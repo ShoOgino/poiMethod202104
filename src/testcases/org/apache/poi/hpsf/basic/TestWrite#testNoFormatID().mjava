@@ -1,0 +1,47 @@
+    /**
+     * <p>Writes an empty property set to a POIFS and reads it back
+     * in.</p>
+     * 
+     * @exception IOException if an I/O exception occurs
+     * @exception UnsupportedVariantTypeException if HPSF does not yet support
+     * a variant type to be written
+     */
+    public void testNoFormatID()
+        throws IOException, UnsupportedVariantTypeException
+    {
+        final File dataDir =
+            new File(System.getProperty("HPSF.testdata.path"));
+        final File filename = new File(dataDir, POI_FS);
+        filename.deleteOnExit();
+
+        /* Create a mutable property set with a section that does not have the
+         * formatID set: */
+        final OutputStream out = new FileOutputStream(filename);
+        final POIFSFileSystem poiFs = new POIFSFileSystem();
+        final MutablePropertySet ps = new MutablePropertySet();
+        ps.clearSections();
+        ps.addSection(new MutableSection());
+
+        /* Write it to a POIFS and the latter to disk: */
+        try
+        {
+            final ByteArrayOutputStream psStream = new ByteArrayOutputStream();
+            ps.write(psStream);
+            psStream.close();
+            final byte[] streamData = psStream.toByteArray();
+            poiFs.createDocument(new ByteArrayInputStream(streamData),
+                                 SummaryInformation.DEFAULT_STREAM_NAME);
+            poiFs.writeFilesystem(out);
+            out.close();
+            Assert.fail("Should have thrown a NoFormatIDException.");
+        }
+        catch (Exception ex)
+        {
+            Assert.assertTrue(ex instanceof NoFormatIDException);
+        }
+        finally
+        {
+            out.close();
+        }
+    }
+

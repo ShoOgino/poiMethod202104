@@ -1,0 +1,72 @@
+    /**
+     * <p>Writes a simple property set with two sections to a POIFS and reads it
+     * back in.</p>
+     * 
+     * @exception IOException if an I/O exception occurs
+     * @exception WritingNotSupportedException if HPSF does not yet support
+     * a variant type to be written
+     */
+    public void testWriteTwoSections()
+        throws WritingNotSupportedException, IOException
+    {
+        final String STREAM_NAME = "PropertySetStream";
+        final String SECTION1 = "Section 1";
+        final String SECTION2 = "Section 2";
+
+        final File dataDir =
+            new File(System.getProperty("HPSF.testdata.path"));
+        final File filename = new File(dataDir, POI_FS);
+        filename.deleteOnExit();
+        final OutputStream out = new FileOutputStream(filename);
+
+        final POIFSFileSystem poiFs = new POIFSFileSystem();
+        final MutablePropertySet ps = new MutablePropertySet();
+        ps.clearSections();
+
+        final byte[] formatID =
+            new byte[]{0, 1,  2,  3,  4,  5,  6,  7,
+                       8, 9, 10, 11, 12, 13, 14, 15};
+        final MutableSection s1 = new MutableSection();
+        s1.setFormatID(formatID);
+        s1.setProperty(2, SECTION1);
+        ps.addSection(s1);
+
+        final MutableSection s2 = new MutableSection();
+        s2.setFormatID(formatID);
+        s2.setProperty(2, SECTION2);
+        ps.addSection(s2);
+
+        poiFs.createDocument(ps.toInputStream(), STREAM_NAME);
+        poiFs.writeFilesystem(out);
+        out.close();
+
+        /* Read the POIFS: */
+        final PropertySet[] psa = new PropertySet[1];
+        final POIFSReader r = new POIFSReader();
+        r.registerListener(new POIFSReaderListener()
+            {
+                public void processPOIFSReaderEvent
+                    (final POIFSReaderEvent event)
+                {
+                    try
+                    {
+                        psa[0] = PropertySetFactory.create(event.getStream());
+                    }
+                    catch (Exception ex)
+                    {
+                        ex.printStackTrace();
+                        throw new RuntimeException(ex);
+                    }
+                }
+            },
+            STREAM_NAME);
+        r.read(new FileInputStream(filename));
+        Assert.assertNotNull(psa[0]);
+        Section s = (Section) (psa[0].getSections().get(0));
+        Object p = s.getProperty(2);
+        Assert.assertEquals(SECTION1, p);
+        s = (Section) (psa[0].getSections().get(1));
+        p = s.getProperty(2);
+        Assert.assertEquals(SECTION2, p);
+    }
+

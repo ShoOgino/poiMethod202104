@@ -5,57 +5,12 @@
      *
      * @return the section's length in bytes.
      */
-    private int calcSize()
+    private int calcSize() throws WritingNotSupportedException, IOException 
     {
-        int length = 0;
-
-        /* The section header. */
-        length += LittleEndianConsts.INT_SIZE * 2;
-
-        /* The length of the property list. */
-        Property[] psa = getProperties();
-        if (psa == null)
-            psa = new MutableProperty[0];
-        length += psa.length * LittleEndianConsts.INT_SIZE * 3;
-
-        /* The sum of the lengths of the properties - it is calculated by simply
-         * writing the properties to a temporary byte array output stream: */
-        final ByteArrayOutputStream b = new ByteArrayOutputStream();
-        for (int i = 0; i < psa.length; i++)
-        {
-            final MutableProperty mp = new MutableProperty();
-            mp.setID(psa[i].getID());
-            mp.setType(psa[i].getType());
-            mp.setValue(psa[i].getValue());
-            try
-            {
-                length += mp.write(b);
-            }
-            catch (WritingNotSupportedException ex)
-            {
-                /* It was not possible to write the property, not even as a
-                 * byte array. We cannot do anything about that. Instead of the
-                 * property we insert an empty one into the stream. */
-                mp.setType(Variant.VT_EMPTY);
-                mp.setValue(null);
-                try
-                {
-                    length += mp.write(b);
-                }
-                catch (Exception ex2)
-                {
-                    /* Even writing an empty property went awfully wrong.
-                     * Let's give up. */
-                    throw new HPSFRuntimeException(ex2);
-                }
-            }
-            catch (IOException ex)
-            {
-                /* Should never occur. */
-                throw new HPSFRuntimeException(ex);
-            }
-        }
-
-        return length;
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        write(out);
+        out.close();
+        sectionBytes = out.toByteArray();
+        return sectionBytes.length;
     }
 

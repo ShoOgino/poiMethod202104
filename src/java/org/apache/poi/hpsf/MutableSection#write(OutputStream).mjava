@@ -6,19 +6,24 @@
      * the section as such. The two former are appended to the latter when they
      * have received all their data.</p>
      *
-     * @param out The stream to write into
-     * @param offset The offset from the beginning of the property set
-     * stream this section begins at
+     * @param out The stream to write into.
      *
-     * @return The offset of the first byte following this section in
-     * the property set stream.
+     * @return The number of bytes written, i.e. the section's size.
      * @exception IOException if an I/O error occurs
      * @exception WritingNotSupportedException if HPSF does not yet support
      * writing a property's variant type.
      */
-    public int write(final OutputStream out, final int offset)
+    public int write(final OutputStream out)
         throws WritingNotSupportedException, IOException
     {
+        /* Check whether we have already generated the bytes making out the
+         * section. */
+        if (!dirty && sectionBytes != null)
+        {
+            out.write(sectionBytes);
+            return sectionBytes.length;
+        }
+
         /* The properties are written to this stream. */
         final ByteArrayOutputStream propertyStream =
             new ByteArrayOutputStream();
@@ -33,7 +38,8 @@
         int position = 0;
 
         /* Increase the position variable by the size of the property list so
-         * that it points to the beginning of the properties themselves. */
+         * that it points behind the property list and to the beginning of the
+         * properties themselves. */
         position += 2 * LittleEndian.INT_SIZE +
                     getPropertyCount() * 2 * LittleEndian.INT_SIZE;
 
@@ -57,12 +63,21 @@
         /* Write the section: */
         byte[] pb1 = propertyListStream.toByteArray();
         byte[] pb2 = propertyStream.toByteArray();
-        TypeWriter.writeToStream(out, LittleEndian.INT_SIZE * 2 + pb1.length +
-                                 pb2.length);
+        
+        /* Write the section's length: */
+        TypeWriter.writeToStream(out, LittleEndian.INT_SIZE * 2 +
+                                      pb1.length + pb2.length);
+        
+        /* Write the section's number of properties: */
         TypeWriter.writeToStream(out, getPropertyCount());
+        
+        /* Write the property list: */
         out.write(pb1);
+        
+        /* Write the properties: */
         out.write(pb2);
 
-        return offset + position;
+        int streamLength = LittleEndian.INT_SIZE * 2 + pb1.length + pb2.length;
+        return streamLength;
     }
 
