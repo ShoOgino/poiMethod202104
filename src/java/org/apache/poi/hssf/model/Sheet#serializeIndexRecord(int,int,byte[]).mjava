@@ -1,0 +1,35 @@
+    private int serializeIndexRecord(final int BOFRecordIndex, final int offset, byte[] data) {
+      IndexRecord index = new IndexRecord();
+      index.setFirstRow(rows.getFirstRowNum());
+      index.setLastRowAdd1(rows.getLastRowNum()+1);
+      //Calculate the size of the records from the end of the BOF
+      //and up to the RowRecordsAggregate...
+      int sheetRecSize = 0;
+      for (int j = BOFRecordIndex+1; j < records.size(); j++)
+      {
+        Record tmpRec = (( Record ) records.get(j));
+        if (tmpRec instanceof RowRecordsAggregate)
+          break;
+        sheetRecSize+= tmpRec.getRecordSize();
+      }
+      //Add the references to the DBCells in the IndexRecord (one for each block)
+      int blockCount = rows.getRowBlockCount();
+      //Calculate the size of this IndexRecord
+      int indexRecSize = index.getRecordSizeForBlockCount(blockCount);
+
+      int rowBlockOffset = 0;
+      int cellBlockOffset = 0;
+      int dbCellOffset = 0;
+      for (int block=0;block<blockCount;block++) {
+        rowBlockOffset += rows.getRowBlockSize(block);
+        cellBlockOffset += cells.getRowCellBlockSize(rows.getStartRowNumberForBlock(block),
+                                                     rows.getEndRowNumberForBlock(block));
+        //Note: The offsets are relative to the Workbook BOF. Assume that this is
+        //0 for now.....
+        index.addDbcell(offset + indexRecSize + sheetRecSize + dbCellOffset + rowBlockOffset + cellBlockOffset);
+        //Add space required to write the dbcell record(s) (whose references were just added).
+        dbCellOffset += (8 + (rows.getRowCountForBlock(block) * 2));
+      }
+      return index.serialize(offset, data);
+    }
+

@@ -1,0 +1,46 @@
+    /**
+     * called by the class that is responsible for writing this sucker.
+     * Subclasses should implement this so that their data is passed back in a
+     * byte array.
+     *
+     * @param offset    offset to begin writing at
+     * @param data      byte array containing instance data
+     * @return number of bytes written
+     */
+
+    public int serialize(int offset, byte [] data, ValueRecordsAggregate cells)
+    {
+        int pos = offset;
+
+        //DBCells are serialized before row records.
+        final int blockCount = getRowBlockCount();
+        for (int block=0;block<blockCount;block++) {
+          //Serialize a block of rows.
+          //Hold onto the position of the first row in the block
+          final int rowStartPos = pos;
+          //Hold onto the size of this block that was serialized
+          final int rowBlockSize = serializeRowBlock(block, pos, data);
+          pos += rowBlockSize;
+          //Serialize a block of cells for those rows
+          final int startRowNumber = getStartRowNumberForBlock(block);
+          final int endRowNumber = getEndRowNumberForBlock(block);
+          DBCellRecord cellRecord = new DBCellRecord();
+          //Note: Cell references start from the second row...
+          int cellRefOffset = (rowBlockSize-20);
+          for (int row=startRowNumber;row<=endRowNumber;row++) {
+            if (cells.rowHasCells(row)) {
+              final int rowCellSize = cells.serializeCellRow(row, pos, data);
+              pos += rowCellSize;
+              //Add the offset to the first cell for the row into the DBCellRecord.
+              cellRecord.addCellOffset((short)cellRefOffset);
+              cellRefOffset = rowCellSize;
+            }
+          }
+          //Calculate Offset from the start of a DBCellRecord to the first Row
+          cellRecord.setRowOffset(pos - rowStartPos);
+          pos += cellRecord.serialize(pos, data);
+
+        }
+        return pos - offset;
+    }
+
