@@ -1,0 +1,50 @@
+  public TextPieceTable(byte[] documentStream, byte[] tableStream, int offset,
+                        int size, int fcMin)
+    throws UnsupportedEncodingException
+  {
+    // get our plex of PieceDescriptors
+    PlexOfCps pieceTable = new PlexOfCps(tableStream, offset, size, PieceDescriptor.getSizeInBytes());
+
+    int multiple = 2;
+    int length = pieceTable.length();
+    PieceDescriptor[] pieces = new PieceDescriptor[length];
+
+    // iterate through piece descriptors raw bytes and create
+    // PieceDescriptor objects
+    for (int x = 0; x < length; x++)
+    {
+      PropertyNode node = pieceTable.getProperty(x);
+      pieces[x] = new PieceDescriptor(node.getBuf(), 0);
+
+      if (!pieces[x].isUnicode())
+      {
+        multiple = 1;
+      }
+    }
+
+    // using the PieceDescriptors, build our list of TextPieces.
+    for (int x = 0; x < pieces.length; x++)
+    {
+      int start = pieces[x].getFilePosition();
+      PropertyNode node = pieceTable.getProperty(x);
+      int nodeStart = node.getStart() - fcMin;
+      int nodeEnd = node.getEnd() - fcMin;
+      int textSize = nodeEnd - nodeStart;
+
+      boolean unicode = pieces[x].isUnicode();
+      String toStr = null;
+      if (unicode)
+      {
+        byte[] buf = new byte[textSize * multiple];
+        System.arraycopy(documentStream, start, buf, 0, textSize * multiple);
+        _textPieces.add(new TextPiece(nodeStart, nodeEnd, buf, pieces[x]));
+      }
+      else
+      {
+        byte[] buf = new byte[textSize];
+        System.arraycopy(documentStream, start, buf, 0, textSize);
+        _textPieces.add(new TextPiece(nodeStart, nodeEnd, buf, pieces[x]));
+      }
+    }
+  }
+
