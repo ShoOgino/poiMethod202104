@@ -9,7 +9,7 @@
      */
     public int serialize(int offset, byte[] data) {
         LittleEndian.putShort(data, 0 + offset, sid);
-        LittleEndian.putShort(data, 2 + offset, (short)( 15 + getTextsLength()));
+        // size defined below
         LittleEndian.putShort(data, 4 + offset, getOptionFlag());
         data[6 + offset] = getKeyboardShortcut();
         data[7 + offset] = getNameTextLength();
@@ -21,30 +21,42 @@
         data [16 + offset] =  getHelpTopicLength();
         data [17 + offset] =  getStatusBarLength();
         data [18 + offset] =  getCompressedUnicodeFlag();
-
-        StringUtil.putCompressedUnicode(getNameText(), data , 19 + offset);
-
-        int start_of_name_definition    = 19  + field_3_length_name_text;
-        if (this.field_13_name_definition != null) {
-            serializePtgs(data, start_of_name_definition + offset);
-        } else {
-            System.arraycopy(field_13_raw_name_definition,0,data
-            ,start_of_name_definition + offset,field_13_raw_name_definition.length);
-        }
-
-        int start_of_custom_menu_text   = start_of_name_definition + field_4_length_name_definition;
-        StringUtil.putCompressedUnicode(getCustomMenuText(), data , start_of_custom_menu_text + offset);
-
-        int start_of_description_text   = start_of_custom_menu_text + field_8_length_description_text;
-        StringUtil.putCompressedUnicode(getDescriptionText(), data , start_of_description_text + offset);
-
-        int start_of_help_topic_text    = start_of_description_text + field_9_length_help_topic_text;
-        StringUtil.putCompressedUnicode(getHelpTopicText(), data , start_of_help_topic_text + offset);
-
-        int start_of_status_bar_text       = start_of_help_topic_text + field_10_length_status_bar_text;
-        StringUtil.putCompressedUnicode(getStatusBarText(), data , start_of_status_bar_text + offset);
-
-
-        return getRecordSize();
+        
+      if ( ( field_1_option_flag & (short)0x20 ) != 0 ) {
+          LittleEndian.putShort(data, 2 + offset, (short)( 16 + field_13_raw_name_definition.length ));
+          
+            data [19 + offset] =  field_12_builtIn_name;
+            System.arraycopy( field_13_raw_name_definition, 0, data, 20 + offset, field_13_raw_name_definition.length );
+            
+            return 20 + field_13_raw_name_definition.length;
+      }
+      else {
+          LittleEndian.putShort(data, 2 + offset, (short)( 15 + getTextsLength()));
+          
+          
+            StringUtil.putCompressedUnicode(getNameText(), data , 19 + offset);
+    
+            int start_of_name_definition    = 19  + field_3_length_name_text;
+            if (this.field_13_name_definition != null) {
+                serializePtgs(data, start_of_name_definition + offset);
+            } else {
+                System.arraycopy(field_13_raw_name_definition,0,data
+                ,start_of_name_definition + offset,field_13_raw_name_definition.length);
+            }
+    
+            int start_of_custom_menu_text   = start_of_name_definition + field_4_length_name_definition;
+            StringUtil.putCompressedUnicode(getCustomMenuText(), data , start_of_custom_menu_text + offset);
+    
+            int start_of_description_text   = start_of_custom_menu_text + field_8_length_description_text;
+            StringUtil.putCompressedUnicode(getDescriptionText(), data , start_of_description_text + offset);
+    
+            int start_of_help_topic_text    = start_of_description_text + field_9_length_help_topic_text;
+            StringUtil.putCompressedUnicode(getHelpTopicText(), data , start_of_help_topic_text + offset);
+    
+            int start_of_status_bar_text       = start_of_help_topic_text + field_10_length_status_bar_text;
+            StringUtil.putCompressedUnicode(getStatusBarText(), data , start_of_status_bar_text + offset);
+            
+          return getRecordSize();
+      }
     }
 
