@@ -1,0 +1,41 @@
+  public ListTables(byte[] tableStream, int lstOffset, int lfoOffset)
+  {
+    // get the list data
+    int length = LittleEndian.getShort(tableStream, lstOffset);
+    lstOffset += LittleEndian.SHORT_SIZE;
+    int levelOffset = lstOffset + (length * LIST_DATA_SIZE);
+
+    for (int x = 0; x < length; x++)
+    {
+      ListData lst = new ListData(tableStream, lstOffset);
+      listMap.put(new Integer(lst.getLsid()), lst);
+      lstOffset += LIST_DATA_SIZE;
+
+      int num = lst.numLevels();
+      for (int y = 0; y < num; y++)
+      {
+        ListLevel lvl = new ListLevel(tableStream, levelOffset);
+        lst.setLevel(y, lvl);
+        levelOffset += lvl.getSizeInBytes();
+      }
+    }
+
+    // now get the list format overrides. The size is an int unlike the LST size
+    length = LittleEndian.getInt(tableStream, lfoOffset);
+    lfoOffset += LittleEndian.INT_SIZE;
+    int lfolvlOffset = LIST_FORMAT_OVERRIDE_SIZE * length + 4;
+    for (int x = 0; x < length; x++)
+    {
+      ListFormatOverride lfo = new ListFormatOverride(tableStream, lfoOffset);
+      lfoOffset += LIST_FORMAT_OVERRIDE_SIZE;
+      int num = lfo.numOverrides();
+      for (int y = 0; y < num; y++)
+      {
+        ListFormatOverrideLevel lfolvl = new ListFormatOverrideLevel(tableStream, lfolvlOffset);
+        lfo.setOverride(y, lfolvl);
+        lfolvlOffset += lfolvl.getSizeInBytes();
+      }
+      overrideMap.put(new Integer(lfo.getLsid()), lfo);
+    }
+  }
+
