@@ -1,0 +1,28 @@
+    /**
+     * Creates an extended string record based on the current contents of
+     * the current SST record.  The offset within the stream to the SST record
+     * is required because the extended string record points directly to the
+     * strings in the SST record.
+     * <p>
+     * NOTE: THIS FUNCTION MUST ONLY BE CALLED AFTER THE SST RECORD HAS BEEN
+     *       SERIALIZED.
+     *
+     * @param sstOffset     The offset in the stream to the start of the
+     *                      SST record.
+     * @return  The new SST record.
+     */
+    public ExtSSTRecord createExtSSTRecord(int sstOffset)
+    {
+        if (bucketAbsoluteOffsets == null || bucketAbsoluteOffsets == null)
+            throw new IllegalStateException("SST record has not yet been serialized.");
+
+        ExtSSTRecord extSST = new ExtSSTRecord();
+        extSST.setNumStringsPerBucket((short)8);
+        int[] absoluteOffsets = (int[]) bucketAbsoluteOffsets.clone();
+        int[] relativeOffsets = (int[]) bucketRelativeOffsets.clone();
+        for ( int i = 0; i < absoluteOffsets.length; i++ )
+            absoluteOffsets[i] += sstOffset;
+        extSST.setBucketOffsets(absoluteOffsets, relativeOffsets);
+        return extSST;
+    }
+

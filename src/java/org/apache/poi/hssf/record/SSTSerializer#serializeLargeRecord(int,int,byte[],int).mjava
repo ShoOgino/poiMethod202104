@@ -6,6 +6,8 @@
     private void serializeLargeRecord( int record_size, int record_length_index, byte[] buffer, int offset )
     {
 
+        startOfSST = offset;
+
         byte[] stringReminant = null;
         int stringIndex = 0;
         boolean lastneedcontinue = false;
@@ -19,6 +21,7 @@
                     recordLength, numStrings, numUniqueStrings );
 
             // write the appropriate header
+            startOfRecord = offset + totalWritten;
             recordProcessor.writeRecordHeader( offset, totalWritten, recordLength, first_record );
             first_record = false;
 
@@ -37,6 +40,12 @@
             for ( ; stringIndex < strings.size(); stringIndex++ )
             {
                 UnicodeString unistr = getUnicodeString( stringIndex );
+
+                if (stringIndex % DEFAULT_BUCKET_SIZE == 0)
+                {
+                    bucketAbsoluteOffsets[stringIndex / DEFAULT_BUCKET_SIZE] = offset + totalWritten + recordProcessor.getRecordOffset() - startOfSST;
+                    bucketRelativeOffsets[stringIndex / DEFAULT_BUCKET_SIZE] = offset + totalWritten + recordProcessor.getRecordOffset() - startOfRecord;
+                }
 
                 if ( unistr.getRecordSize() <= recordProcessor.getAvailable() )
                 {
