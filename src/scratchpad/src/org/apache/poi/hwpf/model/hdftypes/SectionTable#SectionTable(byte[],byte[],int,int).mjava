@@ -1,0 +1,29 @@
+  public SectionTable(byte[] documentStream, byte[] tableStream, int offset,
+                      int size)
+  {
+    PlexOfCps sedPlex = new PlexOfCps(tableStream, offset, size, SED_SIZE);
+
+    int length = sedPlex.length();
+
+    for (int x = 0; x < length; x++)
+    {
+      PropertyNode node = sedPlex.getProperty(x);
+      SectionDescriptor sed = new SectionDescriptor(node.getBuf(), 0);
+
+      int fileOffset = sed.getFc();
+
+      // check for the optimization
+      if (fileOffset == 0xffffffff)
+      {
+        sections.add(new SEPX(node.getStart(), node.getEnd(), new byte[0]));
+      }
+      else
+      {
+        // The first byte at the offset is the size of the grpprl.
+        byte[] buf = new byte[documentStream[fileOffset++]];
+        System.arraycopy(documentStream, fileOffset, buf, 0, buf.length);
+        sections.add(new SEPX(node.getStart(), node.getEnd(), buf));
+      }
+    }
+  }
+
