@@ -1,0 +1,34 @@
+    /** Creates a new instance of HDFObjectFactory
+     *
+     * @param istream The InputStream that is the Word document
+     *
+     */
+    protected HDFObjectFactory(InputStream istream, HDFLowLevelParsingListener l) throws IOException
+    {
+        if (l == null)
+        {
+            _listener = this;
+        }
+        else
+        {
+            _listener = l;
+        }
+
+        //do Ole stuff
+        _filesystem = new POIFSFileSystem(istream);
+
+        DocumentEntry headerProps =
+            (DocumentEntry)_filesystem.getRoot().getEntry("WordDocument");
+
+        _mainDocument = new byte[headerProps.getSize()];
+        _filesystem.createDocumentInputStream("WordDocument").read(_mainDocument);
+
+        _fib = new FileInformationBlock(_mainDocument);
+
+        initTableStream();
+        initTextPieces();
+        initFormattingProperties();
+
+
+    }
+

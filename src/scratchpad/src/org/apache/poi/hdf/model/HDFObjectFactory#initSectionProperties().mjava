@@ -3,22 +3,38 @@
      */
     private void initSectionProperties()
     {
-      //find sections
+
+
+      //sections
       int fcMin = _fib.getFcMin();
       int plcfsedFC = _fib.getFcPlcfsed();
       int plcfsedSize = _fib.getLcbPlcfsed();
-      byte[] plcfsed = new byte[plcfsedSize];
-      System.arraycopy(_tableBuffer, plcfsedFC, plcfsed, 0, plcfsedSize);
 
-      int arraySize = (plcfsedSize - 4)/16;
+      //paragraphs
+      int parOffset = _fib.getFcPlcfbtePapx();
+      int parPlcSize = _fib.getLcbPlcfbtePapx();
+
+      //characters
+      int charOffset = _fib.getFcPlcfbteChpx();
+      int charPlcSize = _fib.getLcbPlcfbteChpx();
+
+      PlexOfCps charPlcf = new PlexOfCps(charPlcSize, 4);
+      PlexOfCps parPlcf = new PlexOfCps(parPlcSize, 4);
+
+      //byte[] plcfsed = new byte[plcfsedSize];
+      //System.arraycopy(_tableBuffer, plcfsedFC, plcfsed, 0, plcfsedSize);
+
+      PlexOfCps plcfsed = new PlexOfCps(plcfsedSize, 12);
+      int arraySize = plcfsed.length();
 
 
       for(int x = 0; x < arraySize; x++)
       {
-          int sectionStart = LittleEndian.getInt(plcfsed, x * 4) + fcMin;
-          int sectionEnd = LittleEndian.getInt(plcfsed, (x+1) * 4) + fcMin;
-          int sepxStart = LittleEndian.getInt(plcfsed, 4 * (arraySize + 1) + (x * 12) + 2);
+          int sectionStart = LittleEndian.getInt(_tableBuffer, plcfsed.getIntOffset(x)) + fcMin;
+          int sectionEnd = LittleEndian.getInt(_tableBuffer, plcfsed.getIntOffset(x + 1)) + fcMin;
+          int sepxStart = LittleEndian.getInt(_tableBuffer, plcfsed.getStructOffset(x));
           int sepxSize = LittleEndian.getShort(_mainDocument, sepxStart);
+
           byte[] sepx = new byte[sepxSize];
           System.arraycopy(_mainDocument, sepxStart + 2, sepx, 0, sepxSize);
           SepxNode node = new SepxNode(x + 1, sectionStart, sectionEnd, sepx);

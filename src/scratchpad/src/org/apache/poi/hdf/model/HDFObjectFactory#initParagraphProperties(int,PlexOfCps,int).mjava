@@ -1,0 +1,44 @@
+    private void initParagraphProperties(int parOffset, PlexOfCps parPlcf, int end)
+    {
+        //Initialize character property stuff
+        int currentParPage = _parParsingState.getCurrentPage();
+        int parPlcfLen = parPlcf.length();
+        int currentPageIndex = _parParsingState.getCurrentPageIndex();
+        //byte[] fkp = new byte[512];
+        //System.arraycopy(_mainDocument, (currentCharPage * 512), fkp, 0, 512);
+        FormattedDiskPage fkp = _parParsingState.getFkp();
+        int currentPapxIndex = _parParsingState.getCurrentPropIndex();
+        int currentArraySize = fkp.size();
+
+        do
+        {
+          if (currentPapxIndex < currentArraySize)
+          {
+            int parStart = fkp.getStart(currentPapxIndex);
+            int parEnd = fkp.getEnd(currentPapxIndex);
+            byte[] papx = fkp.getGrpprl(currentPapxIndex);
+            _listener.paragraph(new PapxNode(parStart, parEnd, papx));
+            if (parEnd < end)
+            {
+              currentPapxIndex++;
+            }
+            else
+            {
+              //save the state
+              _parParsingState.setState(currentParPage, currentPageIndex, fkp, currentPapxIndex);
+              break;
+            }
+          }
+          else
+          {
+            currentParPage = LittleEndian.getInt(_tableBuffer, parOffset + parPlcf.getStructOffset(++currentPageIndex));
+            byte byteFkp[] = new byte[512];
+            System.arraycopy(_mainDocument, (currentParPage * 512), fkp, 0, 512);
+            fkp = new PAPFormattedDiskPage(byteFkp);
+            currentPapxIndex = 0;
+            currentArraySize = fkp.size();
+          }
+        }
+        while(currentParPage <= parPlcfLen + 1);
+    }
+

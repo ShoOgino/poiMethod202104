@@ -1,21 +1,24 @@
     /**
-     * intializes the Paragraph Properties BTree
+     * initializes the CharacterProperties BTree
      */
-    private void initParagraphProperties()
+    /*private void initCharacterProperties()
     {
-        //find paragraphs
-        int parOffset = _fib.getFcPlcfbtePapx();
-        int parPlcSize = _fib.getLcbPlcfbtePapx();
+        int charOffset = _fib.getFcPlcfbteChpx();
+        int charPlcSize = _fib.getLcbPlcfbteChpx();
 
-        int arraySize = (parPlcSize - 4)/8;
+        //int arraySize = (charPlcSize - 4)/8;
+
         //first we must go through the bin table and find the fkps
         for(int x = 0; x < arraySize; x++)
         {
-            int PN = LittleEndian.getInt(_tableBuffer, parOffset + (4 * (arraySize + 1) + (4 * x)));
+
+            //get page number(has nothing to do with document page)
+            //containing the chpx for the paragraph
+            int PN = LittleEndian.getInt(_tableBuffer, charOffset + (4 * (arraySize + 1) + (4 * x)));
 
             byte[] fkp = new byte[512];
             System.arraycopy(_mainDocument, (PN * 512), fkp, 0, 512);
-            //take each fkp and get the paps
+            //take each fkp and get the chpxs
             int crun = LittleEndian.getUnsignedByte(fkp, 511);
             for(int y = 0; y < crun; y++)
             {
@@ -23,20 +26,109 @@
                 int fcStart = LittleEndian.getInt(fkp, y * 4);
                 int fcEnd = LittleEndian.getInt(fkp, (y+1) * 4);
                 //get the offset in fkp of the papx for this paragraph
-                int papxOffset = 2 * LittleEndian.getUnsignedByte(fkp, ((crun + 1) * 4) + (y * 13));
-                int size = 2 * LittleEndian.getUnsignedByte(fkp, papxOffset);
-                if(size == 0)
+                int chpxOffset = 2 * LittleEndian.getUnsignedByte(fkp, ((crun + 1) * 4) + y);
+
+                //optimization if offset == 0 use "Normal" style
+                if(chpxOffset == 0)
+
                 {
-                    size = 2 * LittleEndian.getUnsignedByte(fkp, ++papxOffset);
-                }
-                else
-                {
-                    size--;
+                    _characterRuns.add(new ChpxNode(fcStart, fcEnd, new byte[0]));
+                    continue;
                 }
 
-                byte[] papx = new byte[size];
-                System.arraycopy(fkp, ++papxOffset, papx, 0, size);
-                _paragraphs.add(new PapxNode(fcStart, fcEnd, papx));
+                int size = LittleEndian.getUnsignedByte(fkp, chpxOffset);
+
+                byte[] chpx = new byte[size];
+                System.arraycopy(fkp, ++chpxOffset, chpx, 0, size);
+                //_papTable.put(new Integer(fcStart), papx);
+                _characterRuns.add(new ChpxNode(fcStart, fcEnd, chpx));
+            }
+
+        }
+    }*/
+    /**
+     * intializes the Paragraph Properties BTree
+     */
+    private void initParagraphProperties()
+    {
+        //paragraphs
+        int parOffset = _fib.getFcPlcfbtePapx();
+        int parPlcSize = _fib.getLcbPlcfbtePapx();
+
+        //characters
+        int charOffset = _fib.getFcPlcfbteChpx();
+        int charPlcSize = _fib.getLcbPlcfbteChpx();
+
+        PlexOfCps charPlcf = new PlexOfCps(charPlcSize, 4);
+        PlexOfCps parPlcf = new PlexOfCps(parPlcSize, 4);
+
+        //Initialize character property stuff
+        int currentCharPage = LittleEndian.getInt(_tableBuffer, charOffset + charPlcf.getStructOffset(0));
+        int charPlcfLen = charPlcf.length();
+        int currentPageIndex = 0;
+        byte[] fkp = new byte[512];
+        System.arraycopy(_mainDocument, (currentCharPage * 512), fkp, 0, 512);
+        CHPFormattedDiskPage cfkp = new CHPFormattedDiskPage(fkp);
+        int currentChpxIndex = 0;
+        int currentArraySize = cfkp.size();
+
+
+        int arraySize = parPlcf.length();
+
+        //first we must go through the bin table and find the fkps
+        for(int x = 0; x < arraySize; x++)
+        {
+            int PN = LittleEndian.getInt(_tableBuffer, parOffset + parPlcf.getStructOffset(x));
+
+            fkp = new byte[512];
+            System.arraycopy(_mainDocument, (PN * 512), fkp, 0, 512);
+
+            PAPFormattedDiskPage pfkp = new PAPFormattedDiskPage(fkp);
+            //take each fkp and get the paps
+            int crun = pfkp.size();
+            for(int y = 0; y < crun; y++)
+            {
+                //get the beginning fc of each paragraph text run
+                int fcStart = pfkp.getStart(y);
+                int fcEnd = pfkp.getEnd(y);
+
+                //get the papx for this paragraph
+                byte[] papx = pfkp.getGrpprl(y);
+
+                _listener.paragraph(new PapxNode(fcStart, fcEnd, papx));
+
+                //get the character runs for this paragraph
+                int charStart = 0;
+                int charEnd = 0;
+                //add the character runs
+                do
+                {
+                  if (currentChpxIndex < currentArraySize)
+                  {
+                    charStart = cfkp.getStart(currentChpxIndex);
+                    charEnd = cfkp.getEnd(currentChpxIndex);
+                    byte[] chpx = cfkp.getGrpprl(currentChpxIndex);
+                    _listener.characterRun(new ChpxNode(charStart, charEnd, chpx));
+                    if (charEnd < fcEnd)
+                    {
+                      currentChpxIndex++;
+                    }
+                    else
+                    {
+                      break;
+                    }
+                  }
+                  else
+                  {
+                    currentCharPage = LittleEndian.getInt(_tableBuffer, charOffset + charPlcf.getStructOffset(++currentPageIndex));
+                    fkp = new byte[512];
+                    System.arraycopy(_mainDocument, (currentCharPage * 512), fkp, 0, 512);
+                    cfkp = new CHPFormattedDiskPage(fkp);
+                    currentChpxIndex = 0;
+                    currentArraySize = cfkp.size();
+                  }
+                }
+                while(currentCharPage <= charPlcfLen + 1);
 
             }
 
