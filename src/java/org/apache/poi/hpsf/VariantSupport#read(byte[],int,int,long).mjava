@@ -10,19 +10,19 @@
      * @return A Java object that corresponds best to the variant
      * field. For example, a VT_I4 is returned as a {@link Long}, a
      * VT_LPSTR as a {@link String}.
+     * @exception UnsupportedVariantTypeException if HPSF does not (yet)
+     * support the variant type which is to be read 
      *
      * @see Variant
      */
     public static Object read(final byte[] src, final int offset,
-                              final int length, final int type)
+                              final int length, final long type)
+        throws ReadingNotSupportedException
     {
-        /*
-         * FIXME: Support reading more types and clean up this code!
-         */
         Object value;
         int o1 = offset;
         int l1 = length - LittleEndian.INT_SIZE;
-        switch (type)
+        switch ((int) type)
         {
             case Variant.VT_EMPTY:
             {
@@ -95,10 +95,13 @@
                 {
                     final int i1 = o1 + (i * 2);
                     final int i2 = i1 + 1;
-                    b.append((char) ((src[i2] << 8) + src[i1]));
+                    final int high = src[i2] << 8;
+                    final int low = src[i1] & 0xff;
+                    final char c = (char) (high | low);
+                    b.append(c);
                 }
                 /* Strip 0x00 characters from the end of the string: */
-                while (b.charAt(b.length() - 1) == 0x00)
+                while (b.length() > 0 && b.charAt(b.length() - 1) == 0x00)
                     b.setLength(b.length() - 1);
                 value = b.toString();
                 break;
@@ -131,8 +134,7 @@
                 final byte[] v = new byte[l1];
                 for (int i = 0; i < l1; i++)
                     v[i] = src[(int) (o1 + i)];
-                value = v;
-                break;
+                throw new ReadingNotSupportedException(type, v);
             }
         }
         return value;
