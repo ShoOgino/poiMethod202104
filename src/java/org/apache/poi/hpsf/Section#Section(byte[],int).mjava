@@ -1,56 +1,74 @@
     /**
-     * <p>Creates a {@link Section} instance from a byte array.</p>
+     *  <p>
      *
-     * @param src Contains the complete property set stream.
+     *  Creates a {@link Section} instance from a byte array.</p>
      *
-     * @param offset The position in the stream that points to the
-     * section's format ID.
+     *@param  src     Contains the complete property set stream.
+     *@param  offset  The position in the stream that points to the section's
+     *      format ID.
      */
-    public Section(final byte[] src, int offset)
-    {
-        /* Read the format ID. */
+    public Section(final byte[] src, int offset) {
+        /*
+         *  Read the format ID.
+         */
         formatID = new ClassID(src, offset);
         offset += ClassID.LENGTH;
 
-        /* Read the offset from the stream's start and positions to
-         * the section header. */
-        this.offset = new DWord(src, offset).intValue();
-        offset = this.offset;
+        /*
+         *  Read the offset from the stream's start and positions to
+         *  the section header.
+         */
+        this.offset = LittleEndian.getUInt(src, offset);
+        offset = (int)this.offset;
 
-        /* Read the section length. */
-        size = new DWord(src, offset).intValue();
-        offset += DWord.LENGTH;
+        /*
+         *  Read the section length.
+         */
+        size = (int)LittleEndian.getUInt(src, offset);
+        offset += LittleEndian.INT_SIZE;
 
-        /* Read the number of properties. */
-        propertyCount = new DWord(src, offset).intValue();
-        offset += DWord.LENGTH;
+        /*
+         *  Read the number of properties.
+         */
+        propertyCount = (int)LittleEndian.getUInt(src, offset);
+        offset += LittleEndian.INT_SIZE;
 
-        /* Read the properties. The offset is positioned at the first
-         * entry of the property list. */
+        /*
+         *  Read the properties. The offset is positioned at the first
+         *  entry of the property list.
+         */
         properties = new Property[propertyCount];
-        for (int i = 0; i < properties.length; i++)
-        {
-            final int id = new DWord(src, offset).intValue();
-            offset += DWord.LENGTH;
+        for (int i = 0; i < properties.length; i++) {
+            final int id = (int)LittleEndian.getUInt(src, offset);
+            offset += LittleEndian.INT_SIZE;
 
-            /* Offset from the section. */
-            final int sOffset = new DWord(src, offset).intValue();
-            offset += DWord.LENGTH;
+            /*
+             *  Offset from the section.
+             */
+            final int sOffset = (int)LittleEndian.getUInt(src, offset);
+            offset += LittleEndian.INT_SIZE;
 
-            /* Calculate the length of the property. */
+            /*
+             *  Calculate the length of the property.
+             */
             int length;
-            if (i == properties.length - 1)
-                length = src.length - this.offset - sOffset;
-            else
-                length =
-                    new DWord(src, offset + DWord.LENGTH).intValue() - sOffset;
+            if (i == properties.length - 1) {
+                length = (int)(src.length - this.offset - sOffset);
+            } else {
+                length = (int)
+                        LittleEndian.getUInt(src, offset + LittleEndian.INT_SIZE) - sOffset;
+            }
 
-            /* Create it. */
+            /*
+             *  Create it.
+             */
             properties[i] =
-                new Property(id, src, this.offset + sOffset, length);
+                    new Property(id, src, this.offset + sOffset, length);
         }
 
-        /* Extract the dictionary (if available). */
+        /*
+         *  Extract the dictionary (if available).
+         */
         dictionary = (Map) getProperty(0);
     }
 
