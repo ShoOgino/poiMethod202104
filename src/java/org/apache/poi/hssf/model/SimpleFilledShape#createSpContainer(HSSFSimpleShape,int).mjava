@@ -1,0 +1,37 @@
+    /**
+     * Generates the shape records for this shape.
+     *
+     * @param hssfShape
+     * @param shapeId
+     * @return
+     */
+    private EscherContainerRecord createSpContainer( HSSFSimpleShape hssfShape, int shapeId )
+    {
+        HSSFShape shape = hssfShape;
+
+        EscherContainerRecord spContainer = new EscherContainerRecord();
+        EscherSpRecord sp = new EscherSpRecord();
+        EscherOptRecord opt = new EscherOptRecord();
+        EscherClientDataRecord clientData = new EscherClientDataRecord();
+
+        spContainer.setRecordId( EscherContainerRecord.SP_CONTAINER );
+        spContainer.setOptions( (short) 0x000F );
+        sp.setRecordId( EscherSpRecord.RECORD_ID );
+        short shapeType = objTypeToShapeType( hssfShape.getShapeType() );
+        sp.setOptions( (short) ( ( shapeType << 4 ) | 0x2 ) );
+        sp.setShapeId( shapeId );
+        sp.setFlags( EscherSpRecord.FLAG_HAVEANCHOR | EscherSpRecord.FLAG_HASSHAPETYPE );
+        opt.setRecordId( EscherOptRecord.RECORD_ID );
+        addStandardOptions(shape, opt);
+        EscherRecord anchor = createAnchor( shape.getAnchor() );
+        clientData.setRecordId( EscherClientDataRecord.RECORD_ID );
+        clientData.setOptions( (short) 0x0000 );
+
+        spContainer.addChildRecord( sp );
+        spContainer.addChildRecord( opt );
+        spContainer.addChildRecord( anchor );
+        spContainer.addChildRecord( clientData );
+
+        return spContainer;
+    }
+

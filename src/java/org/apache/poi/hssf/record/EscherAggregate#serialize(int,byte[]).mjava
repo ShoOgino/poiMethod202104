@@ -1,0 +1,78 @@
+    /**
+     * Serializes this aggregate to a byte array.  Since this is an aggregate
+     * record it will effectively serialize the aggregated records.
+     *
+     * @param offset    The offset into the start of the array.
+     * @param data      The byte array to serialize to.
+     * @return          The number of bytes serialized.
+     */
+    public int serialize( int offset, byte[] data )
+    {
+        convertUserModelToRecords();
+
+        // Determine buffer size
+        List records = getEscherRecords();
+        int size = getEscherRecordSize( records );
+        byte[] buffer = new byte[size];
+
+
+        // Serialize escher records into one big data structure and keep note of ending offsets.
+        final List spEndingOffsets = new ArrayList();
+        final List shapes = new ArrayList();
+        int pos = 0;
+        for ( Iterator iterator = records.iterator(); iterator.hasNext(); )
+        {
+            EscherRecord e = (EscherRecord) iterator.next();
+            pos += e.serialize( pos, buffer, new EscherSerializationListener()
+            {
+                public void beforeRecordSerialize( int offset, short recordId, EscherRecord record )
+                {
+                }
+
+                public void afterRecordSerialize( int offset, short recordId, int size, EscherRecord record )
+                {
+                    if ( recordId == EscherClientDataRecord.RECORD_ID || recordId == EscherTextboxRecord.RECORD_ID )
+                    {
+                        spEndingOffsets.add( new Integer( offset ) );
+                        shapes.add( record );
+                    }
+                }
+            } );
+        }
+        // todo: fix this
+        shapes.add( 0, null );
+        spEndingOffsets.add( 0, null );
+
+        // Split escher records into separate MSODRAWING and OBJ, TXO records.  (We don't break on
+        // the first one because it's the patriach).
+        pos = offset;
+        for ( int i = 1; i < shapes.size(); i++ )
+        {
+            int endOffset = ( (Integer) spEndingOffsets.get( i ) ).intValue() - 1;
+            int startOffset;
+            if ( i == 1 )
+                startOffset = 0;
+            else
+                startOffset = ( (Integer) spEndingOffsets.get( i - 1 ) ).intValue();
+
+            // Create and write a new MSODRAWING record
+            DrawingRecord drawing = new DrawingRecord();
+            byte[] drawingData = new byte[endOffset - startOffset + 1];
+            System.arraycopy( buffer, startOffset, drawingData, 0, drawingData.length );
+            drawing.setData( drawingData );
+            int temp = drawing.serialize( pos, data );
+            pos += temp;
+
+            // Write the matching OBJ record
+            Record obj = (Record) shapeToObj.get( shapes.get( i ) );
+            temp = obj.serialize( pos, data );
+            pos += temp;
+
+        }
+
+        int bytesWritten = pos - offset;
+        if ( bytesWritten != getRecordSize() )
+            throw new RecordFormatException( bytesWritten + " bytes written but getRecordSize() reports " + getRecordSize() );
+        return bytesWritten;
+    }
+

@@ -1,0 +1,40 @@
+    private void convertPatriarch( HSSFPatriarch patriarch )
+    {
+        EscherContainerRecord dgContainer = new EscherContainerRecord();
+        EscherDgRecord dg;
+        EscherContainerRecord spgrContainer = new EscherContainerRecord();
+        EscherContainerRecord spContainer1 = new EscherContainerRecord();
+        EscherSpgrRecord spgr = new EscherSpgrRecord();
+        EscherSpRecord sp1 = new EscherSpRecord();
+
+        dgContainer.setRecordId( EscherContainerRecord.DG_CONTAINER );
+        dgContainer.setOptions( (short) 0x000F );
+        dg = drawingManager.createDgRecord();
+        drawingGroupId = dg.getDrawingGroupId();
+//        dg.setOptions( (short) ( drawingId << 4 ) );
+//        dg.setNumShapes( getNumberOfShapes( patriarch ) );
+//        dg.setLastMSOSPID( 0 );  // populated after all shape id's are assigned.
+        spgrContainer.setRecordId( EscherContainerRecord.SPGR_CONTAINER );
+        spgrContainer.setOptions( (short) 0x000F );
+        spContainer1.setRecordId( EscherContainerRecord.SP_CONTAINER );
+        spContainer1.setOptions( (short) 0x000F );
+        spgr.setRecordId( EscherSpgrRecord.RECORD_ID );
+        spgr.setOptions( (short) 0x0001 );    // don't know what the 1 is for.
+        spgr.setRectX1( patriarch.getX1() );
+        spgr.setRectY1( patriarch.getY1() );
+        spgr.setRectX2( patriarch.getX2() );
+        spgr.setRectY2( patriarch.getY2() );
+        sp1.setRecordId( EscherSpRecord.RECORD_ID );
+        sp1.setOptions( (short) 0x0002 );
+        sp1.setShapeId( drawingManager.allocateShapeId(dg.getDrawingGroupId()) );
+        sp1.setFlags( EscherSpRecord.FLAG_GROUP | EscherSpRecord.FLAG_PATRIARCH );
+
+        dgContainer.addChildRecord( dg );
+        dgContainer.addChildRecord( spgrContainer );
+        spgrContainer.addChildRecord( spContainer1 );
+        spContainer1.addChildRecord( spgr );
+        spContainer1.addChildRecord( sp1 );
+
+        addEscherRecord( dgContainer );
+    }
+

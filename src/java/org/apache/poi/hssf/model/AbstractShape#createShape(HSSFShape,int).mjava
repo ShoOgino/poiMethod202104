@@ -1,0 +1,42 @@
+    /**
+     * Create a new shape object used to create the escher records.
+     *
+     * @param hssfShape     The simple shape this is based on.
+     */
+    public static AbstractShape createShape( HSSFShape hssfShape, int shapeId )
+    {
+        AbstractShape shape = null;
+        if (hssfShape instanceof HSSFTextbox)
+        {
+            shape = new TextboxShape( (HSSFTextbox)hssfShape, shapeId );
+        }
+        else if (hssfShape instanceof HSSFPolygon)
+        {
+            shape = new PolygonShape( (HSSFPolygon) hssfShape, shapeId );
+        }
+        else if (hssfShape instanceof HSSFSimpleShape)
+        {
+            HSSFSimpleShape simpleShape = (HSSFSimpleShape) hssfShape;
+            switch ( simpleShape.getShapeType() )
+            {
+                case HSSFSimpleShape.OBJECT_TYPE_LINE:
+                    shape = new LineShape( simpleShape, shapeId );
+                    break;
+                case HSSFSimpleShape.OBJECT_TYPE_OVAL:
+                case HSSFSimpleShape.OBJECT_TYPE_RECTANGLE:
+                    shape = new SimpleFilledShape( simpleShape, shapeId );
+                    break;
+                default:
+                    throw new IllegalArgumentException("Do not know how to handle this type of shape");
+            }
+        }
+        else
+        {
+            throw new IllegalArgumentException("Unknown shape type");
+        }
+        EscherSpRecord sp = shape.getSpContainer().getChildById(EscherSpRecord.RECORD_ID);
+        if (hssfShape.getParent() != null)
+            sp.setFlags(sp.getFlags() | EscherSpRecord.FLAG_CHILD);
+        return shape;
+    }
+

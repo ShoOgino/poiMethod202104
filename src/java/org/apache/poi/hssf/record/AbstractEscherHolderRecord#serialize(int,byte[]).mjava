@@ -1,0 +1,25 @@
+    public int serialize(int offset, byte[] data)
+    {
+        if (escherRecords.size() == 0 && rawData != null)
+        {
+            System.arraycopy( rawData, 0, data, offset, rawData.length);
+            return rawData.length;
+        }
+        else
+        {
+            collapseShapeInformation();
+
+            LittleEndian.putShort(data, 0 + offset, getSid());
+            LittleEndian.putShort(data, 2 + offset, (short)(getRecordSize() - 4));
+
+            int pos = offset + 4;
+            for ( Iterator iterator = escherRecords.iterator(); iterator.hasNext(); )
+            {
+                EscherRecord r = (EscherRecord) iterator.next();
+                pos += r.serialize(pos, data, new NullEscherSerializationListener() );
+            }
+
+            return getRecordSize();
+        }
+    }
+

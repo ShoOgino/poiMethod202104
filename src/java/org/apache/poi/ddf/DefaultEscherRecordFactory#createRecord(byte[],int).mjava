@@ -1,0 +1,46 @@
+    /**
+     * Generates an escher record including the any children contained under that record.
+     * An exception is thrown if the record could not be generated.
+     *
+     * @param data   The byte array containing the records
+     * @param offset The starting offset into the byte array
+     * @return The generated escher record
+     */
+    public EscherRecord createRecord( byte[] data, int offset )
+    {
+        EscherRecord.EscherRecordHeader header = EscherRecord.EscherRecordHeader.readHeader( data, offset );
+        if ( ( header.getOptions() & (short) 0x000F ) == (short) 0x000F )
+        {
+            EscherContainerRecord r = new EscherContainerRecord();
+            r.setRecordId( header.getRecordId() );
+            r.setOptions( header.getOptions() );
+            return r;
+        }
+        else if ( header.getRecordId() >= EscherBlipRecord.RECORD_ID_START && header.getRecordId() <= EscherBlipRecord.RECORD_ID_END )
+        {
+            EscherBlipRecord r = new EscherBlipRecord();
+            r.setRecordId( header.getRecordId() );
+            r.setOptions( header.getOptions() );
+            return r;
+        }
+        else
+        {
+            Constructor recordConstructor = (Constructor) recordsMap.get( new Short( header.getRecordId() ) );
+            EscherRecord escherRecord = null;
+            if ( recordConstructor != null )
+            {
+                try
+                {
+                    escherRecord = (EscherRecord) recordConstructor.newInstance( new Object[]{} );
+                    escherRecord.setRecordId( header.getRecordId() );
+                    escherRecord.setOptions( header.getOptions() );
+                }
+                catch ( Exception e )
+                {
+                    escherRecord = null;
+                }
+            }
+            return escherRecord == null ? new UnknownEscherRecord() : escherRecord;
+        }
+    }
+

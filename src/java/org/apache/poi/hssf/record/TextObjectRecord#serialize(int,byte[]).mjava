@@ -1,0 +1,28 @@
+    public int serialize( int offset, byte[] data )
+    {
+        // Temporarily blank out str so that record size is calculated without the continue records.
+        HSSFRichTextString temp = str;
+        str = new HSSFRichTextString("");
+        int bytesWritten1 = super.serialize( offset, data );
+        str = temp;
+
+        int pos = offset + bytesWritten1;
+        if ( str.toString().equals( "" ) == false )
+        {
+            ContinueRecord c1 = createContinue1();
+            ContinueRecord c2 = createContinue2();
+            int bytesWritten2 = c1.serialize( pos, data );
+            pos += bytesWritten2;
+            int bytesWritten3 = c2.serialize( pos, data );
+            pos += bytesWritten3;
+
+            int size = bytesWritten1 + bytesWritten2 + bytesWritten3;
+            if ( size != getRecordSize() )
+                throw new RecordFormatException(size + " bytes written but getRecordSize() reports " + getRecordSize());
+            return size;
+        }
+        if ( bytesWritten1 != getRecordSize() )
+            throw new RecordFormatException(bytesWritten1 + " bytes written but getRecordSize() reports " + getRecordSize());
+        return bytesWritten1;
+    }
+
