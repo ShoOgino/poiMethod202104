@@ -1,0 +1,65 @@
+    /**
+     * Static method to convert an array of Ptgs in RPN order
+     * to a human readable string format in infix mode.
+     * @param book  workbook for named and 3D references
+     * @param ptgs  array of Ptg, can be null or empty
+     * @return a human readable String
+     */
+    public static String toFormulaString(Workbook book, Ptg[] ptgs) {
+        if (ptgs == null || ptgs.length == 0) return "#NAME";
+        java.util.Stack stack = new java.util.Stack();
+        AttrPtg ifptg = null;
+
+           // Excel allows to have AttrPtg at position 0 (such as Blanks) which
+           // do not have any operands. Skip them.
+        stack.push(ptgs[0].toFormulaString(book));
+                  
+        for (int i = 1; i < ptgs.length; i++) {
+            if (! (ptgs[i] instanceof OperationPtg)) {
+                stack.push(ptgs[i].toFormulaString(book));
+                continue;
+            }
+                      
+            if (ptgs[i] instanceof AttrPtg && ((AttrPtg) ptgs[i]).isOptimizedIf()) {
+                ifptg = (AttrPtg) ptgs[i];
+                continue;
+            }
+                      
+            final OperationPtg o = (OperationPtg) ptgs[i];
+            final String[] operands = new String[o.getNumberOfOperands()];
+
+            for (int j = operands.length; j > 0; j--) {
+                //TODO: catch stack underflow and throw parse exception.
+                operands[j - 1] = (String) stack.pop();
+                      }  
+
+            stack.push(o.toFormulaString(operands));
+            if (!(o instanceof AbstractFunctionPtg)) continue;
+
+            final AbstractFunctionPtg f = (AbstractFunctionPtg) o;
+            final String fname = f.getName();
+            if (fname == null) continue;
+
+            if ((ifptg != null) && (fname.equals("specialflag"))) {
+                             // this special case will be way different.
+                stack.push(ifptg.toFormulaString(new String[]{(String) stack.pop()}));
+                continue;
+                      }
+            if (fname.equals("externalflag")) {
+                final String top = (String) stack.pop();
+                final int paren = top.indexOf('(');
+                final int comma = top.indexOf(',');
+                if (comma == -1) {
+                    final int rparen = top.indexOf(')');
+                    stack.push(top.substring(paren + 1, rparen) + "()");
+                  }
+                else {
+                    stack.push(top.substring(paren + 1, comma) + '(' +
+                               top.substring(comma + 1));
+            }
+        }
+    }
+        // TODO: catch stack underflow and throw parse exception.
+        return (String) stack.pop();
+    }
+
