@@ -1,0 +1,39 @@
+    /**
+     * <p>Writes an empty property set to a POIFS and reads it back
+     * in.</p>
+     * 
+     * @exception IOException if an I/O exception occurs
+     * @exception UnsupportedVariantTypeException if HPSF does not yet support
+     * a variant type to be written
+     */
+    public void testWriteEmptyPropertySet()
+        throws IOException, UnsupportedVariantTypeException
+    {
+        final File dataDir =
+            new File(System.getProperty("HPSF.testdata.path"));
+        final File filename = new File(dataDir, POI_FS);
+        filename.deleteOnExit();
+
+        /* Create a mutable property set and write it to a POIFS: */
+        final OutputStream out = new FileOutputStream(filename);
+        final POIFSFileSystem poiFs = new POIFSFileSystem();
+        final MutablePropertySet ps = new MutablePropertySet();
+        final MutableSection s = (MutableSection) ps.getSections().get(0);
+        s.setFormatID(SectionIDMap.SUMMARY_INFORMATION_ID);
+
+        final ByteArrayOutputStream psStream = new ByteArrayOutputStream();
+        ps.write(psStream);
+        psStream.close();
+        final byte[] streamData = psStream.toByteArray();
+        poiFs.createDocument(new ByteArrayInputStream(streamData),
+                             SummaryInformation.DEFAULT_STREAM_NAME);
+        poiFs.writeFilesystem(out);
+        out.close();
+
+        /* Read the POIFS: */
+        final POIFSReader r = new POIFSReader();
+        r.registerListener(new MyPOIFSReaderListener(),
+                           SummaryInformation.DEFAULT_STREAM_NAME);
+        r.read(new FileInputStream(filename));
+    }
+
