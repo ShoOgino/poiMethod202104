@@ -1,0 +1,51 @@
+  private void createParagraph(int start, int end, PapxNode currentNode,
+                               BTreeSet characterTable, BTreeSet text)
+  {
+    StringBuffer blockBuffer = _bodyBuffer;
+    byte[] papx = currentNode.getPapx();
+    int istd = Utils.convertBytesToShort(papx, 0);
+    StyleDescription std = _styleSheet.getStyleDescription(istd);
+    PAP pap = (PAP)StyleSheet.uncompressProperty(papx, std.getPAP(), _styleSheet);
+
+    //handle table cells
+    if(pap._fInTable > 0)
+    {
+      if(pap._fTtp == 0)
+      {
+        if(_cellBuffer == null)
+        {
+          _cellBuffer = new StringBuffer();
+        }
+        blockBuffer = _cellBuffer;
+      }
+      else
+      {
+        if(_table == null)
+        {
+          _table = new ArrayList();
+        }
+        TAP tap = (TAP)StyleSheet.uncompressProperty(papx, new TAP(), _styleSheet);
+        TableRow nextRow = new TableRow(_cells, tap);
+        _table.add(nextRow);
+        _cells = null;
+        return;
+      }
+    }
+    else
+    {
+      //just prints out any table that is stored in _table
+      printTable();
+    }
+
+    if(pap._ilfo > 0)
+    {
+      LVL lvl = _listTables.getLevel(pap._ilfo, pap._ilvl);
+      addListParagraphContent(lvl, blockBuffer, pap, currentNode, start, end, std);
+    }
+    else
+    {
+      addParagraphContent(blockBuffer, pap, currentNode, start, end, std);
+    }
+
+  }
+

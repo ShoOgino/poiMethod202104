@@ -1,0 +1,56 @@
+  /**
+   * Goes through the piece table and parses out the info regarding the text
+   * blocks. For Word 97 and greater all text is stored in the "complex" way
+   * because of unicode.
+   *
+   * @param tableStream buffer containing the main table stream.
+   * @param beginning of the complex data.
+   * @throws IOException
+   */
+  private void findText(byte[] tableStream, int complexOffset) throws IOException
+  {
+    //actual text
+    int pos = complexOffset;
+    //skips through the prms before we reach the piece table. These contain data
+    //for actual fast saved files
+    while(tableStream[pos] == 1)
+    {
+        pos++;
+        int skip = LittleEndian.getShort(tableStream, pos);
+        pos += 2 + skip;
+    }
+    if(tableStream[pos] != 2)
+    {
+        throw new IOException("corrupted Word file");
+    }
+    else
+    {
+        //parse out the text pieces
+        int pieceTableSize = LittleEndian.getInt(tableStream, ++pos);
+        pos += 4;
+        int pieces = (pieceTableSize - 4) / 12;
+        for (int x = 0; x < pieces; x++)
+        {
+            int filePos = LittleEndian.getInt(tableStream, pos + ((pieces + 1) * 4) + (x * 8) + 2);
+            boolean unicode = false;
+            if ((filePos & 0x40000000) == 0)
+            {
+                unicode = true;
+            }
+            else
+            {
+                unicode = false;
+                filePos &= ~(0x40000000);//gives me FC in doc stream
+                filePos /= 2;
+            }
+            int totLength = LittleEndian.getInt(tableStream, pos + (x + 1) * 4) -
+                            LittleEndian.getInt(tableStream, pos + (x * 4));
+
+            TextPiece piece = new TextPiece(filePos, totLength, unicode);
+            _text.add(piece);
+
+        }
+
+    }
+  }
+
