@@ -1,26 +1,28 @@
   public String text()
     throws UnsupportedEncodingException
   {
-    if (!_textRangeFound)
-    {
-      int[] point = findRange(_text, _textStart, _start, _end);
-      _textStart = point[0];
-      _textEnd = point[1];
-      _textRangeFound = true;
-    }
+    initText();
 
     StringBuffer sb = new StringBuffer();
     int size = _text.size();
     for (int x = 0; x < size; x++)
     {
       TextPiece tp = (TextPiece)_text.get(x);
-      String encoding = "Cp1252";
-      if (tp.usesUnicode())
+      StringBuffer pieceSb = (StringBuffer)tp.getCacheContents();
+      if (pieceSb == null)
       {
-        encoding = "UTF-16LE";
+        String encoding = "Cp1252";
+        if (tp.usesUnicode())
+        {
+          encoding = "UTF-16LE";
+        }
+        String str = new String(tp.getBuf(), encoding);
+        pieceSb = new StringBuffer(str);
+        tp.fillCache(pieceSb);
       }
-      String str = new String (tp.getBuf(), Math.max(_start, tp.getStart()), Math.min(_end, tp.getEnd()), encoding);
-      sb.append(str);
+      int startIndex = Math.max(0, (tp.getStart() - _start));
+      int endIndex = Math.min(tp.getEnd() - startIndex, _end - startIndex);
+      sb.append(pieceSb.toString().substring(startIndex, endIndex));
     }
     return sb.toString();
   }
