@@ -1,0 +1,46 @@
+    private void insertCell(CellValueRecordInterface cell, int type) {
+        int rownum = cell.getRow();
+        int colnum = cell.getColumn();
+
+        DoubleList  nmRow = (DoubleList)numericcells.get(rownum);
+
+        switch (type) {
+            case HSSFCell.CELL_TYPE_NUMERIC:
+                NumberRecord nrecord = (NumberRecord)cell;
+                adjustDoubleList(nmRow, colnum+1);
+                nmRow.set(colnum,nrecord.getValue());
+                physCells++;
+                break;
+            case HSSFCell.CELL_TYPE_STRING:
+                LabelSSTRecord srecord = (LabelSSTRecord)cell;
+                adjustDoubleList(nmRow, colnum+1);
+                nmRow.set(colnum,srecord.getSSTIndex());
+                physCells++;
+                break;
+            case HSSFCell.CELL_TYPE_FORMULA:
+                List ptRow = (List)formulaptgs.get(rownum);
+                List stRow = (List)stringvals.get(rownum);
+                FormulaRecordAggregate frarecord = (FormulaRecordAggregate)cell;
+                adjustDoubleList(nmRow, colnum+1);
+                adjustObjectList(ptRow, colnum+1);
+                adjustStringList(stRow, colnum+1);
+                nmRow.set(colnum,frarecord.getFormulaRecord().getValue());
+                ptRow.set(colnum,frarecord.getFormulaRecord().getParsedExpression());
+                StringRecord str = frarecord.getStringRecord();
+                if (str != null) {
+                    stRow.set(colnum,str.getString());
+                } else {
+                    stRow.set(colnum,null);
+                }
+                physCells++;
+                break;
+            case HSSFCell.CELL_TYPE_BLANK:
+                //BlankRecord brecord = (BlankRecord)cell;
+                physCells++;
+                break;
+
+            default:
+                throw new RuntimeException("UnImplemented Celltype "+cell.toString());
+        }
+    }
+

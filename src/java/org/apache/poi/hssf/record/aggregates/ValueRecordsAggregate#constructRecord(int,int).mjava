@@ -1,0 +1,63 @@
+    CellValueRecordInterface constructRecord(int row, int col) {
+        if (celltype.size() < row || ((IntList)celltype.get(row)).size() < col) {
+            throw new ArrayIndexOutOfBoundsException("constructRecord called with row = "+row+
+                      "and col ="+col+" but there are only "+celltype.size()+" rows and "+
+                      ((IntList)celltype.get(row)).size()+" cols!!");
+        }
+
+        CellValueRecordInterface retval = null;
+        int type = ((IntList)celltype.get(row)).get(col);
+
+
+        switch (type) {
+            case HSSFCell.CELL_TYPE_NUMERIC:
+                NumberRecord nrecord = new NumberRecord();
+                nrecord.setColumn((short)col);
+                nrecord.setRow(row);
+                nrecord.setValue(((DoubleList)numericcells.get(row)).get(col));
+                nrecord.setXFIndex((short)((IntList)xfs.get(row)).get(col));
+                retval = nrecord;
+                break;
+            case HSSFCell.CELL_TYPE_STRING:
+                LabelSSTRecord srecord = new LabelSSTRecord();
+                srecord.setColumn((short)col);
+                srecord.setRow(row);
+                srecord.setSSTIndex((int)((DoubleList)numericcells.get(row)).get(col));
+                srecord.setXFIndex((short)((IntList)xfs.get(row)).get(col));
+                retval=srecord;
+                break;
+            case HSSFCell.CELL_TYPE_BLANK:
+                BlankRecord brecord = new BlankRecord();
+                brecord.setColumn((short)col);
+                brecord.setRow(row);
+                brecord.setXFIndex((short)((IntList)xfs.get(row)).get(col));
+                retval=brecord;
+                break;
+            case HSSFCell.CELL_TYPE_FORMULA:
+                FormulaRecord fr = new FormulaRecord();
+                fr.setColumn((short)col);
+                fr.setOptions((short)2);
+
+                fr.setRow(row);
+                fr.setXFIndex((short)((IntList)xfs.get(row)).get(col));
+                StringRecord        st = null;
+                String strval = (String)((List)stringvals.get(row)).get(col);
+                List expressionlist =  (List)((List)formulaptgs.get(row)).get(col);
+                fr.setParsedExpression(expressionlist);
+                fr.setExpressionLength(calculatePtgSize(expressionlist));
+                if (strval != null) {
+                  st = new StringRecord();
+                   st.setString(strval);
+                }
+                FormulaRecordAggregate frarecord = new FormulaRecordAggregate(fr,st);
+
+                retval= frarecord;
+                break;
+
+            default:
+                throw new RuntimeException("UnImplemented Celltype "+type);
+        }
+
+        return retval;
+    }
+
