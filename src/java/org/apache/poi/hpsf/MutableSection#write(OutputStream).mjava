@@ -46,6 +46,7 @@
         /* Writing the section's dictionary it tricky. If there is a dictionary
          * (property 0) the codepage property (property 1) has to be set, too.
          * Since HPSF supports Unicode only, the codepage must be 1200. */
+        int codepage = -1;
         if (getProperty(PropertyIDMap.PID_DICTIONARY) != null)
         {
             final Object p1 = getProperty(PropertyIDMap.PID_CODEPAGE);
@@ -55,14 +56,12 @@
                     throw new IllegalPropertySetDataException
                         ("The codepage property (ID = 1) must be an " +
                          "Integer object.");
-                else if (((Integer) p1).intValue() != Constants.CP_UNICODE)
-                    throw new IllegalPropertySetDataException
-                        ("The codepage property (ID = 1) must be " +
-                         "1200 (Unicode).");
             }
             else
                 throw new IllegalPropertySetDataException
-                    ("The codepage property (ID = 1) must be set.");
+                    ("The codepage property (ID = 1) must be set if the " +
+                     "section contains a dictionary.");
+            codepage = getCodepage();
         }
 
         /* Sort the property list by their property IDs: */
@@ -102,11 +101,11 @@
                 position += p.write(propertyStream, getCodepage());
             else
             {
-                final int codepage = getCodepage();
                 if (codepage == -1)
                     throw new IllegalPropertySetDataException
                         ("Codepage (property 1) is undefined.");
-                position += writeDictionary(propertyStream, dictionary);
+                position += writeDictionary(propertyStream, dictionary,
+                                            codepage);
             }
         }
         propertyStream.close();

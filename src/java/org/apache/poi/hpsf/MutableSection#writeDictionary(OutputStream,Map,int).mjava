@@ -1,0 +1,65 @@
+    /**
+     * <p>Writes the section's dictionary.</p>
+     *
+     * @param out The output stream to write to.
+     * @param dictionary The dictionary.
+     * @param codepage The codepage to be used to write the dictionary items.
+     * @return The number of bytes written
+     * @exception IOException if an I/O exception occurs.
+     */
+    private static int writeDictionary(final OutputStream out,
+                                       final Map dictionary, final int codepage)
+        throws IOException
+    {
+        int length = TypeWriter.writeUIntToStream(out, dictionary.size());
+        for (final Iterator i = dictionary.keySet().iterator(); i.hasNext();)
+        {
+            final Long key = (Long) i.next();
+            final String value = (String) dictionary.get(key);
+
+            if (codepage == Constants.CP_UNICODE)
+            {
+                /* Write the dictionary item in Unicode. */
+                int sLength = value.length() + 1;
+                if (sLength % 2 == 1)
+                    sLength++;
+                length += TypeWriter.writeUIntToStream(out, key.longValue());
+                length += TypeWriter.writeUIntToStream(out, sLength);
+                final char[] ca = value.toCharArray();
+                for (int j = 0; j < ca.length; j++)
+                {
+                    int high = (ca[j] & 0x0ff00) >> 8;
+                    int low  = (ca[j] & 0x000ff);
+                    out.write(low);
+                    out.write(high);
+                    length += 2;
+                    sLength--;
+                }
+                while (sLength > 0)
+                {
+                    out.write(0x00);
+                    out.write(0x00);
+                    length += 2;
+                    sLength--;
+                }
+            }
+            else
+            {
+                /* Write the dictionary item in another codepage than
+                 * Unicode. */
+                length += TypeWriter.writeUIntToStream(out, key.longValue());
+                length += TypeWriter.writeUIntToStream(out, value.length() + 1);
+                final byte[] ba =
+                    value.getBytes(VariantSupport.codepageToEncoding(codepage));
+                for (int j = 0; j < ba.length; j++)
+                {
+                    out.write(ba[j]);
+                    length++;
+                }
+                out.write(0x00);
+                length++;
+            }
+        }
+        return length;
+    }
+
