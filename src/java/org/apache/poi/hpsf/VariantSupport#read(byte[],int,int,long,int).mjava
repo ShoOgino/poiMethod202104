@@ -7,17 +7,21 @@
      * @param length The length of the variant including the variant
      * type field
      * @param type The variant type to read
+     * @param codepage The codepage to use to write non-wide strings
      * @return A Java object that corresponds best to the variant
      * field. For example, a VT_I4 is returned as a {@link Long}, a
      * VT_LPSTR as a {@link String}.
      * @exception ReadingNotSupportedException if a property is to be written
      * who's variant type HPSF does not yet support
+     * @exception UnsupportedEncodingException if the specified codepage is not
+     * supported
      *
      * @see Variant
      */
     public static Object read(final byte[] src, final int offset,
-                              final int length, final long type)
-        throws ReadingNotSupportedException
+                              final int length, final long type,
+                              final int codepage)
+        throws ReadingNotSupportedException, UnsupportedEncodingException
     {
         Object value;
         int o1 = offset;
@@ -65,18 +69,18 @@
                  * Read a byte string. In Java it is represented as a
                  * String object. The 0x00 bytes at the end must be
                  * stripped.
-                 *
-                 * FIXME (2): Reading an 8-bit string should pay attention
-                 * to the codepage. Currently the byte making out the
-                 * property's value are interpreted according to the
-                 * platform's default character set.
                  */
                 final int first = o1 + LittleEndian.INT_SIZE;
                 long last = first + LittleEndian.getUInt(src, o1) - 1;
                 o1 += LittleEndian.INT_SIZE;
+                final int rawLength = (int) (last - first + 1);
                 while (src[(int) last] == 0 && first <= last)
                     last--;
-                value = new String(src, (int) first, (int) (last - first + 1));
+                final int l = (int) (last - first + 1);
+                value = codepage != -1 ?
+                    new String(src, (int) first, l,
+                               codepageToEncoding(codepage)) :
+                    new String(src, (int) first, l);
                 break;
             }
             case Variant.VT_LPWSTR:

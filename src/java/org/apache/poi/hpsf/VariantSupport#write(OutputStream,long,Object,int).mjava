@@ -5,6 +5,7 @@
      * @param out The stream to write the value to.
      * @param type The variant's type.
      * @param value The variant's value.
+     * @param codepage The codepage to use to write non-wide strings
      * @return The number of entities that have been written. In many cases an
      * "entity" is a byte but this is not always the case.
      * @exception IOException if an I/O exceptions occurs
@@ -12,7 +13,7 @@
      * who's variant type HPSF does not yet support
      */
     public static int write(final OutputStream out, final long type,
-                            final Object value)
+                            final Object value, final int codepage)
         throws IOException, WritingNotSupportedException
     {
         int length = 0;
@@ -30,16 +31,13 @@
             }
             case Variant.VT_LPSTR:
             {
-                length = TypeWriter.writeUIntToStream
-                    (out, ((String) value).length() + 1);
-                char[] s = Util.pad4((String) value);
-                /* FIXME (2): The following line forces characters to bytes.
-                 * This is generally wrong and should only be done according to
-                 * a codepage. Alternatively Unicode could be written (see 
-                 * Variant.VT_LPWSTR). */
-                byte[] b = new byte[s.length + 1];
-                for (int i = 0; i < s.length; i++)
-                    b[i] = (byte) s[i];
+                final byte[] bytes =
+                    (codepage == -1 ?
+                    ((String) value).getBytes() :
+                    ((String) value).getBytes(codepageToEncoding(codepage)));
+                length = TypeWriter.writeUIntToStream(out, bytes.length + 1);
+                final byte[] b = new byte[bytes.length + 1];
+                System.arraycopy(bytes, 0, b, 0, bytes.length);
                 b[b.length - 1] = 0x00;
                 out.write(b);
                 length += b.length;
@@ -119,12 +117,13 @@
             }
         }
 
-        /* Add 0x00 character to write a multiple of four bytes: */
-        while (length % 4 != 0)
-        {
-            out.write(0);
-            length++;
-        }
+        /* Add 0x00 characters to write a multiple of four bytes: */
+        // FIXME (1) Try this!
+//        while (length % 4 != 0)
+//        {
+//            out.write(0);
+//            length++;
+//        }
         return length;
     }
 
