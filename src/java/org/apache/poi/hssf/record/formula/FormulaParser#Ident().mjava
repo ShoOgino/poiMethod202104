@@ -1,24 +1,33 @@
-    /** Parse and Translate a Identifier */
+    /** Parse and Translate a String Identifier */
     private void Ident() {
         String name;
         name = GetName();
         if (Look == '('){
-            //This is a function 
-            Match('(');
-            int numArgs = Arguments(); 
-            Match(')');
-            //this is the end of the function
-            tokens.add(function(name,(byte)numArgs));
+            //This is a function
+            function(name);
         } else if (Look == ':') { // this is a AreaReference
             String first = name;
             Match(':');
             String second = GetName();
             tokens.add(new AreaPtg(first+":"+second));
+        } else if (Look == '!') {
+            Match('!');
+            String sheetName = name;
+            String first = GetName();
+            short externIdx = book.checkExternSheet(book.getSheetIndex(sheetName));
+            if (Look == ':') {
+                Match(':');
+                String second=GetName();
+                
+                tokens.add(new Area3DPtg(first+":"+second,externIdx));
+            } else {
+                tokens.add(new Ref3DPtg(first,externIdx));
+            }
         } else {
             //this can be either a cell ref or a named range !!
             boolean cellRef = true ; //we should probably do it with reg exp??
             if (cellRef) {
-                tokens.add(new ReferencePtg(name)); 
+                tokens.add(new ReferencePtg(name));
             }else {
                 //handle after named range is integrated!!
             }
