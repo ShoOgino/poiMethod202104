@@ -1,0 +1,76 @@
+    /**
+     * <p>Compares two {@link DirectoryEntry} instances of a POI file system.
+     * The directories must contain the same streams with the same names and
+     * contents.</p>
+     *
+     * @param d1 The first directory.
+     * @param d2 The second directory.
+     * @param msg The method may append human-readable comparison messages to
+     * this string buffer. 
+     * @return <code>true</code> if the directories are equal, else
+     * <code>false</code>.
+     * @exception MarkUnsupportedException if a POI document stream does not
+     * support the mark() operation.
+     * @exception NoPropertySetStreamException if the application tries to
+     * create a property set from a POI document stream that is not a property
+     * set stream.
+     * @exception IOException if any I/O exception occurs.
+     */
+    private static boolean equal(final DirectoryEntry d1,
+                                 final DirectoryEntry d2,
+                                 final StringBuffer msg)
+    throws MarkUnsupportedException, NoPropertySetStreamException, IOException
+    {
+        boolean equal = true;
+        /* Iterate over d1 and compare each entry with its counterpart in d2. */
+        for (final Iterator i = d1.getEntries(); equal && i.hasNext();)
+        {
+            final Entry e1 = (Entry) i.next();
+            final String n1 = e1.getName();
+            Entry e2 = null;
+            try
+            {
+                e2 = d2.getEntry(n1);
+            }
+            catch (FileNotFoundException ex)
+            {
+                msg.append("Document \"" + e1 + "\" exitsts, document \"" +
+                           e2 + "\" does not.\n");
+                equal = false;
+                break;
+            }
+
+            if (e1.isDirectoryEntry() && e2.isDirectoryEntry())
+                equal = equal((DirectoryEntry) e1, (DirectoryEntry) e2, msg);
+            else if (e1.isDocumentEntry() && e2.isDocumentEntry())
+                equal = equal((DocumentEntry) e1, (DocumentEntry) e2, msg);
+            else
+            {
+                msg.append("One of \"" + e1 + "\" and \"" + e2 + "\" is a " +
+                           "document while the other one is a directory.\n");
+                equal = false;
+            }
+        }
+
+        /* Iterate over d2 just to make sure that there are no entries in d2
+         * that are not in d1. */
+        for (final Iterator i = d2.getEntries(); equal && i.hasNext();)
+        {
+            final Entry e2 = (Entry) i.next();
+            final String n2 = e2.getName();
+            Entry e1 = null;
+            try
+            {
+                e1 = d1.getEntry(n2);
+            }
+            catch (FileNotFoundException ex)
+            {
+                msg.append("Document \"" + e2 + "\" exitsts, document \"" +
+                           e1 + "\" does not.\n");
+                equal = false;
+                break;
+            }
+        }
+        return equal;
+    }
+

@@ -1,0 +1,76 @@
+    /**
+     * <p>Runs the example program. The application expects one or two
+     * arguments:</p>
+     * 
+     * <ol>
+     * 
+     * <li><p>The first argument is the disk file name of the POI filesystem to
+     * copy.</p></li>
+     * 
+     * <li><p>The second argument is optional. If it is given, it is the name of
+     * a disk file the copy of the POI filesystem will be written to. If it is
+     * not given, the copy will be written to a temporary file which will be
+     * deleted at the end of the program.</p></li>
+     * 
+     * </ol>
+     *
+     * @param args Command-line arguments.
+     * @exception MarkUnsupportedException if a POI document stream does not
+     * support the mark() operation.
+     * @exception NoPropertySetStreamException if the application tries to
+     * create a property set from a POI document stream that is not a property
+     * set stream.
+     * @exception IOException if any I/O exception occurs.
+     */
+    public static void main(final String[] args)
+    throws MarkUnsupportedException, NoPropertySetStreamException, IOException
+    {
+        String originalFileName = null;
+        String copyFileName = null;
+
+        /* Check the command-line arguments. */
+        if (args.length == 1)
+        {
+            originalFileName = args[0];
+            File f = File.createTempFile("CopyOfPOIFileSystem-", ".ole2");
+            f.deleteOnExit();
+            copyFileName = f.getAbsolutePath();
+        }
+        else if (args.length == 2)
+        {
+            originalFileName = args[0];
+            copyFileName = args[1];
+        }
+        else
+        {
+            System.err.println("Usage: " + CopyCompare.class.getName() +
+                               "originPOIFS [copyPOIFS]");
+            System.exit(1);
+        }
+
+        /* Read the origin POIFS using the eventing API. The real work is done
+         * in the class CopyFile which is registered here as a POIFSReader. */
+        final POIFSReader r = new POIFSReader();
+        final CopyFile cf = new CopyFile(copyFileName);
+        r.registerListener(cf);
+        r.read(new FileInputStream(originalFileName));
+        
+        /* Write the new POIFS to disk. */
+        cf.close();
+
+        /* Read all documents from the original POI file system and compare them
+         * with the equivalent document from the copy. */
+        final POIFSFileSystem opfs =
+            new POIFSFileSystem(new FileInputStream(originalFileName));
+        final POIFSFileSystem cpfs =
+            new POIFSFileSystem(new FileInputStream(copyFileName));
+
+        final DirectoryEntry oRoot = opfs.getRoot();
+        final DirectoryEntry cRoot = cpfs.getRoot();
+        final StringBuffer messages = new StringBuffer();
+        if (equal(oRoot, cRoot, messages))
+            System.out.println("Equal");
+        else
+            System.out.println("Not equal: " + messages.toString());
+    }
+
