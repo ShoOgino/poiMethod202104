@@ -1,8 +1,5 @@
-    public static byte[] readTestData( String filename )
-            throws IOException
+    static private byte[] readData( FileInputStream stream, int eofChar ) throws IOException
     {
-        File file = new File( filename );
-        FileInputStream stream = new FileInputStream( file );
         int characterCount = 0;
         byte b = (byte) 0;
         List bytes = new ArrayList();
@@ -11,6 +8,10 @@
         while ( !done )
         {
             int count = stream.read();
+            char baseChar = 'a';
+
+            if ( count == eofChar)
+                break;
 
             switch ( count )
             {
@@ -18,16 +19,7 @@
                 case '#':
                     readToEOL(stream);
                     break;
-                case '0':
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9':
+                case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
                     b <<= 4;
                     b += (byte) ( count - '0' );
                     characterCount++;
@@ -39,31 +31,12 @@
                     }
                     break;
 
-                case 'A':
-                case 'B':
-                case 'C':
-                case 'D':
-                case 'E':
-                case 'F':
-                    b <<= 4;
-                    b += (byte) ( count + 10 - 'A' );
-                    characterCount++;
-                    if ( characterCount == 2 )
-                    {
-                        bytes.add( new Byte( b ) );
-                        characterCount = 0;
-                        b = (byte) 0;
-                    }
-                    break;
+                case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
+                    baseChar = 'A';
 
-                case 'a':
-                case 'b':
-                case 'c':
-                case 'd':
-                case 'e':
-                case 'f':
+                case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
                     b <<= 4;
-                    b += (byte) ( count + 10 - 'a' );
+                    b += (byte) ( count + 10 - baseChar );
                     characterCount++;
                     if ( characterCount == 2 )
                     {
@@ -81,7 +54,6 @@
                     break;
             }
         }
-        stream.close();
         Byte[] polished = (Byte[]) bytes.toArray( new Byte[0] );
         byte[] rval = new byte[polished.length];
 
