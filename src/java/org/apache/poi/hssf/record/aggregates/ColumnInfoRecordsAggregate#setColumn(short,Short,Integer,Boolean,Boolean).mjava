@@ -1,0 +1,91 @@
+    public void setColumn(short column, Short width, Integer level, Boolean hidden, Boolean collapsed)
+    {
+        ColumnInfoRecord ci = null;
+        int              k  = 0;
+
+        for (k = 0; k < records.size(); k++)
+        {
+            ci = ( ColumnInfoRecord ) records.get(k);
+            if ((ci.getFirstColumn() <= column)
+                    && (column <= ci.getLastColumn()))
+            {
+                break;
+            }
+            ci = null;
+        }
+
+        if (ci != null)
+        {
+            boolean widthChanged = width != null && ci.getColumnWidth() != width.shortValue();
+            boolean levelChanged = level != null && ci.getOutlineLevel() != level.intValue();
+            boolean hiddenChanged = hidden != null && ci.getHidden() != hidden.booleanValue();
+            boolean collapsedChanged = collapsed != null && ci.getCollapsed() != collapsed.booleanValue();
+            boolean columnChanged = widthChanged || levelChanged || hiddenChanged || collapsedChanged;
+            if (!columnChanged)
+            {
+                // do nothing...nothing changed.
+            }
+            else if ((ci.getFirstColumn() == column)
+                     && (ci.getLastColumn() == column))
+            {                               // if its only for this cell then
+                setColumnInfoFields( ci, width, level, hidden, collapsed );
+            }
+            else if ((ci.getFirstColumn() == column)
+                     || (ci.getLastColumn() == column))
+            {
+                // okay so the width is different but the first or last column == the column we'return setting
+                // we'll just divide the info and create a new one
+                if (ci.getFirstColumn() == column)
+                {
+                    ci.setFirstColumn(( short ) (column + 1));
+                }
+                else
+                {
+                    ci.setLastColumn(( short ) (column - 1));
+                }
+                ColumnInfoRecord nci = ( ColumnInfoRecord ) createColInfo();
+
+                nci.setFirstColumn(column);
+                nci.setLastColumn(column);
+                nci.setOptions(ci.getOptions());
+                nci.setXFIndex(ci.getXFIndex());
+                setColumnInfoFields( nci, width, level, hidden, collapsed );
+
+                insertColumn(k, nci);
+            }
+            else
+            {
+                //split to 3 records
+                short lastcolumn = ci.getLastColumn();
+                ci.setLastColumn(( short ) (column - 1));
+
+                ColumnInfoRecord nci = ( ColumnInfoRecord ) createColInfo();
+                nci.setFirstColumn(column);
+                nci.setLastColumn(column);
+                nci.setOptions(ci.getOptions());
+                nci.setXFIndex(ci.getXFIndex());
+                setColumnInfoFields( nci, width, level, hidden, collapsed );
+                insertColumn(++k, nci);
+
+                nci = ( ColumnInfoRecord ) createColInfo();
+                nci.setFirstColumn((short)(column+1));
+                nci.setLastColumn(lastcolumn);
+                nci.setOptions(ci.getOptions());
+                nci.setXFIndex(ci.getXFIndex());
+                nci.setColumnWidth(ci.getColumnWidth());
+                insertColumn(++k, nci);
+            }
+        }
+        else
+        {
+
+            // okay so there ISN'T a column info record that cover's this column so lets create one!
+            ColumnInfoRecord nci = ( ColumnInfoRecord ) createColInfo();
+
+            nci.setFirstColumn(column);
+            nci.setLastColumn(column);
+            setColumnInfoFields( nci, width, level, hidden, collapsed );
+            insertColumn(k, nci);
+        }
+    }
+

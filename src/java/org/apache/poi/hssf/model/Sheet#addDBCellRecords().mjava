@@ -1,0 +1,78 @@
+    /**
+     * Not currently used method to calculate and add dbcell records
+     *
+     */
+
+    public void addDBCellRecords()
+    {
+        int         offset        = 0;
+        int         recnum        = 0;
+        int         rownum        = 0;
+        //int         lastrow       = 0;
+        //long        lastrowoffset = 0;
+        IndexRecord index         = null;
+
+        // ArrayList rowOffsets = new ArrayList();
+        IntList     rowOffsets    = new IntList();
+
+        for (recnum = 0; recnum < records.size(); recnum++)
+        {
+            Record rec = ( Record ) records.get(recnum);
+
+            if (rec.getSid() == IndexRecord.sid)
+            {
+                index = ( IndexRecord ) rec;
+            }
+            if (rec.getSid() != RowRecord.sid)
+            {
+                offset += rec.serialize().length;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // First Row Record
+        for (; recnum < records.size(); recnum++)
+        {
+            Record rec = ( Record ) records.get(recnum);
+
+            if (rec.getSid() == RowRecord.sid)
+            {
+                rownum++;
+                rowOffsets.add(offset);
+                if ((rownum % 32) == 0)
+                {
+
+                    // if this is the last rec in a  dbcell block
+                    // find the next row or last value record
+                    for (int rn = recnum; rn < records.size(); rn++)
+                    {
+                        rec = ( Record ) records.get(rn);
+                        if ((!rec.isInValueSection())
+                                || (rec.getSid() == RowRecord.sid))
+                        {
+
+                            // here is the next row or last value record
+                            records.add(rn,
+                                        createDBCell(offset, rowOffsets,
+                                                     index));
+                            recnum = rn;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                }
+            }
+            if (!rec.isInValueSection())
+            {
+                records.add(recnum, createDBCell(offset, rowOffsets, index));
+                break;
+            }
+            offset += rec.serialize().length;
+        }
+    }
+

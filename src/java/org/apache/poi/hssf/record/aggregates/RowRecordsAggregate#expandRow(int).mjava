@@ -1,0 +1,39 @@
+    public void expandRow( int rowNumber )
+    {
+        int idx = rowNumber;
+        if (idx == -1)
+            return;
+
+        // If it is already expanded do nothing.
+        if (!isRowGroupCollapsed(idx))
+            return;
+
+        // Find the start of the group.
+        int startIdx = findStartOfRowOutlineGroup( idx );
+        RowRecord row = getRow( startIdx );
+
+        // Find the end of the group.
+        int endIdx = findEndOfRowOutlineGroup( idx );
+
+        // expand:
+        // colapsed bit must be unset
+        // hidden bit gets unset _if_ surrounding groups are expanded you can determine
+        //   this by looking at the hidden bit of the enclosing group.  You will have
+        //   to look at the start and the end of the current group to determine which
+        //   is the enclosing group
+        // hidden bit only is altered for this outline level.  ie.  don't uncollapse contained groups
+        if ( !isRowGroupHiddenByParent( idx ) )
+        {
+            for ( int i = startIdx; i <= endIdx; i++ )
+            {
+                if ( row.getOutlineLevel() == getRow( i ).getOutlineLevel() )
+                    getRow( i ).setZeroHeight( false );
+                else if (!isRowGroupCollapsed(i))
+                    getRow( i ).setZeroHeight( false );
+            }
+        }
+
+        // Write collapse field
+        getRow( endIdx + 1 ).setColapsed( false );
+    }
+

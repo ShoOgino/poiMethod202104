@@ -17,9 +17,10 @@
      */
     public static Sheet createSheet(List recs, int sheetnum, int offset)
     {
-        log.logFormatted(POILogger.DEBUG,
-                         "Sheet createSheet (existing file) with %",
-                         new Integer(recs.size()));
+        if (log.check( POILogger.DEBUG ))
+            log.logFormatted(POILogger.DEBUG,
+                    "Sheet createSheet (existing file) with %",
+                    new Integer(recs.size()));
         Sheet     retval             = new Sheet();
         ArrayList records            = new ArrayList(recs.size() / 5);
         boolean   isfirstcell        = true;
@@ -55,6 +56,13 @@
             }
             else if (rec.getSid() == DimensionsRecord.sid)
             {
+                // Make a columns aggregate if one hasn't ready been created.
+                if (retval.columns == null)
+                {
+                    retval.columns = new ColumnInfoRecordsAggregate();
+                    records.add(retval.columns);
+                }
+
                 retval.dims    = ( DimensionsRecord ) rec;
                 retval.dimsloc = records.size();
             }
@@ -66,11 +74,16 @@
             }
             else if (rec.getSid() == ColumnInfoRecord.sid)
             {
-                if (retval.columnSizes == null)
+                ColumnInfoRecord col = (ColumnInfoRecord)rec;
+                if (retval.columns != null)
                 {
-                    retval.columnSizes = new ArrayList();
+                    rec = null; //only add the aggregate once
                 }
-                retval.columnSizes.add(rec);
+                else
+                {
+                    rec = retval.columns = new ColumnInfoRecordsAggregate();
+                }
+                retval.columns.insertColumn(col);
             }
             else if (rec.getSid() == DefaultColWidthRecord.sid)
             {
@@ -100,18 +113,16 @@
             }
             else if ( rec.getSid() == RowRecord.sid )
             {
+                RowRecord row = (RowRecord)rec;
+                if (!isfirstrow) rec = null; //only add the aggregate once
+
                 if ( isfirstrow )
                 {
                     retval.rows = new RowRecordsAggregate();
-                    rec = retval.rows;
-                    retval.rows.construct( k, recs );
+                    rec = retval.rows;                    
                     isfirstrow = false;
                 }
-                else
-                {
-                    rec = null;
-                }
-
+                retval.rows.insertRow(row);
             }
             else if ( rec.getSid() == PrintGridlinesRecord.sid )
             {
@@ -129,62 +140,59 @@
             {
                 retval.printSetup = (PrintSetupRecord) rec;
             }
-            else if ( rec.getSid() == ProtectRecord.sid )
+            else if ( rec.getSid() == LeftMarginRecord.sid)
             {
-                 retval.protect = (ProtectRecord) rec;
+                retval.getMargins()[LeftMargin] = (LeftMarginRecord) rec;
             }
-	    else if ( rec.getSid() == LeftMarginRecord.sid)
-	    {
-		retval.getMargins()[LeftMargin] = (LeftMarginRecord) rec;
-	    }
-	    else if ( rec.getSid() == RightMarginRecord.sid)
-	    {
-		retval.getMargins()[RightMargin] = (RightMarginRecord) rec;
-	    }
-	    else if ( rec.getSid() == TopMarginRecord.sid)
+            else if ( rec.getSid() == RightMarginRecord.sid)
             {
-		retval.getMargins()[TopMargin] = (TopMarginRecord) rec;
-	    }
-	    else if ( rec.getSid() == BottomMarginRecord.sid)
-            {
-		retval.getMargins()[BottomMargin] = (BottomMarginRecord) rec;
-	    }
-	    else if ( rec.getSid() == WindowTwoRecord.sid )
-	    {
-		retval.windowTwo = (WindowTwoRecord) rec;
-	    }
-            else if ( rec.getSid() == DBCellRecord.sid )
-            {
-                rec = null;
+                retval.getMargins()[RightMargin] = (RightMarginRecord) rec;
             }
-            else if ( rec.getSid() == IndexRecord.sid )
+            else if ( rec.getSid() == TopMarginRecord.sid)
             {
-                rec = null;
+                retval.getMargins()[TopMargin] = (TopMarginRecord) rec;
             }
-			else if (rec.getSid() == PageBreakRecord.HORIZONTAL_SID)
+            else if ( rec.getSid() == BottomMarginRecord.sid)
+            {
+                retval.getMargins()[BottomMargin] = (BottomMarginRecord) rec;
+            }
+            else if ( rec.getSid() == SelectionRecord.sid )
+            {
+                retval.selection = (SelectionRecord) rec;
+            }
+            else if ( rec.getSid() == WindowTwoRecord.sid )
+            {
+                retval.windowTwo = (WindowTwoRecord) rec;
+            }
+			else if ( rec.getSid() == ProtectRecord.sid )
 			{
-				retval.rowBreaks = (PageBreakRecord)rec;
-            }
-			else if (rec.getSid() == PageBreakRecord.VERTICAL_SID)
-			{
-				retval.colBreaks = (PageBreakRecord)rec;
+				retval.protect = (ProtectRecord) rec;
+			} 
+			else if (rec.getSid() == PageBreakRecord.HORIZONTAL_SID) 
+			{	
+				retval.rowBreaks = (PageBreakRecord)rec;				
 			}
-
-	    
+			else if (rec.getSid() == PageBreakRecord.VERTICAL_SID) 
+			{	
+				retval.colBreaks = (PageBreakRecord)rec;				
+			}
+            
             if (rec != null)
             {
                 records.add(rec);
             }
         }
         retval.records = records;
-        if (retval.rows == null)
-        {
-            retval.rows = new RowRecordsAggregate();
-        }
-        if (retval.cells == null)
-        {
-            retval.cells = new ValueRecordsAggregate();
-        }
+//        if (retval.rows == null)
+//        {
+//            retval.rows = new RowRecordsAggregate();
+//        }
+        retval.checkCells();
+        retval.checkRows();
+//        if (retval.cells == null)
+//        {
+//            retval.cells = new ValueRecordsAggregate();
+//        }
         if (log.check( POILogger.DEBUG ))
             log.log(POILogger.DEBUG, "sheet createSheet (existing file) exited");
         return retval;
