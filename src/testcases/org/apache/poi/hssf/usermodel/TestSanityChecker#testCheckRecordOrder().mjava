@@ -1,0 +1,120 @@
+    public void testCheckRecordOrder()
+            throws Exception
+    {
+        final SanityChecker c = new SanityChecker();
+        List records = new ArrayList();
+        records.add(new BOFRecord());
+        records.add(new InterfaceHdrRecord());
+        records.add(new BoundSheetRecord());
+        records.add(new EOFRecord());
+        final SanityChecker.CheckRecord[] check = {
+            new SanityChecker.CheckRecord(BOFRecord.class, '1'),
+            new SanityChecker.CheckRecord(InterfaceHdrRecord.class, '0'),
+            new SanityChecker.CheckRecord(BoundSheetRecord.class, 'M'),
+            new SanityChecker.CheckRecord(NameRecord.class, '*'),
+            new SanityChecker.CheckRecord(EOFRecord.class, '1'),
+        };
+        // check pass
+        c.checkRecordOrder(records, check);
+        records.add(2, new BoundSheetRecord());
+        c.checkRecordOrder(records, check);
+        records.remove(1);      // optional record missing
+        c.checkRecordOrder(records, check);
+        records.add(3, new NameRecord());
+        records.add(3, new NameRecord()); // optional multiple record occurs more than one time
+        c.checkRecordOrder(records, check);
+
+        // check fail
+        expectFail( new Runnable() {
+            public void run()
+            {
+                // check optional in wrong spot
+                List records = new ArrayList();
+                records.add(new BOFRecord());
+                records.add(new BoundSheetRecord());
+                records.add(new InterfaceHdrRecord());
+                records.add(new EOFRecord());
+                c.checkRecordOrder(records, check);
+            }
+        });
+
+        expectFail( new Runnable() {
+            public void run()
+            {
+                // check optional one off occurs more than once
+                List records = new ArrayList();
+                records.add(new BOFRecord());
+                records.add(new InterfaceHdrRecord());
+                records.add(new BoundSheetRecord());
+                records.add(new InterfaceHdrRecord());
+                records.add(new EOFRecord());
+                c.checkRecordOrder(records, check);
+            }
+        });
+
+        expectFail( new Runnable() {
+            public void run()
+            {
+                // check many scattered
+                List records = new ArrayList();
+                records.add(new BOFRecord());
+                records.add(new BoundSheetRecord());
+                records.add(new NameRecord());
+                records.add(new EOFRecord());
+                records.add(new NameRecord());
+                c.checkRecordOrder(records, check);
+            }
+        });
+
+        expectFail( new Runnable() {
+            public void run()
+            {
+                // check missing manditory
+                List records = new ArrayList();
+                records.add(new InterfaceHdrRecord());
+                records.add(new BoundSheetRecord());
+                records.add(new EOFRecord());
+                c.checkRecordOrder(records, check);
+            }
+        });
+
+        expectFail( new Runnable() {
+            public void run()
+            {
+                // check missing 1..many
+                List records = new ArrayList();
+                records.add(new BOFRecord());
+                records.add(new InterfaceHdrRecord());
+                records.add(new EOFRecord());
+                c.checkRecordOrder(records, check);
+            }
+        });
+
+        expectFail( new Runnable() {
+            public void run()
+            {
+                // check wrong order
+                List records = new ArrayList();
+                records.add(new InterfaceHdrRecord());
+                records.add(new BoundSheetRecord());
+                records.add(new BOFRecord());
+                records.add(new EOFRecord());
+                c.checkRecordOrder(records, check);
+            }
+        });
+
+        expectFail( new Runnable() {
+            public void run()
+            {
+                // check optional record in wrong order
+                List records = new ArrayList();
+                records.add(new BOFRecord());
+                records.add(new BoundSheetRecord());
+                records.add(new InterfaceHdrRecord());
+                records.add(new EOFRecord());
+                c.checkRecordOrder(records, check);
+            }
+        });
+
+    }
+
