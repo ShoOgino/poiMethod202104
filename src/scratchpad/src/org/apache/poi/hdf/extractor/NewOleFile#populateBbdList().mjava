@@ -1,0 +1,35 @@
+    private void populateBbdList() throws IOException
+    {
+      seek(0x4c);
+      for(int x = 0; x < 109; x++)
+      {
+          _bbd_list[x] = readIntLE();
+      }
+      int pos = 109;
+      int remainder = _num_bbd_blocks - 109;
+      seek(0x48);
+      int numLists = readIntLE();
+      seek(0x44);
+      int firstList = readIntLE();
+
+      firstList = (firstList + 1) * 512;
+
+      for(int y = 0; y < numLists; y++)
+      {
+        int size = Math.min(127, remainder);
+        for(int z = 0; z < size; z++)
+        {
+          seek(firstList + (z * 4));
+          _bbd_list[pos++] = readIntLE();
+        }
+        if(size == 127)
+        {
+          seek(firstList + (127 * 4));
+          firstList = readIntLE();
+          firstList = (firstList + 1) * 512;
+          remainder -= 127;
+        }
+      }
+
+    }
+

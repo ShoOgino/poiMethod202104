@@ -1,0 +1,43 @@
+  private void addParagraphContent(StringBuffer blockBuffer, PAP pap,
+                                   PapxNode currentNode, int start, int end,
+                                   StyleDescription std)
+  {
+    addParagraphProperties(pap, blockBuffer);
+
+    Vector charRuns = findProperties(Math.max(currentNode.getStart(), start),
+                                     Math.min(currentNode.getEnd(), end),
+                                     _characterTable.root);
+    int len = charRuns.size();
+
+    for(int x = 0; x < len; x++)
+    {
+      ChpxNode charNode = (ChpxNode)charRuns.get(x);
+      byte[] chpx = charNode.getChpx();
+      CHP chp = (CHP)StyleSheet.uncompressProperty(chpx, std.getCHP(), _styleSheet);
+
+      addCharacterProperties(chp, blockBuffer);
+
+      int charStart = Math.max(charNode.getStart(), currentNode.getStart());
+      int charEnd = Math.min(charNode.getEnd(), currentNode.getEnd());
+      Vector textRuns = findProperties(charStart, charEnd, _text.root);
+      int textRunLen = textRuns.size();
+      for(int y = 0; y < textRunLen; y++)
+      {
+        TextPiece piece = (TextPiece)textRuns.get(y);
+        charStart = Math.max(charStart, piece.getStart());
+        charEnd = Math.min(charEnd, piece.getEnd());
+
+        if(piece.usesUnicode())
+        {
+          addUnicodeText(charStart, charEnd, blockBuffer);
+        }
+        else
+        {
+          addText(charStart, charEnd, blockBuffer);
+        }
+        closeLine(blockBuffer);
+      }
+    }
+    closeBlock(blockBuffer);
+  }
+

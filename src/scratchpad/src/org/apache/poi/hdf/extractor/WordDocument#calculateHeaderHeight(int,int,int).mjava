@@ -1,0 +1,79 @@
+  private int calculateHeaderHeight(int start, int end, int pageWidth)
+  {
+    Vector paragraphs = findProperties(start, end, _paragraphTable.root);
+    int size = paragraphs.size();
+    Vector lineHeights = new Vector();
+    //StyleContext context = StyleContext.getDefaultStyleContext();
+
+    for(int x = 0; x < size; x++)
+    {
+      PapxNode node = (PapxNode)paragraphs.get(x);
+      int parStart = Math.max(node.getStart(), start);
+      int parEnd = Math.min(node.getEnd(), end);
+
+      int lineWidth = 0;
+      int maxHeight = 0;
+
+      Vector textRuns = findProperties(parStart, parEnd, _characterTable.root);
+      int charSize = textRuns.size();
+
+      //StringBuffer lineBuffer = new StringBuffer();
+      for(int y = 0; y < charSize; y++)
+      {
+        ChpxNode charNode = (ChpxNode)textRuns.get(y);
+        int istd = Utils.convertBytesToShort(node.getPapx(), 0);
+        StyleDescription sd = _styleSheet.getStyleDescription(istd);
+        CHP chp = (CHP)StyleSheet.uncompressProperty(charNode.getChpx(), sd.getCHP(), _styleSheet);
+
+        //get Font info
+        //FontMetrics metrics = getFontMetrics(chp, context);
+
+        int height = 10;//metrics.getHeight();
+        maxHeight = Math.max(maxHeight, height);
+
+        int charStart = Math.max(parStart, charNode.getStart());
+        int charEnd = Math.min(parEnd, charNode.getEnd());
+
+        Vector text = findProperties(charStart, charEnd, _text.root);
+
+        int textSize = text.size();
+        StringBuffer buf = new StringBuffer();
+        for(int z = 0; z < textSize; z++)
+        {
+
+          TextPiece piece = (TextPiece)text.get(z);
+          int textStart = Math.max(piece.getStart(), charStart);
+          int textEnd = Math.min(piece.getEnd(), charEnd);
+
+          if(piece.usesUnicode())
+          {
+            addUnicodeText(textStart, textEnd, buf);
+          }
+          else
+          {
+            addText(textStart, textEnd, buf);
+          }
+        }
+
+        String tempString = buf.toString();
+        lineWidth += 10 * tempString.length();//metrics.stringWidth(tempString);
+        if(lineWidth > pageWidth)
+        {
+          lineHeights.add(new Integer(maxHeight));
+          maxHeight = 0;
+          lineWidth = 0;
+        }
+      }
+      lineHeights.add(new Integer(maxHeight));
+    }
+    int sum = 0;
+    size = lineHeights.size();
+    for(int x = 0; x < size; x++)
+    {
+      Integer height = (Integer)lineHeights.get(x);
+      sum += height.intValue();
+    }
+
+    return sum;
+  }
+

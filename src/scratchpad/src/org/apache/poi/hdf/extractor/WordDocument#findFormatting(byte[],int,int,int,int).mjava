@@ -1,0 +1,115 @@
+  private void findFormatting(byte[] tableStream, int charOffset,
+                              int charPlcSize, int parOffset, int parPlcSize) throws IOException
+  {
+      openDoc();
+      createStyleSheet(tableStream);
+      createListTables(tableStream);
+      createFontTable(tableStream);
+
+      //find character runs
+      //Get all the chpx info and store it
+
+      int arraySize = (charPlcSize - 4)/8;
+      //int[][] parFkpTable = new int[arraySize][2];
+      //first we must go through the bin table and find the fkps
+      for(int x = 0; x < arraySize; x++)
+      {
+
+          //get fc of the start of the paragraph
+          //parFkpTable[x][0] = Utils.convertBytesToInt(tableStream, parOffset + (x * 4));
+          //get pn containing the chpx for the paragraph
+          //parFkpTable[x][1] = Utils.convertBytesToInt(tableStream, parOffset + (4 * (arraySize + 1) + (4 * x)));
+          int PN = Utils.convertBytesToInt(tableStream, charOffset + (4 * (arraySize + 1) + (4 * x)));
+
+          byte[] fkp = new byte[512];
+          System.arraycopy(_header, (PN * 512), fkp, 0, 512);
+          //take each fkp and get the paps
+          int crun = Utils.convertUnsignedByteToInt(fkp[511]);
+          for(int y = 0; y < crun; y++)
+          {
+              //get the beginning fc of each paragraph text run
+              int fcStart = Utils.convertBytesToInt(fkp, y * 4);
+              int fcEnd = Utils.convertBytesToInt(fkp, (y+1) * 4);
+              //get the offset in fkp of the papx for this paragraph
+              int chpxOffset = 2 * Utils.convertUnsignedByteToInt(fkp[((crun + 1) * 4) + y]);
+
+              //optimization if offset == 0 use "Normal" style
+              if(chpxOffset == 0)
+
+              {
+                _characterTable.add(new ChpxNode(fcStart, fcEnd, new byte[0]));
+                continue;
+              }
+
+              int size = Utils.convertUnsignedByteToInt(fkp[chpxOffset]);
+
+              byte[] chpx = new byte[size];
+              System.arraycopy(fkp, ++chpxOffset, chpx, 0, size);
+              //_papTable.put(new Integer(fcStart), papx);
+              _characterTable.add(new ChpxNode(fcStart, fcEnd, chpx));
+          }
+
+      }
+
+      //find paragraphs
+      arraySize = (parPlcSize - 4)/8;
+      //first we must go through the bin table and find the fkps
+      for(int x = 0; x < arraySize; x++)
+      {
+          int PN = Utils.convertBytesToInt(tableStream, parOffset + (4 * (arraySize + 1) + (4 * x)));
+
+          byte[] fkp = new byte[512];
+          System.arraycopy(_header, (PN * 512), fkp, 0, 512);
+          //take each fkp and get the paps
+          int crun = Utils.convertUnsignedByteToInt(fkp[511]);
+          for(int y = 0; y < crun; y++)
+          {
+              //get the beginning fc of each paragraph text run
+              int fcStart = Utils.convertBytesToInt(fkp, y * 4);
+              int fcEnd = Utils.convertBytesToInt(fkp, (y+1) * 4);
+              //get the offset in fkp of the papx for this paragraph
+              int papxOffset = 2 * Utils.convertUnsignedByteToInt(fkp[((crun + 1) * 4) + (y * 13)]);
+              int size = 2 * Utils.convertUnsignedByteToInt(fkp[papxOffset]);
+              if(size == 0)
+              {
+                  size = 2 * Utils.convertUnsignedByteToInt(fkp[++papxOffset]);
+              }
+              else
+              {
+                  size--;
+              }
+
+              byte[] papx = new byte[size];
+              System.arraycopy(fkp, ++papxOffset, papx, 0, size);
+              _paragraphTable.add(new PapxNode(fcStart, fcEnd, papx));
+
+          }
+
+      }
+      //find sections
+      int fcMin = Utils.convertBytesToInt(_header, 0x18);
+      int plcfsedFC = Utils.convertBytesToInt(_header, 0xca);
+      int plcfsedSize = Utils.convertBytesToInt(_header, 0xce);
+      byte[] plcfsed = new byte[plcfsedSize];
+      System.arraycopy(tableStream, plcfsedFC, plcfsed, 0, plcfsedSize);
+
+      arraySize = (plcfsedSize - 4)/16;
+
+      //openDoc();
+
+      for(int x = 0; x < arraySize; x++)
+      {
+          int sectionStart = Utils.convertBytesToInt(plcfsed, x * 4) + fcMin;
+          int sectionEnd = Utils.convertBytesToInt(plcfsed, (x+1) * 4) + fcMin;
+          int sepxStart = Utils.convertBytesToInt(plcfsed, 4 * (arraySize + 1) + (x * 12) + 2);
+          int sepxSize = Utils.convertBytesToShort(_header, sepxStart);
+          byte[] sepx = new byte[sepxSize];
+          System.arraycopy(_header, sepxStart + 2, sepx, 0, sepxSize);
+          SepxNode node = new SepxNode(x + 1, sectionStart, sectionEnd, sepx);
+          _sectionTable.add(node);
+          //HeaderFooter[] hdrftr = findSectionHdrFtr(x);
+      }
+
+
+  }
+

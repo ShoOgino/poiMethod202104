@@ -1,0 +1,148 @@
+  static void doTAPOperation(TAP newTAP, int operand, int param, byte[] varParam)
+  {
+      switch(operand)
+      {
+          case 0:
+               newTAP._jc = (short)param;
+               break;
+          case 0x01:
+          {
+               int adjust = param - (newTAP._rgdxaCenter[0] + newTAP._dxaGapHalf);
+               for(int x = 0; x < newTAP._itcMac; x++)
+               {
+                  newTAP._rgdxaCenter[x] += adjust;
+               }
+               break;
+          }
+          case 0x02:
+               if(newTAP._rgdxaCenter != null)
+               {
+                 int adjust = newTAP._dxaGapHalf - param;
+                 newTAP._rgdxaCenter[0] += adjust;
+               }
+               newTAP._dxaGapHalf = param;
+               break;
+          case 0x03:
+               newTAP._fCantSplit = getFlag(param);
+               break;
+          case 0x04:
+               newTAP._fTableHeader = getFlag(param);
+               break;
+          case 0x05:
+
+               newTAP._brcTop[0] = Utils.convertBytesToShort(varParam, 0);
+               newTAP._brcTop[1] = Utils.convertBytesToShort(varParam, 2);
+
+               newTAP._brcLeft[0] = Utils.convertBytesToShort(varParam, 4);
+               newTAP._brcLeft[1] = Utils.convertBytesToShort(varParam, 6);
+
+               newTAP._brcBottom[0] = Utils.convertBytesToShort(varParam, 8);
+               newTAP._brcBottom[1] = Utils.convertBytesToShort(varParam, 10);
+
+               newTAP._brcRight[0] = Utils.convertBytesToShort(varParam, 12);
+               newTAP._brcRight[1] = Utils.convertBytesToShort(varParam, 14);
+
+               newTAP._brcHorizontal[0] = Utils.convertBytesToShort(varParam, 16);
+               newTAP._brcHorizontal[1] = Utils.convertBytesToShort(varParam, 18);
+
+               newTAP._brcVertical[0] = Utils.convertBytesToShort(varParam, 20);
+               newTAP._brcVertical[1] = Utils.convertBytesToShort(varParam, 22);
+               break;
+          case 0x06:
+               //obsolete, used in word 1.x
+               break;
+          case 0x07:
+               newTAP._dyaRowHeight = param;
+               break;
+          case 0x08:
+               //I use varParam[0] and newTAP._itcMac interchangably
+               newTAP._itcMac = varParam[0];
+               newTAP._rgdxaCenter = new short[varParam[0] + 1];
+               newTAP._rgtc = new TC[varParam[0]];
+
+               for(int x = 0; x < newTAP._itcMac; x++)
+               {
+                 newTAP._rgdxaCenter[x] = Utils.convertBytesToShort(varParam , 1 + (x * 2));
+                 newTAP._rgtc[x] = TC.convertBytesToTC(varParam, 1 + ((varParam[0] + 1) * 2) + (x * 20));
+               }
+               newTAP._rgdxaCenter[newTAP._itcMac] = Utils.convertBytesToShort(varParam , 1 + (newTAP._itcMac * 2));
+               break;
+          case 0x09:
+               /** @todo handle cell shading*/
+               break;
+          case 0x0a:
+               /** @todo handle word defined table styles*/
+               break;
+          case 0x20:
+               for(int x = varParam[0]; x < varParam[1]; x++)
+               {
+                 if((varParam[2] & 0x08) > 0)
+                 {
+                   newTAP._rgtc[x]._brcRight[0] = Utils.convertBytesToShort(varParam, 6);
+                   newTAP._rgtc[x]._brcRight[1] = Utils.convertBytesToShort(varParam, 8);
+                 }
+                 else if((varParam[2] & 0x04) > 0)
+                 {
+                   newTAP._rgtc[x]._brcBottom[0] = Utils.convertBytesToShort(varParam, 6);
+                   newTAP._rgtc[x]._brcBottom[1] = Utils.convertBytesToShort(varParam, 8);
+                 }
+                 else if((varParam[2] & 0x02) > 0)
+                 {
+                   newTAP._rgtc[x]._brcLeft[0] = Utils.convertBytesToShort(varParam, 6);
+                   newTAP._rgtc[x]._brcLeft[1] = Utils.convertBytesToShort(varParam, 8);
+                 }
+                 else if((varParam[2] & 0x01) > 0)
+                 {
+                   newTAP._rgtc[x]._brcTop[0] = Utils.convertBytesToShort(varParam, 6);
+                   newTAP._rgtc[x]._brcTop[1] = Utils.convertBytesToShort(varParam, 8);
+                 }
+               }
+               break;
+          case 0x21:
+               int index = (param & 0xff000000) >> 24;
+               int count = (param & 0x00ff0000) >> 16;
+               int width = (param & 0x0000ffff);
+
+               short[] rgdxaCenter = new short[newTAP._itcMac + count + 1];
+               TC[] rgtc = new TC[newTAP._itcMac + count];
+               if(index >= newTAP._itcMac)
+               {
+                 index = newTAP._itcMac;
+                 System.arraycopy(newTAP._rgdxaCenter, 0, rgdxaCenter, 0, newTAP._itcMac + 1);
+                 System.arraycopy(newTAP._rgtc, 0, rgtc, 0, newTAP._itcMac);
+               }
+               else
+               {
+                 //copy rgdxaCenter
+                 System.arraycopy(newTAP._rgdxaCenter, 0, rgdxaCenter, 0, index + 1);
+                 System.arraycopy(newTAP._rgdxaCenter, index + 1, rgdxaCenter, index + count, (newTAP._itcMac) - (index));
+                 //copy rgtc
+                 System.arraycopy(newTAP._rgtc, 0, rgtc, 0, index);
+                 System.arraycopy(newTAP._rgtc, index, rgtc, index + count, newTAP._itcMac - index);
+               }
+
+               for(int x = index; x < index + count; x++)
+               {
+                 rgtc[x] = new TC();
+                 rgdxaCenter[x] = (short)(rgdxaCenter[x-1] + width);
+               }
+               rgdxaCenter[index + count] = (short)(rgdxaCenter[(index + count)-1] + width);
+               break;
+          /**@todo handle table sprms from complex files*/
+          case 0x22:
+          case 0x23:
+          case 0x24:
+          case 0x25:
+          case 0x26:
+          case 0x27:
+          case 0x28:
+          case 0x29:
+          case 0x2a:
+          case 0x2b:
+          case 0x2c:
+               break;
+          default:
+               break;
+      }
+  }
+

@@ -1,0 +1,44 @@
+  private void findText(byte[] tableStream, int complexOffset) throws IOException
+  {
+    //actual text
+    int pos = complexOffset;
+    while(tableStream[pos] == 1)
+    {
+        pos++;
+        int skip = Utils.convertBytesToShort(tableStream, pos);
+        pos += 2 + skip;
+    }
+    if(tableStream[pos] != 2)
+    {
+        throw new IOException("corrupted Word file");
+    }
+    else
+    {
+        int pieceTableSize = Utils.convertBytesToInt(tableStream, ++pos);
+        pos += 4;
+        int pieces = (pieceTableSize - 4) / 12;
+        for (int x = 0; x < pieces; x++)
+        {
+            int filePos = Utils.convertBytesToInt(tableStream, pos + ((pieces + 1) * 4) + (x * 8) + 2);
+            boolean unicode = false;
+            if ((filePos & 0x40000000) == 0)
+            {
+                unicode = true;
+            }
+            else
+            {
+                unicode = false;
+                filePos &= ~(0x40000000);//gives me FC in doc stream
+                filePos /= 2;
+            }
+            int totLength = Utils.convertBytesToInt(tableStream, pos + (x + 1) * 4) -
+                            Utils.convertBytesToInt(tableStream, pos + (x * 4));
+
+            TextPiece piece = new TextPiece(filePos, totLength, unicode);
+            _text.add(piece);
+
+        }
+
+    }
+  }
+

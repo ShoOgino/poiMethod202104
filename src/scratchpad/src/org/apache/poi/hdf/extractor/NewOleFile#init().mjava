@@ -1,0 +1,48 @@
+    private void init() throws IOException
+    {
+
+        for(int x = 0; x < LAOLA_ID_ARRAY.length; x++)
+        {
+            if(LAOLA_ID_ARRAY[x] != readByte())
+            {
+                throw new IOException("Not an OLE file");
+            }
+        }
+        _size = length();
+        _num_bbd_blocks = readInt(0x2c);
+        _root_startblock = readInt(0x30);
+        _sbd_startblock = readInt(0x3c);
+        _bbd_list = new int[_num_bbd_blocks];
+        //populate bbd_list. If _num_bbd_blocks > 109 I have to do it
+        //differently
+        if(_num_bbd_blocks <= 109)
+        {
+            seek(0x4c);
+            for(int x = 0; x < _num_bbd_blocks; x++)
+            {
+                _bbd_list[x] = readIntLE();
+            }
+        }
+        else
+        {
+            populateBbdList();
+        }
+        //populate the big block depot
+        _big_block_depot = new int[_num_bbd_blocks * 128];
+        int counter = 0;
+        for(int x = 0; x < _num_bbd_blocks; x++)
+        {
+            byte[] bigBlock = new byte[512];
+            int offset = (_bbd_list[x] + 1) * 512;
+            seek(offset);
+            for(int y = 0; y < 128; y++)
+            {
+                _big_block_depot[counter++] = readIntLE();
+            }
+        }
+        _small_block_depot = createSmallBlockDepot();
+        int[] rootChain = readChain(_big_block_depot, _root_startblock);
+        initializePropertySets(rootChain);
+
+    }
+

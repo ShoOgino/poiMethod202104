@@ -1,0 +1,40 @@
+    private void initializePropertySets(int[] rootChain) throws IOException
+    {
+        for(int x = 0; x < rootChain.length; x++)
+        {
+            int offset = (rootChain[x] + 1) * 512;
+            seek(offset);
+            for(int y = 0; y < 4; y++)
+            {
+                //read the block the makes up the property set
+                byte[] propArray = new byte[128];
+                read(propArray);
+
+                //parse the byte array for properties
+                int nameSize = Utils.convertBytesToShort(propArray[0x41], propArray[0x40])/2 - 1;
+                if(nameSize > 0)
+                {
+                    StringBuffer nameBuffer = new StringBuffer(nameSize);
+                    for(int z = 0; z < nameSize; z++)
+                    {
+                        nameBuffer.append((char)propArray[z*2]);
+                    }
+                    int type = propArray[0x42];
+                    int previous_pps = Utils.convertBytesToInt(propArray[0x47], propArray[0x46], propArray[0x45], propArray[0x44]);
+                    int next_pps = Utils.convertBytesToInt(propArray[0x4b], propArray[0x4a], propArray[0x49], propArray[0x48]);
+                    int pps_dir = Utils.convertBytesToInt(propArray[0x4f], propArray[0x4e], propArray[0x4d], propArray[0x4c]);
+                    int pps_sb = Utils.convertBytesToInt(propArray[0x77], propArray[0x76], propArray[0x75], propArray[0x74]);
+                    int pps_size = Utils.convertBytesToInt(propArray[0x7b], propArray[0x7a], propArray[0x79], propArray[0x78]);
+
+                    PropertySet propSet = new PropertySet(nameBuffer.toString(),
+                                                          type, previous_pps, next_pps,
+                                                          pps_dir, pps_sb, pps_size,
+                                                          (x*4) + y);
+                    _propertySetsHT.put(nameBuffer.toString(), propSet);
+                    _propertySetsV.add(propSet);
+                }
+            }
+        }
+
+    }
+
