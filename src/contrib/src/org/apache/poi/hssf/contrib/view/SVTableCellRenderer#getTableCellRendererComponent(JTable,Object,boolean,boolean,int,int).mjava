@@ -1,0 +1,82 @@
+    public Component getTableCellRendererComponent(JTable table, Object value,
+                          boolean isSelected, boolean hasFocus, int row, int column) {
+
+	if (isSelected) {
+	   super.setForeground(table.getSelectionForeground());
+	   super.setBackground(table.getSelectionBackground());
+	}
+
+        HSSFCell c = getCell(row,column);
+        if (c != null) {
+          HSSFCellStyle s = c.getCellStyle();
+          HSSFFont f = wb.getFontAt(s.getFontIndex());
+          boolean isbold = f.getBoldweight() > HSSFFont.BOLDWEIGHT_NORMAL;
+          boolean isitalics = f.getItalic();
+          int fontstyle = 0;
+
+          if (isbold) fontstyle = Font.BOLD;
+          if (isitalics) fontstyle = fontstyle | Font.ITALIC;
+
+
+          Font font = new Font(f.getFontName(),fontstyle,f.getFontHeightInPoints());
+          setFont(font);
+
+
+          HSSFColor clr = null;
+          if (s.getFillPattern() == HSSFCellStyle.SOLID_FOREGROUND) {
+            clr = (HSSFColor)colors.get(new Integer(s.getFillForegroundColor()));
+          }
+          if (clr == null) clr = new HSSFColor.WHITE();
+
+          short[] rgb = clr.getTriplet();
+          Color awtcolor = new Color(rgb[0],rgb[1],rgb[2]);
+
+          setBackground(awtcolor);
+
+        }
+
+
+	if (hasFocus) {
+	    setBorder( UIManager.getBorder("Table.focusCellHighlightBorder") );
+	    if (table.isCellEditable(row, column)) {
+	        super.setForeground( UIManager.getColor("Table.focusCellForeground") );
+	        super.setBackground( UIManager.getColor("Table.focusCellBackground") );
+	    }
+	} else {
+	    setBorder(noFocusBorder);
+	}
+
+        if (c != null) {
+          switch (c.getCellType()) {
+            case HSSFCell.CELL_TYPE_BLANK:
+              setValue("");
+            break;
+            case HSSFCell.CELL_TYPE_BOOLEAN:
+              if (c.getBooleanCellValue()) {
+                setValue("true");
+              } else {
+                setValue("false");
+              }
+            break;
+            case HSSFCell.CELL_TYPE_FORMULA:
+            case HSSFCell.CELL_TYPE_NUMERIC:
+              setValue(""+c.getNumericCellValue());
+            break;
+            case HSSFCell.CELL_TYPE_STRING:
+              setValue(c.getStringCellValue());
+            break;
+            default:
+              setValue("?");
+          }
+       }
+
+
+	// ---- begin optimization to avoid painting background ----
+	Color back = getBackground();
+	boolean colorMatch = (back != null) && ( back.equals(table.getBackground()) ) && table.isOpaque();
+        setOpaque(!colorMatch);
+	// ---- end optimization to aviod painting background ----
+
+	return this;
+    }
+
