@@ -1,0 +1,42 @@
+  protected JComponent makeSheetView(HSSFSheet sheet) {
+    JTable sheetView = new JTable(new SVTableModel(sheet));
+    sheetView.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+    sheetView.setDefaultRenderer(HSSFCell.class, cellRenderer);
+    if (allowEdits)
+      sheetView.setDefaultEditor(HSSFCell.class, cellEditor);
+    JTableHeader header = sheetView.getTableHeader();
+    //Dont allow column reordering
+    header.setReorderingAllowed(false);
+    //Only allow column resizing if editing is allowed
+    header.setResizingAllowed(allowEdits);
+
+    //Set the columns the correct size
+    TableColumnModel columns = sheetView.getColumnModel();
+    for (int i=0; i< columns.getColumnCount(); i++) {
+      TableColumn column = columns.getColumn(i);
+      short width = sheet.getColumnWidth((short)i);
+      //256 is because the width is in 256ths of a character
+      column.setPreferredWidth(width/256*magicCharFactor);
+    }
+
+    //Set the rows to the correct size
+    int rows = sheet.getPhysicalNumberOfRows();
+    Insets insets = cellRenderer.getInsets();
+    //Need to include the insets in the calculation of the row height to use.
+    int extraHeight = insets.bottom+insets.top;
+    for (int i=0; i< rows; i++) {
+      HSSFRow row = sheet.getRow(i);
+      if (row == null) {
+        sheetView.setRowHeight(i, (int)sheet.getDefaultRowHeightInPoints()+extraHeight);
+      } else {
+        sheetView.setRowHeight(i, (int)row.getHeightInPoints()+extraHeight);
+      }
+    }
+
+    //Add the row header to the sheet
+    SVRowHeader rowHeader = new SVRowHeader(sheet, sheetView, extraHeight);
+    JScrollPane scroll = new JScrollPane( sheetView );
+    scroll.setRowHeaderView(rowHeader);
+    return scroll;
+  }
+

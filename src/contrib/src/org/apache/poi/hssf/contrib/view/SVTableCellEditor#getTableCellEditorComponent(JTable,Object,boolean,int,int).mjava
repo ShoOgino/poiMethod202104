@@ -1,0 +1,85 @@
+  /**
+   *  Gets the tableCellEditorComponent attribute of the SVTableCellEditor object
+   *
+   * @param  table       Description of the Parameter
+   * @param  value       Description of the Parameter
+   * @param  isSelected  Description of the Parameter
+   * @param  row         Description of the Parameter
+   * @param  column      Description of the Parameter
+   * @return             The tableCellEditorComponent value
+   */
+  public Component getTableCellEditorComponent(JTable table, Object value,
+      boolean isSelected,
+      int row,
+      int column) {
+    System.out.println("GetTableCellEditorComponent");
+    HSSFCell cell = (HSSFCell) value;
+    if (cell != null) {
+          HSSFCellStyle style = cell.getCellStyle();
+          HSSFFont f = wb.getFontAt(style.getFontIndex());
+          boolean isbold = f.getBoldweight() > HSSFFont.BOLDWEIGHT_NORMAL;
+          boolean isitalics = f.getItalic();
+
+          int fontstyle = Font.PLAIN;
+
+          if (isbold) fontstyle = Font.BOLD;
+          if (isitalics) fontstyle = fontstyle | Font.ITALIC;
+
+          int fontheight = f.getFontHeightInPoints();
+          if (fontheight == 9) fontheight = 10; //fix for stupid ol Windows
+
+          Font font = new Font(f.getFontName(),fontstyle,fontheight);
+          editor.setFont(font);
+
+          if (style.getFillPattern() == HSSFCellStyle.SOLID_FOREGROUND) {
+            editor.setBackground(getAWTColor(style.getFillForegroundColor(), white));
+          } else editor.setBackground(white);
+
+          editor.setForeground(getAWTColor(f.getColor(), black));
+
+
+      //Set the value that is rendered for the cell
+      switch (cell.getCellType()) {
+        case HSSFCell.CELL_TYPE_BLANK:
+          editor.setText("");
+          break;
+        case HSSFCell.CELL_TYPE_BOOLEAN:
+          if (cell.getBooleanCellValue()) {
+            editor.setText("true");
+          } else {
+            editor.setText("false");
+          }
+          break;
+        case HSSFCell.CELL_TYPE_NUMERIC:
+          editor.setText(Double.toString(cell.getNumericCellValue()));
+          break;
+        case HSSFCell.CELL_TYPE_STRING:
+          editor.setText(cell.getStringCellValue());
+          break;
+        case HSSFCell.CELL_TYPE_FORMULA:
+        default:
+          editor.setText("?");
+      }
+      switch (style.getAlignment()) {
+        case HSSFCellStyle.ALIGN_LEFT:
+        case HSSFCellStyle.ALIGN_JUSTIFY:
+        case HSSFCellStyle.ALIGN_FILL:
+          editor.setHorizontalAlignment(SwingConstants.LEFT);
+          break;
+        case HSSFCellStyle.ALIGN_CENTER:
+        case HSSFCellStyle.ALIGN_CENTER_SELECTION:
+          editor.setHorizontalAlignment(SwingConstants.CENTER);
+          break;
+        case HSSFCellStyle.ALIGN_GENERAL:
+        case HSSFCellStyle.ALIGN_RIGHT:
+          editor.setHorizontalAlignment(SwingConstants.RIGHT);
+          break;
+        default:
+          editor.setHorizontalAlignment(SwingConstants.LEFT);
+          break;
+      }
+
+    }
+    return editor;
+  }
+
