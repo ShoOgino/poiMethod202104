@@ -1,0 +1,51 @@
+    private void calcRemainingStrings()
+    {
+        for ( ; unipos < serializer.strings.size(); unipos++ )
+        {
+            int available = SSTRecord.MAX_RECORD_SIZE - pos;
+            Integer intunipos = new Integer( unipos );
+
+            unistr = ( (UnicodeString) serializer.strings.get( intunipos ) );
+            if ( unistr.getRecordSize() <= available )
+            {
+                totalBytesWritten += unistr.getRecordSize();
+                pos += unistr.getRecordSize();
+            }
+            else
+            {
+                if ( available >= SSTRecord.STRING_MINIMAL_OVERHEAD )
+                {
+                    int toBeWritten =
+                            unistr.maxBrokenLength( available );
+
+                    totalBytesWritten += toBeWritten;
+                    stringReminant =
+                            ( unistr.getRecordSize() - toBeWritten )
+                            + LittleEndianConsts.BYTE_SIZE;
+                    if ( available != toBeWritten )
+                    {
+                        int shortrecord = recordSize
+                                - ( available - toBeWritten );
+
+                        serializer.recordLengths.set(
+                                serializer.recordLengths.size() - 1,
+                                new Integer(
+                                        shortrecord - SSTRecord.STD_RECORD_OVERHEAD ) );
+                        recordSize = shortrecord;
+                    }
+                    isRemainingString = true;
+                    unipos++;
+                }
+                else
+                {
+                    int shortrecord = recordSize - available;
+
+                    serializer.recordLengths.set( serializer.recordLengths.size() - 1,
+                            new Integer( shortrecord - SSTRecord.STD_RECORD_OVERHEAD ) );
+                    recordSize = shortrecord;
+                }
+                break;
+            }
+        }
+    }
+
