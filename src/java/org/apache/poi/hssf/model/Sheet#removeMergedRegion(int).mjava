@@ -1,11 +1,43 @@
     public void removeMergedRegion(int index)
     {
-        merged.removeAreaAt(index);
-        if (merged.getNumAreas() == 0)
+        //safety checks
+        if (index >= numMergedRegions || mergedRecords.size() == 0)
+           return;
+            
+        int pos = 0;
+        int startNumRegions = 0;
+        
+        //optimisation for current record
+        if (numMergedRegions - index < merged.getNumAreas())
         {
-            merged = null;
-            records.remove(mergedloc);
-            mergedloc = 0;
+            pos = mergedRecords.size() - 1;
+            startNumRegions = numMergedRegions - merged.getNumAreas(); 
+        }
+        else
+        {
+            for (int n = 0; n < mergedRecords.size(); n++)
+            {
+                MergeCellsRecord record = (MergeCellsRecord) mergedRecords.get(n);
+                if (startNumRegions + record.getNumAreas() > index)
+                {
+                    pos = n;
+                    break;
+                }
+                startNumRegions += record.getNumAreas(); 
+            }
+        }
+
+        MergeCellsRecord rec = (MergeCellsRecord) mergedRecords.get(pos);
+        rec.removeAreaAt(index - startNumRegions);
+        numMergedRegions--;
+        if (rec.getNumAreas() == 0)
+        {
+            mergedRecords.remove(pos);
+            if (merged == rec)
+            	merged = (MergeCellsRecord) mergedRecords.get(mergedRecords.size() - 1);
+            int removePos = ((Integer) mergedLocs.get(pos)).intValue();
+            records.remove(removePos);
+            mergedLocs.remove(pos);
         }
     }
 
