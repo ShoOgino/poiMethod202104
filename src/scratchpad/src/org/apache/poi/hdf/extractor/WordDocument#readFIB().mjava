@@ -1,26 +1,33 @@
+  /**
+   * Extracts the main document stream from the POI file then hands off to other
+   * functions that parse other areas.
+   *
+   * @throws IOException
+   */
   private void readFIB() throws IOException
   {
-      //PropertySet headerProps = (PropertySet)_propertySetsHT.get("WordDocument");
-      Entry headerProps = filesystem.getRoot().getEntry("WordDocument");
-      
- //     if(headerProps.getSize() >= 4096)
-   //   {
-          //_header = createBufferFromBBD(headerProps.getStartBlock());      
-          _header = new byte[4096];
-          filesystem.createDocumentInputStream("WordDocument").read(_header);
-     // }
+      //get the main document stream
+      DocumentEntry headerProps =
+        (DocumentEntry)filesystem.getRoot().getEntry("WordDocument");
+
+      //I call it the header but its also the main document stream
+      _header = new byte[headerProps.getSize()];
+      filesystem.createDocumentInputStream("WordDocument").read(_header);
+
+      //Get the information we need from the header
       int info = LittleEndian.getShort(_header, 0xa);
 
-      _fcMin = Utils.convertBytesToInt(_header, 0x18);
-      _ccpText = Utils.convertBytesToInt(_header, 0x4c);
-      _ccpFtn = Utils.convertBytesToInt(_header, 0x50);
+      _fcMin = LittleEndian.getInt(_header, 0x18);
+      _ccpText = LittleEndian.getInt(_header, 0x4c);
+      _ccpFtn = LittleEndian.getInt(_header, 0x50);
 
-      int charPLC = Utils.convertBytesToInt(_header, 0xfa);
-      int charPlcSize = Utils.convertBytesToInt(_header, 0xfe);
-      int parPLC = Utils.convertBytesToInt(_header, 0x102);
-      int parPlcSize = Utils.convertBytesToInt(_header, 0x106);
+      int charPLC = LittleEndian.getInt(_header, 0xfa);
+      int charPlcSize = LittleEndian.getInt(_header, 0xfe);
+      int parPLC = LittleEndian.getInt(_header, 0x102);
+      int parPlcSize = LittleEndian.getInt(_header, 0x106);
       boolean useTable1 = (info & 0x200) != 0;
 
+      //process the text and formatting properties
       processComplexFile(useTable1, charPLC, charPlcSize, parPLC, parPlcSize);
   }
 

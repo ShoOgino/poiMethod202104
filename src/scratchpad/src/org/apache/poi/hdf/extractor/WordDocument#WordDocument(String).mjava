@@ -1,15 +1,27 @@
-  public WordDocument(String fileName, String mode) throws IOException
+  /**
+   * Constructs a Word document from fileName. Parses the document and places
+   * all the important stuff into data structures.
+   *
+   * @param fileName The name of the file to read.
+   * @throws IOException if there is a problem while parsing the document.
+   */
+  public WordDocument(String fileName) throws IOException
   {
-//        super(fileName, mode);
-      
-      
+
+
+        //do Ole stuff
         istream = new FileInputStream(fileName);
         filesystem = new POIFSFileSystem(istream);
-      
+
+        //get important stuff from the Header block and parse all the
+        //data structures
         readFIB();
 
+        //get the SEPS for the main document text
         ArrayList sections = findProperties(_fcMin, _fcMin + _ccpText, _sectionTable.root);
 
+        //iterate through sections, paragraphs, and character runs doing what
+        //you will with the data.
         int size = sections.size();
         for(int x = 0; x < size; x++)
         {
@@ -19,7 +31,7 @@
           SEP sep = (SEP)StyleSheet.uncompressProperty(node.getSepx(), new SEP(), _styleSheet);
           writeSection(Math.max(_fcMin, start), Math.min(_fcMin + _ccpText, end), sep, _text, _paragraphTable, _characterTable, _styleSheet);
         }
-        
+        //finish
         istream.close();
 
   }

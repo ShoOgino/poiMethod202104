@@ -1,43 +1,49 @@
-  private boolean processComplexFile(boolean useTable1, int charTable,
+  /**
+   * Extracts the correct Table stream from the POI filesystem then hands off to
+   * other functions to process text and formatting info. the name is based on
+   * the fact that in Word 8(97) all text (not character or paragraph formatting)
+   * is stored in complex format.
+   *
+   * @param useTable1 boolean that specifies if we should use table1 or table0
+   * @param charTable offset in table stream of character property bin table
+   * @param charPlcSize size of character property bin table
+   * @param parTable offset in table stream of paragraph property bin table.
+   * @param parPlcSize size of paragraph property bin table.
+   * @return boolean indocating success of
+   * @throws IOException
+   */
+  private void processComplexFile(boolean useTable1, int charTable,
                                      int charPlcSize, int parTable, int parPlcSize) throws IOException
   {
-      int complexOffset = Utils.convertBytesToInt(_header, 0x1a2);
-      //int complexSize = Utils.convertBytesToInt(_header, 0x1a6);
 
-      //if(complexSize <= 0)
-      //{
-      //    return false;
-      //}
+      //get the location of the piece table
+      int complexOffset = LittleEndian.getInt(_header, 0x1a2);
 
       String tablename=null;
-      Entry tableProps = null;
+      DocumentEntry tableEntry = null;
       if(useTable1)
       {
-          tableProps = filesystem.getRoot().getEntry("1Table");
           tablename="1Table";
       }
       else
       {
-          tableProps = filesystem.getRoot().getEntry("0Table");
           tablename="0Table";
       }
-      //get table properties
-      //int size = tableProps.getSize();
-      int size = 4096; //hardcoded -- need to learn more about new POIFS api..??
-      //int startBlock = tableProps.getStartBlock();
+      tableEntry = (DocumentEntry)filesystem.getRoot().getEntry(tablename);
 
+      //load the table stream into a buffer
+      int size = tableEntry.getSize();
       byte[] tableStream = new byte[size];
-      //big enough to use BBD?
-      if(size >= 4096)
-      {
-          filesystem.createDocumentInputStream(tablename).read(tableStream); //createBufferFromBBD(startBlock);
-      }
-      initDocProperties(tableStream);
-      initPclfHdd(tableStream);
-      findText(tableStream, complexOffset);
-      findFormatting(tableStream, charTable, charPlcSize, parTable, parPlcSize);
+      filesystem.createDocumentInputStream(tablename).read(tableStream);
 
-      return true;
+      //init the DOP for this document
+      initDocProperties(tableStream);
+      //load the header/footer raw data for this document
+      initPclfHdd(tableStream);
+      //parse out the text locations
+      findText(tableStream, complexOffset);
+      //parse out text formatting
+      findFormatting(tableStream, charTable, charPlcSize, parTable, parPlcSize);
 
   }
 

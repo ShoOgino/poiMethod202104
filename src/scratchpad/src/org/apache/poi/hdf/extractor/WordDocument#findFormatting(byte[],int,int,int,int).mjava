@@ -1,3 +1,12 @@
+  /**
+   * Does all of the formatting parsing
+   *
+   * @param tableStream Main table stream buffer.
+   * @param charOffset beginning of the character bin table.
+   * @param chrPlcSize size of the char bin table.
+   * @param parOffset offset of the paragraph bin table.
+   * @param size of the paragraph bin table.
+   */
   private void findFormatting(byte[] tableStream, int charOffset,
                               int charPlcSize, int parOffset, int parPlcSize) throws IOException
   {
@@ -10,26 +19,25 @@
       //Get all the chpx info and store it
 
       int arraySize = (charPlcSize - 4)/8;
-      //int[][] parFkpTable = new int[arraySize][2];
+
       //first we must go through the bin table and find the fkps
       for(int x = 0; x < arraySize; x++)
       {
 
-          //get fc of the start of the paragraph
-          //parFkpTable[x][0] = Utils.convertBytesToInt(tableStream, parOffset + (x * 4));
-          //get pn containing the chpx for the paragraph
-          //parFkpTable[x][1] = Utils.convertBytesToInt(tableStream, parOffset + (4 * (arraySize + 1) + (4 * x)));
-          int PN = Utils.convertBytesToInt(tableStream, charOffset + (4 * (arraySize + 1) + (4 * x)));
+
+          //get page number(has nothing to do with document page)
+          //containing the chpx for the paragraph
+          int PN = LittleEndian.getInt(tableStream, charOffset + (4 * (arraySize + 1) + (4 * x)));
 
           byte[] fkp = new byte[512];
           System.arraycopy(_header, (PN * 512), fkp, 0, 512);
-          //take each fkp and get the paps
+          //take each fkp and get the chpxs
           int crun = Utils.convertUnsignedByteToInt(fkp[511]);
           for(int y = 0; y < crun; y++)
           {
               //get the beginning fc of each paragraph text run
-              int fcStart = Utils.convertBytesToInt(fkp, y * 4);
-              int fcEnd = Utils.convertBytesToInt(fkp, (y+1) * 4);
+              int fcStart = LittleEndian.getInt(fkp, y * 4);
+              int fcEnd = LittleEndian.getInt(fkp, (y+1) * 4);
               //get the offset in fkp of the papx for this paragraph
               int chpxOffset = 2 * Utils.convertUnsignedByteToInt(fkp[((crun + 1) * 4) + y]);
 
@@ -56,7 +64,7 @@
       //first we must go through the bin table and find the fkps
       for(int x = 0; x < arraySize; x++)
       {
-          int PN = Utils.convertBytesToInt(tableStream, parOffset + (4 * (arraySize + 1) + (4 * x)));
+          int PN = LittleEndian.getInt(tableStream, parOffset + (4 * (arraySize + 1) + (4 * x)));
 
           byte[] fkp = new byte[512];
           System.arraycopy(_header, (PN * 512), fkp, 0, 512);
@@ -65,8 +73,8 @@
           for(int y = 0; y < crun; y++)
           {
               //get the beginning fc of each paragraph text run
-              int fcStart = Utils.convertBytesToInt(fkp, y * 4);
-              int fcEnd = Utils.convertBytesToInt(fkp, (y+1) * 4);
+              int fcStart = LittleEndian.getInt(fkp, y * 4);
+              int fcEnd = LittleEndian.getInt(fkp, (y+1) * 4);
               //get the offset in fkp of the papx for this paragraph
               int papxOffset = 2 * Utils.convertUnsignedByteToInt(fkp[((crun + 1) * 4) + (y * 13)]);
               int size = 2 * Utils.convertUnsignedByteToInt(fkp[papxOffset]);
@@ -86,6 +94,7 @@
           }
 
       }
+
       //find sections
       int fcMin = Utils.convertBytesToInt(_header, 0x18);
       int plcfsedFC = Utils.convertBytesToInt(_header, 0xca);
@@ -107,7 +116,6 @@
           System.arraycopy(_header, sepxStart + 2, sepx, 0, sepxSize);
           SepxNode node = new SepxNode(x + 1, sectionStart, sectionEnd, sepx);
           _sectionTable.add(node);
-          //HeaderFooter[] hdrftr = findSectionHdrFtr(x);
       }
 
 
