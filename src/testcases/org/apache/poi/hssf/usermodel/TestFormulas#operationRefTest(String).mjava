@@ -1,0 +1,65 @@
+    private void operationRefTest(String operator) 
+    throws Exception {
+        File file = File.createTempFile("testFormula",".xls");
+        FileOutputStream out    = new FileOutputStream(file);
+        HSSFWorkbook     wb     = new HSSFWorkbook();
+        HSSFSheet        s      = wb.createSheet();
+        HSSFRow          r      = null;
+        HSSFCell         c      = null;
+        
+        //get our minimum values
+        r = s.createRow((short)0);
+        c = r.createCell((short)1);
+        c.setCellFormula("A2" + operator + "A3");
+        
+        for (short x = 1; x < Short.MAX_VALUE && x > 0; x=(short)(x*2)) {
+            r = s.createRow((short) x);
+
+            for (short y = 1; y < 256 && y > 0; y++) {                
+                
+                String ref=null;
+                String ref2=null;
+                short refx1=0;
+                short refy1=0;
+                short refx2=0;
+                short refy2=0;
+                if (x +50 < Short.MAX_VALUE) {
+                    refx1=(short)(x+50);
+                    refx2=(short)(x+46);
+                } else {
+                    refx1=(short)(x-4);
+                    refx2=(short)(x-3);
+                }
+                    
+                if (y+50 < 255) {
+                    refy1=(short)(y+50);
+                    refy2=(short)(y+49);
+                } else {
+                    refy1=(short)(y-4);
+                    refy2=(short)(y-3);
+                }
+                
+                ref = ReferenceUtil.getReferenceFromXY(refx1,refy1);                    
+                ref2 = ReferenceUtil.getReferenceFromXY(refx2,refy2);
+
+                c = r.createCell((short) y);
+                c.setCellFormula("" + ref + operator + ref2);
+                
+
+                
+            }
+        }
+        
+        //make sure we do the maximum value of the Int operator
+        if (s.getLastRowNum() < Short.MAX_VALUE) {
+            r = s.createRow((short)0);
+            c = r.createCell((short)0);
+            c.setCellFormula("" + "B1" + operator + "IV255");
+        }
+        
+        wb.write(out);
+        out.close();
+        assertTrue("file exists",file.exists());
+        operationalRefVerify(operator,file);
+    }
+
