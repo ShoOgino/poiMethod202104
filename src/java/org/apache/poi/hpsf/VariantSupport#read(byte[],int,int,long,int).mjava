@@ -14,19 +14,26 @@
      * @exception ReadingNotSupportedException if a property is to be written
      * who's variant type HPSF does not yet support
      * @exception UnsupportedEncodingException if the specified codepage is not
-     * supported
+     * supported.
      *
      * @see Variant
      */
     public static Object read(final byte[] src, final int offset,
                               final int length, final long type,
                               final int codepage)
-        throws ReadingNotSupportedException, UnsupportedEncodingException
+    throws ReadingNotSupportedException, UnsupportedEncodingException
     {
         Object value;
         int o1 = offset;
         int l1 = length - LittleEndian.INT_SIZE;
-        switch ((int) type)
+        long lType = type;
+
+        /* Instead of trying to read 8-bit characters from a Unicode string,
+         * read 16-bit characters. */
+        if (codepage == Constants.CP_UNICODE && type == Variant.VT_LPSTR)
+            lType = Variant.VT_LPWSTR;
+
+        switch ((int) lType)
         {
             case Variant.VT_EMPTY:
             {
