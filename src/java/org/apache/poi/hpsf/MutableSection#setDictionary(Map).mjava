@@ -1,0 +1,50 @@
+    /**
+     * <p>Sets the section's dictionary. All keys in the dictionary must be
+     * {@see java.lang.Long} instances, all values must be
+     * {@see java.lang.String}s. This method overwrites the properties with IDs
+     * 0 and 1 since they are reserved for the dictionary and the dictionary's
+     * codepage. Setting these properties explicitly might have surprising
+     * effects. An application should never do this but always use this
+     * method.</p>
+     *
+     * @param dictionary The dictionary
+     * 
+     * @exception IllegalPropertySetDataException if the dictionary's key and
+     * value types are not correct.
+     * 
+     * @see Section#getDictionary()
+     */
+    public void setDictionary(final Map dictionary)
+        throws IllegalPropertySetDataException
+    {
+        if (dictionary != null)
+        {
+            for (final Iterator i = dictionary.keySet().iterator();
+                 i.hasNext();)
+                if (!(i.next() instanceof Long))
+                    throw new IllegalPropertySetDataException
+                        ("Dictionary keys must be of type Long.");
+            for (final Iterator i = dictionary.values().iterator();
+                 i.hasNext();)
+                if (!(i.next() instanceof String))
+                    throw new IllegalPropertySetDataException
+                        ("Dictionary values must be of type String.");
+            this.dictionary = dictionary;
+
+            /* Set the dictionary property (ID 0). Please note that the second
+             * parameter in the method call below is unused because dictionaries
+             * don't have a type. */
+            setProperty(PropertyIDMap.PID_DICTIONARY, -1, dictionary);
+
+            /* Set the codepage property (ID 1) for the strings used in the 
+             * dictionary. HPSF always writes Unicode strings to the
+             * dictionary. */
+            setProperty(PropertyIDMap.PID_CODEPAGE, Variant.VT_I2,
+                        new Integer(Property.CP_UNICODE));
+        }
+        else
+            /* Setting the dictionary to null means to remove property 0.
+             * However, it does not mean to remove property 1 (codepage). */
+            removeProperty(PropertyIDMap.PID_DICTIONARY);
+    }
+

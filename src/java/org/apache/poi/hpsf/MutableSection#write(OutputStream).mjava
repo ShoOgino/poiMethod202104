@@ -43,19 +43,55 @@
         position += 2 * LittleEndian.INT_SIZE +
                     getPropertyCount() * 2 * LittleEndian.INT_SIZE;
 
+        /* Writing the section's dictionary it tricky. If there is a dictionary
+         * (property 0) the codepage property (property 1) has to be set, too.
+         * Since HPSF supports Unicode only, the codepage must be 1200. */
+        if (getProperty(PropertyIDMap.PID_DICTIONARY) != null)
+        {
+            final Object p1 = getProperty(PropertyIDMap.PID_CODEPAGE);
+            if (p1 != null)
+            {
+                if (!(p1 instanceof Integer))
+                    throw new IllegalPropertySetDataException
+                        ("The codepage property (ID = 1) must be an " +
+                         "Integer object.");
+                else if (((Integer) p1).intValue() != Property.CP_UNICODE)
+                    throw new IllegalPropertySetDataException
+                        ("The codepage property (ID = 1) must be " +
+                         "1200 (Unicode).");
+            }
+            else
+                throw new IllegalPropertySetDataException
+                    ("The codepage property (ID = 1) must be set.");
+        }
+
         /* Write the properties and the property list into their respective
          * streams: */
         for (final Iterator i = preprops.iterator(); i.hasNext();)
         {
             final MutableProperty p = (MutableProperty) i.next();
+            final long id = p.getID();
             
             /* Write the property list entry. */
             TypeWriter.writeUIntToStream(propertyListStream, p.getID());
             TypeWriter.writeUIntToStream(propertyListStream, position);
-            
-            /* Write the property and update the position to the next
-             * property. */
-            position += p.write(propertyStream);
+
+            /* If the property ID is not equal 0 we write the property and all
+             * is fine. However, if it equals 0 we have to write the section's
+             * dictionary which does not have a type but just a value. */
+            if (id != 0)
+                /* Write the property and update the position to the next
+                 * property. */
+                position += p.write(propertyStream);
+            else
+            {
+                final Integer codepage =
+                    (Integer) getProperty(PropertyIDMap.PID_CODEPAGE);
+                if (codepage == null)
+                    throw new IllegalPropertySetDataException
+                        ("Codepage (property 1) is undefined.");
+                position += writeDictionary(propertyStream, dictionary);
+            }
         }
         propertyStream.close();
         propertyListStream.close();

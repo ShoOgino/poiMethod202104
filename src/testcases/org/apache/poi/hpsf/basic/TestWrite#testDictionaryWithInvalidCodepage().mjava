@@ -1,0 +1,40 @@
+    /**
+     * <p>Tests writing and reading back a proper dictionary with an invalid
+     * codepage. (HPSF writes Unicode dictionaries only.)</p>
+     */
+    public void testDictionaryWithInvalidCodepage()
+    {
+        try
+        {
+            final File copy = File.createTempFile("Test-HPSF", "ole2");
+            copy.deleteOnExit();
+
+            /* Write: */
+            final OutputStream out = new FileOutputStream(copy);
+            final POIFSFileSystem poiFs = new POIFSFileSystem();
+            final MutablePropertySet ps1 = new MutablePropertySet();
+            final MutableSection s = (MutableSection) ps1.getSections().get(0);
+            final Map m = new HashMap(3, 1.0f);
+            m.put(new Long(1), "String 1");
+            m.put(new Long(2), "String 2");
+            m.put(new Long(3), "String 3");
+            s.setDictionary(m);
+            s.setFormatID(SectionIDMap.DOCUMENT_SUMMARY_INFORMATION_ID);
+            int codepage = 12345;
+            s.setProperty(PropertyIDMap.PID_CODEPAGE, Variant.VT_I2,
+                          new Integer(codepage));
+            poiFs.createDocument(ps1.toInputStream(), "Test");
+            poiFs.writeFilesystem(out);
+            out.close();
+            fail("This testcase did not detect the invalid codepage value.");
+        }
+        catch (IllegalPropertySetDataException ex)
+        {
+            assertTrue(true);
+        }
+        catch (Exception ex)
+        {
+            handle(ex);
+        }
+    }
+
