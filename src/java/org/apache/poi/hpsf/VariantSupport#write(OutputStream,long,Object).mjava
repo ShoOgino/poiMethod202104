@@ -1,49 +1,55 @@
     /**
-     * <p>Writes a variant value to an output stream.</p>
+     * <p>Writes a variant value to an output stream. This method ensures that
+     * always a multiple of 4 bytes is written.</p>
      *
      * @param out The stream to write the value to.
      * @param type The variant's type.
      * @param value The variant's value.
      * @return The number of entities that have been written. In many cases an
      * "entity" is a byte but this is not always the case.
+     * @exception IOException if an I/O exceptions occurs
+     * @exception WritingNotSupportedException if a property is to be written
+     * who's variant type HPSF does not yet support
      */
     public static int write(final OutputStream out, final long type,
-                               final Object value)
+                            final Object value)
         throws IOException, WritingNotSupportedException
     {
+        int length = 0;
         switch ((int) type)
         {
             case Variant.VT_BOOL:
             {
                 int trueOrFalse;
-                int length = 0;
                 if (((Boolean) value).booleanValue())
                     trueOrFalse = 1;
                 else
                     trueOrFalse = 0;
-                length += TypeWriter.writeUIntToStream(out, trueOrFalse);
-                return length;
+                length = TypeWriter.writeUIntToStream(out, trueOrFalse);
+                break;
             }
             case Variant.VT_LPSTR:
             {
-                TypeWriter.writeUIntToStream
+                length = TypeWriter.writeUIntToStream
                     (out, ((String) value).length() + 1);
-                char[] s = toPaddedCharArray((String) value);
-                /* FIXME: The following line forces characters to bytes. This
-                 * is generally wrong and should only be done according to a
-                 * codepage. Alternatively Unicode could be written (see 
+                char[] s = Util.pad4((String) value);
+                /* FIXME (2): The following line forces characters to bytes.
+                 * This is generally wrong and should only be done according to
+                 * a codepage. Alternatively Unicode could be written (see 
                  * Variant.VT_LPWSTR). */
-                byte[] b = new byte[s.length];
+                byte[] b = new byte[s.length + 1];
                 for (int i = 0; i < s.length; i++)
                     b[i] = (byte) s[i];
+                b[b.length - 1] = 0x00;
                 out.write(b);
-                return b.length;
+                length += b.length;
+                break;
             }
             case Variant.VT_LPWSTR:
             {
                 final int nrOfChars = ((String) value).length() + 1; 
                 TypeWriter.writeUIntToStream(out, nrOfChars);
-                char[] s = toPaddedCharArray((String) value);
+                char[] s = Util.pad4((String) value);
                 for (int i = 0; i < s.length; i++)
                 {
                     final int high = (int) ((s[i] & 0xff00) >> 8);
@@ -53,43 +59,72 @@
                     out.write(lowb);
                     out.write(highb);
                 }
-                return nrOfChars * 2;
+                length = nrOfChars * 2;
+                out.write(0x00);
+                out.write(0x00);
+                length += 2;
+                break;
             }
             case Variant.VT_CF:
             {
                 final byte[] b = (byte[]) value; 
                 out.write(b);
-                return b.length;
+                length = b.length;
+                break;
             }
             case Variant.VT_EMPTY:
             {
                 TypeWriter.writeUIntToStream(out, Variant.VT_EMPTY);
-                return LittleEndianConsts.INT_SIZE;
+                length = LittleEndianConsts.INT_SIZE;
+                break;
             }
             case Variant.VT_I2:
             {
                 TypeWriter.writeToStream(out, ((Integer) value).shortValue());
-                return LittleEndianConsts.SHORT_SIZE;
+                length = LittleEndianConsts.SHORT_SIZE;
+                break;
             }
             case Variant.VT_I4:
             {
                 TypeWriter.writeToStream(out, ((Long) value).intValue());
-                return LittleEndianConsts.INT_SIZE;
+                length = LittleEndianConsts.INT_SIZE;
+                break;
             }
             case Variant.VT_FILETIME:
             {
-                int length = 0;
                 long filetime = Util.dateToFileTime((Date) value);
                 int high = (int) ((filetime >> 32) & 0xFFFFFFFFL);
                 int low = (int) (filetime & 0x00000000FFFFFFFFL);
-                length += TypeWriter.writeUIntToStream(out, 0x0000000FFFFFFFFL & low);
-                length += TypeWriter.writeUIntToStream(out, 0x0000000FFFFFFFFL & high);
-                return length;
+                length += TypeWriter.writeUIntToStream
+                    (out, 0x0000000FFFFFFFFL & low);
+                length += TypeWriter.writeUIntToStream
+                    (out, 0x0000000FFFFFFFFL & high);
+                break;
             }
             default:
             {
-                throw new WritingNotSupportedException(type, value);
-             }
+                /* The variant type is not supported yet. However, if the value
+                 * is a byte array we can write it nevertheless. */
+                if (value instanceof byte[])
+                {
+                    final byte[] b = (byte[]) value; 
+                    out.write(b);
+                    length = b.length;
+                    writeUnsupportedTypeMessage
+                        (new WritingNotSupportedException(type, value));
+                }
+                else
+                    throw new WritingNotSupportedException(type, value);
+                break;
+            }
         }
+
+        /* Add 0x00 character to write a multiple of four bytes: */
+        while (length % 4 != 0)
+        {
+            out.write(0);
+            length++;
+        }
+        return length;
     }
 

@@ -3,15 +3,21 @@
      * 4.</p>
      *
      * @return the property's size in bytes
+     * 
+     * @exception WritingNotSupportedException if HPSF does not yet support the
+     * property's variant type.
      */
-    protected int getSize()
+    protected int getSize() throws WritingNotSupportedException
     {
-        int length = LittleEndian.INT_SIZE;
+        int length = VariantSupport.getVariantLength(type);
+        if (length >= 0)
+            return length; /* Fixed length */
+        if (length == -2)
+            /* Unknown length */
+            throw new WritingNotSupportedException(type, null);
+
+        /* Variable length: */
         final int PADDING = 4; /* Pad to multiples of 4. */
-        if (type > Integer.MAX_VALUE)
-            throw new HPSFRuntimeException
-                ("Variant type " + type + " is greater than " +
-                Integer.MAX_VALUE + ".");
         switch ((int) type)
         {
             case Variant.VT_LPSTR:
@@ -26,9 +32,7 @@
             case Variant.VT_EMPTY:
                 break;
             default:
-                throw new HPSFRuntimeException
-                    ("Writing is not yet implemented for variant type " +
-                     type + ". Please report this problem to the POI team!");
+                throw new WritingNotSupportedException(type, value);
         }
         return length;
     }

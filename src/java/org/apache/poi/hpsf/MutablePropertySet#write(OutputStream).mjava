@@ -1,0 +1,46 @@
+    /**
+     * <p>Writes the property set to an output stream.</p>
+     * 
+     * @param out the output stream to write the section to
+     * @exception IOException if an error when writing to the output stream
+     * occurs
+     * @exception WritingNotSupportedException if HPSF does not yet support
+     * writing a property's variant type.
+     */
+    public void write(final OutputStream out)
+        throws WritingNotSupportedException, IOException
+    {
+        /* Write the number of sections in this property set stream. */
+        final int nrSections = sections.size();
+        int length = 0;
+
+        /* Write the property set's header. */
+        length += TypeWriter.writeToStream(out, (short) getByteOrder());
+        length += TypeWriter.writeToStream(out, (short) getFormat());
+        length += TypeWriter.writeToStream(out, (int) getOSVersion());
+        length += TypeWriter.writeToStream(out, getClassID());
+        length += TypeWriter.writeToStream(out, (int) nrSections);
+        int offset = OFFSET_HEADER;
+
+        /* Write the section list, i.e. the references to the sections. Each
+         * entry in the section list consist of a class ID and the offset to the
+         * section's begin. */
+        offset += nrSections * (ClassID.LENGTH + LittleEndian.INT_SIZE);
+        final int sectionsBegin = offset;
+        for (final ListIterator i = sections.listIterator(); i.hasNext();)
+        {
+            final MutableSection s = (MutableSection) i.next();
+            length += TypeWriter.writeToStream(out, s.getFormatID());
+            length += TypeWriter.writeUIntToStream(out, offset);
+            offset += s.getSize();
+        }
+
+        /* Write the sections themselves. */
+        offset = sectionsBegin;
+        for (final ListIterator i = sections.listIterator(); i.hasNext();)
+        {
+            final MutableSection s = (MutableSection) i.next();
+            offset = s.write(out, offset);
+        }
+    }
+
