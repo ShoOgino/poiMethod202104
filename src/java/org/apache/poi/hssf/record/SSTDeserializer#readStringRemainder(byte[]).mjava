@@ -1,0 +1,36 @@
+    /**
+     * Reads the remainder string and any subsequent strings from the continuation record.
+     *
+     * @param record  The entire continuation record data.
+     */
+    private void readStringRemainder( final byte[] record )
+    {
+        int stringRemainderSizeInBytes = calculateByteCount( getContinuationExpectedChars() );
+//        stringDataOffset = LittleEndianConsts.BYTE_SIZE;
+        byte[] unicodeStringData = new byte[SSTRecord.STRING_MINIMAL_OVERHEAD
+                + calculateByteCount( getContinuationExpectedChars() )];
+
+        // write the string length
+        LittleEndian.putShort( unicodeStringData, 0, (short) getContinuationExpectedChars() );
+
+        // write the options flag
+        unicodeStringData[LittleEndianConsts.SHORT_SIZE] = createOptionByte( wideChar, richText, extendedText );
+
+        // copy the bytes/words making up the string; skipping
+        // past all the overhead of the str_data array
+        arraycopy( record, LittleEndianConsts.BYTE_SIZE, unicodeStringData,
+                SSTRecord.STRING_MINIMAL_OVERHEAD,
+                unicodeStringData.length - SSTRecord.STRING_MINIMAL_OVERHEAD );
+
+        // use special constructor to create the final string
+        UnicodeString string = new UnicodeString( UnicodeString.sid,
+                (short) unicodeStringData.length, unicodeStringData,
+                unfinishedString );
+        Integer integer = new Integer( strings.size() );
+
+        addToStringTable( strings, integer, string );
+
+        int newOffset = offsetForContinuedRecord( stringRemainderSizeInBytes );
+        manufactureStrings( record, newOffset, (short) ( record.length - newOffset ) );
+    }
+

@@ -1,0 +1,20 @@
+    /**
+     * If the continued record is so long is spans into the next continue then
+     * simply suck the remaining string data into the existing <code>unfinishedString</code>.
+     *
+     * @param record    The data from the continuation record.
+     */
+    private void processEntireContinuation( final byte[] record )
+    {
+        // create artificial data to create a UnicodeString
+        int dataLengthInBytes = record.length - LittleEndianConsts.BYTE_SIZE;
+        byte[] unicodeStringData = new byte[record.length + LittleEndianConsts.SHORT_SIZE];
+
+        LittleEndian.putShort( unicodeStringData, (byte) 0, (short) calculateCharCount( dataLengthInBytes ) );
+        arraycopy( record, 0, unicodeStringData, LittleEndianConsts.SHORT_SIZE, record.length );
+        UnicodeString ucs = new UnicodeString( UnicodeString.sid, (short) unicodeStringData.length, unicodeStringData );
+
+        unfinishedString = unfinishedString + ucs.getString();
+        setContinuationExpectedChars( getContinuationExpectedChars() - calculateCharCount( dataLengthInBytes ) );
+    }
+

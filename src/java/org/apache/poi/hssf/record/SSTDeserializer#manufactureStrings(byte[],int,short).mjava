@@ -3,14 +3,14 @@
      * strings may span across multiple continuations. Read the SST record
      * carefully before beginning to hack.
      */
-    public void manufactureStrings( final byte[] data, final int index,
-                                     short size )
+    public void manufactureStrings( final byte[] data, final int initialOffset, short dataSize )
     {
-        int offset = index;
+        initVars();
 
-        while ( offset < size )
+        int offset = initialOffset;
+        while ( ( offset - initialOffset ) < dataSize )
         {
-            int remaining = size - offset;
+            int remaining = dataSize - offset + initialOffset;
 
             if ( ( remaining > 0 ) && ( remaining < LittleEndianConsts.SHORT_SIZE ) )
             {
@@ -18,26 +18,26 @@
             }
             if ( remaining == LittleEndianConsts.SHORT_SIZE )
             {
-                setExpectedChars( LittleEndian.getUShort( data, offset ) );
+                setContinuationExpectedChars( LittleEndian.getUShort( data, offset ) );
                 unfinishedString = "";
                 break;
             }
-            short charCount = LittleEndian.getShort( data, offset );
-
-            setupStringParameters( data, offset, charCount );
-            if ( remaining < totalLengthBytes )
+            charCount = LittleEndian.getUShort( data, offset );
+            readStringHeader( data, offset );
+            boolean stringContinuesOverContinuation = remaining < totalStringSize();
+            if ( stringContinuesOverContinuation )
             {
-                setExpectedChars( calculateCharCount( totalLengthBytes - remaining ) );
-                charCount -= getExpectedChars();
-                totalLengthBytes = remaining;
+                int remainingBytes = ( initialOffset + dataSize ) - offset - stringHeaderOverhead();
+                setContinuationExpectedChars( charCount - calculateCharCount( remainingBytes ) );
+                charCount -= getContinuationExpectedChars();
             }
             else
             {
-                setExpectedChars( 0 );
+                setContinuationExpectedChars( 0 );
             }
             processString( data, offset, charCount );
-            offset += totalLengthBytes;
-            if ( getExpectedChars() != 0 )
+            offset += totalStringSize();
+            if ( getContinuationExpectedChars() != 0 )
             {
                 break;
             }

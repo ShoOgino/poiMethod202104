@@ -18,80 +18,29 @@
      *
      * @param record the Continue record's byte data
      */
-
     public void processContinueRecord( final byte[] record )
     {
-        if ( getExpectedChars() == 0 )
+        if ( isStringFinished() )
         {
-            unfinishedString = "";
-            totalLengthBytes = 0;
-            stringDataOffset = 0;
-            wideChar = false;
+            initVars();
             manufactureStrings( record, 0, (short) record.length );
         }
         else
         {
-            int data_length = record.length - LittleEndianConsts.BYTE_SIZE;
+            // reset the wide bit because that can change across a continuation. the fact that it's
+            // actually rich text doesn't change across continuations even though the rich text
+            // may on longer be set in the "new" option flag.  confusing huh?
+            wideChar = ( record[0] & 1 ) == 1;
 
-            if ( calculateByteCount( getExpectedChars() ) > data_length )
+            if ( stringSpansContinuation( record.length - LittleEndianConsts.BYTE_SIZE ) )
             {
-
-                // create artificial data to create a UnicodeString
-                byte[] input =
-                        new byte[record.length + LittleEndianConsts.SHORT_SIZE];
-                short size = (short) ( ( ( record[0] & 1 ) == 1 )
-                        ? ( data_length / LittleEndianConsts.SHORT_SIZE )
-                        : ( data_length / LittleEndianConsts.BYTE_SIZE ) );
-
-                LittleEndian.putShort( input, (byte) 0, size );
-                System.arraycopy( record, 0, input, LittleEndianConsts.SHORT_SIZE, record.length );
-                UnicodeString ucs = new UnicodeString( UnicodeString.sid, (short) input.length, input );
-
-                unfinishedString = unfinishedString + ucs.getString();
-                setExpectedChars( getExpectedChars() - size );
+                processEntireContinuation( record );
             }
             else
             {
-                setupStringParameters( record, -LittleEndianConsts.SHORT_SIZE,
-                        getExpectedChars() );
-                byte[] str_data = new byte[totalLengthBytes];
-                int length = SSTRecord.STRING_MINIMAL_OVERHEAD
-                        + ( calculateByteCount( getExpectedChars() ) );
-                byte[] bstring = new byte[length];
-
-                // Copy data from the record into the string
-                // buffer. Copy skips the length of a short in the
-                // string buffer, to leave room for the string length.
-                System.arraycopy( record, 0, str_data,
-                        LittleEndianConsts.SHORT_SIZE,
-                        str_data.length
-                        - LittleEndianConsts.SHORT_SIZE );
-
-                // write the string length
-                LittleEndian.putShort( bstring, 0,
-                        (short) getExpectedChars() );
-
-                // write the options flag
-                bstring[LittleEndianConsts.SHORT_SIZE] =
-                        str_data[LittleEndianConsts.SHORT_SIZE];
-
-                // copy the bytes/words making up the string; skipping
-                // past all the overhead of the str_data array
-                System.arraycopy( str_data, stringDataOffset, bstring,
-                        SSTRecord.STRING_MINIMAL_OVERHEAD,
-                        bstring.length - SSTRecord.STRING_MINIMAL_OVERHEAD );
-
-                // use special constructor to create the final string
-                UnicodeString string =
-                        new UnicodeString( UnicodeString.sid,
-                                (short) bstring.length, bstring,
-                                unfinishedString );
-                Integer integer = new Integer( strings.size() );
-
-//                field_3_strings.put( integer, string );
-                addToStringTable( strings, integer, string );
-                manufactureStrings( record, totalLengthBytes - LittleEndianConsts.SHORT_SIZE, (short) record.length );
+                readStringRemainder( record );
             }
         }
+
     }
 
