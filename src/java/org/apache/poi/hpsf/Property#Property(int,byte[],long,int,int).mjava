@@ -1,0 +1,42 @@
+    /**
+     * <p>Creates a {@link Property} instance by reading its bytes
+     * from the property set stream.</p>
+     *
+     * @param id The property's ID.
+     * @param src The bytes the property set stream consists of.
+     * @param offset The property's type/value pair's offset in the
+     * section.
+     * @param length The property's type/value pair's length in bytes.
+     * @param codepage The section's and thus the property's
+     * codepage. It is needed only when reading string values.
+     */
+    public Property(final int id, final byte[] src, final long offset,
+		    int length, int codepage)
+    {
+        this.id = id;
+
+        /*
+         * ID 0 is a special case since it specifies a dictionary of
+         * property IDs and property names.
+         */
+        if (id == 0)
+	{
+            value = readDictionary(src, offset, length, codepage);
+            return;
+        }
+
+        int o = (int) offset;
+        type = LittleEndian.getUInt(src, o);
+        o += LittleEndian.INT_SIZE;
+
+	try
+	{
+	    value = TypeReader.read(src, o, length, (int) type);
+	}
+	catch (Throwable t)
+	{
+	    t.printStackTrace();
+	    value = "*** null ***";
+	}
+    }
+
