@@ -7,6 +7,7 @@
         log.log(DEBUG, "creating new workbook from scratch");
         Workbook  retval  = new Workbook();
         ArrayList records = new ArrayList(30);
+        ArrayList formats = new ArrayList(8);
 
         records.add(retval.createBOF());
         records.add(retval.createInterfaceHdr());
@@ -37,14 +38,17 @@
         records.add(retval.createFont());
         retval.fontpos  = records.size() - 1;   // last font record postion
         retval.numfonts = 4;
-        records.add(retval.createFormat(0));
-        records.add(retval.createFormat(1));
-        records.add(retval.createFormat(2));
-        records.add(retval.createFormat(3));
-        records.add(retval.createFormat(4));
-        records.add(retval.createFormat(5));
-        records.add(retval.createFormat(6));
-        records.add(retval.createFormat(7));
+
+        // set up format records
+	for (int i = 0; i <= 7; i++) {
+            Record    rec;         
+	    rec = retval.createFormat(i);
+	    retval.maxformatid = retval.maxformatid >= ((FormatRecord)rec).getIndexCode() ? retval.maxformatid : ((FormatRecord)rec).getIndexCode();
+	    formats.add(rec);
+	    records.add(rec);
+	}
+	retval.formats = formats;
+
         for (int k = 0; k < 21; k++) {
             records.add(retval.createExtendedFormat(k));
             retval.numxfs++;
