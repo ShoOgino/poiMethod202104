@@ -3,70 +3,88 @@
       switch(operand)
       {
           case 0:
-               newTAP._jc = (short)param;
+               newTAP.setJc((short)param);
                break;
           case 0x01:
           {
-               int adjust = param - (newTAP._rgdxaCenter[0] + newTAP._dxaGapHalf);
-               for(int x = 0; x < newTAP._itcMac; x++)
+               short[] rgdxaCenter = newTAP.getRgdxaCenter();
+               short itcMac = newTAP.getItcMac();
+               int adjust = param - (rgdxaCenter[0] + newTAP.getDxaGapHalf());
+               for(int x = 0; x < itcMac; x++)
                {
-                  newTAP._rgdxaCenter[x] += adjust;
+                  rgdxaCenter[x] += adjust;
                }
                break;
           }
           case 0x02:
-               if(newTAP._rgdxaCenter != null)
+          {
+               short[] rgdxaCenter = newTAP.getRgdxaCenter();
+               if(rgdxaCenter != null)
                {
-                 int adjust = newTAP._dxaGapHalf - param;
-                 newTAP._rgdxaCenter[0] += adjust;
+                 int adjust = newTAP.getDxaGapHalf() - param;
+                 rgdxaCenter[0] += adjust;
                }
-               newTAP._dxaGapHalf = param;
+               newTAP.setDxaGapHalf(param);
                break;
+          }
           case 0x03:
-               newTAP._fCantSplit = getFlag(param);
+               newTAP.setFCantSplit(getFlag(param));
                break;
           case 0x04:
-               newTAP._fTableHeader = getFlag(param);
+               newTAP.setFTableHeader(getFlag(param));
                break;
           case 0x05:
+          {
+               short[] brcTop = newTAP.getBrcTop();
+               short[] brcLeft = newTAP.getBrcLeft();
+               short[] brcBottom = newTAP.getBrcBottom();
+               short[] brcRight = newTAP.getBrcRight();
+               short[] brcVertical = newTAP.getBrcVertical();
+               short[] brcHorizontal = newTAP.getBrcHorizontal();
 
-               newTAP._brcTop[0] = LittleEndian.getShort(varParam, 0);
-               newTAP._brcTop[1] = LittleEndian.getShort(varParam, 2);
+               brcTop[0] = LittleEndian.getShort(varParam, 0);
+               brcTop[1] = LittleEndian.getShort(varParam, 2);
 
-               newTAP._brcLeft[0] = LittleEndian.getShort(varParam, 4);
-               newTAP._brcLeft[1] = LittleEndian.getShort(varParam, 6);
+               brcLeft[0] = LittleEndian.getShort(varParam, 4);
+               brcLeft[1] = LittleEndian.getShort(varParam, 6);
 
-               newTAP._brcBottom[0] = LittleEndian.getShort(varParam, 8);
-               newTAP._brcBottom[1] = LittleEndian.getShort(varParam, 10);
+               brcBottom[0] = LittleEndian.getShort(varParam, 8);
+               brcBottom[1] = LittleEndian.getShort(varParam, 10);
 
-               newTAP._brcRight[0] = LittleEndian.getShort(varParam, 12);
-               newTAP._brcRight[1] = LittleEndian.getShort(varParam, 14);
+               brcRight[0] = LittleEndian.getShort(varParam, 12);
+               brcRight[1] = LittleEndian.getShort(varParam, 14);
 
-               newTAP._brcHorizontal[0] = LittleEndian.getShort(varParam, 16);
-               newTAP._brcHorizontal[1] = LittleEndian.getShort(varParam, 18);
+               brcHorizontal[0] = LittleEndian.getShort(varParam, 16);
+               brcHorizontal[1] = LittleEndian.getShort(varParam, 18);
 
-               newTAP._brcVertical[0] = LittleEndian.getShort(varParam, 20);
-               newTAP._brcVertical[1] = LittleEndian.getShort(varParam, 22);
+               brcVertical[0] = LittleEndian.getShort(varParam, 20);
+               brcVertical[1] = LittleEndian.getShort(varParam, 22);
                break;
+          }
           case 0x06:
                //obsolete, used in word 1.x
                break;
           case 0x07:
-               newTAP._dyaRowHeight = param;
+               newTAP.setDyaRowHeight(param);
                break;
           case 0x08:
+          {
+               short[] rgdxaCenter = new short[varParam[0] + 1];
+               TableCellDescriptor[] rgtc = new TableCellDescriptor[varParam[0]];
+               short itcMac = varParam[0];
                //I use varParam[0] and newTAP._itcMac interchangably
-               newTAP._itcMac = varParam[0];
-               newTAP._rgdxaCenter = new short[varParam[0] + 1];
-               newTAP._rgtc = new TableCellDescriptor[varParam[0]];
+               newTAP.setItcMac(itcMac);
+               newTAP.setRgdxaCenter(rgdxaCenter) ;
+               newTAP.setRgtc(rgtc);
 
-               for(int x = 0; x < newTAP._itcMac; x++)
+               for(int x = 0; x < itcMac; x++)
                {
-                 newTAP._rgdxaCenter[x] = LittleEndian.getShort(varParam , 1 + (x * 2));
-                 newTAP._rgtc[x] = TableCellDescriptor.convertBytesToTC(varParam, 1 + ((varParam[0] + 1) * 2) + (x * 20));
+                 rgdxaCenter[x] = LittleEndian.getShort(varParam , 1 + (x * 2));
+                 rgtc[x] = TableCellDescriptor.convertBytesToTC(varParam, 1 + ((itcMac + 1) * 2) + (x * 20));
                }
-               newTAP._rgdxaCenter[newTAP._itcMac] = LittleEndian.getShort(varParam , 1 + (newTAP._itcMac * 2));
+               rgdxaCenter[itcMac] = LittleEndian.getShort(varParam , 1 + (itcMac * 2));
                break;
+          }
           case 0x09:
                /** @todo handle cell shading*/
                break;
@@ -74,51 +92,61 @@
                /** @todo handle word defined table styles*/
                break;
           case 0x20:
+          {
+               TCAbstractType[] rgtc = newTAP.getRgtc();
+
                for(int x = varParam[0]; x < varParam[1]; x++)
                {
+
                  if((varParam[2] & 0x08) > 0)
                  {
-                   newTAP._rgtc[x]._brcRight[0] = LittleEndian.getShort(varParam, 6);
-                   newTAP._rgtc[x]._brcRight[1] = LittleEndian.getShort(varParam, 8);
+                   short[] brcRight = rgtc[x].getBrcRight();
+                   brcRight[0] = LittleEndian.getShort(varParam, 6);
+                   brcRight[1] = LittleEndian.getShort(varParam, 8);
                  }
                  else if((varParam[2] & 0x04) > 0)
                  {
-                   newTAP._rgtc[x]._brcBottom[0] = LittleEndian.getShort(varParam, 6);
-                   newTAP._rgtc[x]._brcBottom[1] = LittleEndian.getShort(varParam, 8);
+                   short[] brcBottom = rgtc[x].getBrcBottom();
+                   brcBottom[0] = LittleEndian.getShort(varParam, 6);
+                   brcBottom[1] = LittleEndian.getShort(varParam, 8);
                  }
                  else if((varParam[2] & 0x02) > 0)
                  {
-                   newTAP._rgtc[x]._brcLeft[0] = LittleEndian.getShort(varParam, 6);
-                   newTAP._rgtc[x]._brcLeft[1] = LittleEndian.getShort(varParam, 8);
+                   short[] brcLeft = rgtc[x].getBrcLeft();
+                   brcLeft[0] = LittleEndian.getShort(varParam, 6);
+                   brcLeft[1] = LittleEndian.getShort(varParam, 8);
                  }
                  else if((varParam[2] & 0x01) > 0)
                  {
-                   newTAP._rgtc[x]._brcTop[0] = LittleEndian.getShort(varParam, 6);
-                   newTAP._rgtc[x]._brcTop[1] = LittleEndian.getShort(varParam, 8);
+                   short[] brcTop = rgtc[x].getBrcTop();
+                   brcTop[0] = LittleEndian.getShort(varParam, 6);
+                   brcTop[1] = LittleEndian.getShort(varParam, 8);
                  }
                }
                break;
+          }
           case 0x21:
                int index = (param & 0xff000000) >> 24;
                int count = (param & 0x00ff0000) >> 16;
                int width = (param & 0x0000ffff);
+               int itcMac = newTAP.getItcMac();
 
-               short[] rgdxaCenter = new short[newTAP._itcMac + count + 1];
-               TableCellDescriptor[] rgtc = new TableCellDescriptor[newTAP._itcMac + count];
-               if(index >= newTAP._itcMac)
+               short[] rgdxaCenter = new short[itcMac + count + 1];
+               TableCellDescriptor[] rgtc = new TableCellDescriptor[itcMac + count];
+               if(index >= itcMac)
                {
-                 index = newTAP._itcMac;
-                 System.arraycopy(newTAP._rgdxaCenter, 0, rgdxaCenter, 0, newTAP._itcMac + 1);
-                 System.arraycopy(newTAP._rgtc, 0, rgtc, 0, newTAP._itcMac);
+                 index = itcMac;
+                 System.arraycopy(newTAP.getRgdxaCenter(), 0, rgdxaCenter, 0, itcMac + 1);
+                 System.arraycopy(newTAP.getRgtc(), 0, rgtc, 0, itcMac);
                }
                else
                {
                  //copy rgdxaCenter
-                 System.arraycopy(newTAP._rgdxaCenter, 0, rgdxaCenter, 0, index + 1);
-                 System.arraycopy(newTAP._rgdxaCenter, index + 1, rgdxaCenter, index + count, (newTAP._itcMac) - (index));
+                 System.arraycopy(newTAP.getRgdxaCenter(), 0, rgdxaCenter, 0, index + 1);
+                 System.arraycopy(newTAP.getRgdxaCenter(), index + 1, rgdxaCenter, index + count, itcMac - (index));
                  //copy rgtc
-                 System.arraycopy(newTAP._rgtc, 0, rgtc, 0, index);
-                 System.arraycopy(newTAP._rgtc, index, rgtc, index + count, newTAP._itcMac - index);
+                 System.arraycopy(newTAP.getRgtc(), 0, rgtc, 0, index);
+                 System.arraycopy(newTAP.getRgtc(), index, rgtc, index + count, itcMac - index);
                }
 
                for(int x = index; x < index + count; x++)
