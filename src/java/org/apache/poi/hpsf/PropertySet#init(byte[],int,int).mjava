@@ -9,24 +9,27 @@
      * from the beginning of <var>src</src>
      * @param length Length of the property set stream.
      */
-    private void init(final byte[] src, int offset, final int length)
+    private void init(final byte[] src, final int offset, final int length)
     {
+        /* FIXME: Ensure that at most "length" bytes are read. */
+        
         /*
          * Read the stream's header fields.
          */
-        byteOrder = LittleEndian.getUShort(src, offset);
-        offset += LittleEndian.SHORT_SIZE;
-        format = LittleEndian.getUShort(src, offset);
-        offset += LittleEndian.SHORT_SIZE;
-        osVersion = (int) LittleEndian.getUInt(src, offset);
-        offset += LittleEndian.INT_SIZE;
-        classID = new ClassID(src, offset);
-        offset += ClassID.LENGTH;
-        sectionCount = LittleEndian.getInt(src, offset);
-        offset += LittleEndian.INT_SIZE;
-	if (sectionCount <= 0)
-	    throw new HPSFRuntimeException("Section count " + sectionCount +
-					   " must be greater than 0.");
+        int o = offset;
+        byteOrder = LittleEndian.getUShort(src, o);
+        o += LittleEndian.SHORT_SIZE;
+        format = LittleEndian.getUShort(src, o);
+        o += LittleEndian.SHORT_SIZE;
+        osVersion = (int) LittleEndian.getUInt(src, o);
+        o += LittleEndian.INT_SIZE;
+        classID = new ClassID(src, o);
+        o += ClassID.LENGTH;
+        sectionCount = LittleEndian.getInt(src, o);
+        o += LittleEndian.INT_SIZE;
+        if (sectionCount <= 0)
+            throw new HPSFRuntimeException("Section count " + sectionCount +
+                                           " must be greater than 0.");
 
         /*
          * Read the sections, which are following the header. They
@@ -48,9 +51,9 @@
          * "offset" accordingly.
          */
         for (int i = 0; i < sectionCount; i++)
-	{
-            final Section s = new Section(src, offset);
-            offset += ClassID.LENGTH + LittleEndian.INT_SIZE;
+        {
+            final Section s = new Section(src, o);
+            o += ClassID.LENGTH + LittleEndian.INT_SIZE;
             sections.add(s);
         }
     }
