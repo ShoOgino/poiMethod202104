@@ -6,6 +6,7 @@
     //int fcMin = docStream.getOffset();
 
     int size = _textPieces.size();
+    int bumpDown = 0;
     for (int x = 0; x < size; x++)
     {
       TextPiece next = (TextPiece)_textPieces.get(x);
@@ -16,12 +17,24 @@
 
       // write the text to the docstream and save the piece descriptor to the
       // plex which will be written later to the tableStream.
+      //if (_multiple == 1 && pd.isUnicode() &&
       docStream.write(next.getBuf());
 
       int nodeStart = next.getStart();
-      textPlex.addProperty(new PropertyNode(nodeStart,
-                                            (next.getEnd() - nodeStart)/_multiple + nodeStart,
-                                            pd.toByteArray()));
+      int multiple = 1;
+      if (pd.isUnicode())
+      {
+        multiple = 2;
+      }
+      textPlex.addProperty(new PropertyNode(nodeStart - bumpDown,
+        ((next.getEnd() - nodeStart)/multiple + nodeStart) - bumpDown,
+        pd.toByteArray()));
+
+      if (pd.isUnicode())
+      {
+        bumpDown += ((next.getEnd() - nodeStart)/multiple);
+      }
+
 
     }
 

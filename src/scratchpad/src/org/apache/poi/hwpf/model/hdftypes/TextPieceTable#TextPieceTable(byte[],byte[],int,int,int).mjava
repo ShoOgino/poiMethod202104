@@ -5,7 +5,7 @@
     // get our plex of PieceDescriptors
     PlexOfCps pieceTable = new PlexOfCps(tableStream, offset, size, PieceDescriptor.getSizeInBytes());
 
-    _multiple = 2;
+    //_multiple = 2;
     int length = pieceTable.length();
     PieceDescriptor[] pieces = new PieceDescriptor[length];
 
@@ -16,31 +16,45 @@
       PropertyNode node = pieceTable.getProperty(x);
       pieces[x] = new PieceDescriptor(node.getBuf(), 0);
 
-      if (!pieces[x].isUnicode())
-      {
-        _multiple = 1;
-      }
+//      if (!pieces[x].isUnicode())
+//      {
+//        _multiple = 1;
+//      }
     }
 
     _cpMin = pieces[0].getFilePosition() - fcMin;
+    // if a piece is unicode the actual offset may be bumped because of the
+    // doubling of the needed size.
+    int bump = 0;
+
     // using the PieceDescriptors, build our list of TextPieces.
     for (int x = 0; x < pieces.length; x++)
     {
       int start = pieces[x].getFilePosition();
       PropertyNode node = pieceTable.getProperty(x);
       int nodeStart = node.getStart();
+
       // multiple will be 2 if there is only one piece and its unicode. Some
       // type of optimization.
-      int nodeEnd = ((node.getEnd() - nodeStart) * _multiple) + nodeStart;
+      boolean unicode = pieces[x].isUnicode();
+
+      int multiple = 1;
+      if (unicode)
+      {
+        multiple = 2;
+      }
+      int nodeEnd = ((node.getEnd() - nodeStart) * multiple) + nodeStart;
       int textSize = nodeEnd - nodeStart;
 
-      boolean unicode = pieces[x].isUnicode();
-      String toStr = null;
 
-      byte[] buf = new byte[textSize + (unicode ? textSize % 2 : 0)];
+      byte[] buf = new byte[textSize];
       System.arraycopy(documentStream, start, buf, 0, textSize);
-      _textPieces.add(new TextPiece(nodeStart, nodeEnd, buf, pieces[x]));
+      _textPieces.add(new TextPiece(nodeStart + bump, nodeEnd + bump, buf, pieces[x]));
 
+      if (unicode)
+      {
+        bump += (node.getEnd() - nodeStart);
+      }
     }
   }
 
