@@ -1,0 +1,39 @@
+  public Table getTable(Paragraph paragraph)
+  {
+    if (!paragraph.isInTable())
+    {
+      throw new IllegalArgumentException("This paragraph doesn't belong to a table");
+    }
+
+    Range r = (Range)paragraph;
+    if (r._parent.get() != this)
+    {
+      throw new IllegalArgumentException("This paragraph is not a child of this range");
+    }
+
+    r.initAll();
+    int tableEnd = r._parEnd;
+
+    if (r._parStart != 0 && ((Paragraph)r._paragraphs.get(r._parStart - 1)).isInTable())
+    {
+      throw new IllegalArgumentException("This paragraph is not the first one in the table");
+    }
+
+    int limit = r._paragraphs.size();
+    for (; tableEnd < limit; tableEnd++)
+    {
+      if (!((Paragraph)r._paragraphs.get(tableEnd)).isInTable())
+      {
+        break;
+      }
+    }
+
+    initAll();
+    if (tableEnd > _parEnd)
+    {
+      throw new ArrayIndexOutOfBoundsException("The table's bounds fall outside of this Range");
+    }
+
+    return new Table(r._parStart, tableEnd, r._doc.getRange(), 1);
+  }
+

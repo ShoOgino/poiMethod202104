@@ -33,6 +33,19 @@
 
     _fib.fillVariableFields(_mainStream, _tableStream);
 
+    // read in the data stream.
+    try
+    {
+      DocumentEntry dataProps =
+          (DocumentEntry) _filesystem.getRoot().getEntry("Data");
+      _dataStream = new byte[dataProps.getSize()];
+      _filesystem.createDocumentInputStream("Data").read(_dataStream);
+    }
+    catch(java.io.FileNotFoundException e)
+    {
+        _dataStream = new byte[0];
+    }
+
     // get the start of text in the main stream
     int fcMin = _fib.getFcMin();
 
@@ -41,7 +54,7 @@
     _cft = new ComplexFileTable(_mainStream, _tableStream, _fib.getFcClx(), fcMin);
     _tpt = _cft.getTextPieceTable();
     _cbt = new CHPBinTable(_mainStream, _tableStream, _fib.getFcPlcfbteChpx(), _fib.getLcbPlcfbteChpx(), fcMin);
-    _pbt = new PAPBinTable(_mainStream, _tableStream, _fib.getFcPlcfbtePapx(), _fib.getLcbPlcfbtePapx(), fcMin);
+    _pbt = new PAPBinTable(_mainStream, _tableStream, _dataStream, _fib.getFcPlcfbtePapx(), _fib.getLcbPlcfbtePapx(), fcMin);
 
     // Word XP puts in a zero filled buffer in front of the text and it screws
     // up my system for offsets. This is an adjustment.
@@ -63,7 +76,12 @@
       _lt = new ListTables(_tableStream, _fib.getFcPlcfLst(), _fib.getFcPlfLfo());
     }
 
-    int x = 0;
-
+    PlexOfCps plc = new PlexOfCps(_tableStream, _fib.getFcPlcffldMom(), _fib.getLcbPlcffldMom(), 2);
+    for (int x = 0; x < plc.length(); x++)
+    {
+      GenericPropertyNode node = plc.getProperty(x);
+      byte[] fld = node.getBytes();
+      int breakpoint = 0;
+    }
   }
 

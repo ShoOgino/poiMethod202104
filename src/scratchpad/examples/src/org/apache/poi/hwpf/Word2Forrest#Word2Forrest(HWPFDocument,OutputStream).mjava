@@ -1,0 +1,92 @@
+  public Word2Forrest(HWPFDocument doc, OutputStream stream)
+    throws IOException, UnsupportedEncodingException
+  {
+    OutputStreamWriter out = new OutputStreamWriter (stream, "UTF-8");
+    _out = out;
+    _doc = doc;
+
+    init ();
+    openDocument ();
+    openBody ();
+
+    Range r = doc.getRange ();
+    StyleSheet styleSheet = doc.getStyleSheet ();
+
+    int sectionLevel = 0;
+    int lenParagraph = r.numParagraphs ();
+    boolean inCode = false;
+    for (int x = 0; x < lenParagraph; x++)
+    {
+      Paragraph p = r.getParagraph (x);
+      String text = p.text ();
+      if (text.trim ().length () == 0)
+      {
+        continue;
+      }
+      StyleDescription paragraphStyle = styleSheet.getStyleDescription (p.
+        getStyleIndex ());
+      String styleName = paragraphStyle.getName();
+      if (styleName.startsWith ("Heading"))
+      {
+        if (inCode)
+        {
+          closeSource();
+          inCode = false;
+        }
+
+        int headerLevel = Integer.parseInt (styleName.substring (8));
+        if (headerLevel > sectionLevel)
+        {
+          openSection ();
+        }
+        else
+        {
+          for (int y = 0; y < (sectionLevel - headerLevel) + 1; y++)
+          {
+            closeSection ();
+          }
+          openSection ();
+        }
+        sectionLevel = headerLevel;
+        openTitle ();
+        writePlainText (text);
+        closeTitle ();
+      }
+      else
+      {
+        int cruns = p.numCharacterRuns ();
+        CharacterRun run = p.getCharacterRun (0);
+        int ftcAscii = run.getFontNameIndex ();
+        String fontName = doc.getFontTable().getMainFont(ftcAscii);
+        if (fontName.startsWith ("Courier"))
+        {
+          if (!inCode)
+          {
+            openSource ();
+            inCode = true;
+          }
+          writePlainText (p.text());
+        }
+        else
+        {
+          if (inCode)
+          {
+            inCode = false;
+            closeSource();
+          }
+          openParagraph();
+          writePlainText(p.text());
+          closeParagraph();
+        }
+      }
+    }
+    for (int x = 0; x < sectionLevel; x++)
+    {
+      closeSection();
+    }
+    closeBody();
+    closeDocument();
+    _out.flush();
+
+  }
+

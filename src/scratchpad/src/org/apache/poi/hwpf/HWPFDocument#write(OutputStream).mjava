@@ -12,6 +12,7 @@
     HWPFFileSystem docSys = new HWPFFileSystem();
     HWPFOutputStream mainStream = docSys.getStream("WordDocument");
     HWPFOutputStream tableStream = docSys.getStream("1Table");
+    HWPFOutputStream dataStream = docSys.getStream("Data");
     int tableOffset = 0;
 
     // FileInformationBlock fib = (FileInformationBlock)_fib.clone();
@@ -95,7 +96,7 @@
     _fib.setFcMac(fcMac);
     _fib.setCbMac(mainStream.getOffset());
 
-    // make sure that the table and doc stream use big blocks.
+    // make sure that the table, doc and data streams use big blocks.
     byte[] mainBuf = mainStream.toByteArray();
     if (mainBuf.length < 4096)
     {
@@ -116,11 +117,20 @@
       tableBuf = tempBuf;
     }
 
+    byte[] dataBuf = _dataStream;
+    if (dataBuf.length < 4096)
+    {
+      byte[] tempBuf = new byte[4096];
+      System.arraycopy(dataBuf, 0, tempBuf, 0, dataBuf.length);
+      dataBuf = tempBuf;
+    }
+
 
     // spit out the Word document.
     POIFSFileSystem pfs = new POIFSFileSystem();
     pfs.createDocument(new ByteArrayInputStream(mainBuf), "WordDocument");
     pfs.createDocument(new ByteArrayInputStream(tableBuf), "1Table");
+    pfs.createDocument(new ByteArrayInputStream(dataBuf), "Data");
 
     pfs.writeFilesystem(out);
   }
