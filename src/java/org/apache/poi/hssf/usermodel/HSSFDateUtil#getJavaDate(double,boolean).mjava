@@ -1,0 +1,35 @@
+    /**
+     *  Given an Excel date with either 1900 or 1904 date windowing,
+     *  converts it to a java.util.Date.
+     *
+     *  @param date  The Excel date.
+     *  @param use1904windowing  true if date uses 1904 windowing,
+     *   or false if using 1900 date windowing.
+     *  @return Java representation of the date, or null if date is not a valid Excel date
+     */
+    public static Date getJavaDate(double date, boolean use1904windowing) {
+        if (isValidExcelDate(date)) {
+            int startYear = 1900;
+            int dayAdjust = -1; // Excel thinks 2/29/1900 is a valid date, which it isn't
+            int wholeDays = (int)Math.floor(date);
+            if (use1904windowing) {
+                startYear = 1904;
+                dayAdjust = 1; // 1904 date windowing uses 1/2/1904 as the first day
+            }
+            else if (wholeDays < 61) {
+                // Date is prior to 3/1/1900, so adjust because Excel thinks 2/29/1900 exists
+                // If Excel date == 2/29/1900, will become 3/1/1900 in Java representation
+                dayAdjust = 0;
+            }
+            GregorianCalendar calendar = new GregorianCalendar(startYear,0,
+                                                     wholeDays + dayAdjust);
+            int millisecondsInDay = (int)((date - Math.floor(date)) * 
+                                          (double) DAY_MILLISECONDS + 0.5);
+            calendar.set(GregorianCalendar.MILLISECOND, millisecondsInDay);
+            return calendar.getTime();
+        }
+        else {
+            return null;
+        }
+    }
+
