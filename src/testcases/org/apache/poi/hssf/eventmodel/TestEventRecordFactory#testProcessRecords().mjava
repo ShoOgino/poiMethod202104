@@ -1,0 +1,35 @@
+    /**
+     * tests that the records can be processed and properly return 
+     * values.
+     */
+    public void testProcessRecords()
+    {
+        byte[] bytes = null;
+        int offset = 0;
+        //boolean wascalled = false;
+        factory.registerListener(new ERFListener() {
+            public boolean processRecord(Record rec) {
+                wascalled = true;
+                assertTrue("must be BOFRecord got SID="+rec.getSid(),
+                           (rec.getSid() == BOFRecord.sid));                  
+                return true;              
+            }
+        }, new short[] {BOFRecord.sid});
+        
+        BOFRecord bof = new BOFRecord();
+        bof.setBuild((short)0);
+        bof.setBuildYear((short)1999);
+        bof.setRequiredVersion(123);
+        bof.setType(BOFRecord.TYPE_WORKBOOK);
+        bof.setVersion((short)0x06);
+        bof.setHistoryBitMask(BOFRecord.HISTORY_MASK);
+        
+        EOFRecord eof = new EOFRecord();
+        bytes = new byte[bof.getRecordSize() + eof.getRecordSize()];
+        offset = bof.serialize(offset,bytes);
+        offset = eof.serialize(offset,bytes);
+                
+        factory.processRecords(new ByteArrayInputStream(bytes));    
+        assertTrue("The record listener must be called",wascalled);    
+    }
+
