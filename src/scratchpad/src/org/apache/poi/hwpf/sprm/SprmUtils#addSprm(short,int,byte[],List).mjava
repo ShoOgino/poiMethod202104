@@ -1,0 +1,46 @@
+  public static int addSprm(short instruction, int param, byte[] varParam, List list)
+  {
+    int type = instruction & 0xe000;
+
+    byte[] sprm = null;
+    switch(type)
+    {
+      case 0:
+      case 1:
+        sprm = new byte[3];
+        sprm[2] = (byte)param;
+        break;
+      case 2:
+        sprm = new byte[4];
+        LittleEndian.putShort(sprm, 2, (short)param);
+        break;
+      case 3:
+        sprm = new byte[6];
+        LittleEndian.putInt(sprm, 2, param);
+        break;
+      case 4:
+      case 5:
+        sprm = new byte[4];
+        LittleEndian.putShort(sprm, 2, (short)param);
+        break;
+      case 6:
+        sprm = new byte[3 + varParam.length];
+        sprm[2] = (byte)varParam.length;
+        System.arraycopy(varParam, 0, sprm, 3, varParam.length);
+        break;
+      case 7:
+        sprm = new byte[5];
+        // this is a three byte int so it has to be handled special
+        byte[] temp = new byte[4];
+        LittleEndian.putInt(temp, 0, param);
+        System.arraycopy(temp, 0, sprm, 2, 3);
+        break;
+      default:
+        //should never happen
+        break;
+    }
+    LittleEndian.putShort(sprm, 0, instruction);
+    list.add(sprm);
+    return sprm.length;
+  }
+
