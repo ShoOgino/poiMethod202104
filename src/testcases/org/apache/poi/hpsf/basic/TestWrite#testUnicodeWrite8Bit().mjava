@@ -1,0 +1,45 @@
+    /**
+     * <p>Tests whether writing 8-bit characters to a Unicode property
+     * succeeds.</p>
+     */
+    public void testUnicodeWrite8Bit()
+    {
+        final String TITLE = "This is a sample title";
+        final MutablePropertySet mps = new MutablePropertySet();
+        final MutableSection ms = (MutableSection) mps.getSections().get(0);
+        ms.setFormatID(SectionIDMap.SUMMARY_INFORMATION_ID);
+        final MutableProperty p = new MutableProperty();
+        p.setID(PropertyIDMap.PID_TITLE);
+        p.setType(Variant.VT_LPSTR);
+        p.setValue(TITLE);
+        ms.setProperty(p);
+
+        Throwable t = null;
+        try
+        {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            mps.write(out);
+            out.close();
+            byte[] bytes = out.toByteArray();
+
+            PropertySet psr = new PropertySet(bytes);
+            Section sr = (Section) psr.getSections().get(0);
+            String title = (String) sr.getProperty(PropertyIDMap.PID_TITLE);
+            assertEquals(TITLE, title);
+        }
+        catch (WritingNotSupportedException e)
+        {
+            t = e;
+        }
+        catch (IOException e)
+        {
+            t = e;
+        }
+        catch (NoPropertySetStreamException e)
+        {
+            t = e;
+        }
+        if (t != null)
+            fail(t.getMessage());
+    }
+
