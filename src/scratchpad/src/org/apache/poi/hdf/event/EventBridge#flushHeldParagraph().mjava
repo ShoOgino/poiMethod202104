@@ -1,0 +1,26 @@
+  private void flushHeldParagraph()
+  {
+    PapxNode papx = (PapxNode)_onHold.get(0);
+    byte[] bytePapx = papx.getPapx();
+    int istd = LittleEndian.getShort(bytePapx, 0);
+    StyleDescription std = _stsh.getStyleDescription(istd);
+
+    ParagraphProperties pap = (ParagraphProperties)StyleSheet.uncompressProperty(bytePapx, _currentStd.getPAP(), _stsh);
+    LVL lvl = _listTables.getLevel(pap.getIlfo(), pap.getIlvl());
+    pap = (ParagraphProperties)StyleSheet.uncompressProperty(lvl._papx, pap, _stsh, false);
+
+    int size = _onHold.size() - 1;
+
+    CharacterProperties numChp = (CharacterProperties)StyleSheet.uncompressProperty(((ChpxNode)_onHold.get(size)).getChpx(), std.getCHP(), _stsh);
+
+    numChp = (CharacterProperties)StyleSheet.uncompressProperty(lvl._chpx, numChp, _stsh);
+    String bulletText = getBulletText(lvl, pap);
+
+    _listener.listEntry(bulletText, numChp, pap, papx.getStart() - _fcMin, papx.getEnd() - _fcMin);
+    for (int x = 1; x <= size; x++)
+    {
+      characterRun((ChpxNode)_onHold.get(x));
+    }
+
+  }
+

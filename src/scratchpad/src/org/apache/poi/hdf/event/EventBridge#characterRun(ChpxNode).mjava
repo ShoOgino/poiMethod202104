@@ -1,0 +1,33 @@
+  public void characterRun(ChpxNode chpx)
+  {
+    if (_beginHeaders)
+    {
+      _hdrCharacterRuns.add(chpx);
+    }
+
+    int start = chpx.getStart();
+    int end = chpx.getEnd();
+    //check to see if we should hold this characterRun
+    if (_holdParagraph)
+    {
+      _onHold.add(chpx);
+      if (end >= _endHoldIndex)
+      {
+        _holdParagraph = false;
+        _endHoldIndex = -1;
+        flushHeldParagraph();
+        _onHold = new ArrayList();
+      }
+    }
+
+    byte[] byteChpx = chpx.getChpx();
+
+
+    CharacterProperties chp = (CharacterProperties)StyleSheet.uncompressProperty(byteChpx, _currentStd.getCHP(), _stsh);
+
+    ArrayList textList = BTreeSet.findProperties(start, end, _text.root);
+    String text = getTextFromNodes(textList, start, end);
+
+    _listener.characterRun(chp, text, start - _fcMin, end - _fcMin);
+  }
+
