@@ -1,0 +1,54 @@
+  public byte[] writeTo(HWPFOutputStream docStream)
+    throws IOException
+  {
+
+    PlexOfCps textPlex = new PlexOfCps(PieceDescriptor.getSizeInBytes());
+    //int fcMin = docStream.getOffset();
+
+    int size = _textPieces.size();
+    int bumpDown = 0;
+    for (int x = 0; x < size; x++)
+    {
+      TextPiece next = (TextPiece)_textPieces.get(x);
+      PieceDescriptor pd = next.getPieceDescriptor();
+
+      int offset = docStream.getOffset();
+      int mod = (offset % POIFSConstants.BIG_BLOCK_SIZE);
+      if (mod != 0)
+      {
+        mod = POIFSConstants.BIG_BLOCK_SIZE - mod;
+        byte[] buf = new byte[mod];
+        docStream.write(buf);
+      }
+
+
+      // set the text piece position to the current docStream offset.
+      pd.setFilePosition(docStream.getOffset());
+
+      // write the text to the docstream and save the piece descriptor to the
+      // plex which will be written later to the tableStream.
+      //if (_multiple == 1 && pd.isUnicode() &&
+      docStream.write(next.getRawBytes());
+
+      int nodeStart = next.getStart();
+      int multiple = 1;
+      if (pd.isUnicode())
+      {
+        multiple = 2;
+      }
+      textPlex.addProperty(new GenericPropertyNode(nodeStart - bumpDown,
+        ((next.getEnd() - nodeStart)/multiple + nodeStart) - bumpDown,
+        pd.toByteArray()));
+
+      if (pd.isUnicode())
+      {
+        bumpDown += ((next.getEnd() - nodeStart)/multiple);
+      }
+
+
+    }
+
+    return textPlex.toByteArray();
+
+  }
+

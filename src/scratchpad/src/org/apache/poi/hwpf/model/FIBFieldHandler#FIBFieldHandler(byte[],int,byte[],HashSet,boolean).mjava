@@ -1,0 +1,28 @@
+  public FIBFieldHandler(byte[] mainStream, int offset, byte[] tableStream,
+                         HashSet offsetList, boolean areKnown)
+  {
+    int numFields = LittleEndian.getShort(mainStream, offset);
+    offset += LittleEndian.SHORT_SIZE;
+    _fields = new int[numFields * 2];
+
+    for (int x = 0; x < numFields; x++)
+    {
+      int fieldOffset = (x * FIELD_SIZE) + offset;
+      int dsOffset = LittleEndian.getInt(mainStream, fieldOffset);
+      fieldOffset += LittleEndian.INT_SIZE;
+      int dsSize = LittleEndian.getInt(mainStream, fieldOffset);
+
+      if (offsetList.contains(new Integer(x)) ^ areKnown)
+      {
+        if (dsSize > 0)
+        {
+          UnhandledDataStructure unhandled = new UnhandledDataStructure(
+            tableStream, dsOffset, dsSize);
+          _unknownMap.put(new Integer(x), unhandled);
+        }
+      }
+      _fields[x*2] = dsOffset;
+      _fields[(x*2) + 1] = dsSize;
+    }
+  }
+

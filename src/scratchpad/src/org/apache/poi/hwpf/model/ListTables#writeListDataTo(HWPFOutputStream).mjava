@@ -1,0 +1,29 @@
+  public void writeListDataTo(HWPFOutputStream tableStream)
+    throws IOException
+  {
+
+    Integer[] intList = (Integer[])_listMap.keySet().toArray(new Integer[0]);
+
+    // use this stream as a buffer for the levels since their size varies.
+    ByteArrayOutputStream levelBuf = new ByteArrayOutputStream();
+
+    // use a byte array for the lists because we know their size.
+    byte[] listBuf = new byte[intList.length * LIST_DATA_SIZE];
+
+    byte[] shortHolder = new byte[2];
+    LittleEndian.putShort(shortHolder, (short)intList.length);
+    tableStream.write(shortHolder);
+
+    for (int x = 0; x < intList.length; x++)
+    {
+      ListData lst = (ListData)_listMap.get(intList[x]);
+      tableStream.write(lst.toByteArray());
+      ListLevel[] lvls = lst.getLevels();
+      for (int y = 0; y < lvls.length; y++)
+      {
+        levelBuf.write(lvls[y].toByteArray());
+      }
+    }
+    tableStream.write(levelBuf.toByteArray());
+  }
+

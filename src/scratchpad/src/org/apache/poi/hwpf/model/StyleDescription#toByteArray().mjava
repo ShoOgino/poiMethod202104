@@ -1,0 +1,54 @@
+  public byte[] toByteArray()
+  {
+    // size equals _baseLength bytes for known variables plus 2 bytes for name
+    // length plus name length * 2 plus 2 bytes for null plus upx's preceded by
+    // length
+    int size = _baseLength + 2 + ((_name.length() + 1) * 2);
+
+    // determine the size needed for the upxs. They always fall on word
+    // boundaries.
+    size += _upxs[0].size() + 2;
+    for (int x = 1; x < _upxs.length; x++)
+    {
+      size += _upxs[x-1].size() % 2;
+      size += _upxs[x].size() + 2;
+    }
+
+
+    byte[] buf = new byte[size];
+
+    int offset = 0;
+    LittleEndian.putShort(buf, offset, _infoShort);
+    offset += LittleEndian.SHORT_SIZE;
+    LittleEndian.putShort(buf, offset, _infoShort2);
+    offset += LittleEndian.SHORT_SIZE;
+    LittleEndian.putShort(buf, offset, _infoShort3);
+    offset += LittleEndian.SHORT_SIZE;
+    LittleEndian.putShort(buf, offset, _bchUpe);
+    offset += LittleEndian.SHORT_SIZE;
+    LittleEndian.putShort(buf, offset, _infoShort4);
+    offset = _baseLength;
+
+    char[] letters = _name.toCharArray();
+    LittleEndian.putShort(buf, _baseLength, (short)letters.length);
+    offset += LittleEndian.SHORT_SIZE;
+    for (int x = 0; x < letters.length; x++)
+    {
+      LittleEndian.putShort(buf, offset, (short)letters[x]);
+      offset += LittleEndian.SHORT_SIZE;
+    }
+    // get past the null delimiter for the name.
+    offset += LittleEndian.SHORT_SIZE;
+
+    for (int x = 0; x < _upxs.length; x++)
+    {
+      short upxSize = (short)_upxs[x].size();
+      LittleEndian.putShort(buf, offset, upxSize);
+      offset += LittleEndian.SHORT_SIZE;
+      System.arraycopy(_upxs[x].getUPX(), 0, buf, offset, upxSize);
+      offset += upxSize + (upxSize % 2);
+    }
+
+    return buf;
+  }
+

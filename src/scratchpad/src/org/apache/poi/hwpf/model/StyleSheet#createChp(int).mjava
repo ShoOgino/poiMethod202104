@@ -1,0 +1,36 @@
+  /**
+   * Creates a CharacterProperties object from a chpx stored in the
+   * StyleDescription at the index istd in the StyleDescription array. The
+   * CharacterProperties object is placed in the StyleDescription at istd after
+   * its been created. Not every StyleDescription will contain a chpx. In these
+   * cases this function does nothing.
+   *
+   * @param istd The index of the StyleDescription to create the
+   *        CharacterProperties object from.
+   */
+  private void createChp(int istd)
+  {
+      StyleDescription sd = _styleDescriptions[istd];
+      CharacterProperties chp = sd.getCHP();
+      byte[] chpx = sd.getCHPX();
+      int baseIndex = sd.getBaseStyle();
+      if(chp == null && chpx != null)
+      {
+          CharacterProperties parentCHP = new CharacterProperties();
+          if(baseIndex != NIL_STYLE)
+          {
+
+              parentCHP = _styleDescriptions[baseIndex].getCHP();
+              if(parentCHP == null)
+              {
+                  createChp(baseIndex);
+                  parentCHP = _styleDescriptions[baseIndex].getCHP();
+              }
+
+          }
+
+          chp = (CharacterProperties)CharacterSprmUncompressor.uncompressCHP(parentCHP, chpx, 0);
+          sd.setCHP(chp);
+      }
+  }
+

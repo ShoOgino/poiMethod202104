@@ -1,0 +1,19 @@
+  protected Paragraph insertBefore(ParagraphProperties props, int styleIndex, String text)
+    //throws UnsupportedEncodingException
+  {
+    initAll();
+    StyleSheet ss = _doc.getStyleSheet();
+    ParagraphProperties baseStyle = ss.getParagraphStyle(styleIndex);
+    CharacterProperties baseChp = ss.getCharacterStyle(styleIndex);
+
+    byte[] grpprl = ParagraphSprmCompressor.compressParagraphProperty(props, baseStyle);
+    byte[] withIndex = new byte[grpprl.length + LittleEndian.SHORT_SIZE];
+    LittleEndian.putShort(withIndex, (short)styleIndex);
+    System.arraycopy(grpprl, 0, withIndex, LittleEndian.SHORT_SIZE, grpprl.length);
+    SprmBuffer buf = new SprmBuffer(withIndex);
+
+    _doc.getParagraphTable().insert(_parStart, _start, buf);
+    insertBefore(text, baseChp);
+    return getParagraph(0);
+  }
+

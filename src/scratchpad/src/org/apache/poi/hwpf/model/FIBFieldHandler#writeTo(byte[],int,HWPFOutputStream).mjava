@@ -1,0 +1,29 @@
+  void writeTo(byte[] mainStream, int offset, HWPFOutputStream tableStream)
+    throws IOException
+  {
+    int length = _fields.length/2;
+    LittleEndian.putShort(mainStream, offset, (short)length);
+    offset += LittleEndian.SHORT_SIZE;
+
+    for (int x = 0; x < length; x++)
+    {
+      UnhandledDataStructure ds = (UnhandledDataStructure)_unknownMap.get(new Integer(x));
+      if (ds != null)
+      {
+        LittleEndian.putInt(mainStream, offset, tableStream.getOffset());
+        offset += LittleEndian.INT_SIZE;
+        byte[] buf = ds.getBuf();
+        tableStream.write(buf);
+        LittleEndian.putInt(mainStream, offset, buf.length);
+        offset += LittleEndian.INT_SIZE;
+      }
+      else
+      {
+        LittleEndian.putInt(mainStream, offset, _fields[x * 2]);
+        offset += LittleEndian.INT_SIZE;
+        LittleEndian.putInt(mainStream, offset, _fields[(x * 2) + 1]);
+        offset += LittleEndian.INT_SIZE;
+      }
+    }
+  }
+

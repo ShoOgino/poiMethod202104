@@ -1,0 +1,36 @@
+  public void writeTo(HWPFFileSystem sys, int fcMin)
+    throws IOException
+  {
+    HWPFOutputStream docStream = sys.getStream("WordDocument");
+    HWPFOutputStream tableStream = sys.getStream("1Table");
+
+    int offset = docStream.getOffset();
+    int len = _sections.size();
+    PlexOfCps plex = new PlexOfCps(SED_SIZE);
+
+    for (int x = 0; x < len; x++)
+    {
+      SEPX sepx = (SEPX)_sections.get(x);
+      byte[] grpprl = sepx.getGrpprl();
+
+      // write the sepx to the document stream. starts with a 2 byte size
+      // followed by the grpprl
+      byte[] shortBuf = new byte[2];
+      LittleEndian.putShort(shortBuf, (short)grpprl.length);
+
+      docStream.write(shortBuf);
+      docStream.write(grpprl);
+
+      // set the fc in the section descriptor
+      SectionDescriptor sed = sepx.getSectionDescriptor();
+      sed.setFc(offset);
+
+      // add the section descriptor bytes to the PlexOfCps.
+      GenericPropertyNode property = new GenericPropertyNode(sepx.getStart(), sepx.getEnd(), sed.toByteArray());
+      plex.addProperty(property);
+
+      offset = docStream.getOffset();
+    }
+    tableStream.write(plex.toByteArray());
+  }
+

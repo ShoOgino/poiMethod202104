@@ -1,0 +1,52 @@
+  private static void handleTabs(ParagraphProperties pap, SprmOperation sprm)
+  {
+    byte[] grpprl = sprm.getGrpprl();
+    int offset = sprm.getGrpprlOffset();
+    int delSize = grpprl[offset++];
+    int[] tabPositions = pap.getRgdxaTab();
+    byte[] tabDescriptors = pap.getRgtbd();
+
+    HashMap tabMap = new HashMap();
+    for (int x = 0; x < tabPositions.length; x++)
+    {
+      tabMap.put(new Integer(tabPositions[x]), new Byte(tabDescriptors[x]));
+    }
+
+    for (int x = 0; x < delSize; x++)
+    {
+      tabMap.remove(new Integer(LittleEndian.getInt(grpprl, offset)));
+      offset += LittleEndian.INT_SIZE;;
+    }
+
+    int addSize = grpprl[offset++];
+    int start = offset;
+    for (int x = 0; x < addSize; x++)
+    {
+      Integer key = new Integer(LittleEndian.getShort(grpprl, offset));
+      Byte val = new Byte(grpprl[start + ((LittleEndian.SHORT_SIZE * addSize) + x)]);
+      tabMap.put(key, val);
+      offset += LittleEndian.SHORT_SIZE;
+    }
+
+    tabPositions = new int[tabMap.size()];
+    tabDescriptors = new byte[tabPositions.length];
+    ArrayList list = new ArrayList();
+
+    Iterator keyIT = tabMap.keySet().iterator();
+    while (keyIT.hasNext())
+    {
+      list.add(keyIT.next());
+    }
+    Collections.sort(list);
+
+    for (int x = 0; x < tabPositions.length; x++)
+    {
+      Integer key = ((Integer)list.get(x));
+      tabPositions[x] = key.intValue();
+      tabDescriptors[x] = ((Byte)tabMap.get(key)).byteValue();
+    }
+
+    pap.setRgdxaTab(tabPositions);
+    pap.setRgtbd(tabDescriptors);
+  }
+
