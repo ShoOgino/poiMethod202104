@@ -1,0 +1,54 @@
+  /**
+   *  This method attempt to find an already existing HSSFCellStyle that matches
+   *  what you want the style to be. If it does not find the style, then it
+   *  creates a new one. If it does create a new one, then it applyies the
+   *  propertyName and propertyValue to the style. This is nessasary because
+   *  Excel has an upper limit on the number of Styles that it supports.
+   *
+   *@param  workbook               The workbook that is being worked with.
+   *@param  propertyName           The name of the property that is to be
+   *      changed.
+   *@param  propertyValue          The value of the property that is to be
+   *      changed.
+   *@param  cell                   The cell that needs it's style changes
+   *@exception  NestableException  Thrown if an error happens.
+   */
+  public static void setCellStyleProperty( HSSFCell cell, HSSFWorkbook workbook, String propertyName, Object propertyValue )
+    throws NestableException {
+    try {
+      HSSFCellStyle originalStyle = cell.getCellStyle();
+      HSSFCellStyle newStyle = null;
+      Map values = PropertyUtils.describe( originalStyle );
+      values.put( propertyName, propertyValue );
+      values.remove( "index" );
+      // index seems like what  index the cellstyle is in the list of styles for a workbook.
+      // not good to compare on!
+
+      short numberCellStyles = workbook.getNumCellStyles();
+
+      for ( short i = 0; i < numberCellStyles; i++ ) {
+        HSSFCellStyle wbStyle = workbook.getCellStyleAt( i );
+        Map wbStyleMap = PropertyUtils.describe( wbStyle );
+        wbStyleMap.remove( "index" );
+
+        if ( wbStyleMap.equals( values ) ) {
+          newStyle = wbStyle;
+          break;
+        }
+      }
+
+      if ( newStyle == null ) {
+        newStyle = workbook.createCellStyle();
+        newStyle.setFont( workbook.getFontAt( originalStyle.getFontIndex() ) );
+        PropertyUtils.copyProperties( newStyle, originalStyle );
+        PropertyUtils.setProperty( newStyle, propertyName, propertyValue );
+      }
+
+      cell.setCellStyle( newStyle );
+    }
+    catch ( Exception e ) {
+      e.printStackTrace();
+      throw new NestableException( "Couldn't setCellStyleProperty.", e );
+    }
+  }
+
