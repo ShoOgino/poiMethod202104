@@ -16,24 +16,33 @@
     int lfolvlNum = 0;
     for(int x = 0; x < lfoSize; x++)
     {
-      for(int y = 0; y < _pllfo[x]._clfolvl; y++)
-      {
-        int offset = lfolvlOffset + (lfolvlNum * 8) + lvlOffset;
-        LFOLVL lfolvl = new LFOLVL();
-        lfolvl._iStartAt = Utils.convertBytesToInt(plflfo, offset);
-        lfolvl._ilvl = Utils.convertBytesToInt(plflfo, offset + 4);
-        lfolvl._fStartAt = StyleSheet.getFlag(lfolvl._ilvl & 0x10);
-        lfolvl._fFormatting = StyleSheet.getFlag(lfolvl._ilvl & 0x20);
-        lfolvl._ilvl = (lfolvl._ilvl & (byte)0x0f);
+      if (_pllfo[x]._clfolvl == 0)
+        //  If LFO._clfolvl is 0, then it appears that Word writes
+        //  out a LFOLVL anyway - however, it's all 0xff.  We need
+        //  to skip over it.
         lfolvlNum++;
-
-        if(lfolvl._fFormatting)
-        {
-          offset = lfolvlOffset + (lfolvlNum * 12) + lvlOffset;
-          lfolvl._override = new LVL();
-          lvlOffset += createLVL(plflfo, offset, lfolvl._override);
-        }
-        _pllfo[x]._levels[y] = lfolvl;
+      else
+      {
+          for(int y = 0; y < _pllfo[x]._clfolvl; y++)
+          {
+            int offset = lfolvlOffset + (lfolvlNum * 8) + lvlOffset;
+            LFOLVL lfolvl = new LFOLVL();
+            lfolvl._iStartAt = Utils.convertBytesToInt(plflfo, offset);
+            lfolvl._ilvl = Utils.convertBytesToInt(plflfo, offset + 4);
+            lfolvl._fStartAt = StyleSheet.getFlag(lfolvl._ilvl & 0x10);
+            lfolvl._fFormatting = StyleSheet.getFlag(lfolvl._ilvl & 0x20);
+            lfolvl._ilvl = (lfolvl._ilvl & (byte)0x0f);
+            lfolvlNum++;
+    
+            if(lfolvl._fFormatting)
+            {
+              // The size of a LFOLVL is 8 bytes.
+              offset = lfolvlOffset + (lfolvlNum * 8) + lvlOffset;
+              lfolvl._override = new LVL();
+              lvlOffset += createLVL(plflfo, offset, lfolvl._override);
+            }
+            _pllfo[x]._levels[y] = lfolvl;
+          }
       }
     }
   }
