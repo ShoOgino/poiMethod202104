@@ -1,13 +1,16 @@
   public StyleDescription(byte[] std, int baseLength, int offset, boolean word9)
   {
-      int nameStart = offset + baseLength;
+     _baseLength = baseLength;
+     int nameStart = offset + baseLength;
       _infoShort = LittleEndian.getShort(std, offset);
       offset += LittleEndian.SHORT_SIZE;
       _infoShort2 = LittleEndian.getShort(std, offset);
       offset += LittleEndian.SHORT_SIZE;
+      _infoShort3 = LittleEndian.getShort(std, offset);
+      offset += LittleEndian.SHORT_SIZE;
       _bchUpe = LittleEndian.getShort(std, offset);
       offset += LittleEndian.SHORT_SIZE;
-      _infoShort3 = LittleEndian.getShort(std, offset);
+      _infoShort4 = LittleEndian.getShort(std, offset);
       offset += LittleEndian.SHORT_SIZE;
 
       //first byte(s) of variable length section of std is the length of the
@@ -34,13 +37,13 @@
         // ignore
       }
 
-      //2 bytes for length, length then null terminator.
-      int grupxStart = multiplier + ((nameLength + 1) * multiplier) + nameStart;
+      //length then null terminator.
+      int grupxStart = ((nameLength + 1) * multiplier) + nameStart;
 
       // the spec only refers to two possible upxs but it mentions
       // that more may be added in the future
       int add = 0;
-      int numUPX = _numUPX.getValue(_infoShort2);
+      int numUPX = _numUPX.getValue(_infoShort3);
       for(int x = 0; x < numUPX; x++)
       {
           int upxSize = LittleEndian.getShort(std, grupxStart + add);
@@ -48,8 +51,10 @@
           {
               if(x == 0)
               {
+                  _istd = LittleEndian.getShort(std, grupxStart + add + 2);
+                  int grrprlSize = upxSize - 2;
                   _papx = new byte[upxSize];
-                  System.arraycopy(std, grupxStart + add + 2, _papx, 0, upxSize);
+                  System.arraycopy(std, grupxStart + add + 4, _papx, 0, grrprlSize);
               }
               else if(x == 1)
               {

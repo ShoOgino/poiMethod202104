@@ -16,15 +16,19 @@
 //  }
   public byte[] toByteArray()
   {
-    // size equals 8 bytes for known variables plus 2 bytes for name length plus
-    // name length * 2 plus 2 bytes for null plus upx's preceded by length
-    int size = 8 + 2 + ((_name.length() + 1) * 2);
+    // size equals _baseLength bytes for known variables plus 2 bytes for name
+    // length plus name length * 2 plus 2 bytes for null plus upx's preceded by
+    // length
+    int size = _baseLength + 2 + ((_name.length() + 1) * 2);
 
     //only worry about papx and chpx for upxs
     if(_styleTypeCode.getValue(_infoShort2) == PARAGRAPH_STYLE)
     {
-      size += _papx.length + 2 + (_papx.length % 2);
-      size += _chpx.length + 2;
+      size += _papx.length + 4 + (_papx.length % 2);
+      if (_chpx != null)
+      {
+        size += _chpx.length + 2;
+      }
     }
     else if (_styleTypeCode.getValue(_infoShort2) == CHARACTER_STYLE)
     {
@@ -38,9 +42,11 @@
     offset += LittleEndian.SHORT_SIZE;
     LittleEndian.putShort(buf, offset, _infoShort2);
     offset += LittleEndian.SHORT_SIZE;
+    LittleEndian.putShort(buf, offset, _infoShort3);
+    offset += LittleEndian.SHORT_SIZE;
     LittleEndian.putShort(buf, offset, _bchUpe);
     offset += LittleEndian.SHORT_SIZE;
-    LittleEndian.putShort(buf, offset, _infoShort3);
+    LittleEndian.putShort(buf, offset, _infoShort4);
     offset += LittleEndian.SHORT_SIZE;
 
     char[] letters = _name.toCharArray();
@@ -59,13 +65,18 @@
     {
       LittleEndian.putShort(buf, offset, (short)_papx.length);
       offset += LittleEndian.SHORT_SIZE;
+      LittleEndian.putShort(buf, offset, (short)_istd);
+      offset += LittleEndian.SHORT_SIZE;
       System.arraycopy(_papx, 0, buf, offset, _papx.length);
       offset += _papx.length + (_papx.length % 2);
 
-      LittleEndian.putShort(buf, offset, (short)_chpx.length);
-      offset += LittleEndian.SHORT_SIZE;
-      System.arraycopy(_chpx, 0, buf, offset, _chpx.length);
-      offset += _chpx.length;
+      if (_chpx != null)
+      {
+        LittleEndian.putShort(buf, offset, (short) _chpx.length);
+        offset += LittleEndian.SHORT_SIZE;
+        System.arraycopy(_chpx, 0, buf, offset, _chpx.length);
+        offset += _chpx.length;
+      }
     }
     else if (_styleTypeCode.getValue(_infoShort2) == CHARACTER_STYLE)
     {
