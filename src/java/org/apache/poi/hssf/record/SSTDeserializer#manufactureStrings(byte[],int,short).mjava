@@ -1,0 +1,46 @@
+    /**
+     * This is the starting point where strings are constructed.  Note that
+     * strings may span across multiple continuations. Read the SST record
+     * carefully before beginning to hack.
+     */
+    public void manufactureStrings( final byte[] data, final int index,
+                                     short size )
+    {
+        int offset = index;
+
+        while ( offset < size )
+        {
+            int remaining = size - offset;
+
+            if ( ( remaining > 0 ) && ( remaining < LittleEndianConsts.SHORT_SIZE ) )
+            {
+                throw new RecordFormatException( "Cannot get length of the last string in SSTRecord" );
+            }
+            if ( remaining == LittleEndianConsts.SHORT_SIZE )
+            {
+                setExpectedChars( LittleEndian.getUShort( data, offset ) );
+                unfinishedString = "";
+                break;
+            }
+            short charCount = LittleEndian.getShort( data, offset );
+
+            setupStringParameters( data, offset, charCount );
+            if ( remaining < totalLengthBytes )
+            {
+                setExpectedChars( calculateCharCount( totalLengthBytes - remaining ) );
+                charCount -= getExpectedChars();
+                totalLengthBytes = remaining;
+            }
+            else
+            {
+                setExpectedChars( 0 );
+            }
+            processString( data, offset, charCount );
+            offset += totalLengthBytes;
+            if ( getExpectedChars() != 0 )
+            {
+                break;
+            }
+        }
+    }
+

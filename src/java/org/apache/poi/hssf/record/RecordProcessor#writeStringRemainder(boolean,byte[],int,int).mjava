@@ -1,0 +1,22 @@
+    public byte[] writeStringRemainder( boolean lastStringCompleted, byte[] stringreminant, int offset, int totalWritten )
+    {
+        if ( !lastStringCompleted )
+        {
+            // write reminant -- it'll all fit neatly
+            System.arraycopy( stringreminant, 0, data, recordOffset + offset + totalWritten, stringreminant.length );
+            adjustPointers( stringreminant.length );
+        }
+        else
+        {
+            // write as much of the remnant as possible
+            System.arraycopy( stringreminant, 0, data, recordOffset + offset + totalWritten, available );
+            byte[] leftover = new byte[( stringreminant.length - available ) + LittleEndianConsts.BYTE_SIZE];
+
+            System.arraycopy( stringreminant, available, leftover, LittleEndianConsts.BYTE_SIZE, stringreminant.length - available );
+            leftover[0] = stringreminant[0];
+            stringreminant = leftover;
+            adjustPointers( available );    // Consume all available remaining space
+        }
+        return stringreminant;
+    }
+

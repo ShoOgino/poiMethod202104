@@ -1,0 +1,63 @@
+    /**
+     * Large records are serialized to an SST and to one or more CONTINUE records.  Joy.  They have the special
+     * characteristic that they can change the option field when a single string is split across to a
+     * CONTINUE record.
+     */
+    private void serializeLargeRecord( int record_size, int record_length_index, byte[] buffer, int offset )
+    {
+
+        byte[] stringReminant = null;
+        int stringIndex = 0;
+        boolean lastneedcontinue = false;
+        boolean first_record = true;
+        int totalWritten = 0;
+
+        while ( totalWritten != record_size )
+        {
+            int recordLength = ( (Integer) recordLengths.get( record_length_index++ ) ).intValue();
+            RecordProcessor recordProcessor = new RecordProcessor( buffer,
+                    recordLength, numStrings, numUniqueStrings );
+
+            // write the appropriate header
+            recordProcessor.writeRecordHeader( offset, totalWritten, recordLength, first_record );
+            first_record = false;
+
+            // now, write the rest of the data into the current
+            // record space
+            if ( lastneedcontinue )
+            {
+                lastneedcontinue = stringReminant.length > recordProcessor.getAvailable();
+                // the last string in the previous record was not written out completely
+                stringReminant = recordProcessor.writeStringRemainder( lastneedcontinue,
+                        stringReminant, offset, totalWritten );
+            }
+
+            // last string's remnant, if any, is cleaned up as best as can be done ... now let's try and write
+            // some more strings
+            for ( ; stringIndex < strings.size(); stringIndex++ )
+            {
+                UnicodeString unistr = getUnicodeString( stringIndex );
+
+                if ( unistr.getRecordSize() <= recordProcessor.getAvailable() )
+                {
+                    recordProcessor.writeWholeString( unistr, offset, totalWritten );
+                }
+                else
+                {
+
+                    // can't write the entire string out
+                    if ( recordProcessor.getAvailable() >= SSTRecord.STRING_MINIMAL_OVERHEAD )
+                    {
+
+                        // we can write some of it
+                        stringReminant = recordProcessor.writePartString( unistr, offset, totalWritten );
+                        lastneedcontinue = true;
+                        stringIndex++;
+                    }
+                    break;
+                }
+            }
+            totalWritten += recordLength + SSTRecord.STD_RECORD_OVERHEAD;
+        }
+    }
+
