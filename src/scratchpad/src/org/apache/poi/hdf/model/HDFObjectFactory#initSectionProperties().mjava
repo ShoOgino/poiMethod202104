@@ -1,0 +1,28 @@
+    /**
+     * initializes the SectionProperties BTree
+     */
+    private void initSectionProperties()
+    {
+      //find sections
+      int fcMin = _fib.getFirstCharOffset();
+      int plcfsedFC = _fib.getSectionDescriptorOffset();
+      int plcfsedSize = _fib.getSectionDescriptorSize();
+      byte[] plcfsed = new byte[plcfsedSize];
+      System.arraycopy(_tableBuffer, plcfsedFC, plcfsed, 0, plcfsedSize);
+
+      int arraySize = (plcfsedSize - 4)/16;
+
+
+      for(int x = 0; x < arraySize; x++)
+      {
+          int sectionStart = LittleEndian.getInt(plcfsed, x * 4) + fcMin;
+          int sectionEnd = LittleEndian.getInt(plcfsed, (x+1) * 4) + fcMin;
+          int sepxStart = LittleEndian.getInt(plcfsed, 4 * (arraySize + 1) + (x * 12) + 2);
+          int sepxSize = LittleEndian.getShort(_mainDocument, sepxStart);
+          byte[] sepx = new byte[sepxSize];
+          System.arraycopy(_mainDocument, sepxStart + 2, sepx, 0, sepxSize);
+          SepxNode node = new SepxNode(x + 1, sectionStart, sectionEnd, sepx);
+          _sections.add(node);
+      }
+    }
+

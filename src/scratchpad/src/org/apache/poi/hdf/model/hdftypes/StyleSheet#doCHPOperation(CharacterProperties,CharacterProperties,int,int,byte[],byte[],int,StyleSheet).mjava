@@ -1,0 +1,426 @@
+  static void doCHPOperation(CharacterProperties oldCHP, CharacterProperties newCHP,
+                             int operand, int param,
+                             byte[] varParam, byte[] grpprl, int offset,
+                             StyleSheet styleSheet)
+  {
+      switch(operand)
+      {
+          case 0:
+               newCHP._fRMarkDel = getFlag(param);
+               break;
+          case 0x1:
+               newCHP._fRMark = getFlag(param);
+               break;
+          case 0x2:
+               break;
+          case 0x3:
+               newCHP._fcPic = param;
+               newCHP._fSpec = true;
+               break;
+          case 0x4:
+               newCHP._ibstRMark = (short)param;
+               break;
+          case 0x5:
+               newCHP._dttmRMark[0] = LittleEndian.getShort(grpprl, (offset - 4));
+               newCHP._dttmRMark[1] = LittleEndian.getShort(grpprl, (offset - 2));
+               break;
+          case 0x6:
+               newCHP._fData = getFlag(param);
+               break;
+          case 0x7:
+               //don't care about this
+               break;
+          case 0x8:
+               short chsDiff = (short)((param & 0xff0000) >>> 8);
+               newCHP._fChsDiff = getFlag(chsDiff);
+               newCHP._chse = (short)(param & 0xffff);
+               break;
+          case 0x9:
+               newCHP._fSpec = true;
+               newCHP._ftcSym = (short)LittleEndian.getShort(varParam, 0);
+               newCHP._xchSym = (short)LittleEndian.getShort(varParam, 2);
+               break;
+          case 0xa:
+               newCHP._fOle2 = getFlag(param);
+               break;
+          case 0xb:
+               //?
+               break;
+          case 0xc:
+               newCHP._icoHighlight = (byte)param;
+               newCHP._highlighted = getFlag(param);
+               break;
+          case 0xd:
+               break;
+          case 0xe:
+               newCHP._fcObj = param;
+               break;
+          case 0xf:
+               break;
+          case 0x10:
+               //?
+               break;
+          case 0x11:
+               break;
+          case 0x12:
+               break;
+          case 0x13:
+               break;
+          case 0x14:
+               break;
+          case 0x15:
+               break;
+          case 0x16:
+               break;
+          case 0x17:
+               break;
+          case 0x18:
+               break;
+          case 0x19:
+               break;
+          case 0x1a:
+               break;
+          case 0x1b:
+               break;
+          case 0x1c:
+               break;
+          case 0x1d:
+               break;
+          case 0x1e:
+               break;
+          case 0x1f:
+               break;
+          case 0x20:
+               break;
+          case 0x21:
+               break;
+          case 0x22:
+               break;
+          case 0x23:
+               break;
+          case 0x24:
+               break;
+          case 0x25:
+               break;
+          case 0x26:
+               break;
+          case 0x27:
+               break;
+          case 0x28:
+               break;
+          case 0x29:
+               break;
+          case 0x2a:
+               break;
+          case 0x2b:
+               break;
+          case 0x2c:
+               break;
+          case 0x2d:
+               break;
+          case 0x2e:
+               break;
+          case 0x2f:
+               break;
+          case 0x30:
+               newCHP._istd = param;
+               break;
+          case 0x31:
+               //permutation vector for fast saves who cares!
+               break;
+          case 0x32:
+               newCHP._bold = false;
+               newCHP._italic = false;
+               newCHP._fOutline = false;
+               newCHP._fStrike = false;
+               newCHP._fShadow = false;
+               newCHP._fSmallCaps = false;
+               newCHP._fCaps = false;
+               newCHP._fVanish = false;
+               newCHP._kul = 0;
+               newCHP._ico = 0;
+               break;
+          case 0x33:
+               newCHP.copy(oldCHP);
+               return;
+          case 0x34:
+               break;
+          case 0x35:
+               newCHP._bold = getCHPFlag((byte)param, oldCHP._bold);
+               break;
+          case 0x36:
+               newCHP._italic = getCHPFlag((byte)param, oldCHP._italic);
+               break;
+          case 0x37:
+               newCHP._fStrike = getCHPFlag((byte)param, oldCHP._fStrike);
+               break;
+          case 0x38:
+               newCHP._fOutline = getCHPFlag((byte)param, oldCHP._fOutline);
+               break;
+          case 0x39:
+               newCHP._fShadow = getCHPFlag((byte)param, oldCHP._fShadow);
+               break;
+          case 0x3a:
+               newCHP._fSmallCaps = getCHPFlag((byte)param, oldCHP._fSmallCaps);
+               break;
+          case 0x3b:
+               newCHP._fCaps = getCHPFlag((byte)param, oldCHP._fCaps);
+               break;
+          case 0x3c:
+               newCHP._fVanish = getCHPFlag((byte)param, oldCHP._fVanish);
+               break;
+          case 0x3d:
+               newCHP._ftc = (short)param;
+               break;
+          case 0x3e:
+               newCHP._kul = (byte)param;
+               break;
+          case 0x3f:
+               int hps = param & 0xff;
+               if(hps != 0)
+               {
+                  newCHP._hps = hps;
+               }
+               byte cInc = (byte)(((byte)(param & 0xfe00) >>> 4) >> 1);
+               if(cInc != 0)
+               {
+                  newCHP._hps = Math.max(newCHP._hps + (cInc * 2), 2);
+               }
+               byte hpsPos = (byte)((param & 0xff0000) >>> 8);
+               if(hpsPos != 0x80)
+               {
+                  newCHP._hpsPos = hpsPos;
+               }
+               boolean fAdjust = (param & 0x0100) > 0;
+               if(fAdjust && hpsPos != 128 && hpsPos != 0 && oldCHP._hpsPos == 0)
+               {
+                  newCHP._hps = Math.max(newCHP._hps + (-2), 2);
+               }
+               if(fAdjust && hpsPos == 0 && oldCHP._hpsPos != 0)
+               {
+                  newCHP._hps = Math.max(newCHP._hps + 2, 2);
+               }
+               break;
+          case 0x40:
+               newCHP._dxaSpace = param;
+               break;
+          case 0x41:
+               newCHP._lidDefault = (short)param;
+               break;
+          case 0x42:
+               newCHP._ico = (byte)param;
+               break;
+          case 0x43:
+               newCHP._hps = param;
+               break;
+          case 0x44:
+               byte hpsLvl = (byte)param;
+               newCHP._hps = Math.max(newCHP._hps + (hpsLvl * 2), 2);
+               break;
+          case 0x45:
+               newCHP._hpsPos = (short)param;
+               break;
+          case 0x46:
+               if(param != 0)
+               {
+                  if(oldCHP._hpsPos == 0)
+                  {
+                      newCHP._hps = Math.max(newCHP._hps + (-2), 2);
+                  }
+               }
+               else
+               {
+                  if(oldCHP._hpsPos != 0)
+                  {
+                      newCHP._hps = Math.max(newCHP._hps + 2, 2);
+                  }
+               }
+               break;
+          case 0x47:
+               CharacterProperties genCHP = new CharacterProperties();
+               genCHP._ftc = 4;
+               genCHP = (CharacterProperties)uncompressProperty(varParam, genCHP, styleSheet);
+               CharacterProperties styleCHP = styleSheet.getStyleDescription(oldCHP._baseIstd).getCHP();
+               if(genCHP._bold == newCHP._bold)
+               {
+                  newCHP._bold = styleCHP._bold;
+               }
+               if(genCHP._italic == newCHP._italic)
+               {
+                  newCHP._italic = styleCHP._italic;
+               }
+               if(genCHP._fSmallCaps == newCHP._fSmallCaps)
+               {
+                  newCHP._fSmallCaps = styleCHP._fSmallCaps;
+               }
+               if(genCHP._fVanish == newCHP._fVanish)
+               {
+                  newCHP._fVanish = styleCHP._fVanish;
+               }
+               if(genCHP._fStrike == newCHP._fStrike)
+               {
+                  newCHP._fStrike = styleCHP._fStrike;
+               }
+               if(genCHP._fCaps == newCHP._fCaps)
+               {
+                  newCHP._fCaps = styleCHP._fCaps;
+               }
+               if(genCHP._ftcAscii == newCHP._ftcAscii)
+               {
+                  newCHP._ftcAscii = styleCHP._ftcAscii;
+               }
+               if(genCHP._ftcFE == newCHP._ftcFE)
+               {
+                  newCHP._ftcFE = styleCHP._ftcFE;
+               }
+               if(genCHP._ftcOther == newCHP._ftcOther)
+               {
+                  newCHP._ftcOther = styleCHP._ftcOther;
+               }
+               if(genCHP._hps == newCHP._hps)
+               {
+                  newCHP._hps = styleCHP._hps;
+               }
+               if(genCHP._hpsPos == newCHP._hpsPos)
+               {
+                  newCHP._hpsPos = styleCHP._hpsPos;
+               }
+               if(genCHP._kul == newCHP._kul)
+               {
+                  newCHP._kul = styleCHP._kul;
+               }
+               if(genCHP._dxaSpace == newCHP._dxaSpace)
+               {
+                  newCHP._dxaSpace = styleCHP._dxaSpace;
+               }
+               if(genCHP._ico == newCHP._ico)
+               {
+                  newCHP._ico = styleCHP._ico;
+               }
+               if(genCHP._lidDefault == newCHP._lidDefault)
+               {
+                  newCHP._lidDefault = styleCHP._lidDefault;
+               }
+               if(genCHP._lidFE == newCHP._lidFE)
+               {
+                  newCHP._lidFE = styleCHP._lidFE;
+               }
+               break;
+          case 0x48:
+               newCHP._iss = (byte)param;
+               break;
+          case 0x49:
+               newCHP._hps = LittleEndian.getShort(varParam, 0);
+               break;
+          case 0x4a:
+               int increment = LittleEndian.getShort(varParam, 0);
+               newCHP._hps = Math.max(newCHP._hps + increment, 8);
+               break;
+          case 0x4b:
+               newCHP._hpsKern = param;
+               break;
+          case 0x4c:
+               doCHPOperation(oldCHP, newCHP, 0x47, param, varParam, grpprl, offset, styleSheet);
+               break;
+          case 0x4d:
+               float percentage = (float)param/100.0f;
+               int add = (int)((float)percentage * (float)newCHP._hps);
+               newCHP._hps += add;
+               break;
+          case 0x4e:
+               newCHP._ysr = (byte)param;
+               break;
+          case 0x4f:
+               newCHP._ftcAscii = (short)param;
+               break;
+          case 0x50:
+               newCHP._ftcFE = (short)param;
+               break;
+          case 0x51:
+               newCHP._ftcOther = (short)param;
+               break;
+          case 0x52:
+               break;
+          case 0x53:
+               newCHP._fDStrike = getFlag(param);
+               break;
+          case 0x54:
+               newCHP._fImprint = getFlag(param);
+               break;
+          case 0x55:
+               newCHP._fSpec = getFlag(param);
+               break;
+          case 0x56:
+               newCHP._fObj = getFlag(param);
+               break;
+          case 0x57:
+               newCHP._fPropMark = getFlag(varParam[0]);
+               newCHP._ibstPropRMark = (short)LittleEndian.getShort(varParam, 1);
+               newCHP._dttmPropRMark = LittleEndian.getInt(varParam, 3);
+               break;
+          case 0x58:
+               newCHP._fEmboss = getFlag(param);
+               break;
+          case 0x59:
+               newCHP._sfxtText = (byte)param;
+               break;
+          case 0x5a:
+               break;
+          case 0x5b:
+               break;
+          case 0x5c:
+               break;
+          case 0x5d:
+               break;
+          case 0x5e:
+               break;
+          case 0x5f:
+               break;
+          case 0x60:
+               break;
+          case 0x61:
+               break;
+          case 0x62:
+               newCHP._fDispFldRMark = getFlag(varParam[0]);
+               newCHP._ibstDispFldRMark = (short)LittleEndian.getShort(varParam, 1);
+               newCHP._dttmDispFldRMark = LittleEndian.getInt(varParam, 3);
+               System.arraycopy(varParam, 7, newCHP._xstDispFldRMark, 0, 32);
+               break;
+          case 0x63:
+               newCHP._ibstRMarkDel = (short)param;
+               break;
+          case 0x64:
+               newCHP._dttmRMarkDel[0] = LittleEndian.getShort(grpprl, offset - 4);
+               newCHP._dttmRMarkDel[1] = LittleEndian.getShort(grpprl, offset - 2);
+               break;
+          case 0x65:
+               newCHP._brc[0] = (short)LittleEndian.getShort(grpprl, offset - 4);
+               newCHP._brc[1] = (short)LittleEndian.getShort(grpprl, offset - 2);
+               break;
+          case 0x66:
+               newCHP._shd = (short)param;
+               break;
+          case 0x67:
+               break;
+          case 0x68:
+               break;
+          case 0x69:
+               break;
+          case 0x6a:
+               break;
+          case 0x6b:
+               break;
+          case 0x6c:
+               break;
+          case 0x6d:
+               newCHP._lidDefault = (short)param;
+               break;
+          case 0x6e:
+               newCHP._lidFE = (short)param;
+               break;
+          case 0x6f:
+               newCHP._idctHint = (byte)param;
+               break;
+      }
+  }
+

@@ -1,0 +1,43 @@
+  public StyleSheet(byte[] styleSheet)
+  {
+      int stshiLength = LittleEndian.getShort(styleSheet, 0);
+      int stdCount = LittleEndian.getShort(styleSheet, 2);
+      int baseLength = LittleEndian.getShort(styleSheet, 4);
+      int[] rgftc = new int[3];
+
+      rgftc[0] = LittleEndian.getInt(styleSheet, 14);
+      rgftc[1] = LittleEndian.getInt(styleSheet, 18);
+      rgftc[2] = LittleEndian.getInt(styleSheet, 22);
+
+      int offset = 0;
+      _styleDescriptions = new StyleDescription[stdCount];
+      for(int x = 0; x < stdCount; x++)
+      {
+          int stdOffset = (2 + stshiLength) + offset;
+          int stdSize = LittleEndian.getShort(styleSheet, stdOffset);
+          if(stdSize > 0)
+          {
+              byte[] std = new byte[stdSize];
+
+              //get past the size
+              stdOffset += 2;
+              System.arraycopy(styleSheet, stdOffset, std, 0, stdSize);
+              StyleDescription aStyle = new StyleDescription(std, baseLength, true);
+
+              _styleDescriptions[x] = aStyle;
+          }
+
+
+          offset += stdSize + 2;
+
+      }
+      for(int x = 0; x < _styleDescriptions.length; x++)
+      {
+          if(_styleDescriptions[x] != null)
+          {
+              createPap(x);
+              createChp(x);
+          }
+      }
+  }
+

@@ -1,0 +1,36 @@
+  private void initLST(byte[] plcflst)
+  {
+    short length = Utils.convertBytesToShort(plcflst, 0);
+    int nextLevelOffset = 0;
+    //LST[] lstArray = new LST[length];
+    for(int x = 0; x < length; x++)
+    {
+      LST lst = new LST();
+      lst._lsid = Utils.convertBytesToInt(plcflst, 2 + (x * 28));
+      lst._tplc = Utils.convertBytesToInt(plcflst, 2 + 4 + (x * 28));
+      System.arraycopy(plcflst, 2 + 8 + (x * 28), lst._rgistd, 0, 18);
+      byte code = plcflst[2 + 26 + (x * 28)];
+      lst._fSimpleList = StyleSheet.getFlag(code & 0x01);
+      //lstArray[x] = lst;
+      _lists.put(new Integer(lst._lsid), lst);
+
+      if(lst._fSimpleList)
+      {
+        lst._levels = new LVL[1];
+      }
+      else
+      {
+        lst._levels = new LVL[9];
+      }
+
+      for(int y = 0; y < lst._levels.length; y++)
+      {
+        int offset = 2 + (length * 28) + nextLevelOffset;
+        lst._levels[y] = new LVL();
+        nextLevelOffset += createLVL(plcflst, offset, lst._levels[y]);
+      }
+    }
+
+
+  }
+

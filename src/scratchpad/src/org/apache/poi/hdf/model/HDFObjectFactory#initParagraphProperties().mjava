@@ -1,0 +1,46 @@
+    /**
+     * intializes the Paragraph Properties BTree
+     */
+    private void initParagraphProperties()
+    {
+        //find paragraphs
+        int parOffset = _fib.getPapBinTableOffset();
+        int parPlcSize = _fib.getPapBinTableSize();
+
+        int arraySize = (parPlcSize - 4)/8;
+        //first we must go through the bin table and find the fkps
+        for(int x = 0; x < arraySize; x++)
+        {
+            int PN = LittleEndian.getInt(_tableBuffer, parOffset + (4 * (arraySize + 1) + (4 * x)));
+
+            byte[] fkp = new byte[512];
+            System.arraycopy(_mainDocument, (PN * 512), fkp, 0, 512);
+            //take each fkp and get the paps
+            int crun = LittleEndian.getUnsignedByte(fkp, 511);
+            for(int y = 0; y < crun; y++)
+            {
+                //get the beginning fc of each paragraph text run
+                int fcStart = LittleEndian.getInt(fkp, y * 4);
+                int fcEnd = LittleEndian.getInt(fkp, (y+1) * 4);
+                //get the offset in fkp of the papx for this paragraph
+                int papxOffset = 2 * LittleEndian.getUnsignedByte(fkp, ((crun + 1) * 4) + (y * 13));
+                int size = 2 * LittleEndian.getUnsignedByte(fkp, papxOffset);
+                if(size == 0)
+                {
+                    size = 2 * LittleEndian.getUnsignedByte(fkp, ++papxOffset);
+                }
+                else
+                {
+                    size--;
+                }
+
+                byte[] papx = new byte[size];
+                System.arraycopy(fkp, ++papxOffset, papx, 0, size);
+                _paragraphs.add(new PapxNode(fcStart, fcEnd, papx));
+
+            }
+
+        }
+
+    }
+

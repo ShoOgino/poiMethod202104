@@ -1,0 +1,77 @@
+        /*
+         * This method is called only when stealLeft, stealRight, and mergeLeft could not be called,
+         * the BTreeNode has the minimum number of elements, has a rightSibling, and the
+         * rightSibling has more than the minimum number of elements.  If after completion
+         * parent has fewer than the minimum number of elements than the parents entries[0]
+         * slot is left empty in anticipation of a recursive call to stealLeft, stealRight,
+         * mergeLeft, or mergeRight to fix the parent. All of the before-mentioned methods
+         * expect the parent to be in such a condition.
+        */
+        private void mergeRight(int parentIndex) {
+            BTreeNode p = parent;
+            BTreeNode rs = p.entries[parentIndex + 1].child;
+
+            if (isLeaf()) { // Don't worry about children
+                entries[nrElements] = new Entry();
+                entries[nrElements].element = p.entries[parentIndex].element;
+                nrElements++;
+                for (int i = 0, nr = nrElements; i < rs.nrElements; i++, nr++) {
+                    entries[nr] = rs.entries[i];
+                    nrElements++;
+                }
+                p.entries[parentIndex].element = p.entries[parentIndex + 1].element;
+                if (p.nrElements == MIN && p != BTreeSet.this.root) {
+                    for (int x = parentIndex + 1, y = parentIndex; y >= 0; x--, y--)
+                        p.entries[x] = p.entries[y];
+                    p.entries[0] = new Entry();
+                    p.entries[0].child = rs; // So it doesn't think it's a leaf, this child will be deleted in the next recursive call
+                }
+
+                else {
+                    for (int x = parentIndex + 1, y = parentIndex + 2; y <= p.nrElements; x++, y++)
+                        p.entries[x] = p.entries[y];
+                    p.entries[p.nrElements] = null;
+                }
+
+                p.nrElements--;
+                if (p.isRoot() && p.nrElements == 0) { // It's the root and it's empty
+                    BTreeSet.this.root = this;
+                    parent = null;
+                }
+           }
+
+           else { // It's not a leaf
+
+               entries[nrElements].element = p.entries[parentIndex].element;
+               nrElements++;
+
+               for (int x = nrElements + 1, y = 0; y <= rs.nrElements; x++, y++) {
+                   entries[x] = rs.entries[y];
+                   rs.entries[y].child.parent = this;
+                   nrElements++;
+               }
+               nrElements--;
+
+               p.entries[++parentIndex].child = this;
+
+               if (p.nrElements == MIN && p != BTreeSet.this.root) {
+                  for (int x = parentIndex - 1, y = parentIndex - 2; y >= 0; x--, y--)
+                      p.entries[x] = p.entries[y];
+                  p.entries[0] = new Entry();
+               }
+
+               else {
+                   for (int x = parentIndex - 1, y = parentIndex; y <= p.nrElements; x++, y++)
+                       p.entries[x] = p.entries[y];
+                   p.entries[p.nrElements] = null;
+               }
+
+               p.nrElements--;
+
+               if (p.isRoot() && p.nrElements == 0) { // It's the root and it's empty
+                   BTreeSet.this.root = this;
+                   parent = null;
+               }
+            }
+        }
+

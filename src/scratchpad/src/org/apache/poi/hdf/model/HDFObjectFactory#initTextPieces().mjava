@@ -1,0 +1,54 @@
+    /**
+     * Initializes the text pieces. Text is divided into pieces because some
+     * "pieces" may only contain unicode characters.
+     *
+     * @throws IOException
+     */
+    private void initTextPieces() throws IOException
+    {
+        int pos = _fib.getComplexOffset();
+
+        //skips through the prms before we reach the piece table. These contain data
+        //for actual fast saved files
+        while (_tableBuffer[pos] == 1)
+        {
+            pos++;
+            int skip = LittleEndian.getShort(_tableBuffer, pos);
+            pos += 2 + skip;
+        }
+        if(_tableBuffer[pos] != 2)
+        {
+            throw new IOException("The text piece table is corrupted");
+        }
+        else
+        {
+            //parse out the text pieces
+            int pieceTableSize = LittleEndian.getInt(_tableBuffer, ++pos);
+            pos += 4;
+            int pieces = (pieceTableSize - 4) / 12;
+            for (int x = 0; x < pieces; x++)
+            {
+                int filePos = LittleEndian.getInt(_tableBuffer, pos + ((pieces + 1) * 4) + (x * 8) + 2);
+                boolean unicode = false;
+                if ((filePos & 0x40000000) == 0)
+                {
+                    unicode = true;
+                }
+                else
+                {
+                    unicode = false;
+                    filePos &= ~(0x40000000);//gives me FC in doc stream
+                    filePos /= 2;
+                }
+                int totLength = LittleEndian.getInt(_tableBuffer, pos + (x + 1) * 4) -
+                                LittleEndian.getInt(_tableBuffer, pos + (x * 4));
+
+                TextPiece piece = new TextPiece(filePos, totLength, unicode);
+                _text.add(piece);
+
+            }
+
+        }
+
+    }
+
