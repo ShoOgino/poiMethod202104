@@ -1,0 +1,112 @@
+    /**
+     * read support  (offset used as starting point for search) for low level
+     * API.  Pass in an array of Record objects, the sheet number (0 based) and
+     * a record offset (should be the location of the sheets BOF record).  A Sheet
+     * object is constructed and passed back with all of its initialization set
+     * to the passed in records and references to those records held. This function
+     * is normally called via Workbook.
+     *
+     * @param recs array containing those records in the sheet in sequence (normally obtained from RecordFactory)
+     * @param sheetnum integer specifying the sheet's number (0,1 or 2 in this release)
+     * @param offset of the sheet's BOF record
+     *
+     * @return Sheet object with all values set to those read from the file
+     *
+     * @see org.apache.poi.hssf.model.Workbook
+     * @see org.apache.poi.hssf.record.Record
+     */
+    public static Sheet createSheet(List recs, int sheetnum, int offset)
+    {
+        log.logFormatted(log.DEBUG,
+                         "Sheet createSheet (existing file) with %",
+                         new Integer(recs.size()));
+        Sheet     retval             = new Sheet();
+        ArrayList records            = new ArrayList(recs.size() / 5);
+        boolean   isfirstcell        = true;
+        boolean   isfirstrow         = true;
+        int       bofEofNestingLevel = 0;
+
+        for (int k = offset; k < recs.size(); k++)
+        {
+            Record rec = ( Record ) recs.get(k);
+
+            if (rec.getSid() == LabelRecord.sid)
+            {
+                log.log(log.DEBUG, "Hit label record");
+                retval.containsLabels = true;
+            }
+            else if (rec.getSid() == BOFRecord.sid)
+            {
+                bofEofNestingLevel++;
+            }
+            else if ((rec.getSid() == EOFRecord.sid)
+                     && (--bofEofNestingLevel == 0))
+            {
+                log.log(log.DEBUG, "Hit EOF record at ");
+                records.add(rec);
+                break;
+            }
+            else if (rec.getSid() == DimensionsRecord.sid)
+            {
+                retval.dims    = ( DimensionsRecord ) rec;
+                retval.dimsloc = records.size();
+            }
+            else if (rec.getSid() == MergeCellsRecord.sid)
+            {
+                retval.merged    = ( MergeCellsRecord ) rec;
+                retval.mergedloc = k - offset;
+            }
+            else if (rec.getSid() == ColumnInfoRecord.sid)
+            {
+                if (retval.columnSizes == null)
+                {
+                    retval.columnSizes = new ArrayList();
+                }
+                retval.columnSizes.add(( ColumnInfoRecord ) rec);
+            }
+            else if (rec.getSid() == DefaultColWidthRecord.sid)
+            {
+                retval.defaultcolwidth = ( DefaultColWidthRecord ) rec;
+            }
+            else if (rec.getSid() == DefaultRowHeightRecord.sid)
+            {
+                retval.defaultrowheight = ( DefaultRowHeightRecord ) rec;
+            }
+            else if (rec.isValue())
+            {
+                if (isfirstcell)
+                {
+                    retval.cells = new ValueRecordsAggregate();
+                    rec          = retval.cells;
+                    retval.cells.construct(k, recs);
+                    isfirstcell = false;
+                }
+                else
+                {
+                    rec = null;
+                }
+            }
+            else if (rec.getSid() == RowRecord.sid)
+            {
+                if (isfirstrow)
+                {
+                    retval.rows = new RowRecordsAggregate();
+                    rec         = retval.rows;
+                    retval.rows.construct(k, recs);
+                    isfirstrow = false;
+                }
+                else
+                {
+                    rec = null;
+                }
+            }
+            if (rec != null)
+            {
+                records.add(rec);
+            }
+        }
+        retval.records = records;
+        log.log(log.DEBUG, "sheet createSheet (existing file) exited");
+        return retval;
+    }
+
