@@ -1,0 +1,40 @@
+    /**
+     * <p>Checks whether an {@link InputStream} is in the Horrible
+     * Property Set Format.</p>
+     *
+     * @param stream The {@link InputStream} to check. In order to
+     * perform the check, the method reads the first bytes from the
+     * stream. After reading, the stream is reset to the position it
+     * had before reading. The {@link InputStream} must support the
+     * {@link InputStream#mark} method.
+     *
+     * @return <code>true</code> if the stream is a property set
+     * stream, else <code>false</code>.
+     *
+     * @throws MarkUnsupportedException if the {@link InputStream}
+     * does not support the {@link InputStream#mark} method.
+     */
+    public static boolean isPropertySetStream(final InputStream stream)
+        throws MarkUnsupportedException, IOException
+    {
+        /* Read at most this many bytes. */
+        final int BUFFER_SIZE = 50;
+
+        /* Mark the current position in the stream so that we can
+         * reset to this position if the stream does not contain a
+         * property set. */
+        if (!stream.markSupported())
+            throw new MarkUnsupportedException(stream.getClass().getName());
+        stream.mark(BUFFER_SIZE);
+
+        /* Read a couple of bytes from the stream. */
+        final byte[] buffer = new byte[BUFFER_SIZE];
+        final int bytes =
+            stream.read(buffer, 0,
+                        Math.min(buffer.length, stream.available()));
+        final boolean isPropertySetStream =
+            isPropertySetStream(buffer, 0, bytes);
+        stream.reset();
+        return isPropertySetStream;
+    }
+

@@ -1,0 +1,56 @@
+    /**
+     * <p>Creates a {@link Section} instance from a byte array.</p>
+     *
+     * @param src Contains the complete property set stream.
+     *
+     * @param offset The position in the stream that points to the
+     * section's format ID.
+     */
+    public Section(final byte[] src, int offset)
+    {
+        /* Read the format ID. */
+        formatID = new ClassID(src, offset);
+        offset += ClassID.LENGTH;
+
+        /* Read the offset from the stream's start and positions to
+         * the section header. */
+        this.offset = new DWord(src, offset).intValue();
+        offset = this.offset;
+
+        /* Read the section length. */
+        size = new DWord(src, offset).intValue();
+        offset += DWord.LENGTH;
+
+        /* Read the number of properties. */
+        propertyCount = new DWord(src, offset).intValue();
+        offset += DWord.LENGTH;
+
+        /* Read the properties. The offset is positioned at the first
+         * entry of the property list. */
+        properties = new Property[propertyCount];
+        for (int i = 0; i < properties.length; i++)
+        {
+            final int id = new DWord(src, offset).intValue();
+            offset += DWord.LENGTH;
+
+            /* Offset from the section. */
+            final int sOffset = new DWord(src, offset).intValue();
+            offset += DWord.LENGTH;
+
+            /* Calculate the length of the property. */
+            int length;
+            if (i == properties.length - 1)
+                length = src.length - this.offset - sOffset;
+            else
+                length =
+                    new DWord(src, offset + DWord.LENGTH).intValue() - sOffset;
+
+            /* Create it. */
+            properties[i] =
+                new Property(id, src, this.offset + sOffset, length);
+        }
+
+        /* Extract the dictionary (if available). */
+        dictionary = (Map) getProperty(0);
+    }
+

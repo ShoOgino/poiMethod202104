@@ -1,0 +1,55 @@
+    /**
+     * <p>A document in the POI filesystem has been opened for
+     * reading. This method retrieves properties of the document and
+     * adds them to a tree model.</p>
+     */
+    public void processPOIFSReaderEvent(final POIFSReaderEvent event)
+    {
+        DocumentDescriptor d;
+        final DocumentInputStream is = event.getStream();
+        if (!is.markSupported())
+            throw new UnsupportedOperationException(is.getClass().getName() +
+                " does not support mark().");
+
+        /* Try do handle this document as a property set. We receive
+         * an exception if is no property set and handle it as a
+         * document of some other format. We are not concerned about
+         * that document's details. */
+        try
+        {
+            d = new PropertySetDescriptor(event.getName(), event.getPath(),
+                                          is, nrOfBytes);
+        }
+        catch (HPSFException ex)
+        {
+            d = new DocumentDescriptor(event.getName(), event.getPath(),
+                                       is, nrOfBytes);
+        }
+        catch (Throwable t)
+        {
+            System.err.println
+                ("Unexpected exception while processing " +
+                event.getName() + " in " + event.getPath().toString());
+            t.printStackTrace(System.err);
+            throw new RuntimeException(t.getMessage());
+        }
+
+        try
+        {
+            is.close();
+        }
+        catch (IOException ex)
+        {
+            System.err.println
+                ("Unexpected exception while closing " +
+                event.getName() + " in " + event.getPath().toString());
+            ex.printStackTrace(System.err);
+        }
+
+        final MutableTreeNode parentNode = getNode(d.path, filename, rootNode);
+        final MutableTreeNode nameNode = new DefaultMutableTreeNode(d.name);
+        parentNode.insert(nameNode, 0);
+        final MutableTreeNode dNode = new DefaultMutableTreeNode(d);
+        nameNode.insert(dNode, 0);
+    }
+

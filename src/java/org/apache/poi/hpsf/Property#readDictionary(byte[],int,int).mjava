@@ -1,0 +1,42 @@
+    /**
+     * <p>Reads a dictionary.</p>
+     *
+     * @param src The byte array containing the bytes making out the
+     * dictionary.
+     *
+     * @param offset At this offset within <var>src</var> the
+     * dictionary starts.
+     *
+     * @param length The dictionary contains at most this many bytes.
+     */
+    protected Map readDictionary(final byte[] src, final int offset,
+                                 final int length)
+    {
+        /* FIXME: Check the length! */
+        int o = offset;
+
+        /* Read the number of dictionary entries. */
+        final int nrEntries = new DWord(src, o).intValue();
+        o += DWord.LENGTH;
+
+        final Map m = new HashMap(nrEntries, (float) 1.0);
+        for (int i = 0; i < nrEntries; i++)
+        {
+            /* The key */
+            final Integer id = new Integer(new DWord(src, o).intValue());
+            o += DWord.LENGTH;
+
+            /* The value (a string) */
+            final int sLength = new DWord(src, o).intValue();
+            o += DWord.LENGTH;
+            /* Strip trailing 0x00 bytes. */
+            int l = sLength;
+            while (src[o + l - 1] == 0x00)
+                l--;
+            final String s = new String(src, o, l);
+            o += sLength;
+            m.put(id, s);
+        }
+        return m;
+    }
+
