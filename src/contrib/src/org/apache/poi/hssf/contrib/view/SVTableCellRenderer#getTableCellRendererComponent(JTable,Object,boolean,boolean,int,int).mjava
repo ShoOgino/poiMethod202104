@@ -1,14 +1,15 @@
     public Component getTableCellRendererComponent(JTable table, Object value,
                           boolean isSelected, boolean hasFocus, int row, int column) {
-
 	boolean isBorderSet = false;
 
 	if (isSelected) {
-	   super.setForeground(table.getSelectionForeground());
-	   super.setBackground(table.getSelectionBackground());
+	   setForeground(table.getSelectionForeground());
+	   setBackground(table.getSelectionBackground());
 	}
 
-        HSSFCell c = getCell(row,column);
+        //If the JTables default cell renderer has been setup correctly the
+        //value will be the HSSFCell that we are trying to render
+        HSSFCell c = (HSSFCell)value;
 
         if (c != null) {
 
@@ -17,7 +18,7 @@
           boolean isbold = f.getBoldweight() > HSSFFont.BOLDWEIGHT_NORMAL;
           boolean isitalics = f.getItalic();
 
-          int fontstyle = 0;
+          int fontstyle = Font.PLAIN;
 
           if (isbold) fontstyle = Font.BOLD;
           if (isitalics) fontstyle = fontstyle | Font.ITALIC;
@@ -28,7 +29,6 @@
           Font font = new Font(f.getFontName(),fontstyle,fontheight);
           setFont(font);
           
-
           HSSFColor clr = null;
           if (s.getFillPattern() == HSSFCellStyle.SOLID_FOREGROUND) {
             clr = (HSSFColor)colors.get(new Integer(s.getFillForegroundColor()));
@@ -56,6 +56,8 @@
               int borderBottom = s.getBorderBottom();
               int borderLeft = s.getBorderLeft();
               
+              //OUCH! This could causing rendering performance problems.
+              //Need to somehow create once and store
               SVBorder border = new SVBorder(Color.black, Color.black,
                                            Color.black, Color.black,
                                            borderTop, borderRight,
@@ -67,25 +69,7 @@
               setBorder(border);
               isBorderSet=true;
 
-//          }
-        } else {
-          setBackground(Color.white);
-        }
-
-
-	if (hasFocus) {
-            if (!isBorderSet) {
-	        setBorder( UIManager.getBorder("Table.focusCellHighlightBorder") );
-            }
-	    if (table.isCellEditable(row, column)) {
-	        super.setForeground( UIManager.getColor("Table.focusCellForeground") );
-	        super.setBackground( UIManager.getColor("Table.focusCellBackground") );
-	    }
-	} else if (!isBorderSet) {
-	    setBorder(noFocusBorder);
-	}
-
-        if (c != null) {
+              //Set the value that is rendered for the cell
           switch (c.getCellType()) {
             case HSSFCell.CELL_TYPE_BLANK:
               setValue("");
@@ -107,10 +91,43 @@
             default:
               setValue("?");
           }
+              //Set the text alignment of the cell
+              switch (s.getAlignment()) {
+                case HSSFCellStyle.ALIGN_GENERAL:
+                case HSSFCellStyle.ALIGN_LEFT:
+                case HSSFCellStyle.ALIGN_JUSTIFY:
+                case HSSFCellStyle.ALIGN_FILL:
+                  setHorizontalAlignment(SwingConstants.LEFT);
+                  break;
+                case HSSFCellStyle.ALIGN_CENTER:
+                case HSSFCellStyle.ALIGN_CENTER_SELECTION:
+                  setHorizontalAlignment(SwingConstants.CENTER);
+                  break;
+                case HSSFCellStyle.ALIGN_RIGHT:
+                  setHorizontalAlignment(SwingConstants.RIGHT);
+                  break;
+                default:
+                  setHorizontalAlignment(SwingConstants.LEFT);
+                  break;
+              }
+//          }
        } else {
            setValue("");
+          setBackground(Color.white);
        }
 
+
+	if (hasFocus) {
+            if (!isBorderSet) {
+	        setBorder( UIManager.getBorder("Table.focusCellHighlightBorder") );
+            }
+	    if (table.isCellEditable(row, column)) {
+	        setForeground( UIManager.getColor("Table.focusCellForeground") );
+	        setBackground( UIManager.getColor("Table.focusCellBackground") );
+	    }
+	} else if (!isBorderSet) {
+	    setBorder(noFocusBorder);
+	}
 
 	// ---- begin optimization to avoid painting background ----
 	Color back = getBackground();
