@@ -1,0 +1,44 @@
+    /**
+     * Get an inputstream to a given resource in the given file which may
+     * either be a directory or a zip file.
+     *
+     * @param file the file (directory or jar) in which to search for the resource.
+     * @param resourceName the name of the resource for which a stream is required.
+     *
+     * @return a stream to the required resource or null if the resource cannot be
+     * found in the given file object
+     */
+    private boolean contains(File file, String resourceName) {
+        try {
+            if (!file.exists()) {
+                return false;
+            }
+
+            if (file.isDirectory()) {
+                File resource = new File(file, resourceName);
+
+                if (resource.exists()) {
+                    return true;
+                }
+            }
+            else {
+                // is the zip file in the cache
+                ZipFile zipFile = (ZipFile)zipFiles.get(file);
+                if (zipFile == null) {
+                    zipFile = new ZipFile(file);
+                    zipFiles.put(file, zipFile);
+                }
+                ZipEntry entry = zipFile.getEntry(resourceName);
+                if (entry != null) {
+                    return true;
+                }
+            }
+        }
+        catch (Exception e) {
+            log("Ignoring Exception " + e.getClass().getName() + ": " + e.getMessage() +
+                " reading resource " + resourceName + " from " + file, Project.MSG_VERBOSE);
+        }
+
+        return false;
+    }
+
