@@ -1,15 +1,39 @@
     public int serialize(int offset, byte [] data)
     {
         LittleEndian.putShort(data, 0 + offset, sid);
-        LittleEndian.putShort(data, 2 + offset,
-                              ( short ) (0x08 + getSheetnameLength()));
+        LittleEndian.putShort( data, 2 + offset, (short)( 8 + getRawSheetnameLength() ) );
         LittleEndian.putInt(data, 4 + offset, getPositionOfBof());
         LittleEndian.putShort(data, 8 + offset, getOptionFlags());
-        data[ 10 + offset ] = getSheetnameLength();
+        data[ 10 + offset ] = (byte)( getSheetnameLength() );
         data[ 11 + offset ] = getCompressedUnicodeFlag();
+        
+        if ( ( field_4_compressed_unicode_flag & 0x01 ) == 1 )
+	        StringUtil.putUncompressedUnicode( getSheetname(), data, 12 + offset );
+	    else
+	        StringUtil.putCompressedUnicode( getSheetname(), data, 12 + offset );
+		
 
-        // we assume compressed unicode (bein the dern americans we are ;-p)
-        StringUtil.putCompressedUnicode(getSheetname(), data, 12 + offset);
         return getRecordSize();
+        
+		/*
+		byte[] fake = new byte[] {	(byte)0x85, 0x00, 			// sid
+		    							0x1a, 0x00, 			// length
+		    							0x3C, 0x09, 0x00, 0x00, // bof
+		    							0x00, 0x00, 			// flags
+		    							0x09, 					// len( str )
+		    							0x01, 					// unicode
+		    							// <str>
+		    							0x21, 0x04, 0x42, 0x04, 0x40, 0x04, 0x30, 0x04, 0x3D, 
+		    							0x04, 0x38, 0x04, 0x47, 0x04, 0x3A, 0x04, 0x30, 0x04   
+		    							// </str>
+		    						};
+		    						
+		    						sid + len + bof + flags + len(str) + unicode +   str
+		    						 2  +  2  +  4  +   2   +    1     +    1    + len(str)
+		
+		System.arraycopy( fake, 0, data, offset, fake.length );
+		
+		return fake.length;
+		*/
     }
 
