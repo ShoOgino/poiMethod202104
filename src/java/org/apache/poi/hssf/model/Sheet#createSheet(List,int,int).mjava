@@ -32,19 +32,23 @@
 
             if (rec.getSid() == LabelRecord.sid)
             {
-                log.log(log.DEBUG, "Hit label record");
+                log.log(log.DEBUG, "Hit label record.");
                 retval.containsLabels = true;
             }
             else if (rec.getSid() == BOFRecord.sid)
             {
                 bofEofNestingLevel++;
+                log.log(log.DEBUG, "Hit BOF record. Nesting increased to " + bofEofNestingLevel);
             }
-            else if ((rec.getSid() == EOFRecord.sid)
-                     && (--bofEofNestingLevel == 0))
+            else if (rec.getSid() == EOFRecord.sid)
             {
-                log.log(log.DEBUG, "Hit EOF record at ");
-                records.add(rec);
-                break;
+                --bofEofNestingLevel;
+                log.log(log.DEBUG, "Hit EOF record. Nesting decreased to " + bofEofNestingLevel);
+                if (bofEofNestingLevel == 0) {
+                    records.add(rec);
+                    retval.eofLoc = k;
+                    break;
+                }
             }
             else if (rec.getSid() == DimensionsRecord.sid)
             {
@@ -72,7 +76,7 @@
             {
                 retval.defaultrowheight = ( DefaultRowHeightRecord ) rec;
             }
-            else if ( rec.isValue() )
+            else if ( rec.isValue() && bofEofNestingLevel == 1 )
             {
                 if ( isfirstcell )
                 {
@@ -85,6 +89,10 @@
                 {
                     rec = null;
                 }
+            }
+            else if ( rec.getSid() == StringRecord.sid )
+            {
+                rec = null;
             }
             else if ( rec.getSid() == RowRecord.sid )
             {
@@ -123,6 +131,14 @@
             }
         }
         retval.records = records;
+        if (retval.rows == null)
+        {
+            retval.rows = new RowRecordsAggregate();
+        }
+        if (retval.cells == null)
+        {
+            retval.cells = new ValueRecordsAggregate();
+        }
         log.log(log.DEBUG, "sheet createSheet (existing file) exited");
         return retval;
     }
