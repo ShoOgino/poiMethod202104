@@ -5,7 +5,7 @@
     // get our plex of PieceDescriptors
     PlexOfCps pieceTable = new PlexOfCps(tableStream, offset, size, PieceDescriptor.getSizeInBytes());
 
-    int multiple = 2;
+    _multiple = 2;
     int length = pieceTable.length();
     PieceDescriptor[] pieces = new PieceDescriptor[length];
 
@@ -18,7 +18,7 @@
 
       if (!pieces[x].isUnicode())
       {
-        multiple = 1;
+        _multiple = 1;
       }
     }
 
@@ -27,24 +27,19 @@
     {
       int start = pieces[x].getFilePosition();
       PropertyNode node = pieceTable.getProperty(x);
-      int nodeStart = node.getStart() - fcMin;
-      int nodeEnd = node.getEnd() - fcMin;
+      int nodeStart = node.getStart();
+      // multiple will be 2 if there is only one piece and its unicode. Some
+      // type of optimization.
+      int nodeEnd = ((node.getEnd() - nodeStart) * _multiple) + nodeStart;
       int textSize = nodeEnd - nodeStart;
 
       boolean unicode = pieces[x].isUnicode();
       String toStr = null;
-      if (unicode)
-      {
-        byte[] buf = new byte[textSize * multiple];
-        System.arraycopy(documentStream, start, buf, 0, textSize * multiple);
-        _textPieces.add(new TextPiece(nodeStart, nodeEnd, buf, pieces[x]));
-      }
-      else
-      {
-        byte[] buf = new byte[textSize];
-        System.arraycopy(documentStream, start, buf, 0, textSize);
-        _textPieces.add(new TextPiece(nodeStart, nodeEnd, buf, pieces[x]));
-      }
+
+      byte[] buf = new byte[textSize + (unicode ? textSize % 2 : 0)];
+      System.arraycopy(documentStream, start, buf, 0, textSize);
+      _textPieces.add(new TextPiece(nodeStart, nodeEnd, buf, pieces[x]));
+
     }
   }
 

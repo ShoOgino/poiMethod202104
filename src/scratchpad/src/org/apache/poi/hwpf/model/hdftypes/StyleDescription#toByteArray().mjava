@@ -1,19 +1,3 @@
-//  public ParagraphProperties getPAP()
-//  {
-//      return _pap;
-//  }
-//  public CharacterProperties getCHP()
-//  {
-//      return _chp;
-//  }
-//  public void setPAP(ParagraphProperties pap)
-//  {
-//      _pap = pap;
-//  }
-//  public void setCHP(CharacterProperties chp)
-//  {
-//      _chp = chp;
-//  }
   public byte[] toByteArray()
   {
     // size equals _baseLength bytes for known variables plus 2 bytes for name
@@ -21,19 +5,15 @@
     // length
     int size = _baseLength + 2 + ((_name.length() + 1) * 2);
 
-    //only worry about papx and chpx for upxs
-    if(_styleTypeCode.getValue(_infoShort2) == PARAGRAPH_STYLE)
+    // determine the size needed for the upxs. They always fall on word
+    // boundaries.
+    size += _upxs[0].size() + 2;
+    for (int x = 1; x < _upxs.length; x++)
     {
-      size += _papx.length + 2 + (_papx.length % 2);
-      if (_chpx != null)
-      {
-        size += _chpx.length + 2;
-      }
+      size += _upxs[x-1].size() % 2;
+      size += _upxs[x].size() + 2;
     }
-    else if (_styleTypeCode.getValue(_infoShort2) == CHARACTER_STYLE)
-    {
-      size += _chpx.length + 2;
-    }
+
 
     byte[] buf = new byte[size];
 
@@ -47,10 +27,10 @@
     LittleEndian.putShort(buf, offset, _bchUpe);
     offset += LittleEndian.SHORT_SIZE;
     LittleEndian.putShort(buf, offset, _infoShort4);
-    offset += LittleEndian.SHORT_SIZE;
+    offset = _baseLength;
 
     char[] letters = _name.toCharArray();
-    LittleEndian.putShort(buf, offset, (short)letters.length);
+    LittleEndian.putShort(buf, _baseLength, (short)letters.length);
     offset += LittleEndian.SHORT_SIZE;
     for (int x = 0; x < letters.length; x++)
     {
@@ -60,28 +40,13 @@
     // get past the null delimiter for the name.
     offset += LittleEndian.SHORT_SIZE;
 
-    //only worry about papx and chpx for upxs
-    if(_styleTypeCode.getValue(_infoShort2) == PARAGRAPH_STYLE)
+    for (int x = 0; x < _upxs.length; x++)
     {
-      LittleEndian.putShort(buf, offset, (short)(_papx.length));
+      short upxSize = (short)_upxs[x].size();
+      LittleEndian.putShort(buf, offset, upxSize);
       offset += LittleEndian.SHORT_SIZE;
-      System.arraycopy(_papx, 0, buf, offset, _papx.length);
-      offset += _papx.length + (_papx.length % 2);
-
-      if (_chpx != null)
-      {
-        LittleEndian.putShort(buf, offset, (short) _chpx.length);
-        offset += LittleEndian.SHORT_SIZE;
-        System.arraycopy(_chpx, 0, buf, offset, _chpx.length);
-        offset += _chpx.length;
-      }
-    }
-    else if (_styleTypeCode.getValue(_infoShort2) == CHARACTER_STYLE)
-    {
-      LittleEndian.putShort(buf, offset, (short)_chpx.length);
-      offset += LittleEndian.SHORT_SIZE;
-      System.arraycopy(_chpx, 0, buf, offset, _chpx.length);
-      offset += _chpx.length;
+      System.arraycopy(_upxs[x].getUPX(), 0, buf, offset, upxSize);
+      offset += upxSize + (upxSize % 2);
     }
 
     return buf;
