@@ -1,0 +1,48 @@
+    /**
+     * <p>Reads all files from a POI filesystem and returns them as an
+     * array of {@link POIFile} instances. This method loads all files
+     * into memory and thus does not cope well with large POI
+     * filessystems.</p>
+     * 
+     * @param file The name of the POI filesystem as seen by the
+     * operating system. (This is the "filename".)
+     *
+     * @return The POI files. The elements are ordered in the same way
+     * as the files in the POI filesystem.
+     */
+    public static POIFile[] readPOIFiles(final File poiFs)
+	throws FileNotFoundException, IOException
+    {
+	final List files = new ArrayList();
+	POIFSReader r = new POIFSReader();
+	r.registerListener(new POIFSReaderListener()
+	    {
+		public void processPOIFSReaderEvent(POIFSReaderEvent event)
+		{
+		    try
+		    {
+			POIFile f = new POIFile();
+			f.setName(event.getName());
+			f.setPath(event.getPath());
+			InputStream in = event.getStream();
+			ByteArrayOutputStream out =
+			    new ByteArrayOutputStream();
+			Util.copy(in, out);
+			out.close();
+			f.setBytes(out.toByteArray());
+			files.add(f);
+		    }
+		    catch (IOException ex)
+		    {
+			ex.printStackTrace();
+			throw new RuntimeException(ex.getMessage());
+		    }
+		}
+	    });
+	r.read(new FileInputStream(poiFs));
+	POIFile[] result = new POIFile[files.size()];
+	for (int i = 0; i < result.length; i++)
+	    result[i] = (POIFile) files.get(i);
+	return result;
+    }
+
