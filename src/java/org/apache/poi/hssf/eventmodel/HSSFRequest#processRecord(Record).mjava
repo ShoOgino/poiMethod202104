@@ -1,11 +1,17 @@
-    /**
-     * called by HSSFEventFactory, passes the Record to each listener associated with
-     * a record.sid.
-     */
+	/**
+	 * Called by HSSFEventFactory, passes the Record to each listener associated with
+	 * a record.sid.
+	 *
+	 * Exception and return value added 2002-04-19 by Carey Sublette
+	 *
+	 * @return numeric user-specified result code. If zero continue processing.
+	 * @throws HSSFUserException User exception condition
+	 */
 
-    protected void processRecord(Record rec)
+    protected short processRecord(Record rec) throws HSSFUserException
     {
         Object obj = records.get(new Short(rec.getSid()));
+        short userCode = 0;
 
         if (obj != null)
         {
@@ -13,10 +19,20 @@
 
             for (int k = 0; k < listeners.size(); k++)
             {
-                HSSFListener listener = ( HSSFListener ) listeners.get(k);
-
-                listener.processRecord(rec);
+                Object listenObj = listeners.get(k);
+                if (listenObj instanceof AbortableHSSFListener)
+                {
+					AbortableHSSFListener listener = ( AbortableHSSFListener ) listenObj;
+                	userCode = listener.abortableProcessRecord(rec);
+                	if (userCode!=0) break;
+				}
+				else
+				{ 
+					HSSFListener listener = ( HSSFListener ) listenObj;
+					listener.processRecord(rec);
+				}
             }
         }
+        return userCode;
     }
 

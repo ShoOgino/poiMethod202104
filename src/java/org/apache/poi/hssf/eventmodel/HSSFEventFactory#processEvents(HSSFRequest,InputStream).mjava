@@ -1,5 +1,9 @@
     /**
      * Processes a DocumentInputStream into essentially Record events.
+     * 
+     * If an <code>AbortableHSSFListener</code> causes a halt to processing during this call
+     * the method will return just as with <code>abortableProcessEvents</code>, but no 
+     * user code or <code>HSSFUserException</code> will be passed back.
      *
      * @see org.apache.poi.poifs.filesystem.POIFSFileSystem#createDocumentInputStream(String)
      * @param req       an Instance of HSSFRequest which has your registered listeners
@@ -8,74 +12,12 @@
 
     public void processEvents(HSSFRequest req, InputStream in)
         throws IOException
-    {
-        try
-        {
-            byte[] sidbytes  = new byte[ 2 ];
-            int    bytesread = in.read(sidbytes);
-            Record rec       = null;
-
-            while (bytesread > 0)
-            {
-                short sid = 0;
-
-                sid = LittleEndian.getShort(sidbytes);
-                if ((rec != null) && (sid != ContinueRecord.sid))
-                {
-                    req.processRecord(rec);
-                }
-                if (sid != ContinueRecord.sid)
-                {
-                    short  size = LittleEndian.readShort(in);
-                    byte[] data = new byte[ size ];
-
-                    if (data.length > 0)
-                    {
-                        in.read(data);
-                    }
-                    Record[] recs = RecordFactory.createRecord(sid, size,
-                                                               data);
-
-                    if (recs.length > 1)
-                    {                                // we know that the multiple
-                        for (int k = 0; k < (recs.length - 1); k++)
-                        {                            // record situations do not
-                            req.processRecord(
-                                recs[ k ]);          // contain continue records
-                        }
-                    }
-                    rec = recs[ recs.length - 1 ];   // regardless we'll process
-
-                    // the last record as though
-                    // it might be continued
-                    // if there is only one
-                    // records, it will go here too.
-                }
-                else
-                {                                    // we do have a continue record
-                    short  size = LittleEndian.readShort(in);
-                    byte[] data = new byte[ size ];
-
-                    if (data.length > 0)
-                    {
-                        in.read(data);
-                    }
-                    rec.processContinueRecord(data);
-                }
-                bytesread = in.read(sidbytes);       // read next record sid
-            }
-            if (rec != null)
-            {
-                req.processRecord(rec);
-            }
-        }
-        catch (IOException e)
-        {
-            throw new RecordFormatException("Error reading bytes");
-        }
-
-        // Record[] retval = new Record[ records.size() ];
-        // retval = ( Record [] ) records.toArray(retval);
-        // return null;
-    }
+	{ 
+		try
+		{
+			genericProcessEvents(req, in);
+		}
+		catch (HSSFUserException hue) 
+		{/*If an HSSFUserException user exception is thrown, ignore it.*/ }
+	}
 
