@@ -1,0 +1,43 @@
+        /**
+         * <p>Receives a summary information property set modifies (or creates)
+         * its "author" and "title" properties and writes the result under the
+         * same path and name as the origin to a destination POI filesystem.</p>
+         *
+         * @param poiFs The POI filesystem to write to.
+         * @param path The original (and destination) stream's path.
+         * @param name The original (and destination) stream's name.
+         * @param si The property set. It should be a summary information
+         * property set.
+         */
+        public void editSI(final POIFSFileSystem poiFs,
+                           final POIFSDocumentPath path,
+                           final String name,
+                           final PropertySet si)
+            throws WritingNotSupportedException, IOException
+        {
+            /* Get the directory entry for the target stream. */
+            final DirectoryEntry de = getPath(poiFs, path);
+
+            /* Create a mutable property set as a copy of the original read-only
+             * property set. */
+            final MutablePropertySet mps = new MutablePropertySet(si);
+            
+            /* Retrieve the section containing the properties to modify. A
+             * summary information property set contains exactly one section. */
+            final MutableSection s =
+                (MutableSection) mps.getSections().get(0);
+
+            /* Set the properties. */
+            s.setProperty(PropertyIDMap.PID_AUTHOR, Variant.VT_LPSTR,
+                          "Rainer Klute");
+            s.setProperty(PropertyIDMap.PID_TITLE, Variant.VT_LPWSTR,
+                          "Test");
+
+            /* Create an input stream containing the bytes the property set
+             * stream consists of. */
+            final InputStream pss = mps.toInputStream();
+
+            /* Write the property set stream to the POIFS. */
+            de.createDocument(name, pss);
+        }
+

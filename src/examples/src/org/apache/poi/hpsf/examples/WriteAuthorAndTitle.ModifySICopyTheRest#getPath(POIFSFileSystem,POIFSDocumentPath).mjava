@@ -1,0 +1,64 @@
+        /**
+         * <p>Ensures that the directory hierarchy for a document in a POI
+         * fileystem is in place. When a document is to be created somewhere in
+         * a POI filesystem its directory must be created first. This method
+         * creates all directories between the POI filesystem root and the
+         * directory the document should belong to which do not yet exist.</p>
+         * 
+         * <p>Unfortunately POI does not offer a simple method to interrogate
+         * the POIFS whether a certain child node (file or directory) exists in
+         * a directory. However, since we always start with an empty POIFS which
+         * contains the root directory only and since each directory in the
+         * POIFS is created by this method we can maintain the POIFS's directory
+         * hierarchy ourselves: The {@link DirectoryEntry} of each directory
+         * created is stored in a {@link Map}. The directories' path names map
+         * to the corresponding {@link DirectoryEntry} instances.</p>
+         *
+         * @param poiFs The POI filesystem the directory hierarchy is created
+         * in, if needed.
+         * @param path The document's path. This method creates those directory
+         * components of this hierarchy which do not yet exist.
+         * @return The directory entry of the document path's parent. The caller
+         * should use this {@link DirectoryEntry} to create documents in it.
+         */
+        public DirectoryEntry getPath(final POIFSFileSystem poiFs,
+                                      final POIFSDocumentPath path)
+        {
+            try
+            {
+                /* Check whether this directory has already been created. */
+                final String s = path.toString();
+                DirectoryEntry de = (DirectoryEntry) paths.get(s);
+                if (de != null)
+                    /* Yes: return the corresponding DirectoryEntry. */
+                    return de;
+
+                /* No: We have to create the directory - or return the root's
+                 * DirectoryEntry. */
+                int l = path.length();
+                if (l == 0)
+                    /* Get the root directory. It does not have to be created
+                     * since it always exists in a POIFS. */
+                    de = poiFs.getRoot();
+                else
+                {
+                    /* Create a subordinate directory. The first step is to
+                     * ensure that the parent directory exists: */
+                    de = getPath(poiFs, path.getParent());
+                    /* Now create the target directory: */
+                    de = de.createDirectory(path.getComponent
+                                            (path.length() - 1));
+                }
+                paths.put(s, de);
+                return de;
+            }
+            catch (IOException ex)
+            {
+                /* This exception will be thrown if the directory already
+                 * exists. However, since we have full control about directory
+                 * creation we can ensure that this will never happen. */
+                ex.printStackTrace(System.err);
+                throw new RuntimeException(ex);
+            }
+        }
+
