@@ -1,0 +1,37 @@
+  public void testReadWrite()
+    throws Exception
+  {
+    FileInformationBlock fib = _hWPFDocFixture._fib;
+    byte[] mainStream = _hWPFDocFixture._mainStream;
+    byte[] tableStream = _hWPFDocFixture._tableStream;
+    int fcMin = fib.getFcMin();
+
+    SectionTable sectionTable = new SectionTable(mainStream, tableStream,
+                                                 fib.getFcPlcfsed(),
+                                                 fib.getLcbPlcfsed(),
+                                                 fcMin);
+    HWPFFileSystem fileSys = new HWPFFileSystem();
+
+    sectionTable.writeTo(fileSys, 0);
+    ByteArrayOutputStream tableOut = fileSys.getStream("1Table");
+    ByteArrayOutputStream mainOut =  fileSys.getStream("WordDocument");
+
+    byte[] newTableStream = tableOut.toByteArray();
+    byte[] newMainStream = mainOut.toByteArray();
+
+    SectionTable newSectionTable = new SectionTable(newMainStream, newTableStream, 0, newTableStream.length, 0);
+
+    ArrayList oldSections = sectionTable.getSections();
+    ArrayList newSections = newSectionTable.getSections();
+
+    assertEquals(oldSections.size(), newSections.size());
+
+    int size = oldSections.size();
+    for (int x = 0; x < size; x++)
+    {
+      PropertyNode oldNode = (PropertyNode)oldSections.get(x);
+      PropertyNode newNode = (PropertyNode)newSections.get(x);
+      assertEquals(oldNode, newNode);
+    }
+  }
+
