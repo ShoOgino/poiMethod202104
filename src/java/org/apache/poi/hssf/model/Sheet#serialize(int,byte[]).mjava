@@ -11,39 +11,33 @@
     {
         log.log(log.DEBUG, "Sheet.serialize using offsets");
 
-        // addDBCellRecords();
-        // ArrayList bytes     = new ArrayList(4096);
-        // int arraysize = getSize();   // 0;
-        int pos       = 0;
-
-        // for (int k = 0; k < records.size(); k++)
-        // {
-        // bytes.add((( Record ) records.get(k)).serialize());
-        //
-        // }
-        // for (int k = 0; k < bytes.size(); k++)
-        // {
-        // arraysize += (( byte [] ) bytes.get(k)).length;
-        // log.debug((new StringBuffer("arraysize=")).append(arraysize)
-        // .toString());
-        // }
+        int pos = offset;
+        boolean haveSerializedIndex = false;
         for (int k = 0; k < records.size(); k++)
         {
-//             byte[] rec = (( byte [] ) bytes.get(k));
-            // System.arraycopy(rec, 0, data, offset + pos, rec.length);
             Record record = (( Record ) records.get(k));
+            int startPos = pos;
+            //Once the rows have been found in the list of records, start
+            //writing out the blocked row information. This includes the DBCell references
+            if (record instanceof RowRecordsAggregate) {
+              pos += ((RowRecordsAggregate)record).serialize(pos, data, cells);   // rec.length;
+            } else if (record instanceof ValueRecordsAggregate) {
+              //Do nothing here. The records were serialized during the RowRecordAggregate block serialization
+            } else {
+              pos += record.serialize(pos, data );   // rec.length;
+            }
 
-            //uncomment to test record sizes
-//            byte[] data2 = new byte[record.getRecordSize()];
-//            record.serialize(0, data2 );   // rec.length;
-//            if (LittleEndian.getUShort(data2, 2) != record.getRecordSize() - 4
-//                    && record instanceof RowRecordsAggregate == false && record instanceof ValueRecordsAggregate == false)
-//                throw new RuntimeException("Blah!!!");
-
-            pos += record.serialize(pos + offset, data );   // rec.length;
-
+            //If the BOF record was just serialized then add the IndexRecord
+            if (record.getSid() == BOFRecord.sid) {
+              //Can there be more than one BOF for a sheet? If not then we can
+              //remove this guard. So be safe it is left here.
+              if (!haveSerializedIndex) {
+                haveSerializedIndex = true;
+                pos += serializeIndexRecord(k, pos, data);
+              }
+            }
         }
         log.log(log.DEBUG, "Sheet.serialize returning ");
-        return pos;
+        return pos-offset;
     }
 
