@@ -5,13 +5,12 @@
      */
     private void readStringRemainder( final byte[] record )
     {
-        int stringRemainderSizeInBytes = calculateByteCount( getContinuationExpectedChars() );
-//        stringDataOffset = LittleEndianConsts.BYTE_SIZE;
+        int stringRemainderSizeInBytes = calculateByteCount( charCount-getContinuationCharsRead() );
         byte[] unicodeStringData = new byte[SSTRecord.STRING_MINIMAL_OVERHEAD
-                + calculateByteCount( getContinuationExpectedChars() )];
+                + stringRemainderSizeInBytes];
 
         // write the string length
-        LittleEndian.putShort( unicodeStringData, 0, (short) getContinuationExpectedChars() );
+        LittleEndian.putShort( unicodeStringData, 0, (short) (charCount-getContinuationCharsRead()) );
 
         // write the options flag
         unicodeStringData[LittleEndianConsts.SHORT_SIZE] = createOptionByte( wideChar, richText, extendedText );
@@ -20,7 +19,7 @@
         // past all the overhead of the str_data array
         arraycopy( record, LittleEndianConsts.BYTE_SIZE, unicodeStringData,
                 SSTRecord.STRING_MINIMAL_OVERHEAD,
-                unicodeStringData.length - SSTRecord.STRING_MINIMAL_OVERHEAD );
+                stringRemainderSizeInBytes );
 
         // use special constructor to create the final string
         UnicodeString string = new UnicodeString( UnicodeString.sid,
@@ -31,6 +30,6 @@
         addToStringTable( strings, integer, string );
 
         int newOffset = offsetForContinuedRecord( stringRemainderSizeInBytes );
-        manufactureStrings( record, newOffset, (short) ( record.length - newOffset ) );
+        manufactureStrings( record, newOffset);
     }
 
