@@ -10,64 +10,81 @@
      * @param recs an array of Record objects
      * @return Workbook object
      */
-
-    public static Workbook createWorkbook(List recs)
-    {
+    
+    public static Workbook createWorkbook(List recs) {
         log.log(DEBUG, "Workbook (readfile) created with reclen=",
-                new Integer(recs.size()));
+        new Integer(recs.size()));
         Workbook  retval  = new Workbook();
         ArrayList records = new ArrayList(recs.size() / 3);
-
-        for (int k = 0; k < recs.size(); k++)
-        {
+        
+        for (int k = 0; k < recs.size(); k++) {
             Record rec = ( Record ) recs.get(k);
-
-            if (rec.getSid() == EOFRecord.sid)
-            {
+            
+            if (rec.getSid() == EOFRecord.sid) {
                 records.add(rec);
                 log.log(DEBUG, "found workbook eof record at " + k);
                 break;
             }
-            switch (rec.getSid())
-            {
-
+            switch (rec.getSid()) {
+                
                 case BoundSheetRecord.sid :
                     log.log(DEBUG, "found boundsheet record at " + k);
                     retval.boundsheets.add(rec);
                     retval.bspos = k;
                     break;
-
+                    
                 case SSTRecord.sid :
                     log.log(DEBUG, "found sst record at " + k);
                     retval.sst = ( SSTRecord ) rec;
                     break;
-
+                    
                 case FontRecord.sid :
                     log.log(DEBUG, "found font record at " + k);
                     retval.fontpos = k;
                     retval.numfonts++;
                     break;
-
+                    
                 case ExtendedFormatRecord.sid :
                     log.log(DEBUG, "found XF record at " + k);
                     retval.xfpos = k;
                     retval.numxfs++;
                     break;
-
+                    
                 case TabIdRecord.sid :
                     log.log(DEBUG, "found tabid record at " + k);
                     retval.tabpos = k;
                     break;
-
+                    
                 case BackupRecord.sid :
                     log.log(DEBUG, "found backup record at " + k);
                     retval.backuppos = k;
                     break;
-
+                case ExternSheetRecord.sid :
+                    log.log(DEBUG, "found extern sheet record at " + k);
+                    retval.externSheet = ( ExternSheetRecord ) rec;
+                    break;
+                case NameRecord.sid :
+                    log.log(DEBUG, "found name record at " + k);
+                    retval.names.add(rec);
+                    retval.namepos = k;
+                    break;
+                case 0x1AE :
+                    //Havent Implement the sup book , because we dont need extern ranges
+                    //for now
+                    log.log(DEBUG, "found SupBook record at " + k);
+                    retval.supbookpos = k;
+                    break;
+                    
                 default :
             }
             records.add(rec);
         }
+        //What if we dont have any ranges and supbooks
+        if (retval.supbookpos == 0) {
+            retval.supbookpos = retval.bspos + 1;
+            retval.namepos    = retval.supbookpos + 1;
+        }
+        
         retval.records = records;
         log.log(DEBUG, "exit create workbook from existing file function");
         return retval;
