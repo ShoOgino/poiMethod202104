@@ -1,0 +1,53 @@
+    /**
+     * Test conversion from DocumentBlocks
+     *
+     * @exception IOException
+     */
+
+    public void testConvert1()
+        throws IOException
+    {
+        ByteArrayInputStream stream    = new ByteArrayInputStream(_testdata);
+        List                 documents = new ArrayList();
+
+        while (true)
+        {
+            DocumentBlock block = new DocumentBlock(stream);
+
+            documents.add(block);
+            if (block.partiallyRead())
+            {
+                break;
+            }
+        }
+        SmallDocumentBlock[] results =
+            SmallDocumentBlock
+                .convert(( BlockWritable [] ) documents
+                    .toArray(new DocumentBlock[ 0 ]), _testdata_size);
+
+        assertEquals("checking correct result size: ",
+                     (_testdata_size + 63) / 64, results.length);
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+
+        for (int j = 0; j < results.length; j++)
+        {
+            results[ j ].writeBlocks(output);
+        }
+        byte[] output_array = output.toByteArray();
+
+        assertEquals("checking correct output size: ", 64 * results.length,
+                     output_array.length);
+        int index = 0;
+
+        for (; index < _testdata_size; index++)
+        {
+            assertEquals("checking output " + index, _testdata[ index ],
+                         output_array[ index ]);
+        }
+        for (; index < output_array.length; index++)
+        {
+            assertEquals("checking output " + index, ( byte ) 0xff,
+                         output_array[ index ]);
+        }
+    }
+

@@ -1,0 +1,49 @@
+    /**
+     * Set BAT block parameters. Assumes that all BAT blocks are
+     * contiguous. Will construct XBAT blocks if necessary and return
+     * the array of newly constructed XBAT blocks.
+     *
+     * @param blockCount count of BAT blocks
+     * @param startBlock index of first BAT block
+     *
+     * @return array of XBAT blocks; may be zero length, will not be
+     *         null
+     */
+
+    public BATBlock [] setBATBlocks(final int blockCount,
+                                    final int startBlock)
+    {
+        BATBlock[] rvalue;
+
+        _bat_count.set(blockCount, _data);
+        int limit  = Math.min(blockCount, _max_bats_in_header);
+        int offset = _bat_array_offset;
+
+        for (int j = 0; j < limit; j++)
+        {
+            new IntegerField(offset, startBlock + j, _data);
+            offset += LittleEndianConsts.INT_SIZE;
+        }
+        if (blockCount > _max_bats_in_header)
+        {
+            int   excess_blocks      = blockCount - _max_bats_in_header;
+            int[] excess_block_array = new int[ excess_blocks ];
+
+            for (int j = 0; j < excess_blocks; j++)
+            {
+                excess_block_array[ j ] = startBlock + j
+                                          + _max_bats_in_header;
+            }
+            rvalue = BATBlock.createXBATBlocks(excess_block_array,
+                                               startBlock + blockCount);
+            _xbat_start.set(startBlock + blockCount, _data);
+        }
+        else
+        {
+            rvalue = BATBlock.createXBATBlocks(new int[ 0 ], 0);
+            _xbat_start.set(PoiFSConstants.END_OF_CHAIN, _data);
+        }
+        _xbat_count.set(rvalue.length, _data);
+        return rvalue;
+    }
+

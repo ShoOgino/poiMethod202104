@@ -1,0 +1,64 @@
+    /**
+     * TEST NAME:  Test Write/Modify Sheet Simple <P>
+     * OBJECTIVE:  Test that HSSF can create a simple spreadsheet with numeric and string values,
+     *             remove some rows, yet still have a valid file/data.<P>
+     * SUCCESS:    HSSF creates a sheet.  Filesize matches a known good.  HSSFSheet objects
+     *             Last row, first row is tested against the correct values (74,25).<P>
+     * FAILURE:    HSSF does not create a sheet or excepts.  Filesize does not match the known good.
+     *             HSSFSheet last row or first row is incorrect.             <P>
+     *
+     * @author Andrew C. Oliver
+     */
+
+    public void testWriteModifySheetMerged()
+        throws IOException
+    {
+        File             file = File.createTempFile("testWriteSheetMerged",
+                                                    ".xls");
+        FileOutputStream out  = new FileOutputStream(file);
+        FileInputStream  in   = null;
+        HSSFWorkbook     wb   = new HSSFWorkbook();
+        HSSFSheet        s    = wb.createSheet();
+        HSSFRow          r    = null;
+        HSSFCell         c    = null;
+
+        for (short rownum = ( short ) 0; rownum < 100; rownum++)
+        {
+            r = s.createRow(rownum);
+
+            // r.setRowNum(( short ) rownum);
+            for (short cellnum = ( short ) 0; cellnum < 50; cellnum += 2)
+            {
+                c = r.createCell(cellnum);
+                c.setCellValue(rownum * 10000 + cellnum
+                               + ((( double ) rownum / 1000)
+                                  + (( double ) cellnum / 10000)));
+                c = r.createCell(( short ) (cellnum + 1));
+                c.setCellValue("TEST");
+            }
+        }
+        s.addMergedRegion(new Region(( short ) 0, ( short ) 0, ( short ) 10,
+                                     ( short ) 10));
+        s.addMergedRegion(new Region(( short ) 30, ( short ) 5, ( short ) 40,
+                                     ( short ) 15));
+        wb.write(out);
+        out.close();
+        in = new FileInputStream(file);
+        wb = new HSSFWorkbook(new POIFSFileSystem(in));
+        s  = wb.getSheetAt(0);
+        Region r1 = s.getMergedRegionAt(0);
+        Region r2 = s.getMergedRegionAt(1);
+
+        in.close();
+
+        // System.out.println(file.length());
+        // assertEquals("FILE LENGTH == 87552",file.length(), 87552);
+        // System.out.println(s.getLastRowNum());
+        assertEquals("REGION1 = 0,0,10,10", 0,
+                     new Region(( short ) 0, ( short ) 0, ( short ) 10,
+                                ( short ) 10).compareTo(r1));
+        assertEquals("REGION2 == 30,5,40,15", 0,
+                     new Region(( short ) 30, ( short ) 5, ( short ) 40,
+                                ( short ) 15).compareTo(r2));
+    }
+

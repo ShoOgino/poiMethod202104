@@ -1,0 +1,47 @@
+    private byte [] checkValues(int big_blocks, int small_blocks,
+                                int total_output, POIFSDocument document,
+                                byte [] input)
+        throws IOException
+    {
+        assertEquals(document, document.getDocumentProperty().getDocument());
+        int increment = ( int ) Math.sqrt(input.length);
+
+        for (int j = 1; j <= input.length; j += increment)
+        {
+            byte[] buffer = new byte[ j ];
+            int    offset = 0;
+
+            for (int k = 0; k < (input.length / j); k++)
+            {
+                document.read(buffer, offset);
+                for (int n = 0; n < buffer.length; n++)
+                {
+                    assertEquals("checking byte " + (k * j) + n,
+                                 input[ (k * j) + n ], buffer[ n ]);
+                }
+                offset += j;
+            }
+        }
+        assertEquals(big_blocks, document.countBlocks());
+        assertEquals(small_blocks, document.getSmallBlocks().length);
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+
+        document.writeBlocks(stream);
+        byte[] output = stream.toByteArray();
+
+        assertEquals(total_output, output.length);
+        int limit = Math.min(total_output, input.length);
+
+        for (int j = 0; j < limit; j++)
+        {
+            assertEquals("Checking document offset " + j, input[ j ],
+                         output[ j ]);
+        }
+        for (int j = limit; j < output.length; j++)
+        {
+            assertEquals("Checking document offset " + j, ( byte ) -1,
+                         output[ j ]);
+        }
+        return output;
+    }
+

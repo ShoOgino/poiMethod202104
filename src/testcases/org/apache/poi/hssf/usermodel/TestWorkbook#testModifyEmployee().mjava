@@ -1,0 +1,59 @@
+    /**
+     * TEST NAME:  Test Modify Employee Sheet<P>
+     * OBJECTIVE:  Test that HSSF can read a simple spreadsheet with string values and replace
+     *             them with other string values despite any styling.  In this release of HSSF styling will
+     *             probably be lost and is NOT tested.<P>
+     * SUCCESS:    HSSF reads a sheet.  HSSF replaces the cell values with other cell values. HSSF
+     *             writes the sheet out to another file.  HSSF reads the result and ensures the value
+     *             has been properly replaced.    <P>
+     * FAILURE:    HSSF does not read a sheet or excepts.  HSSF does not write the sheet or excepts.
+     *             HSSF does not re-read the sheet or excepts.  Upon re-reading the sheet the value
+     *             is incorrect or has not been replaced. <P>
+     *
+     * @author Andrew C. Oliver
+     * @author Greg Merrill
+     */
+
+    public void testModifyEmployee()
+        throws IOException
+    {
+        String filename = System.getProperty("HSSF.testdata.path");
+
+        filename = filename + "/Employee.xls";
+        FileInputStream instream = new FileInputStream(filename);
+        POIFSFileSystem fsin     = new POIFSFileSystem(instream);
+        HSSFWorkbook    workbook = new HSSFWorkbook(fsin);
+        HSSFSheet       sheet    = workbook.getSheetAt(0);
+        HSSFCell        cell     =
+            sheet.getRow(( short ) 3).getCell(( short ) 2);
+
+        cell.setCellValue(LAST_NAME_VALUE);
+        cell = sheet.getRow(( short ) 4).getCell(( short ) 2);
+        cell.setCellValue(FIRST_NAME_VALUE);
+        cell = sheet.getRow(( short ) 5).getCell(( short ) 2);
+        cell.setCellValue(SSN_VALUE);
+        File             destination = File.createTempFile("EmployeeResult",
+                                           ".xls");
+        FileOutputStream outstream   = new FileOutputStream(destination);
+
+        workbook.write(outstream);
+        instream.close();
+        outstream.close();
+        instream = new FileInputStream(destination);
+        workbook = new HSSFWorkbook(new POIFSFileSystem(instream));
+        sheet    = workbook.getSheetAt(0);
+        assertEquals(EMPLOYEE_INFORMATION,
+                     sheet.getRow(1).getCell(( short ) 1)
+                         .getStringCellValue());
+        assertEquals(LAST_NAME_VALUE,
+                     sheet.getRow(3).getCell(( short ) 2)
+                         .getStringCellValue());
+        assertEquals(FIRST_NAME_VALUE,
+                     sheet.getRow(4).getCell(( short ) 2)
+                         .getStringCellValue());
+        assertEquals(SSN_VALUE,
+                     sheet.getRow(5).getCell(( short ) 2)
+                         .getStringCellValue());
+        instream.close();
+    }
+

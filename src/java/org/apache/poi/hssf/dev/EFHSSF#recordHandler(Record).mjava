@@ -1,0 +1,64 @@
+    public void recordHandler(Record record)
+    {
+        HSSFRow  row      = null;
+        HSSFCell cell     = null;
+        int      sheetnum = -1;
+
+        switch (record.getSid())
+        {
+
+            case BOFRecord.sid :
+                BOFRecord bof = ( BOFRecord ) record;
+
+                if (bof.getType() == bof.TYPE_WORKBOOK)
+                {
+                    workbook = new HSSFWorkbook();
+                }
+                else if (bof.getType() == bof.TYPE_WORKSHEET)
+                {
+                    sheetnum++;
+                    cursheet = workbook.getSheetAt(sheetnum);
+                }
+                break;
+
+            case BoundSheetRecord.sid :
+                BoundSheetRecord bsr = ( BoundSheetRecord ) record;
+
+                workbook.createSheet(bsr.getSheetname());
+                break;
+
+            case RowRecord.sid :
+                RowRecord rowrec = ( RowRecord ) record;
+
+                cursheet.createRow(rowrec.getRowNumber());
+                break;
+
+            case NumberRecord.sid :
+                NumberRecord numrec = ( NumberRecord ) record;
+
+                row  = cursheet.getRow(numrec.getRow());
+                cell = row.createCell(numrec.getColumn(),
+                                      HSSFCell.CELL_TYPE_NUMERIC);
+                cell.setCellValue(numrec.getValue());
+                break;
+
+            case SSTRecord.sid :
+                SSTRecord sstrec = ( SSTRecord ) record;
+
+                for (int k = 0; k < sstrec.getNumUniqueStrings(); k++)
+                {
+                    workbook.addSSTString(sstrec.getString(k));
+                }
+                break;
+
+            case LabelSSTRecord.sid :
+                LabelSSTRecord lrec = ( LabelSSTRecord ) record;
+
+                row  = cursheet.getRow(lrec.getRow());
+                cell = row.createCell(lrec.getColumn(),
+                                      HSSFCell.CELL_TYPE_STRING);
+                cell.setCellValue(workbook.getSSTString(lrec.getSSTIndex()));
+                break;
+        }
+    }
+

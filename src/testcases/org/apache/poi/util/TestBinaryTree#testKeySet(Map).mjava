@@ -1,0 +1,228 @@
+    /* ********** START helper methods ********** */
+    private void testKeySet(final Map m)
+    {
+        Set s = m.keySet();
+
+        assertEquals(m.size(), s.size());
+        assertEquals(m.isEmpty(), s.isEmpty());
+        LocalTestNode node = new LocalTestNode(-1);
+
+        m.put(node.getKey(), node);
+        assertTrue(s.contains(node.getKey()));
+        assertEquals(m.size(), s.size());
+        assertEquals(m.isEmpty(), s.isEmpty());
+        m.remove(node.getKey());
+        assertTrue(!s.contains(node.getKey()));
+        assertEquals(m.size(), s.size());
+        assertEquals(m.isEmpty(), s.isEmpty());
+        try
+        {
+            s.contains(null);
+            fail("should have caught NullPointerException");
+        }
+        catch (NullPointerException ignored)
+        {
+        }
+        try
+        {
+            s.contains(new Object());
+            fail("should have caught ClassCastException");
+        }
+        catch (ClassCastException ignored)
+        {
+        }
+        for (int k = 0; k < m.size(); k++)
+        {
+            assertTrue(s.contains(new Integer(k)));
+        }
+        int count = 0;
+
+        for (Iterator iter = s.iterator(); iter.hasNext(); )
+        {
+            iter.next();
+            ++count;
+        }
+        assertEquals(count, s.size());
+
+        // force the map to have some content
+        m.put(node.getKey(), node);
+        Iterator      iter  = m.keySet().iterator();
+        LocalTestNode node2 = new LocalTestNode(-2);
+
+        m.put(node2.getKey(), node2);
+        try
+        {
+            iter.next();
+            fail("next() should have thrown an exception after a put");
+        }
+        catch (ConcurrentModificationException ignored)
+        {
+        }
+        m.remove(node2.getKey());
+        iter = s.iterator();
+        m.remove(node.getKey());
+        try
+        {
+            iter.next();
+            fail("next() should have thrown an exception after a Map remove");
+        }
+        catch (ConcurrentModificationException ignored)
+        {
+        }
+        m.put(node.getKey(), node);
+        iter = s.iterator();
+        s.remove(node.getKey());
+        try
+        {
+            iter.next();
+            fail("next() should have thrown an exception after a Set remove");
+        }
+        catch (ConcurrentModificationException ignored)
+        {
+        }
+        iter  = s.iterator();
+        count = 0;
+        boolean terminated = false;
+
+        try
+        {
+            while (true)
+            {
+                iter.next();
+                ++count;
+            }
+        }
+        catch (NoSuchElementException ignored)
+        {
+            terminated = true;
+        }
+        assertTrue(terminated);
+        assertEquals(m.size(), count);
+        iter = s.iterator();
+        try
+        {
+            iter.remove();
+            fail("Should have thrown exception");
+        }
+        catch (IllegalStateException ignored)
+        {
+        }
+        m.put(node.getKey(), node);
+        iter = s.iterator();
+        iter.next();
+        m.put(node2.getKey(), node2);
+        try
+        {
+            iter.remove();
+            fail("should have thrown exception");
+        }
+        catch (ConcurrentModificationException ignored)
+        {
+        }
+        Iterator iter2 = s.iterator();
+
+        iter2.next();
+        LocalTestNode node3 = new LocalTestNode(-3);
+
+        m.put(node3.getKey(), node3);
+        try
+        {
+            iter2.remove();
+            fail("should have thrown exception");
+        }
+        catch (ConcurrentModificationException ignored)
+        {
+        }
+        int r_count = 0;
+
+        for (iter = s.iterator(); iter.hasNext(); )
+        {
+            if (iter.next().equals(node.getKey()))
+            {
+                try
+                {
+                    iter.remove();
+                    ++r_count;
+                    iter.remove();
+                    fail("2nd remove should have failed");
+                }
+                catch (IllegalStateException ignored)
+                {
+                    assertEquals(1, r_count);
+                }
+            }
+        }
+        assertEquals(1, r_count);
+        assertTrue(!s.contains(node.getKey()));
+        r_count = 0;
+        m.put(node.getKey(), node);
+        Object[] a1 = s.toArray();
+
+        assertEquals(s.size(), a1.length);
+        if (a1.length > 1)
+        {
+            Comparable first = ( Comparable ) a1[ 0 ];
+
+            for (int k = 1; k < a1.length; k++)
+            {
+                Comparable second = ( Comparable ) a1[ k ];
+
+                assertTrue(first.compareTo(second) < 0);
+                first = second;
+            }
+            iter  = s.iterator();
+            first = ( Comparable ) iter.next();
+            for (; iter.hasNext(); )
+            {
+                Comparable second = ( Comparable ) iter.next();
+
+                assertTrue(first.compareTo(second) < 0);
+                first = second;
+            }
+        }
+        try
+        {
+            String array2[] = ( String [] ) s.toArray(new String[ 0 ]);
+
+            if (s.size() != 0)
+            {
+                fail("should have caught exception creating an invalid array");
+            }
+        }
+        catch (ArrayStoreException ignored)
+        {
+        }
+        Comparable array2[] =
+            ( Comparable [] ) s.toArray(new Comparable[ 0 ]);
+        Integer    array3[] =
+            ( Integer [] ) s.toArray(new Integer[ s.size() ]);
+
+        if (array3.length > 1)
+        {
+            Integer first = array3[ 0 ];
+
+            for (int k = 1; k < array3.length; k++)
+            {
+                Integer second = array3[ k ];
+
+                assertTrue(first.compareTo(second) < 0);
+                first = second;
+            }
+        }
+        try
+        {
+            s.add("foo");
+            fail("should have thrown an exception");
+        }
+        catch (UnsupportedOperationException ignored)
+        {
+        }
+        assertTrue(!s.equals(null));
+        assertEquals(s, s);
+        Set hs = new HashSet(s);
+
+        assertEquals(s, hs);
+        assertEquals(hs, s);
+        assertTrue(s.hashCode() == hs.hashCode());
+    }
+

@@ -1,0 +1,28 @@
+    public int serialize(int offset, byte [] data)
+    {
+        String       username = getUsername();
+        StringBuffer temp     = new StringBuffer(0x70 - (0x3));
+
+        temp.append(username);
+        while (temp.length() < 0x70 - 0x3)
+        {
+            temp.append(
+                " ");   // (70 = fixed lenght -3 = the overhead bits of unicode string)
+        }
+        username = temp.toString();
+        UnicodeString str = new UnicodeString();
+
+        str.setString(username);
+        str.setOptionFlags(( byte ) 0x0);
+        str.setCharCount(( short ) 0x4);
+        byte[] stringbytes = str.serialize();
+
+        LittleEndian.putShort(data, 0 + offset, sid);
+        LittleEndian.putShort(data, 2 + offset,
+                              ( short ) (stringbytes
+                                  .length));   // 112 bytes (115 total)
+        System.arraycopy(stringbytes, 0, data, 4 + offset,
+                         stringbytes.length);
+        return getRecordSize();
+    }
+

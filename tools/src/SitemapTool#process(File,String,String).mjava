@@ -1,0 +1,113 @@
+    /**
+     * Scan recursive
+     */
+
+    private void process(final File directoryFile, final String ext,
+                         final String sitemapLocation)
+        throws IOException, BuildException
+    {
+        final File[] files = directoryFile.listFiles();
+
+        for (int i = 0; i < files.length; i++)
+        {
+            if (files[ i ].isDirectory() == true)
+            {
+                this.process(files[ i ], ext, sitemapLocation);
+            }
+            else
+            {
+                if (files[ i ].getName().endsWith("." + ext) == true)
+                {
+                    System.out.println("Reading: "
+                                       + files[ i ].getAbsolutePath());
+                    final String          data =
+                        this.load(files[ i ].getAbsolutePath());
+
+                    // separate the data by lines
+                    final StringTokenizer st   = new StringTokenizer(data);
+
+                    while (st.hasMoreElements() == true)
+                    {
+
+                        // now get the properties of a line. These are separated by a "|"
+                        final String          line          =
+                            ( String ) st.nextElement();
+                        final StringTokenizer prop          =
+                            new StringTokenizer(line, "|");
+                        String                category      = null;
+                        String                componentName = null;
+                        String                className     = null;
+                        String                configuration = null;
+                        String                label         = null;
+                        String                mimeType      = null;
+
+                        while (prop.hasMoreElements() == true)
+                        {
+                            final String property =
+                                ( String ) prop.nextElement();
+                            final int    pos      = property.indexOf(":");
+                            final String propName =
+                                property.substring(0, pos);
+                            final String propVal  = property.substring(pos
+                                                                       + 1);
+
+                            if (propName.equals("category"))
+                            {
+                                category = propVal;
+                            }
+                            else if (propName.equals("componentName"))
+                            {
+                                componentName = propVal;
+                            }
+                            else if (propName.equals("componentClass"))
+                            {
+                                className = propVal;
+                            }
+                            else if (propName.equals("configuration"))
+                            {
+                                configuration = propVal;
+                            }
+                            else if (propName.equals("label"))
+                            {
+                                label = propVal;
+                            }
+                            else if (propName.equals("mimeType"))
+                            {
+                                mimeType = propVal;
+                            }
+                            else
+                            {
+                                throw new BuildException(
+                                    "Unknown property " + propName
+                                    + " in file "
+                                    + files[ i ].getAbsolutePath());
+                            }
+                        }
+
+                        // Test for required values
+                        if (category == null)
+                        {
+                            throw new BuildException(
+                                "category property is required in file "
+                                + files[ i ].getAbsolutePath(), location);
+                        }
+                        if (componentName == null)
+                        {
+                            throw new BuildException(
+                                "componentName property is required in file "
+                                + files[ i ].getAbsolutePath(), location);
+                        }
+                        if (className == null)
+                        {
+                            throw new BuildException(
+                                "componentClass property is required in file "
+                                + files[ i ].getAbsolutePath(), location);
+                        }
+                        this.add(sitemapLocation, category, componentName,
+                                 className, configuration, label, mimeType);
+                    }
+                }
+            }
+        }
+    }
+

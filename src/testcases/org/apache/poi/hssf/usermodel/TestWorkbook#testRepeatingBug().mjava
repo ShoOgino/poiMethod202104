@@ -1,0 +1,34 @@
+    /**
+     * This tests is for bug [ #506658 ] Repeating output.
+     *
+     * We need to make sure only one LabelSSTRecord is produced.
+     */
+
+    public void testRepeatingBug()
+        throws Exception
+    {
+        HSSFWorkbook workbook = new HSSFWorkbook();
+        HSSFSheet    sheet    = workbook.createSheet("Design Variants");
+        HSSFRow      row      = sheet.createRow(( short ) 2);
+        HSSFCell     cell     = row.createCell(( short ) 1);
+
+        cell.setCellValue("Class");
+        cell = row.createCell(( short ) 2);
+
+        // workbook.write(new FileOutputStream("/a2.xls"));
+        ValueRecordsAggregate valueAggregate =
+            ( ValueRecordsAggregate ) sheet.getSheet()
+                .findFirstRecordBySid(ValueRecordsAggregate.sid);
+        int                   sstRecords     = 0;
+        Iterator              iterator       = valueAggregate.getIterator();
+
+        while (iterator.hasNext())
+        {
+            if ((( Record ) iterator.next()).getSid() == LabelSSTRecord.sid)
+            {
+                sstRecords++;
+            }
+        }
+        assertEquals(1, sstRecords);
+    }
+

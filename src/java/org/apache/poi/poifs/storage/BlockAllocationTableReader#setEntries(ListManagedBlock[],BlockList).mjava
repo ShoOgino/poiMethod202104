@@ -1,0 +1,39 @@
+    /**
+     * Convert an array of blocks into a set of integer indices
+     *
+     * @param blocks the array of blocks containing the indices
+     * @param raw_blocks the list of blocks being managed. Unused
+     *                   blocks will be eliminated from the list
+     *
+     * @exception IOException
+     */
+
+    private void setEntries(final ListManagedBlock [] blocks,
+                            final BlockList raw_blocks)
+        throws IOException
+    {
+        int limit = BATBlock.entriesPerBlock();
+
+        for (int block_index = 0; block_index < blocks.length; block_index++)
+        {
+            byte[] data   = blocks[ block_index ].getData();
+            int    offset = 0;
+
+            for (int k = 0; k < limit; k++)
+            {
+                int entry = LittleEndian.getInt(data, offset);
+
+                if (entry == PoiFSConstants.UNUSED_BLOCK)
+                {
+                    raw_blocks.zap(_entries.size());
+                }
+                _entries.add(entry);
+                offset += LittleEndianConsts.INT_SIZE;
+            }
+
+            // discard block
+            blocks[ block_index ] = null;
+        }
+        raw_blocks.setBAT(this);
+    }
+

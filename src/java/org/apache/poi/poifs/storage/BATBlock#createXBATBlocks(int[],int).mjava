@@ -1,0 +1,39 @@
+    /**
+     * Create an array of XBATBlocks from an array of int block
+     * allocation table entries
+     *
+     * @param entries the array of int entries
+     * @param startBlock the start block of the array of XBAT blocks
+     *
+     * @return the newly created array of BATBlocks
+     */
+
+    public static BATBlock [] createXBATBlocks(final int [] entries,
+                                               final int startBlock)
+    {
+        int        block_count =
+            calculateXBATStorageRequirements(entries.length);
+        BATBlock[] blocks      = new BATBlock[ block_count ];
+        int        index       = 0;
+        int        remaining   = entries.length;
+
+        if (block_count != 0)
+        {
+            for (int j = 0; j < entries.length; j += _entries_per_xbat_block)
+            {
+                blocks[ index++ ] =
+                    new BATBlock(entries, j,
+                                 (remaining > _entries_per_xbat_block)
+                                 ? j + _entries_per_xbat_block
+                                 : entries.length);
+                remaining         -= _entries_per_xbat_block;
+            }
+            for (index = 0; index < blocks.length - 1; index++)
+            {
+                blocks[ index ].setXBATChain(startBlock + index + 1);
+            }
+            blocks[ index ].setXBATChain(PoiFSConstants.END_OF_CHAIN);
+        }
+        return blocks;
+    }
+

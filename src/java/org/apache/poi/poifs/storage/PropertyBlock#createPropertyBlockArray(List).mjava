@@ -1,0 +1,49 @@
+    /**
+     * Create an array of PropertyBlocks from an array of Property
+     * instances, creating empty Property instances to make up any
+     * shortfall
+     *
+     * @param properties the Property instances to be converted into
+     *                   PropertyBlocks, in a java List
+     *
+     * @return the array of newly created PropertyBlock instances
+     */
+
+    public static BlockWritable [] createPropertyBlockArray(
+            final List properties)
+    {
+        int        block_count   =
+            (properties.size() + _properties_per_block - 1)
+            / _properties_per_block;
+        Property[] to_be_written =
+            new Property[ block_count * _properties_per_block ];
+
+        System.arraycopy(properties.toArray(new Property[ 0 ]), 0,
+                         to_be_written, 0, properties.size());
+        for (int j = properties.size(); j < to_be_written.length; j++)
+        {
+
+            // create an instance of an anonymous inner class that
+            // extends Property
+            to_be_written[ j ] = new Property()
+            {
+                protected void preWrite()
+                {
+                }
+
+                public boolean isDirectory()
+                {
+                    return false;
+                }
+            };
+        }
+        BlockWritable[] rvalue = new BlockWritable[ block_count ];
+
+        for (int j = 0; j < block_count; j++)
+        {
+            rvalue[ j ] = new PropertyBlock(to_be_written,
+                                            j * _properties_per_block);
+        }
+        return rvalue;
+    }
+

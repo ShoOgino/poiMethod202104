@@ -1,0 +1,75 @@
+    /**
+     * read support  for low level
+     * API.  Pass in an array of Record objects, A Workbook
+     * object is constructed and passed back with all of its initialization set
+     * to the passed in records and references to those records held. Unlike Sheet
+     * workbook does not use an offset (its assumed to be 0) since its first in a file.
+     * If you need an offset then construct a new array with a 0 offset or write your
+     * own ;-p.
+     *
+     * @param recs an array of Record objects
+     * @return Workbook object
+     */
+
+    public static Workbook createWorkbook(List recs)
+    {
+        log.log(DEBUG, "Workbook (readfile) created with reclen=",
+                new Integer(recs.size()));
+        Workbook  retval  = new Workbook();
+        ArrayList records = new ArrayList(recs.size() / 3);
+
+        for (int k = 0; k < recs.size(); k++)
+        {
+            Record rec = ( Record ) recs.get(k);
+
+            if (rec.getSid() == EOFRecord.sid)
+            {
+                records.add(rec);
+                log.log(DEBUG, "found workbook eof record at " + k);
+                break;
+            }
+            switch (rec.getSid())
+            {
+
+                case BoundSheetRecord.sid :
+                    log.log(DEBUG, "found boundsheet record at " + k);
+                    retval.boundsheets.add(rec);
+                    retval.bspos = k;
+                    break;
+
+                case SSTRecord.sid :
+                    log.log(DEBUG, "found sst record at " + k);
+                    retval.sst = ( SSTRecord ) rec;
+                    break;
+
+                case FontRecord.sid :
+                    log.log(DEBUG, "found font record at " + k);
+                    retval.fontpos = k;
+                    retval.numfonts++;
+                    break;
+
+                case ExtendedFormatRecord.sid :
+                    log.log(DEBUG, "found XF record at " + k);
+                    retval.xfpos = k;
+                    retval.numxfs++;
+                    break;
+
+                case TabIdRecord.sid :
+                    log.log(DEBUG, "found tabid record at " + k);
+                    retval.tabpos = k;
+                    break;
+
+                case BackupRecord.sid :
+                    log.log(DEBUG, "found backup record at " + k);
+                    retval.backuppos = k;
+                    break;
+
+                default :
+            }
+            records.add(rec);
+        }
+        retval.records = records;
+        log.log(DEBUG, "exit create workbook from existing file function");
+        return retval;
+    }
+

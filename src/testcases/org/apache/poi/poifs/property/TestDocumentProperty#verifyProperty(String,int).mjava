@@ -1,0 +1,66 @@
+    private void verifyProperty(String name, int size)
+        throws IOException
+    {
+        DocumentProperty property = new DocumentProperty(name, size);
+
+        if (size >= 4096)
+        {
+            assertTrue(!property.shouldUseSmallBlocks());
+        }
+        else
+        {
+            assertTrue(property.shouldUseSmallBlocks());
+        }
+        byte[] testblock = new byte[ 128 ];
+        int    index     = 0;
+
+        for (; index < 0x40; index++)
+        {
+            testblock[ index ] = ( byte ) 0;
+        }
+        int limit = Math.min(31, name.length());
+
+        testblock[ index++ ] = ( byte ) (2 * (limit + 1));
+        testblock[ index++ ] = ( byte ) 0;
+        testblock[ index++ ] = ( byte ) 2;
+        testblock[ index++ ] = ( byte ) 1;
+        for (; index < 0x50; index++)
+        {
+            testblock[ index ] = ( byte ) 0xFF;
+        }
+        for (; index < 0x78; index++)
+        {
+            testblock[ index ] = ( byte ) 0;
+        }
+        int sz = size;
+
+        testblock[ index++ ] = ( byte ) sz;
+        sz                   /= 256;
+        testblock[ index++ ] = ( byte ) sz;
+        sz                   /= 256;
+        testblock[ index++ ] = ( byte ) sz;
+        sz                   /= 256;
+        testblock[ index++ ] = ( byte ) sz;
+        for (; index < 0x80; index++)
+        {
+            testblock[ index ] = ( byte ) 0x0;
+        }
+        byte[] name_bytes = name.getBytes();
+
+        for (index = 0; index < limit; index++)
+        {
+            testblock[ index * 2 ] = name_bytes[ index ];
+        }
+        ByteArrayOutputStream stream = new ByteArrayOutputStream(512);
+
+        property.writeData(stream);
+        byte[] output = stream.toByteArray();
+
+        assertEquals(testblock.length, output.length);
+        for (int j = 0; j < testblock.length; j++)
+        {
+            assertEquals("mismatch at offset " + j, testblock[ j ],
+                         output[ j ]);
+        }
+    }
+

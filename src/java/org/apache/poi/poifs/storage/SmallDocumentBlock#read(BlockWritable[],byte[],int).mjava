@@ -1,0 +1,42 @@
+    /**
+     * read data from an array of SmallDocumentBlocks
+     *
+     * @param blocks the blocks to read from
+     * @param buffer the buffer to write the data into
+     * @param offset the offset into the array of blocks to read from
+     */
+
+    public static void read(final BlockWritable [] blocks,
+                            final byte [] buffer, final int offset)
+    {
+        int firstBlockIndex  = offset / _block_size;
+        int firstBlockOffset = offset % _block_size;
+        int lastBlockIndex   = (offset + buffer.length - 1) / _block_size;
+
+        if (firstBlockIndex == lastBlockIndex)
+        {
+            System.arraycopy(
+                (( SmallDocumentBlock ) blocks[ firstBlockIndex ])._data,
+                firstBlockOffset, buffer, 0, buffer.length);
+        }
+        else
+        {
+            int buffer_offset = 0;
+
+            System.arraycopy(
+                (( SmallDocumentBlock ) blocks[ firstBlockIndex ])._data,
+                firstBlockOffset, buffer, buffer_offset,
+                _block_size - firstBlockOffset);
+            buffer_offset += _block_size - firstBlockOffset;
+            for (int j = firstBlockIndex + 1; j < lastBlockIndex; j++)
+            {
+                System.arraycopy((( SmallDocumentBlock ) blocks[ j ])._data,
+                                 0, buffer, buffer_offset, _block_size);
+                buffer_offset += _block_size;
+            }
+            System.arraycopy(
+                (( SmallDocumentBlock ) blocks[ lastBlockIndex ])._data, 0,
+                buffer, buffer_offset, buffer.length - buffer_offset);
+        }
+    }
+

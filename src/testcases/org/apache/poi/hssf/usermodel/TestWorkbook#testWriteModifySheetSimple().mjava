@@ -1,0 +1,60 @@
+    /**
+     * TEST NAME:  Test Write/Modify Sheet Simple <P>
+     * OBJECTIVE:  Test that HSSF can create a simple spreadsheet with numeric and string values,
+     *             remove some rows, yet still have a valid file/data.<P>
+     * SUCCESS:    HSSF creates a sheet.  Filesize matches a known good.  HSSFSheet objects
+     *             Last row, first row is tested against the correct values (74,25).<P>
+     * FAILURE:    HSSF does not create a sheet or excepts.  Filesize does not match the known good.
+     *             HSSFSheet last row or first row is incorrect.             <P>
+     *
+     * @author Andrew C. Oliver
+     */
+
+    public void testWriteModifySheetSimple()
+        throws IOException
+    {
+        File             file = File.createTempFile("testWriteSheetSimple",
+                                                    ".xls");
+        FileOutputStream out  = new FileOutputStream(file);
+        HSSFWorkbook     wb   = new HSSFWorkbook();
+        HSSFSheet        s    = wb.createSheet();
+        HSSFRow          r    = null;
+        HSSFCell         c    = null;
+
+        for (short rownum = ( short ) 0; rownum < 100; rownum++)
+        {
+            r = s.createRow(rownum);
+
+            // r.setRowNum(( short ) rownum);
+            for (short cellnum = ( short ) 0; cellnum < 50; cellnum += 2)
+            {
+                c = r.createCell(cellnum);
+                c.setCellValue(rownum * 10000 + cellnum
+                               + ((( double ) rownum / 1000)
+                                  + (( double ) cellnum / 10000)));
+                c = r.createCell(( short ) (cellnum + 1));
+                c.setCellValue("TEST");
+            }
+        }
+        for (short rownum = ( short ) 0; rownum < 25; rownum++)
+        {
+            r = s.getRow(rownum);
+            s.removeRow(r);
+        }
+        for (short rownum = ( short ) 75; rownum < 100; rownum++)
+        {
+            r = s.getRow(rownum);
+            s.removeRow(r);
+        }
+        wb.write(out);
+        out.close();
+
+        // System.out.println(file.length());
+        // assertEquals("FILE LENGTH == 87552",file.length(), 87552);
+        // System.out.println(s.getLastRowNum());
+        assertEquals("FILE LENGTH == 45568", 45568,
+                     file.length());   // changed due to new sheet behavior (<3)
+        assertEquals("LAST ROW == 74", 74, s.getLastRowNum());
+        assertEquals("FIRST ROW == 25", 25, s.getFirstRowNum());
+    }
+

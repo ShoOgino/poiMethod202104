@@ -1,0 +1,40 @@
+    /**
+     * Create a POIFSFileSystem from an InputStream
+     *
+     * @param stream the InputStream from which to read the data
+     *
+     * @exception IOException on errors reading, or on invalid data
+     */
+
+    public POIFSFileSystem(final InputStream stream)
+        throws IOException
+    {
+        this();
+
+        // read the header block from the stream
+        HeaderBlockReader header_block_reader = new HeaderBlockReader(stream);
+
+        // read the rest of the stream into blocks
+        RawDataBlockList  data_blocks         = new RawDataBlockList(stream);
+
+        // set up the block allocation table (necessary for the
+        // data_blocks to be manageable
+        new BlockAllocationTableReader(header_block_reader.getBATCount(),
+                                       header_block_reader.getBATArray(),
+                                       header_block_reader.getXBATCount(),
+                                       header_block_reader.getXBATIndex(),
+                                       data_blocks);
+
+        // get property table from the document
+        PropertyTable properties =
+            new PropertyTable(header_block_reader.getPropertyStart(),
+                              data_blocks);
+
+        // init documents
+        processProperties(SmallBlockTableReader
+            .getSmallDocumentBlocks(data_blocks, properties
+                .getRoot(), header_block_reader
+                    .getSBATStart()), data_blocks, properties.getRoot()
+                        .getChildren(), null);
+    }
+

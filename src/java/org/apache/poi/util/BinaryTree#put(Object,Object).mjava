@@ -1,0 +1,91 @@
+    /**
+     * Associates the specified value with the specified key in this
+     * map.
+     *
+     * @param key key with which the specified value is to be
+     *            associated.
+     * @param value value to be associated with the specified key.
+     *
+     * @return null
+     *
+     * @exception ClassCastException if the class of the specified key
+     *                               or value prevents it from being
+     *                               stored in this map.
+     * @exception NullPointerException if the specified key or value
+     *                                 is null
+     * @exception IllegalArgumentException if the key duplicates an
+     *                                     existing key, or if the
+     *                                     value duplicates an
+     *                                     existing value
+     */
+
+    public Object put(final Object key, final Object value)
+        throws ClassCastException, NullPointerException,
+                IllegalArgumentException
+    {
+        checkKeyAndValue(key, value);
+        Node node = _root[ _KEY ];
+
+        if (node == null)
+        {
+            Node root = new Node(( Comparable ) key, ( Comparable ) value);
+
+            _root[ _KEY ]   = root;
+            _root[ _VALUE ] = root;
+            grow();
+        }
+        else
+        {
+            while (true)
+            {
+                int cmp = compare(( Comparable ) key, node.getData(_KEY));
+
+                if (cmp == 0)
+                {
+                    throw new IllegalArgumentException(
+                        "Cannot store a duplicate key (\"" + key
+                        + "\") in this Map");
+                }
+                else if (cmp < 0)
+                {
+                    if (node.getLeft(_KEY) != null)
+                    {
+                        node = node.getLeft(_KEY);
+                    }
+                    else
+                    {
+                        Node newNode = new Node(( Comparable ) key,
+                                                ( Comparable ) value);
+
+                        insertValue(newNode);
+                        node.setLeft(newNode, _KEY);
+                        newNode.setParent(node, _KEY);
+                        doRedBlackInsert(newNode, _KEY);
+                        grow();
+                        break;
+                    }
+                }
+                else
+                {   // cmp > 0
+                    if (node.getRight(_KEY) != null)
+                    {
+                        node = node.getRight(_KEY);
+                    }
+                    else
+                    {
+                        Node newNode = new Node(( Comparable ) key,
+                                                ( Comparable ) value);
+
+                        insertValue(newNode);
+                        node.setRight(newNode, _KEY);
+                        newNode.setParent(node, _KEY);
+                        doRedBlackInsert(newNode, _KEY);
+                        grow();
+                        break;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+

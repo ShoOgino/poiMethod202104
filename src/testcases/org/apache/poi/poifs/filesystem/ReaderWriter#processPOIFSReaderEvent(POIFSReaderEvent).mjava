@@ -1,0 +1,59 @@
+    /**
+     * Process a POIFSReaderEvent that this listener had registered
+     * for
+     *
+     * @param event the POIFSReaderEvent
+     */
+
+    public void processPOIFSReaderEvent(final POIFSReaderEvent event)
+    {
+        DocumentInputStream istream = event.getStream();
+        POIFSDocumentPath   path    = event.getPath();
+        String              name    = event.getName();
+
+        try
+        {
+            int    size = istream.available();
+            byte[] data = new byte[ istream.available() ];
+
+            istream.read(data);
+            DocumentDescriptor descriptor = new DocumentDescriptor(path,
+                                                name);
+
+            System.out.println("adding document: " + descriptor + " (" + size
+                               + " bytes)");
+            dataMap.put(descriptor, data);
+            int            pathLength = path.length();
+            DirectoryEntry entry      = root;
+
+            for (int k = 0; k < path.length(); k++)
+            {
+                String componentName = path.getComponent(k);
+                Entry  nextEntry     = null;
+
+                try
+                {
+                    nextEntry = entry.getEntry(componentName);
+                }
+                catch (FileNotFoundException ignored)
+                {
+                    try
+                    {
+                        nextEntry = entry.createDirectory(componentName);
+                    }
+                    catch (IOException e)
+                    {
+                        System.out.println("Unable to create directory");
+                        e.printStackTrace();
+                        System.exit(1);
+                    }
+                }
+                entry = ( DirectoryEntry ) nextEntry;
+            }
+            entry.createDocument(name, size, this);
+        }
+        catch (IOException ignored)
+        {
+        }
+    }
+

@@ -1,0 +1,69 @@
+    /**
+     * Read the appropriate number of bytes from the stream and return
+     * them to the caller.
+     * <p>
+     * It should be noted that, in an attempt to improve system
+     * performance and to prevent a transient explosion of discarded
+     * byte arrays to be garbage collected, static byte arrays are
+     * employed for the standard cases of reading a short, an int, or
+     * a long.
+     * <p>
+     * <b>THIS INTRODUCES A RISK FOR THREADED OPERATIONS!</b>
+     * <p>
+     * However, for the purposes of the POI project, this risk is
+     * deemed negligible. It is, however, so noted.
+     *
+     * @param stream the InputStream we're reading from
+     * @param size the number of bytes to read; in 99.99% of cases,
+     *             this will be SHORT_SIZE, INT_SIZE, or LONG_SIZE --
+     *             but it doesn't have to be.
+     *
+     * @return the byte array containing the required number of
+     *         bytes. The array will contain all zero's on end of
+     *         stream
+     *
+     * @exception IOException will be propagated back to the caller
+     * @exception BufferUnderrunException if the stream cannot provide
+     *            enough bytes
+     */
+
+    public static byte [] readFromStream(final InputStream stream,
+                                         final int size)
+        throws IOException, BufferUnderrunException
+    {
+        byte[] buffer = null;
+
+        switch (size)
+        {
+
+            case SHORT_SIZE :
+                buffer = _short_buffer;
+                break;
+
+            case INT_SIZE :
+                buffer = _int_buffer;
+                break;
+
+            case LONG_SIZE :
+                buffer = _long_buffer;
+                break;
+
+            default :
+                buffer = new byte[ size ];
+                break;
+        }
+        int count = stream.read(buffer);
+
+        if (count == -1)
+        {
+
+            // return a zero-filled buffer
+            Arrays.fill(buffer, ( byte ) 0);
+        }
+        else if (count != size)
+        {
+            throw new BufferUnderrunException();
+        }
+        return buffer;
+    }
+

@@ -1,0 +1,31 @@
+    /**
+     * In the presence of a chart we need to make sure BOF/EOF records still exist.
+     */
+
+    public void testBOFandEOFRecords()
+        throws Exception
+    {
+        String          path      = System.getProperty("HSSF.testdata.path");
+        String          filename  = path + "/SimpleChart.xls";
+        POIFSFileSystem fs        =
+            new POIFSFileSystem(new FileInputStream(filename));
+        HSSFWorkbook    workbook  = new HSSFWorkbook(fs);
+        HSSFSheet       sheet     = workbook.getSheetAt(0);
+        HSSFRow         firstRow  = sheet.getRow(0);
+        HSSFCell        firstCell = firstRow.getCell(( short ) 0);
+
+        assertEquals(new GregorianCalendar(2000, 0, 1, 10, 51, 2).getTime(),
+                     HSSFDateUtil
+                         .getJavaDate(firstCell.getNumericCellValue()));
+        HSSFRow  row  = sheet.createRow(( short ) 15);
+        HSSFCell cell = row.createCell(( short ) 1,
+                                       HSSFCell.CELL_TYPE_NUMERIC);
+
+        cell.setCellValue(22);
+        Sheet newSheet = workbook.getSheetAt(0).getSheet();
+        List  records  = newSheet.getRecords();
+
+        assertTrue(records.get(0) instanceof BOFRecord);
+        assertTrue(records.get(records.size() - 1) instanceof EOFRecord);
+    }
+

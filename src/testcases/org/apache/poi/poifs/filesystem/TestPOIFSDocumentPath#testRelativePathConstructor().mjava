@@ -1,0 +1,91 @@
+    /**
+     * Test relative path constructor
+     */
+
+    public void testRelativePathConstructor()
+    {
+        String[] initialComponents =
+        {
+            "a", "b", "c"
+        };
+
+        for (int n = 0; n < initialComponents.length; n++)
+        {
+            String[] initialParams = new String[ n ];
+
+            for (int k = 0; k < n; k++)
+            {
+                initialParams[ k ] = initialComponents[ k ];
+            }
+            POIFSDocumentPath base       =
+                new POIFSDocumentPath(initialParams);
+            String[]          components =
+            {
+                "foo", "bar", "foobar", "fubar"
+            };
+
+            for (int j = 0; j < components.length; j++)
+            {
+                String[] params = new String[ j ];
+
+                for (int k = 0; k < j; k++)
+                {
+                    params[ k ] = components[ k ];
+                }
+                POIFSDocumentPath path = new POIFSDocumentPath(base, params);
+
+                assertEquals(j + n, path.length());
+                for (int k = 0; k < n; k++)
+                {
+                    assertEquals(initialComponents[ k ],
+                                 path.getComponent(k));
+                }
+                for (int k = 0; k < j; k++)
+                {
+                    assertEquals(components[ k ], path.getComponent(k + n));
+                }
+                if ((j + n) == 0)
+                {
+                    assertNull(path.getParent());
+                }
+                else
+                {
+                    POIFSDocumentPath parent = path.getParent();
+
+                    assertNotNull(parent);
+                    assertEquals(j + n - 1, parent.length());
+                    for (int k = 0; k < (j + n - 1); k++)
+                    {
+                        assertEquals(path.getComponent(k),
+                                     parent.getComponent(k));
+                    }
+                }
+            }
+
+            // test weird variants
+            assertEquals(n, new POIFSDocumentPath(base, null).length());
+            try
+            {
+                new POIFSDocumentPath(base, new String[]
+                {
+                    "fu", ""
+                });
+                fail("should have caught IllegalArgumentException");
+            }
+            catch (IllegalArgumentException ignored)
+            {
+            }
+            try
+            {
+                new POIFSDocumentPath(base, new String[]
+                {
+                    "fu", null
+                });
+                fail("should have caught IllegalArgumentException");
+            }
+            catch (IllegalArgumentException ignored)
+            {
+            }
+        }
+    }
+

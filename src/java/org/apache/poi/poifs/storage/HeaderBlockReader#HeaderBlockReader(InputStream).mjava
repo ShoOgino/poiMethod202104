@@ -1,0 +1,40 @@
+    /**
+     * create a new HeaderBlockReader from an InputStream
+     *
+     * @param stream the source InputStream
+     *
+     * @exception IOException on errors or bad data
+     */
+
+    public HeaderBlockReader(final InputStream stream)
+        throws IOException
+    {
+        _data = new byte[ PoiFSConstants.BIG_BLOCK_SIZE ];
+        int byte_count = stream.read(_data);
+
+        if (byte_count != PoiFSConstants.BIG_BLOCK_SIZE)
+        {
+            String type = " byte" + ((byte_count == 1) ? ("")
+                                                       : ("s"));
+
+            throw new IOException("Unable to read entire header; "
+                                  + byte_count + type + " read; expected "
+                                  + PoiFSConstants.BIG_BLOCK_SIZE + " bytes");
+        }
+
+        // verify signature
+        LongField signature = new LongField(_signature_offset, _data);
+
+        if (signature.get() != _signature)
+        {
+            throw new IOException("Invalid header signature; read "
+                                  + signature.get() + ", expected "
+                                  + _signature);
+        }
+        _bat_count      = new IntegerField(_bat_count_offset, _data);
+        _property_start = new IntegerField(_property_start_offset, _data);
+        _sbat_start     = new IntegerField(_sbat_start_offset, _data);
+        _xbat_start     = new IntegerField(_xbat_start_offset, _data);
+        _xbat_count     = new IntegerField(_xbat_count_offset, _data);
+    }
+

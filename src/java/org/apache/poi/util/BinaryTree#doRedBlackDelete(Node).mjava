@@ -1,0 +1,89 @@
+    /**
+     * complicated red-black delete stuff. Based on Sun's TreeMap
+     * implementation, though it's barely recognizeable any more
+     *
+     * @param deleted_node the node to be deleted
+     */
+
+    private void doRedBlackDelete(final Node deleted_node)
+    {
+        for (int index = _MINIMUM_INDEX; index < _INDEX_COUNT; index++)
+        {
+
+            // if deleted node has both left and children, swap with
+            // the next greater node
+            if ((deleted_node.getLeft(index) != null)
+                    && (deleted_node.getRight(index) != null))
+            {
+                swapPosition(nextGreater(deleted_node, index), deleted_node,
+                             index);
+            }
+            Node replacement = ((deleted_node.getLeft(index) != null)
+                                ? deleted_node.getLeft(index)
+                                : deleted_node.getRight(index));
+
+            if (replacement != null)
+            {
+                replacement.setParent(deleted_node.getParent(index), index);
+                if (deleted_node.getParent(index) == null)
+                {
+                    _root[ index ] = replacement;
+                }
+                else if (deleted_node
+                         == deleted_node.getParent(index).getLeft(index))
+                {
+                    deleted_node.getParent(index).setLeft(replacement, index);
+                }
+                else
+                {
+                    deleted_node.getParent(index).setRight(replacement,
+                                           index);
+                }
+                deleted_node.setLeft(null, index);
+                deleted_node.setRight(null, index);
+                deleted_node.setParent(null, index);
+                if (isBlack(deleted_node, index))
+                {
+                    doRedBlackDeleteFixup(replacement, index);
+                }
+            }
+            else
+            {
+
+                // replacement is null
+                if (deleted_node.getParent(index) == null)
+                {
+
+                    // empty tree
+                    _root[ index ] = null;
+                }
+                else
+                {
+
+                    // deleted node had no children
+                    if (isBlack(deleted_node, index))
+                    {
+                        doRedBlackDeleteFixup(deleted_node, index);
+                    }
+                    if (deleted_node.getParent(index) != null)
+                    {
+                        if (deleted_node
+                                == deleted_node.getParent(index)
+                                    .getLeft(index))
+                        {
+                            deleted_node.getParent(index).setLeft(null,
+                                                   index);
+                        }
+                        else
+                        {
+                            deleted_node.getParent(index).setRight(null,
+                                                   index);
+                        }
+                        deleted_node.setParent(null, index);
+                    }
+                }
+            }
+        }
+        shrink();
+    }
+

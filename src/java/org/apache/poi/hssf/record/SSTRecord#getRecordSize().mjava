@@ -1,0 +1,152 @@
+    // we can probably simplify this later...this calculates the size
+    // w/o serializing but still is a bit slow
+    public int getRecordSize()
+    {
+        _record_lengths = new ArrayList();
+        int retval      = 0;
+        int unicodesize = calculateUnicodeSize();
+
+        if (unicodesize > _max_data_space)
+        {
+            UnicodeString unistr             = null;
+            int           stringreminant     = 0;
+            int           unipos             = 0;
+            boolean       lastneedcontinue   = false;
+            int           stringbyteswritten = 0;
+            boolean       finished           = false;
+            boolean       first_record       = true;
+            int           totalWritten       = 0;
+
+            while (!finished)
+            {
+                int record = 0;
+                int pos    = 0;
+
+                if (first_record)
+                {
+
+                    // writing SST record
+                    record       = _max;
+                    pos          = 12;
+                    first_record = false;
+                    _record_lengths.add(new Integer(record
+                                                    - _std_record_overhead));
+                }
+                else
+                {
+
+                    // writing continue record
+                    pos = 0;
+                    int to_be_written = (unicodesize - stringbyteswritten)
+                                        + (lastneedcontinue ? 1
+                                                            : 0);
+                    int size          = Math.min(_max - _std_record_overhead,
+                                                 to_be_written);
+
+                    if (size == to_be_written)
+                    {
+                        finished = true;
+                    }
+                    record = size + _std_record_overhead;
+                    _record_lengths.add(new Integer(size));
+                    pos = 4;
+                }
+                if (lastneedcontinue)
+                {
+                    int available = _max - pos;
+
+                    if (stringreminant <= available)
+                    {
+
+                        // write reminant
+                        stringbyteswritten += stringreminant - 1;
+                        pos                += stringreminant;
+                        lastneedcontinue   = false;
+                    }
+                    else
+                    {
+
+                        // write as much of the remnant as possible
+                        int toBeWritten = unistr.maxBrokenLength(available);
+
+                        if (available != toBeWritten)
+                        {
+                            int shortrecord = record
+                                              - (available - toBeWritten);
+
+                            _record_lengths.set(
+                                _record_lengths.size() - 1,
+                                new Integer(
+                                    shortrecord - _std_record_overhead));
+                            record = shortrecord;
+                        }
+                        stringbyteswritten += toBeWritten - 1;
+                        pos                += toBeWritten;
+                        stringreminant     -= toBeWritten - 1;
+                        lastneedcontinue   = true;
+                    }
+                }
+                for (; unipos < field_3_strings.size(); unipos++)
+                {
+                    int     available = _max - pos;
+                    Integer intunipos = new Integer(unipos);
+
+                    unistr =
+                        (( UnicodeString ) field_3_strings.get(intunipos));
+                    if (unistr.getRecordSize() <= available)
+                    {
+                        stringbyteswritten += unistr.getRecordSize();
+                        pos                += unistr.getRecordSize();
+                    }
+                    else
+                    {
+                        if (available >= _string_minimal_overhead)
+                        {
+                            int toBeWritten =
+                                unistr.maxBrokenLength(available);
+
+                            stringbyteswritten += toBeWritten;
+                            stringreminant     =
+                                (unistr.getRecordSize() - toBeWritten)
+                                + LittleEndianConsts.BYTE_SIZE;
+                            if (available != toBeWritten)
+                            {
+                                int shortrecord = record
+                                                  - (available - toBeWritten);
+
+                                _record_lengths.set(
+                                    _record_lengths.size() - 1,
+                                    new Integer(
+                                        shortrecord - _std_record_overhead));
+                                record = shortrecord;
+                            }
+                            lastneedcontinue = true;
+                            unipos++;
+                        }
+                        else
+                        {
+                            int shortrecord = record - available;
+
+                            _record_lengths.set(
+                                _record_lengths.size() - 1,
+                                new Integer(
+                                    shortrecord - _std_record_overhead));
+                            record = shortrecord;
+                        }
+                        break;
+                    }
+                }
+                totalWritten += record;
+            }
+            retval = totalWritten;
+        }
+        else
+        {
+
+            // short data: write one simple SST record
+            retval = _sst_record_overhead + unicodesize;
+            _record_lengths.add(new Integer(unicodesize));
+        }
+        return retval;
+    }
+

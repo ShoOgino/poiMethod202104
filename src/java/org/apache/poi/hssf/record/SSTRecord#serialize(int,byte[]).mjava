@@ -1,0 +1,182 @@
+    /**
+     * Create a byte array consisting of an SST record and any
+     * required Continue records, ready to be written out.
+     * <p>
+     * If an SST record and any subsequent Continue records are read
+     * in to create this instance, this method should produce a byte
+     * array that is identical to the byte array produced by
+     * concatenating the input records' data.
+     *
+     * @return the byte array
+     */
+
+    public int serialize(int offset, byte [] data)
+    {
+        int rval                = getRecordSize();
+        int record_length_index = 0;
+
+        // get the linear size of that array
+        int unicodesize         = calculateUnicodeSize();
+
+        if (unicodesize > _max_data_space)
+        {
+            byte[]  stringreminant     = null;
+            int     unipos             = 0;
+            boolean lastneedcontinue   = false;
+            int     stringbyteswritten = 0;
+            boolean first_record       = true;
+            int     totalWritten       = 0;
+            int     size               = 0;
+
+            while (totalWritten != rval)
+            {
+                int pos = 0;
+
+                // write the appropriate header
+                int available;
+
+                if (first_record)
+                {
+                    size         =
+                        (( Integer ) _record_lengths
+                            .get(record_length_index++)).intValue();
+                    available    = size - 8;
+                    pos          = writeSSTHeader(data,
+                                                  pos + offset
+                                                  + totalWritten, size);
+                    size         += _std_record_overhead;
+                    first_record = false;
+                }
+                else
+                {
+                    pos = 0;
+                    int to_be_written = (unicodesize - stringbyteswritten)
+                                        + (lastneedcontinue ? 1
+                                                            : 0);
+
+                    size      =
+                        (( Integer ) _record_lengths
+                            .get(record_length_index++)).intValue();
+                    available = size;
+                    pos       = writeContinueHeader(data,
+                                                    pos + offset
+                                                    + totalWritten, size);
+                    size      = size + _std_record_overhead;
+                }
+
+                // now, write the rest of the data into the current
+                // record space
+                if (lastneedcontinue)
+                {
+
+                    // the last string in the previous record was not
+                    // written out completely
+                    if (stringreminant.length <= available)
+                    {
+
+                        // write reminant -- it'll all fit neatly
+                        System.arraycopy(stringreminant, 0, data,
+                                         pos + offset + totalWritten,
+                                         stringreminant.length);
+                        stringbyteswritten += stringreminant.length - 1;
+                        pos                += stringreminant.length;
+                        lastneedcontinue   = false;
+                        available          -= stringreminant.length;
+                    }
+                    else
+                    {
+
+                        // write as much of the remnant as possible
+                        System.arraycopy(stringreminant, 0, data,
+                                         pos + offset + totalWritten,
+                                         available);
+                        stringbyteswritten += available - 1;
+                        pos                += available;
+                        byte[] leftover =
+                            new byte[ (stringreminant.length - available) + LittleEndianConsts.BYTE_SIZE ];
+
+                        System.arraycopy(stringreminant, available, leftover,
+                                         LittleEndianConsts.BYTE_SIZE,
+                                         stringreminant.length - available);
+                        leftover[ 0 ]    = stringreminant[ 0 ];
+                        stringreminant   = leftover;
+                        available        = 0;
+                        lastneedcontinue = true;
+                    }
+                }
+
+                // last string's remnant, if any, is cleaned up as
+                // best as can be done ... now let's try and write
+                // some more strings
+                for (; unipos < field_3_strings.size(); unipos++)
+                {
+                    Integer       intunipos = new Integer(unipos);
+                    UnicodeString unistr    =
+                        (( UnicodeString ) field_3_strings.get(intunipos));
+
+                    if (unistr.getRecordSize() <= available)
+                    {
+                        unistr.serialize(pos + offset + totalWritten, data);
+                        int rsize = unistr.getRecordSize();
+
+                        stringbyteswritten += rsize;
+                        pos                += rsize;
+                        available          -= rsize;
+                    }
+                    else
+                    {
+
+                        // can't write the entire string out
+                        if (available >= _string_minimal_overhead)
+                        {
+
+                            // we can write some of it
+                            byte[] ucs = unistr.serialize();
+
+                            System.arraycopy(ucs, 0, data,
+                                             pos + offset + totalWritten,
+                                             available);
+                            stringbyteswritten += available;
+                            stringreminant     =
+                                new byte[ (ucs.length - available) + LittleEndianConsts.BYTE_SIZE ];
+                            System.arraycopy(ucs, available, stringreminant,
+                                             LittleEndianConsts.BYTE_SIZE,
+                                             ucs.length - available);
+                            stringreminant[ 0 ] =
+                                ucs[ LittleEndianConsts.SHORT_SIZE ];
+                            available           = 0;
+                            lastneedcontinue    = true;
+                            unipos++;
+                        }
+                        break;
+                    }
+                }
+                totalWritten += size;
+            }
+        }
+        else
+        {
+
+            // short data: write one simple SST record
+            int datasize = _sst_record_overhead + unicodesize;
+
+            writeSSTHeader(
+                data, 0 + offset,
+                _sst_record_overhead
+                + (( Integer ) _record_lengths.get(
+                record_length_index++)).intValue() - _std_record_overhead);
+            int pos = _sst_record_overhead;
+
+            for (int k = 0; k < field_3_strings.size(); k++)
+            {
+                UnicodeString unistr =
+                    (( UnicodeString ) field_3_strings.get(new Integer(k)));
+
+                System.arraycopy(unistr.serialize(), 0, data, pos + offset,
+                                 unistr.getRecordSize());
+                pos += unistr.getRecordSize();
+            }
+        }
+        return rval;
+    }
+

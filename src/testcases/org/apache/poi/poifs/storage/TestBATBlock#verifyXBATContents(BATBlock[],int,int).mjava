@@ -1,0 +1,52 @@
+    private void verifyXBATContents(BATBlock [] blocks, int entries,
+                                    int start_block)
+        throws IOException
+    {
+        byte[] expected = new byte[ 512 * blocks.length ];
+
+        Arrays.fill(expected, ( byte ) 0xFF);
+        int offset = 0;
+
+        for (int j = 0; j < entries; j++)
+        {
+            if ((j % 127) == 0)
+            {
+                if (j != 0)
+                {
+                    offset += 4;
+                }
+            }
+            expected[ offset++ ] = ( byte ) j;
+            expected[ offset++ ] = 0;
+            expected[ offset++ ] = 0;
+            expected[ offset++ ] = 0;
+        }
+        for (int j = 0; j < (blocks.length - 1); j++)
+        {
+            offset               = 508 + (j * 512);
+            expected[ offset++ ] = ( byte ) (start_block + j + 1);
+            expected[ offset++ ] = 0;
+            expected[ offset++ ] = 0;
+            expected[ offset++ ] = 0;
+        }
+        offset               = (blocks.length * 512) - 4;
+        expected[ offset++ ] = ( byte ) -2;
+        expected[ offset++ ] = ( byte ) -1;
+        expected[ offset++ ] = ( byte ) -1;
+        expected[ offset++ ] = ( byte ) -1;
+        ByteArrayOutputStream stream = new ByteArrayOutputStream(512
+                                           * blocks.length);
+
+        for (int j = 0; j < blocks.length; j++)
+        {
+            blocks[ j ].writeBlocks(stream);
+        }
+        byte[] actual = stream.toByteArray();
+
+        assertEquals(expected.length, actual.length);
+        for (int j = 0; j < expected.length; j++)
+        {
+            assertEquals("offset " + j, expected[ j ], actual[ j ]);
+        }
+    }
+

@@ -1,0 +1,35 @@
+    private void setupStringParameters(final byte [] data, final int index,
+                                       final int char_count)
+    {
+        byte flag = data[ index + LittleEndianConsts.SHORT_SIZE ];
+
+        _wide_char = (flag & 1) == 1;
+        boolean extended      = (flag & 4) == 4;
+        boolean formatted_run = (flag & 8) == 8;
+
+        _total_length_bytes = _string_minimal_overhead
+                              + calculateByteCount(char_count);
+        _string_data_offset = _string_minimal_overhead;
+        if (formatted_run)
+        {
+            short run_count = LittleEndian.getShort(data,
+                                                    index
+                                                    + _string_data_offset);
+
+            _string_data_offset += LittleEndianConsts.SHORT_SIZE;
+            _total_length_bytes += LittleEndianConsts.SHORT_SIZE
+                                   + (LittleEndianConsts.INT_SIZE
+                                      * run_count);
+        }
+        if (extended)
+        {
+            int extension_length = LittleEndian.getInt(data,
+                                                       index
+                                                       + _string_data_offset);
+
+            _string_data_offset += LittleEndianConsts.INT_SIZE;
+            _total_length_bytes += LittleEndianConsts.INT_SIZE
+                                   + extension_length;
+        }
+    }
+

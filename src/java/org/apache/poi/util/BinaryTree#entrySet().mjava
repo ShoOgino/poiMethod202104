@@ -1,0 +1,79 @@
+    /**
+     * Returns a set view of the mappings contained in this map. Each
+     * element in the returned set is a Map.Entry. The set is backed
+     * by the map, so changes to the map are reflected in the set, and
+     * vice-versa.  If the map is modified while an iteration over the
+     * set is in progress, the results of the iteration are
+     * undefined. The set supports element removal, which removes the
+     * corresponding mapping from the map, via the Iterator.remove,
+     * Set.remove, removeAll, retainAll and clear operations.  It does
+     * not support the add or addAll operations.
+     *
+     * @return a set view of the mappings contained in this map.
+     */
+
+    public Set entrySet()
+    {
+        if (_entry_set[ _KEY ] == null)
+        {
+            _entry_set[ _KEY ] = new AbstractSet()
+            {
+                public Iterator iterator()
+                {
+                    return new BinaryTreeIterator(_KEY)
+                    {
+                        protected Object doGetNext()
+                        {
+                            return _last_returned_node;
+                        }
+                    };
+                }
+
+                public boolean contains(Object o)
+                {
+                    if (!(o instanceof Map.Entry))
+                    {
+                        return false;
+                    }
+                    Map.Entry entry = ( Map.Entry ) o;
+                    Object    value = entry.getValue();
+                    Node      node  = lookup(( Comparable ) entry.getKey(),
+                                             _KEY);
+
+                    return (node != null)
+                           && node.getData(_VALUE).equals(value);
+                }
+
+                public boolean remove(Object o)
+                {
+                    if (!(o instanceof Map.Entry))
+                    {
+                        return false;
+                    }
+                    Map.Entry entry = ( Map.Entry ) o;
+                    Object    value = entry.getValue();
+                    Node      node  = lookup(( Comparable ) entry.getKey(),
+                                             _KEY);
+
+                    if ((node != null) && node.getData(_VALUE).equals(value))
+                    {
+                        doRedBlackDelete(node);
+                        return true;
+                    }
+                    return false;
+                }
+
+                public int size()
+                {
+                    return BinaryTree.this.size();
+                }
+
+                public void clear()
+                {
+                    BinaryTree.this.clear();
+                }
+            };
+        }
+        return _entry_set[ _KEY ];
+    }
+

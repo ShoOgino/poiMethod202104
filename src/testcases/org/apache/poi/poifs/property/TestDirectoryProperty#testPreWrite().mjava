@@ -1,0 +1,56 @@
+    /**
+     * Test pre-write functionality
+     *
+     * @exception IOException
+     */
+
+    public void testPreWrite()
+        throws IOException
+    {
+        createBasicDirectoryProperty();
+        _property.preWrite();
+
+        // shouldn't change anything at all
+        verifyProperty();
+        verifyChildren(0);
+
+        // now try adding 1 property
+        createBasicDirectoryProperty();
+        _property.addChild(new LocalProperty(1));
+        _property.preWrite();
+
+        // update children index
+        _testblock[ 0x4C ] = 1;
+        _testblock[ 0x4D ] = 0;
+        _testblock[ 0x4E ] = 0;
+        _testblock[ 0x4F ] = 0;
+        verifyProperty();
+        verifyChildren(1);
+
+        // now try adding 2 properties
+        createBasicDirectoryProperty();
+        _property.addChild(new LocalProperty(1));
+        _property.addChild(new LocalProperty(2));
+        _property.preWrite();
+
+        // update children index
+        _testblock[ 0x4C ] = 2;
+        _testblock[ 0x4D ] = 0;
+        _testblock[ 0x4E ] = 0;
+        _testblock[ 0x4F ] = 0;
+        verifyProperty();
+        verifyChildren(2);
+
+        // beat on the children allocation code
+        for (int count = 1; count < 100; count++)
+        {
+            createBasicDirectoryProperty();
+            for (int j = 1; j < (count + 1); j++)
+            {
+                _property.addChild(new LocalProperty(j));
+            }
+            _property.preWrite();
+            verifyChildren(count);
+        }
+    }
+

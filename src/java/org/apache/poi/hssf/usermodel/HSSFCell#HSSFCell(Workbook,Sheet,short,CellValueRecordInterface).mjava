@@ -1,0 +1,53 @@
+    /**
+     * Creates an HSSFCell from a CellValueRecordInterface.  HSSFSheet uses this when
+     * reading in cells from an existing sheet.
+     *
+     * @param book - Workbook record of the workbook containing this cell
+     * @param sheet - Sheet record of the sheet containing this cell
+     * @param cval - the Cell Value Record we wish to represent
+     */
+
+    protected HSSFCell(Workbook book, Sheet sheet, short row,
+                       CellValueRecordInterface cval)
+    {
+        cellNum     = cval.getColumn();
+        record      = cval;
+        this.row    = row;
+        cellType    = determineType(cval);
+        cellStyle   = null;
+        stringValue = null;
+        this.book   = book;
+        this.sheet  = sheet;
+        switch (cellType)
+        {
+
+            case CELL_TYPE_NUMERIC :
+                cellValue = (( NumberRecord ) cval).getValue();
+                break;
+
+            case CELL_TYPE_STRING :
+                stringValue =
+                    book
+                    .getSSTString((( LabelSSTRecord ) cval).getSSTIndex());
+                break;
+
+            case CELL_TYPE_BLANK :
+                break;
+
+            case CELL_TYPE_FORMULA :
+                cellValue = (( FormulaRecord ) cval).getValue();
+                break;
+
+            case CELL_TYPE_BOOLEAN :
+                booleanValue = (( BoolErrRecord ) cval).getBooleanValue();
+                break;
+
+            case CELL_TYPE_ERROR :
+                errorValue = (( BoolErrRecord ) cval).getErrorValue();
+                break;
+        }
+        ExtendedFormatRecord xf = book.getExFormatAt(cval.getXFIndex());
+
+        setCellStyle(new HSSFCellStyle(( short ) cval.getXFIndex(), xf));
+    }
+

@@ -1,0 +1,64 @@
+    /**
+     * test non-trivial constructor (a DirectoryNode with children)
+     *
+     * @exception IOException
+     */
+
+    public void testNonEmptyConstructor()
+        throws IOException
+    {
+        DirectoryProperty property1 = new DirectoryProperty("parent");
+        DirectoryProperty property2 = new DirectoryProperty("child1");
+
+        property1.addChild(property2);
+        property1.addChild(new DocumentProperty("child2", 2000));
+        property2.addChild(new DocumentProperty("child3", 30000));
+        DirectoryNode node  = new DirectoryNode(property1,
+                                                new POIFSFileSystem(), null);
+
+        // verify that getEntries behaves correctly
+        int           count = 0;
+        Iterator      iter  = node.getEntries();
+
+        while (iter.hasNext())
+        {
+            count++;
+            iter.next();
+        }
+        assertEquals(2, count);
+
+        // verify behavior of isEmpty
+        assertTrue(!node.isEmpty());
+
+        // verify behavior of getEntryCount
+        assertEquals(2, node.getEntryCount());
+
+        // verify behavior of getEntry
+        DirectoryNode child1 = ( DirectoryNode ) node.getEntry("child1");
+
+        child1.getEntry("child3");
+        node.getEntry("child2");
+        try
+        {
+            node.getEntry("child3");
+            fail("should have caught FileNotFoundException");
+        }
+        catch (FileNotFoundException ignored)
+        {
+
+            // as expected
+        }
+
+        // verify behavior of isDirectoryEntry
+        assertTrue(node.isDirectoryEntry());
+
+        // verify behavior of getName
+        assertEquals(property1.getName(), node.getName());
+
+        // verify behavior of isDocumentEntry
+        assertTrue(!node.isDocumentEntry());
+
+        // verify behavior of getParent
+        assertNull(node.getParent());
+    }
+

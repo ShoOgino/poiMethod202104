@@ -1,0 +1,118 @@
+    /**
+     * Test capability of handling mondo big strings
+     *
+     * @exception IOException
+     */
+
+    public void testHugeStrings()
+        throws IOException
+    {
+        SSTRecord record       = new SSTRecord();
+        byte[][]  bstrings     =
+        {
+            new byte[ 9000 ], new byte[ 7433 ], new byte[ 9002 ],
+            new byte[ 16998 ]
+        };
+        String[]  strings      = new String[ bstrings.length ];
+        int       total_length = 0;
+
+        for (int k = 0; k < bstrings.length; k++)
+        {
+            Arrays.fill(bstrings[ k ], ( byte ) ('a' + k));
+            strings[ k ] = new String(bstrings[ k ]);
+            record.addString(strings[ k ]);
+            total_length += 3 + bstrings[ k ].length;
+        }
+
+        // add overhead of SST record
+        total_length += 8;
+
+        // add overhead of broken strings
+        total_length += 4;
+
+        // add overhead of six records
+        total_length += (6 * 4);
+        byte[] content = new byte[ record.getRecordSize() ];
+
+        record.serialize(0, content);
+        assertEquals(total_length, content.length);
+        for (int index = 0; index != content.length; )
+        {
+            short record_type = LittleEndian.getShort(content, index);
+
+            index += LittleEndianConsts.SHORT_SIZE;
+            short record_length = LittleEndian.getShort(content, index);
+
+            index += LittleEndianConsts.SHORT_SIZE;
+            byte[] data = new byte[ record_length ];
+
+            System.arraycopy(content, index, data, 0, record_length);
+            index += record_length;
+            if (record_type == SSTRecord.sid)
+            {
+                record = new SSTRecord(record_type, record_length, data);
+            }
+            else
+            {
+                record.processContinueRecord(data);
+            }
+        }
+        assertEquals(strings.length, record.getNumStrings());
+        assertEquals(strings.length, record.getNumUniqueStrings());
+        assertEquals(strings.length, record.countStrings());
+        for (int k = 0; k < strings.length; k++)
+        {
+            assertEquals(strings[ k ], record.getString(k));
+        }
+        record        = new SSTRecord();
+        bstrings[ 1 ] = new byte[ bstrings[ 1 ].length - 1 ];
+        for (int k = 0; k < bstrings.length; k++)
+        {
+            if ((bstrings[ k ].length % 2) == 1)
+            {
+                Arrays.fill(bstrings[ k ], ( byte ) ('a' + k));
+                strings[ k ] = new String(bstrings[ k ]);
+            }
+            else
+            {
+                char[] data = new char[ bstrings[ k ].length / 2 ];
+
+                Arrays.fill(data, ( char ) ('\u2122' + k));
+                strings[ k ] = new String(data);
+            }
+            record.addString(strings[ k ]);
+        }
+        content = new byte[ record.getRecordSize() ];
+        record.serialize(0, content);
+        total_length--;
+        assertEquals(total_length, content.length);
+        for (int index = 0; index != content.length; )
+        {
+            short record_type = LittleEndian.getShort(content, index);
+
+            index += LittleEndianConsts.SHORT_SIZE;
+            short record_length = LittleEndian.getShort(content, index);
+
+            index += LittleEndianConsts.SHORT_SIZE;
+            byte[] data = new byte[ record_length ];
+
+            System.arraycopy(content, index, data, 0, record_length);
+            index += record_length;
+            if (record_type == SSTRecord.sid)
+            {
+                record = new SSTRecord(record_type, record_length, data);
+            }
+            else
+            {
+                record.processContinueRecord(data);
+            }
+        }
+        assertEquals(strings.length, record.getNumStrings());
+        assertEquals(strings.length, record.getNumUniqueStrings());
+        assertEquals(strings.length, record.countStrings());
+        for (int k = 0; k < strings.length; k++)
+        {
+            assertEquals(strings[ k ], record.getString(k));
+        }
+    }
+

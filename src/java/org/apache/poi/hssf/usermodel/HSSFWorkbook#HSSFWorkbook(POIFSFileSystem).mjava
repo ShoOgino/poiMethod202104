@@ -1,0 +1,36 @@
+    /**
+     * given a POI POIFSFileSystem object, read in its Workbook and populate the high and
+     * low level models.  If you're reading in a workbook...start here.
+     *
+     * @param fs the POI filesystem that contains the Workbook stream.
+     * @see org.apache.poi.poifs.filesystem.POIFSFileSystem
+     * @exception IOException if the stream cannot be read
+     */
+
+    public HSSFWorkbook(POIFSFileSystem fs)
+        throws IOException
+    {
+        sheets = new ArrayList(INITIAL_CAPACITY);
+        InputStream stream  = fs.createDocumentInputStream("Workbook");
+        List        records = RecordFactory.createRecords(stream);
+
+        workbook = Workbook.createWorkbook(records);
+        setPropertiesFromWorkbook(workbook);
+        int numRecords = workbook.getNumRecords();
+        int sheetnum   = 0;
+
+        while (numRecords < records.size())
+        {
+            Sheet sheet = Sheet.createSheet(records, sheetnum, numRecords);
+
+            numRecords += sheet.getNumRecords();
+            sheet.convertLabelRecords(
+                workbook);   // convert all LabelRecord records to LabelSSTRecord
+            HSSFSheet hsheet = new HSSFSheet(workbook, sheet);
+
+            sheets.add(hsheet);
+
+            // workbook.setSheetName(sheets.size() -1, "Sheet"+sheets.size());
+        }
+    }
+

@@ -1,0 +1,67 @@
+    /**
+     * test remove method
+     *
+     * @exception IOException
+     */
+
+    public void testRemove()
+        throws IOException
+    {
+        BlockListImpl  list   = new BlockListImpl();
+        RawDataBlock[] blocks = new RawDataBlock[ 5 ];
+        byte[]         data   = new byte[ 512 * 5 ];
+
+        for (int j = 0; j < 5; j++)
+        {
+            Arrays.fill(data, j * 512, (j * 512) + 512, ( byte ) j);
+        }
+        ByteArrayInputStream stream = new ByteArrayInputStream(data);
+
+        for (int j = 0; j < 5; j++)
+        {
+            blocks[ j ] = new RawDataBlock(stream);
+        }
+        list.setBlocks(blocks);
+
+        // verify that you can't remove illegal indices
+        for (int j = -2; j < 10; j++)
+        {
+            if ((j < 0) || (j >= 5))
+            {
+                try
+                {
+                    list.remove(j);
+                    fail("removing item " + j + " should have failed");
+                }
+                catch (IOException ignored)
+                {
+                }
+            }
+        }
+
+        // verify we can safely and correctly remove all blocks
+        for (int j = 0; j < 5; j++)
+        {
+            byte[] output = list.remove(j).getData();
+
+            for (int k = 0; k < 512; k++)
+            {
+                assertEquals("testing block " + j + ", index " + k,
+                             data[ (j * 512) + k ], output[ k ]);
+            }
+        }
+
+        // verify that all blocks are gone
+        for (int j = 0; j < 5; j++)
+        {
+            try
+            {
+                list.remove(j);
+                fail("removing item " + j + " should not have succeeded");
+            }
+            catch (IOException ignored)
+            {
+            }
+        }
+    }
+

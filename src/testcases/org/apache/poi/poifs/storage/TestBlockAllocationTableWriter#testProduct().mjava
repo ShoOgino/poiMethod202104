@@ -1,0 +1,53 @@
+    /**
+     * Test content produced by BlockAllocationTableWriter
+     *
+     * @exception IOException
+     */
+
+    public void testProduct()
+        throws IOException
+    {
+        BlockAllocationTableWriter table = new BlockAllocationTableWriter();
+
+        for (int k = 1; k <= 22; k++)
+        {
+            table.allocateSpace(k);
+        }
+        table.createBlocks();
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+
+        table.writeBlocks(stream);
+        byte[] output = stream.toByteArray();
+
+        assertEquals(1024, output.length);
+        byte[] expected = new byte[ 1024 ];
+
+        Arrays.fill(expected, ( byte ) 0xFF);
+        int offset      = 0;
+        int block_index = 1;
+
+        for (int k = 1; k <= 22; k++)
+        {
+            int limit = k - 1;
+
+            for (int j = 0; j < limit; j++)
+            {
+                LittleEndian.putInt(expected, offset, block_index++);
+                offset += LittleEndianConsts.INT_SIZE;
+            }
+            LittleEndian.putInt(expected, offset,
+                                PoiFSConstants.END_OF_CHAIN);
+            offset += 4;
+            block_index++;
+        }
+
+        // add BAT block indices
+        LittleEndian.putInt(expected, offset, block_index++);
+        offset += LittleEndianConsts.INT_SIZE;
+        LittleEndian.putInt(expected, offset, PoiFSConstants.END_OF_CHAIN);
+        for (int k = 0; k < expected.length; k++)
+        {
+            assertEquals("At offset " + k, expected[ k ], output[ k ]);
+        }
+    }
+

@@ -1,0 +1,214 @@
+    private void testEntrySet(Map m)
+    {
+        Set s = m.entrySet();
+
+        assertEquals(m.size(), s.size());
+        assertEquals(m.isEmpty(), s.isEmpty());
+        LocalTestNode node = new LocalTestNode(-1);
+
+        m.put(node.getKey(), node);
+        assertEquals(m.size(), s.size());
+        assertEquals(m.isEmpty(), s.isEmpty());
+        m.remove(node.getKey());
+        assertEquals(m.size(), s.size());
+        assertEquals(m.isEmpty(), s.isEmpty());
+        int count = 0;
+
+        for (Iterator iter = s.iterator(); iter.hasNext(); )
+        {
+            iter.next();
+            ++count;
+        }
+        assertEquals(s.size(), count);
+        LocalTestNode node2 = new LocalTestNode(-2);
+
+        if (m.size() == 0)
+        {
+            m.put(node2.getKey(), node2);
+        }
+        Iterator iter = s.iterator();
+
+        m.put(node.getKey(), node);
+        try
+        {
+            iter.next();
+            fail("next() should have thrown an exception after a put");
+        }
+        catch (ConcurrentModificationException ignored)
+        {
+        }
+        m.remove(node2.getKey());
+        iter = s.iterator();
+        m.remove(node.getKey());
+        try
+        {
+            iter.next();
+            fail("next() should have thrown an exception after a Map remove");
+        }
+        catch (ConcurrentModificationException ignored)
+        {
+        }
+        m.put(node.getKey(), node);
+        iter  = s.iterator();
+        count = 0;
+        boolean terminated = false;
+
+        try
+        {
+            while (true)
+            {
+                iter.next();
+                ++count;
+            }
+        }
+        catch (NoSuchElementException ignored)
+        {
+            terminated = true;
+        }
+        assertTrue(terminated);
+        assertEquals(m.size(), count);
+        iter = s.iterator();
+        try
+        {
+            iter.remove();
+            fail("Should have thrown exception");
+        }
+        catch (IllegalStateException ignored)
+        {
+        }
+        iter = s.iterator();
+        iter.next();
+        LocalTestNode node3 = new LocalTestNode(-3);
+
+        m.put(node3.getKey(), node3);
+        try
+        {
+            iter.remove();
+            fail("should have thrown exception");
+        }
+        catch (ConcurrentModificationException ignored)
+        {
+        }
+        int r_count = 0;
+        int when    = m.size() / 2;
+        int timer   = 0;
+
+        for (iter = s.iterator(); iter.hasNext(); )
+        {
+            iter.next();
+            if (timer == when)
+            {
+                try
+                {
+                    iter.remove();
+                    ++r_count;
+                    iter.remove();
+                    fail("2nd remove should have failed");
+                }
+                catch (IllegalStateException ignored)
+                {
+                    assertEquals(1, r_count);
+                }
+            }
+            timer++;
+        }
+        assertEquals(1, r_count);
+        Iterator iter2 = s.iterator();
+
+        try
+        {
+            iter2.remove();
+            fail("Should have thrown exception");
+        }
+        catch (IllegalStateException ignored)
+        {
+        }
+        iter2 = s.iterator();
+        while (iter2.hasNext())
+        {
+            iter2.next();
+        }
+        LocalTestNode node4 = new LocalTestNode(-4);
+
+        m.put(node4.getKey(), node4);
+        try
+        {
+            iter2.remove();
+            fail("should have thrown exception");
+        }
+        catch (ConcurrentModificationException ignored)
+        {
+        }
+        Object[] a1 = s.toArray();
+
+        assertTrue(a1.length == s.size());
+        if (a1.length > 1)
+        {
+            Map.Entry first = ( Map.Entry ) a1[ 0 ];
+
+            for (int k = 1; k < a1.length; k++)
+            {
+                Map.Entry second = ( Map.Entry ) a1[ k ];
+
+                assertTrue((( Comparable ) first.getKey())
+                    .compareTo(( Comparable ) second.getKey()) < 0);
+                first = second;
+            }
+            iter  = s.iterator();
+            first = ( Map.Entry ) iter.next();
+            for (; iter.hasNext(); )
+            {
+                Map.Entry second = ( Map.Entry ) iter.next();
+
+                assertTrue((( Comparable ) first.getKey())
+                    .compareTo(( Comparable ) second.getKey()) < 0);
+                first = second;
+            }
+        }
+        try
+        {
+            Integer array2[] = ( Integer [] ) s.toArray(new Integer[ 0 ]);
+
+            if (s.size() != 0)
+            {
+                fail("should have caught exception creating an invalid array");
+            }
+        }
+        catch (ArrayStoreException ignored)
+        {
+        }
+        Map.Entry array2[] = ( Map.Entry [] ) s.toArray(new Map.Entry[ 0 ]);
+        Map.Entry array3[] =
+            ( Map.Entry [] ) s.toArray(new Map.Entry[ s.size() ]);
+
+        if (array3.length > 1)
+        {
+            Comparable first =
+                ( Comparable ) (( Map.Entry ) array3[ 0 ]).getKey();
+
+            for (int k = 1; k < array3.length; k++)
+            {
+                Comparable second =
+                    ( Comparable ) (( Map.Entry ) array3[ k ]).getKey();
+
+                assertTrue(first.compareTo(second) < 0);
+                first = second;
+            }
+        }
+        try
+        {
+            s.add(node.getKey());
+            fail("should have thrown an exception");
+        }
+        catch (UnsupportedOperationException ignored)
+        {
+        }
+        assertTrue(!s.equals(null));
+        assertEquals("SetEquality 1", s, s);
+        Set hs = new HashSet(s);
+
+        assertEquals("SetEquality 2", s, hs);
+        assertEquals("SetEquality 3", hs, s);
+        assertTrue(s.hashCode() == hs.hashCode());
+    }
+

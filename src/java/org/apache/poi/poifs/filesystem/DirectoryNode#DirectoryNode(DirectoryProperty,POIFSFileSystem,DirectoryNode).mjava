@@ -1,0 +1,48 @@
+    /**
+     * create a DirectoryNode. This method is not public by design; it
+     * is intended strictly for the internal use of this package
+     *
+     * @param property the DirectoryProperty for this DirectoryEntry
+     * @param filesystem the POIFSFileSystem we belong to
+     * @param parent the parent of this entry
+     */
+
+    DirectoryNode(final DirectoryProperty property,
+                  final POIFSFileSystem filesystem,
+                  final DirectoryNode parent)
+    {
+        super(property, parent);
+        if (parent == null)
+        {
+            _path = new POIFSDocumentPath();
+        }
+        else
+        {
+            _path = new POIFSDocumentPath(parent._path, new String[]
+            {
+                property.getName()
+            });
+        }
+        _filesystem = filesystem;
+        _entries    = new HashMap();
+        Iterator iter = property.getChildren();
+
+        while (iter.hasNext())
+        {
+            Property child     = ( Property ) iter.next();
+            Entry    childNode = null;
+
+            if (child.isDirectory())
+            {
+                childNode = new DirectoryNode(( DirectoryProperty ) child,
+                                              _filesystem, this);
+            }
+            else
+            {
+                childNode = new DocumentNode(( DocumentProperty ) child,
+                                             this);
+            }
+            _entries.put(childNode.getName(), childNode);
+        }
+    }
+

@@ -1,0 +1,70 @@
+    /**
+     * Test buffered read
+     *
+     * @exception IOException
+     */
+
+    public void testBufferRead()
+        throws IOException
+    {
+        DocumentInputStream stream = new DocumentInputStream(_workbook);
+
+        try
+        {
+            stream.read(null);
+            fail("Should have caught NullPointerException");
+        }
+        catch (NullPointerException ignored)
+        {
+
+            // as expected
+        }
+
+        // test reading zero length buffer
+        assertEquals(0, stream.read(new byte[ 0 ]));
+        assertEquals(_workbook_size, stream.available());
+        byte[] buffer = new byte[ _buffer_size ];
+        int    offset = 0;
+
+        while (stream.available() >= buffer.length)
+        {
+            assertEquals(_buffer_size, stream.read(buffer));
+            for (int j = 0; j < buffer.length; j++)
+            {
+                assertEquals("in main loop, byte " + offset,
+                             _workbook_data[ offset ], buffer[ j ]);
+                offset++;
+            }
+            assertEquals("offset " + offset, _workbook_size - offset,
+                         stream.available());
+        }
+        assertEquals(_workbook_size % _buffer_size, stream.available());
+        Arrays.fill(buffer, ( byte ) 0);
+        int count = stream.read(buffer);
+
+        assertEquals(_workbook_size % _buffer_size, count);
+        for (int j = 0; j < count; j++)
+        {
+            assertEquals("past main loop, byte " + offset,
+                         _workbook_data[ offset ], buffer[ j ]);
+            offset++;
+        }
+        assertEquals(_workbook_size, offset);
+        for (int j = count; j < buffer.length; j++)
+        {
+            assertEquals("checking remainder, byte " + j, 0, buffer[ j ]);
+        }
+        assertEquals(-1, stream.read(buffer));
+        stream.close();
+        try
+        {
+            stream.read(buffer);
+            fail("Should have caught IOException");
+        }
+        catch (IOException ignored)
+        {
+
+            // as expected
+        }
+    }
+

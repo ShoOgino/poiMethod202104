@@ -1,0 +1,44 @@
+    private void manufactureStrings(final byte [] data, final int index,
+                                    short size)
+    {
+        int offset = index;
+
+        while (offset < size)
+        {
+            int remaining = size - offset;
+
+            if ((remaining > 0)
+                    && (remaining < LittleEndianConsts.SHORT_SIZE))
+            {
+                throw new RecordFormatException(
+                    "Cannot get length of the last string in SSTRecord");
+            }
+            if (remaining == LittleEndianConsts.SHORT_SIZE)
+            {
+                setExpectedChars(LittleEndian.getShort(data, offset));
+                _unfinished_string = "";
+                break;
+            }
+            short char_count = LittleEndian.getShort(data, offset);
+
+            setupStringParameters(data, offset, char_count);
+            if (remaining < _total_length_bytes)
+            {
+                setExpectedChars(calculateCharCount(_total_length_bytes
+                                                    - remaining));
+                char_count          -= getExpectedChars();
+                _total_length_bytes = remaining;
+            }
+            else
+            {
+                setExpectedChars(0);
+            }
+            processString(data, offset, char_count);
+            offset += _total_length_bytes;
+            if (getExpectedChars() != 0)
+            {
+                break;
+            }
+        }
+    }
+

@@ -1,0 +1,80 @@
+    /**
+     * set the width for a given column in 1/20th of a character width units
+     * @param column - the column number
+     * @param width (in units of 1/20th of a character width)
+     */
+
+    public void setColumnWidth(short column, short width)
+    {
+        ColumnInfoRecord ci = null;
+        int              k  = 0;
+
+        if (columnSizes == null)
+        {
+            columnSizes = new ArrayList();
+        }
+        int cioffset = getDimsLoc() - columnSizes.size();
+
+        for (k = 0; k < columnSizes.size(); k++)
+        {
+            ci = ( ColumnInfoRecord ) columnSizes.get(k);
+            if ((ci.getFirstColumn() >= column)
+                    && (ci.getLastColumn() <= column))
+            {
+                break;
+            }
+            ci = null;
+        }
+        if (ci != null)
+        {
+            if (ci.getColumnWidth() == width)
+            {
+
+                // do nothing...the cell's width is equal to what we're setting it to.
+            }
+            else if ((ci.getFirstColumn() == column)
+                     && (ci.getLastColumn() == column))
+            {                               // if its only for this cell then
+                ci.setColumnWidth(width);   // who cares, just change the width
+            }
+            else if ((ci.getFirstColumn() == column)
+                     || (ci.getLastColumn() == column))
+            {
+
+                // okay so the width is different but the first or last column == the column we'return setting
+                // we'll just divide the info and create a new one
+                if (ci.getFirstColumn() == column)
+                {
+                    ci.setFirstColumn(( short ) (column + 1));
+                }
+                else
+                {
+                    ci.setLastColumn(( short ) (column - 1));
+                }
+                ColumnInfoRecord nci = ( ColumnInfoRecord ) createColInfo();
+
+                nci.setFirstColumn(column);
+                nci.setLastColumn(column);
+                nci.setOptions(ci.getOptions());
+                nci.setXFIndex(ci.getXFIndex());
+                nci.setColumnWidth(width);
+                columnSizes.add(k, nci);
+                records.add((1 + getDimsLoc() - columnSizes.size()) + k, nci);
+                dimsloc++;
+            }
+        }
+        else
+        {
+
+            // okay so there ISN'T a column info record that cover's this column so lets create one!
+            ColumnInfoRecord nci = ( ColumnInfoRecord ) createColInfo();
+
+            nci.setFirstColumn(column);
+            nci.setLastColumn(column);
+            nci.setColumnWidth(width);
+            columnSizes.add(k, nci);
+            records.add((1 + getDimsLoc() - columnSizes.size()) + k, nci);
+            dimsloc++;
+        }
+    }
+

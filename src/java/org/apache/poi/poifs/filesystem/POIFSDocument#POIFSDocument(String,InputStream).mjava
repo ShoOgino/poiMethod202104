@@ -1,0 +1,49 @@
+    /**
+     * Constructor
+     *
+     * @param name the name of the POIFSDocument
+     * @param stream the InputStream we read data from
+     *
+     * @exception IOException thrown on read errors
+     */
+
+    public POIFSDocument(final String name, final InputStream stream)
+        throws IOException
+    {
+        List blocks = new ArrayList();
+
+        _size = 0;
+        while (true)
+        {
+            DocumentBlock block     = new DocumentBlock(stream);
+            int           blockSize = block.size();
+
+            if (blockSize > 0)
+            {
+                blocks.add(block);
+                _size += blockSize;
+            }
+            if (block.partiallyRead())
+            {
+                break;
+            }
+        }
+        DocumentBlock[] bigBlocks =
+            ( DocumentBlock [] ) blocks.toArray(new DocumentBlock[ 0 ]);
+
+        _big_store = new BigBlockStore(bigBlocks);
+        _property  = new DocumentProperty(name, _size);
+        _property.setDocument(this);
+        if (_property.shouldUseSmallBlocks())
+        {
+            _small_store =
+                new SmallBlockStore(SmallDocumentBlock.convert(bigBlocks,
+                    _size));
+            _big_store   = new BigBlockStore(new DocumentBlock[ 0 ]);
+        }
+        else
+        {
+            _small_store = new SmallBlockStore(new BlockWritable[ 0 ]);
+        }
+    }
+
