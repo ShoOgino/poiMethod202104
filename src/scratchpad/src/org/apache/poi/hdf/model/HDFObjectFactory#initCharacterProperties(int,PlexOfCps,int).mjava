@@ -1,0 +1,45 @@
+    private void initCharacterProperties(int charOffset, PlexOfCps charPlcf, int end)
+    {
+        //Initialize paragraph property stuff
+        //int currentCharPage = _charParsingState.getCurrentPage();
+        int charPlcfLen = charPlcf.length();
+        int currentPageIndex = _charParsingState.getCurrentPageIndex();
+        FormattedDiskPage fkp = _charParsingState.getFkp();
+        int currentChpxIndex = _charParsingState.getCurrentPropIndex();
+        int currentArraySize = fkp.size();
+
+        //get the character runs for this paragraph
+        int charStart = 0;
+        int charEnd = 0;
+        //add the character runs
+        do
+        {
+          if (currentChpxIndex < currentArraySize)
+          {
+            charStart = fkp.getStart(currentChpxIndex);
+            charEnd = fkp.getEnd(currentChpxIndex);
+            byte[] chpx = fkp.getGrpprl(currentChpxIndex);
+            _listener.characterRun(new ChpxNode(charStart, charEnd, chpx));
+            if (charEnd < end)
+            {
+              currentChpxIndex++;
+            }
+            else
+            {
+              _charParsingState.setState(currentPageIndex, fkp, currentChpxIndex);
+              break;
+            }
+          }
+          else
+          {
+            int currentCharPage = LittleEndian.getInt(_tableBuffer, charOffset + charPlcf.getStructOffset(++currentPageIndex));
+            byte[] byteFkp = new byte[512];
+            System.arraycopy(_mainDocument, (currentCharPage * 512), byteFkp, 0, 512);
+            fkp = new CHPFormattedDiskPage(byteFkp);
+            currentChpxIndex = 0;
+            currentArraySize = fkp.size();
+          }
+        }
+        while(currentPageIndex < charPlcfLen);
+    }
+

@@ -21,6 +21,8 @@
       PlexOfCps charPlcf = new PlexOfCps(charPlcSize, 4);
       PlexOfCps parPlcf = new PlexOfCps(parPlcSize, 4);
 
+      initParsingStates(parOffset, parPlcf, charOffset, charPlcf);
+
       //byte[] plcfsed = new byte[plcfsedSize];
       //System.arraycopy(_tableBuffer, plcfsedFC, plcfsed, 0, plcfsedSize);
 
@@ -30,15 +32,17 @@
 
       for(int x = 0; x < arraySize; x++)
       {
-          int sectionStart = LittleEndian.getInt(_tableBuffer, plcfsed.getIntOffset(x)) + fcMin;
-          int sectionEnd = LittleEndian.getInt(_tableBuffer, plcfsed.getIntOffset(x + 1)) + fcMin;
-          int sepxStart = LittleEndian.getInt(_tableBuffer, plcfsed.getStructOffset(x));
+          int sectionStart = LittleEndian.getInt(_tableBuffer, plcfsedFC + plcfsed.getIntOffset(x)) + fcMin;
+          int sectionEnd = LittleEndian.getInt(_tableBuffer, plcfsedFC + plcfsed.getIntOffset(x + 1)) + fcMin;
+          int sepxStart = LittleEndian.getInt(_tableBuffer, plcfsedFC + plcfsed.getStructOffset(x) + 2);
           int sepxSize = LittleEndian.getShort(_mainDocument, sepxStart);
 
           byte[] sepx = new byte[sepxSize];
           System.arraycopy(_mainDocument, sepxStart + 2, sepx, 0, sepxSize);
           SepxNode node = new SepxNode(x + 1, sectionStart, sectionEnd, sepx);
-          _sections.add(node);
+          _listener.section(node);
+
+          initParagraphProperties(parOffset, parPlcf, charOffset, charPlcf, sectionEnd);
       }
     }
 
