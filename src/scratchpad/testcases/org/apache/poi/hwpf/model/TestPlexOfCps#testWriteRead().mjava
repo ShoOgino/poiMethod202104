@@ -1,0 +1,31 @@
+  public void testWriteRead()
+    throws Exception
+  {
+    _plexOfCps = new PlexOfCps(4);
+
+    int last = 0;
+    for (int x = 0; x < 110; x++)
+    {
+      byte[] intHolder = new byte[4];
+      int span = (int)(110.0f * Math.random());
+      LittleEndian.putInt(intHolder, span);
+      _plexOfCps.addProperty(new GenericPropertyNode(last, last + span, intHolder));
+      last += span;
+    }
+
+    byte[] output = _plexOfCps.toByteArray();
+    _plexOfCps = new PlexOfCps(output, 0, output.length, 4);
+    int len = _plexOfCps.length();
+    assertEquals(len, 110);
+
+    last = 0;
+    for (int x = 0; x < len; x++)
+    {
+      GenericPropertyNode node = _plexOfCps.getProperty(x);
+      assertEquals(node.getStart(), last);
+      last = node.getEnd();
+      int span = LittleEndian.getInt(node.getBytes());
+      assertEquals(node.getEnd()-node.getStart(), span);
+    }
+  }
+
