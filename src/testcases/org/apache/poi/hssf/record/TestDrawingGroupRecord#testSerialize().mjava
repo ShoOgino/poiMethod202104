@@ -1,0 +1,51 @@
+    public void testSerialize() throws Exception
+    {
+        // Check under max record size
+        DrawingGroupRecord r = new DrawingGroupRecord();
+        byte[] rawData = new byte[100];
+        rawData[0] = 100;
+        rawData[99] = (byte) 200;
+        r.setRawData( rawData );
+        byte[] buffer = new byte[r.getRecordSize()];
+        int size = r.serialize( 0, buffer );
+        assertEquals( 104, size );
+        assertEquals("[EB, 00, 64, 00, 64, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, C8, ]", HexDump.toHex(buffer));
+
+        // check at max record size
+        rawData = new byte[MAX_DATA_SIZE];
+        r.setRawData( rawData );
+        buffer = new byte[r.getRecordSize()];
+        size = r.serialize( 0, buffer );
+        assertEquals( MAX_RECORD_SIZE, size );
+
+        // check over max record size
+        rawData = new byte[MAX_DATA_SIZE+1];
+        rawData[rawData.length-1] = (byte) 255;
+        r.setRawData( rawData );
+        buffer = new byte[r.getRecordSize()];
+        size = r.serialize( 0, buffer );
+        assertEquals( MAX_RECORD_SIZE + 5, size );
+        assertEquals( "[EB, 00, 20, 20, ]", HexDump.toHex(cut(buffer, 0, 4) ));
+        assertEquals( "[00, EB, 00, 01, 00, FF, ]", HexDump.toHex(cut(buffer, MAX_RECORD_SIZE - 1, MAX_RECORD_SIZE + 5) ));
+
+        // check continue record
+        rawData = new byte[MAX_DATA_SIZE * 2 + 1];
+        rawData[rawData.length-1] = (byte) 255;
+        r.setRawData( rawData );
+        buffer = new byte[r.getRecordSize()];
+        size = r.serialize( 0, buffer );
+        assertEquals( MAX_RECORD_SIZE * 2 + 5, size );
+        assertEquals( MAX_RECORD_SIZE * 2 + 5, r.getRecordSize() );
+        assertEquals( "[EB, 00, 20, 20, ]", HexDump.toHex(cut(buffer, 0, 4) ));
+        assertEquals( "[EB, 00, 20, 20, ]", HexDump.toHex(cut(buffer, MAX_RECORD_SIZE, MAX_RECORD_SIZE + 4) ));
+        assertEquals( "[3C, 00, 01, 00, FF, ]", HexDump.toHex(cut(buffer, MAX_RECORD_SIZE * 2, MAX_RECORD_SIZE * 2 + 5) ));
+
+        // check continue record
+        rawData = new byte[664532];
+        r.setRawData( rawData );
+        buffer = new byte[r.getRecordSize()];
+        size = r.serialize( 0, buffer );
+        assertEquals( 664856, size );
+        assertEquals( 664856, r.getRecordSize() );
+    }
+

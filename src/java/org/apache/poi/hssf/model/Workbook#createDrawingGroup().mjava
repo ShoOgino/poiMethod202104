@@ -1,11 +1,10 @@
     /**
-     * Creates a drawing group record.  If it already exists then it's left
-     * alone.
+     * Creates a drawing group record.  If it already exists then it's modified.
      */
     public void createDrawingGroup()
     {
-        int dggLoc = findFirstRecordLocBySid(EscherContainerRecord.DGG_CONTAINER);
-        if (dggLoc == -1)
+
+        if (drawingManager == null)
         {
             EscherContainerRecord dggContainer = new EscherContainerRecord();
             EscherDggRecord dgg = new EscherDggRecord();
@@ -20,11 +19,23 @@
             dgg.setNumShapesSaved(0);
             dgg.setDrawingsSaved(0);
             dgg.setFileIdClusters(new EscherDggRecord.FileIdCluster[] {} );
-            drawingManager = new DrawingManager(dgg);
+            drawingManager = new DrawingManager2(dgg);
+            EscherContainerRecord bstoreContainer = null;
+            if (escherBSERecords.size() > 0)
+            {
+                bstoreContainer = new EscherContainerRecord();
+                bstoreContainer.setRecordId( EscherContainerRecord.BSTORE_CONTAINER );
+                bstoreContainer.setOptions( (short) ( (escherBSERecords.size() << 4) | 0xF ) );
+                for ( Iterator iterator = escherBSERecords.iterator(); iterator.hasNext(); )
+                {
+                    EscherRecord escherRecord = (EscherRecord) iterator.next();
+                    bstoreContainer.addChildRecord( escherRecord );
+                }
+            }
             opt.setRecordId((short) 0xF00B);
             opt.setOptions((short) 0x0033);
             opt.addEscherProperty( new EscherBoolProperty(EscherProperties.TEXT__SIZE_TEXT_TO_FIT_SHAPE, 524296) );
-            opt.addEscherProperty( new EscherRGBProperty(EscherProperties.FILL__FILLCOLOR, 134217737) );
+            opt.addEscherProperty( new EscherRGBProperty(EscherProperties.FILL__FILLCOLOR, 0x08000041) );
             opt.addEscherProperty( new EscherRGBProperty(EscherProperties.LINESTYLE__COLOR, 134217792) );
             splitMenuColors.setRecordId((short) 0xF11E);
             splitMenuColors.setOptions((short) 0x0040);
@@ -34,13 +45,28 @@
             splitMenuColors.setColor4(0x100000F7);
 
             dggContainer.addChildRecord(dgg);
+            if (bstoreContainer != null)
+                dggContainer.addChildRecord( bstoreContainer );
             dggContainer.addChildRecord(opt);
             dggContainer.addChildRecord(splitMenuColors);
 
-            DrawingGroupRecord drawingGroup = new DrawingGroupRecord();
-            drawingGroup.addEscherRecord(dggContainer);
-            int loc = findFirstRecordLocBySid(CountryRecord.sid);
-            getRecords().add(loc+1, drawingGroup);
+            int dgLoc = findFirstRecordLocBySid(DrawingGroupRecord.sid);
+            if (dgLoc == -1)
+            {
+                DrawingGroupRecord drawingGroup = new DrawingGroupRecord();
+                drawingGroup.addEscherRecord(dggContainer);
+                int loc = findFirstRecordLocBySid(CountryRecord.sid);
+
+                getRecords().add(loc+1, drawingGroup);
+            }
+            else
+            {
+                DrawingGroupRecord drawingGroup = new DrawingGroupRecord();
+                drawingGroup.addEscherRecord(dggContainer);
+                getRecords().set(dgLoc, drawingGroup);
+            }
+
         }
+
     }
 

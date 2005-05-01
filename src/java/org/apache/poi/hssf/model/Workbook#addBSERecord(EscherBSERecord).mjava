@@ -1,0 +1,29 @@
+    public int addBSERecord(EscherBSERecord e)
+    {
+        createDrawingGroup();
+
+        // maybe we don't need that as an instance variable anymore
+        escherBSERecords.add( e );
+
+        int dgLoc = findFirstRecordLocBySid(DrawingGroupRecord.sid);
+        DrawingGroupRecord drawingGroup = (DrawingGroupRecord) getRecords().get( dgLoc );
+
+        EscherContainerRecord dggContainer = (EscherContainerRecord) drawingGroup.getEscherRecord( 0 );
+        EscherContainerRecord bstoreContainer;
+        if (dggContainer.getChild( 1 ).getRecordId() == EscherContainerRecord.BSTORE_CONTAINER )
+        {
+            bstoreContainer = (EscherContainerRecord) dggContainer.getChild( 1 );
+        }
+        else
+        {
+            bstoreContainer = new EscherContainerRecord();
+            bstoreContainer.setRecordId( EscherContainerRecord.BSTORE_CONTAINER );
+            dggContainer.getChildRecords().add( 1, bstoreContainer );
+        }
+        bstoreContainer.setOptions( (short) ( (escherBSERecords.size() << 4) | 0xF ) );
+
+        bstoreContainer.addChildRecord( e );
+
+        return escherBSERecords.size();
+    }
+

@@ -1,12 +1,13 @@
     /**
-     * This method serializes this escher record into a byte array.
+     * Serializes the record to an existing byte array.
      *
-     * @param offset   The offset into <code>data</code> to start writing the record data to.
-     * @param data     The byte array to serialize to.
-     * @param listener A listener to retrieve start and end callbacks.  Use a <code>NullEscherSerailizationListener</code> to ignore these events.
-     * @return The number of bytes written.
-     *
-     * @see NullEscherSerializationListener
+     * @param offset    the offset within the byte array
+     * @param data      the data array to serialize to
+     * @param listener  a listener for begin and end serialization events.  This
+     *                  is useful because the serialization is
+     *                  hierarchical/recursive and sometimes you need to be able
+     *                  break into that.
+     * @return the number of bytes written.
      */
     public int serialize( int offset, byte[] data, EscherSerializationListener listener )
     {
@@ -14,24 +15,10 @@
 
         LittleEndian.putShort( data, offset, getOptions() );
         LittleEndian.putShort( data, offset + 2, getRecordId() );
-        int remainingBytes = field_12_data.length + 36;
-        LittleEndian.putInt( data, offset + 4, remainingBytes );
 
-        int pos = offset + HEADER_SIZE;
-        System.arraycopy(field_1_secondaryUID, 0, data, pos, 16 ); pos += 16;
-        LittleEndian.putInt( data, pos, field_2_cacheOfSize); pos += 4;
-        LittleEndian.putInt( data, pos, field_3_boundaryTop); pos += 4;
-        LittleEndian.putInt( data, pos, field_4_boundaryLeft); pos += 4;
-        LittleEndian.putInt( data, pos, field_5_boundaryWidth); pos += 4;
-        LittleEndian.putInt( data, pos, field_6_boundaryHeight); pos += 4;
-        LittleEndian.putInt( data, pos, field_7_width); pos += 4;
-        LittleEndian.putInt( data, pos, field_8_height); pos += 4;
-        LittleEndian.putInt( data, pos, field_9_cacheOfSavedSize); pos += 4;
-        data[pos++] = field_10_compressionFlag;
-        data[pos++] = field_11_filter;
-        System.arraycopy(field_12_data, 0, data, pos, field_12_data.length); pos += field_12_data.length;
+        System.arraycopy( field_pictureData, 0, data, offset + 4, field_pictureData.length );
 
-        listener.afterRecordSerialize(pos, getRecordId(), pos - offset, this);
-        return pos - offset;
+        listener.afterRecordSerialize(offset + 4 + field_pictureData.length, getRecordId(), field_pictureData.length + 4, this);
+        return field_pictureData.length + 4;
     }
 

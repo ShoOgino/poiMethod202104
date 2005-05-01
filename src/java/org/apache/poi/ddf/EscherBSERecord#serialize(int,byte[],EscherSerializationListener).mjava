@@ -11,9 +11,14 @@
     {
         listener.beforeRecordSerialize( offset, getRecordId(), this );
 
+        if (remainingData == null)
+            remainingData = new byte[0];
+
         LittleEndian.putShort( data, offset, getOptions() );
         LittleEndian.putShort( data, offset + 2, getRecordId() );
-        int remainingBytes = remainingData.length + 36;
+        if (remainingData == null) remainingData = new byte[0];
+        int blipSize = field_12_blipRecord == null ? 0 : field_12_blipRecord.getRecordSize();
+        int remainingBytes = remainingData.length + 36 + blipSize;
         LittleEndian.putInt( data, offset + 4, remainingBytes );
 
         data[offset + 8] = field_1_blipTypeWin32;
@@ -28,8 +33,15 @@
         data[offset + 41] = field_9_name;
         data[offset + 42] = field_10_unused2;
         data[offset + 43] = field_11_unused3;
-        System.arraycopy( remainingData, 0, data, offset + 44, remainingData.length );
-        int pos = offset + 8 + 36 + remainingData.length;
+        int bytesWritten = 0;
+        if (field_12_blipRecord != null)
+        {
+            bytesWritten = field_12_blipRecord.serialize( offset + 44, data, new NullEscherSerializationListener() );
+        }
+        if (remainingData == null)
+            remainingData = new byte[0];
+        System.arraycopy( remainingData, 0, data, offset + 44 + bytesWritten, remainingData.length );
+        int pos = offset + 8 + 36 + remainingData.length + bytesWritten;
 
         listener.afterRecordSerialize(pos, getRecordId(), pos - offset, this);
         return pos - offset;

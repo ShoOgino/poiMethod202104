@@ -1,0 +1,39 @@
+    /**
+     * Adds a picture to the workbook.
+     *
+     * @param pictureData       The bytes of the picture
+     * @param format            The format of the picture.  One of <code>PICTURE_TYPE_*</code>
+     *
+     * @return the index to this picture (1 based).
+     */
+    public int addPicture(byte[] pictureData, int format)
+    {
+        byte[] uid = newUID();
+        EscherBitmapBlip blipRecord = new EscherBitmapBlip();
+        blipRecord.setRecordId( (short) ( EscherBitmapBlip.RECORD_ID_START + format ) );
+        if (format == HSSFWorkbook.PICTURE_TYPE_PNG)
+            blipRecord.setOptions( (short) 0x6E00 );  // MSOBI
+        else if (format == HSSFWorkbook.PICTURE_TYPE_JPEG)
+            blipRecord.setOptions( (short) 0x46A0 );  // MSOBI
+        else if (format == HSSFWorkbook.PICTURE_TYPE_DIB)
+            blipRecord.setOptions( (short) 0x7A8 );  // MSOBI
+
+        blipRecord.setUID( uid );
+        blipRecord.setMarker( (byte) 0xFF );
+        blipRecord.setPictureData( pictureData );
+
+        EscherBSERecord r = new EscherBSERecord();
+        r.setRecordId( EscherBSERecord.RECORD_ID );
+        r.setOptions( (short) ( 0x0002 | ( format << 4 ) ) );
+        r.setBlipTypeMacOS( (byte) format );
+        r.setBlipTypeWin32( (byte) format );
+        r.setUid( uid );
+        r.setTag( (short) 0xFF );
+        r.setSize( pictureData.length + 25 );
+        r.setRef( 1 );
+        r.setOffset( 0 );
+        r.setBlipRecord( blipRecord );
+
+        return workbook.addBSERecord( r );
+    }
+
