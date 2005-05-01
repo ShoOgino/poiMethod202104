@@ -1,0 +1,28 @@
+    /**
+      * Serializes the record to an existing byte array.
+      *
+      * @param offset    the offset within the byte array
+      * @param data      the data array to serialize to
+      * @param listener  a listener for begin and end serialization events.  This
+      *                  is useful because the serialization is
+      *                  hierarchical/recursive and sometimes you need to be able
+      *                  break into that.
+      * @return the number of bytes written.
+      */
+     public int serialize( int offset, byte[] data, EscherSerializationListener listener )
+     {
+         listener.beforeRecordSerialize(offset, getRecordId(), this);
+
+         LittleEndian.putShort( data, offset, getOptions() );
+         LittleEndian.putShort( data, offset + 2, getRecordId() );
+         LittleEndian.putInt( data, offset + 4, getRecordSize() - HEADER_SIZE );
+         int pos = offset + HEADER_SIZE;
+
+         System.arraycopy( field_1_UID, 0, data, pos, 16 );
+         data[pos + 16] = field_2_marker;
+         System.arraycopy( field_pictureData, 0, data, pos + 17, field_pictureData.length );
+
+         listener.afterRecordSerialize(offset + getRecordSize(), getRecordId(), getRecordSize(), this);
+         return HEADER_SIZE + 16 + 1 + field_pictureData.length;
+     }
+
