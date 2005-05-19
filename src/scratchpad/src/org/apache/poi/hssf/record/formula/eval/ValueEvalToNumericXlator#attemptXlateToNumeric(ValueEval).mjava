@@ -1,0 +1,51 @@
+    /**
+     * returned value can be either A NumericValueEval, BlankEval or ErrorEval.
+     * The params can be either NumberEval, BoolEval, StringEval, or
+     * RefEval
+     * @param eval
+     * @return
+     */
+    public ValueEval attemptXlateToNumeric(ValueEval eval) {
+        ValueEval retval = null;
+        
+        if (eval == null) {
+            retval = BlankEval.INSTANCE;
+        }
+        
+        // most common case - least worries :)
+        else if (eval instanceof NumberEval) {
+            retval = (NumberEval) eval; 
+        }
+        
+        // booleval
+        else if (((flags | BOOL_IS_PARSED) > 0) && eval instanceof BoolEval) {
+            retval = (NumericValueEval) eval;
+        } 
+        
+        // stringeval 
+        else if (eval instanceof StringEval) {
+            retval = handleStringEval((StringEval) eval);
+        }
+        
+        // refeval
+        else if (eval instanceof RefEval) {
+            retval = handleRefEval((RefEval) eval);
+        }
+        
+        //blankeval
+        else if (eval instanceof BlankEval) {
+            retval = eval;
+        }
+        
+        // erroreval
+        else if (eval instanceof ErrorEval) {
+            retval = eval;
+        }
+        
+        // probably AreaEval? then not acceptable.
+        else {
+            throw new RuntimeException("Invalid ValueEval type passed for conversion: " + eval.getClass());
+        }
+        return retval;
+    }
+

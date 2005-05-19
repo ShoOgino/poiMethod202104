@@ -1,0 +1,37 @@
+    /**
+     * create a Ref2DEval for ReferencePtg and push it on the stack.
+     * Non existent cells are treated as RefEvals containing BlankEval.
+     * @param ptg
+     * @param stack
+     * @param cell
+     * @param sheet
+     * @param workbook
+     */
+    protected static void pushRef2DEval(ReferencePtg ptg, Stack stack, 
+            HSSFCell cell, HSSFRow row, HSSFSheet sheet, HSSFWorkbook workbook) {
+        if (cell != null)
+            switch (cell.getCellType()) {
+            case HSSFCell.CELL_TYPE_NUMERIC:
+                stack.push(new Ref2DEval(ptg, new NumberEval(cell.getNumericCellValue()), false));
+                break;
+            case HSSFCell.CELL_TYPE_STRING:
+                stack.push(new Ref2DEval(ptg, new StringEval(cell.getStringCellValue()), false));
+                break;
+            case HSSFCell.CELL_TYPE_FORMULA:
+                stack.push(new Ref2DEval(ptg, internalEvaluate(cell, row, sheet, workbook), true));
+                break;
+            case HSSFCell.CELL_TYPE_BOOLEAN:
+                stack.push(new Ref2DEval(ptg, cell.getBooleanCellValue() ? BoolEval.TRUE : BoolEval.FALSE, false));
+                break;
+            case HSSFCell.CELL_TYPE_BLANK:
+                stack.push(new Ref2DEval(ptg, BlankEval.INSTANCE, false));
+                break;
+            case HSSFCell.CELL_TYPE_ERROR:
+                stack.push(new Ref2DEval(ptg, ErrorEval.UNKNOWN_ERROR, false)); // TODO: think abt this
+                break;
+            }
+        else {
+            stack.push(new Ref2DEval(ptg, BlankEval.INSTANCE, false));
+        }
+    }
+

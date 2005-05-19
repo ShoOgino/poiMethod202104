@@ -1,0 +1,68 @@
+    public Eval evaluate(Eval[] operands, int srcRow, short srcCol) {
+        ValueEval retval = null;
+        
+        switch (operands.length) {
+        default:
+            retval = ErrorEval.UNKNOWN_ERROR;
+            break;
+        case 1:
+
+//            ValueEval ve = singleOperandEvaluate(operands[0], srcRow, srcCol);
+//            if (ve instanceof NumericValueEval) {
+//                d = ((NumericValueEval) ve).getNumberValue();
+//            }
+//            else if (ve instanceof BlankEval) {
+//                // do nothing
+//            }
+//            else if (ve instanceof ErrorEval) {
+//                retval = ve;
+//            }
+            if (operands[0] instanceof RefEval) {
+                RefEval re = (RefEval) operands[0];
+                retval = re.getInnerValueEval();
+            }
+            else if (operands[0] instanceof AreaEval) {
+                AreaEval ae = (AreaEval) operands[0];
+                if (ae.contains(srcRow, srcCol)) { // circular ref!
+                    retval = ErrorEval.CIRCULAR_REF_ERROR;
+                }
+                else if (ae.isRow()) {
+                    if (ae.containsColumn(srcCol)) {
+                        ValueEval ve = ae.getValueAt(ae.getFirstRow(), srcCol);
+                        if (ve instanceof RefEval) {
+                            ve = ((RefEval) ve).getInnerValueEval();
+                        }
+                        retval = ve;
+                    }
+                    else {
+                        retval = ErrorEval.VALUE_INVALID;
+                    }
+                }
+                else if (ae.isColumn()) {
+                    if (ae.containsRow(srcRow)) {
+                        ValueEval ve = ae.getValueAt(ae.getFirstRow(), srcCol);
+                        if (ve instanceof RefEval) {
+                            ve = ((RefEval) ve).getInnerValueEval();
+                        }
+                        retval = ve;
+                    }
+                    else {
+                        retval = ErrorEval.VALUE_INVALID;
+                    }
+                }
+                else {
+                    retval = ErrorEval.VALUE_INVALID;
+                }
+            }
+            else {
+                retval = (ValueEval) operands[0];
+            }
+        }
+        
+        if (retval instanceof BlankEval) {
+            retval = new NumberEval(0);
+        }
+
+        return retval;
+    }
+

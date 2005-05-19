@@ -1,0 +1,37 @@
+    /**
+     * Given a cell, find its type and from that create an appropriate ValueEval
+     * impl instance and return that. Since the cell could be an external
+     * reference, we need the sheet that this belongs to.
+     * Non existent cells are treated as empty.
+     * @param cell
+     * @param sheet
+     * @param workbook
+     * @return
+     */
+    protected static ValueEval getEvalForCell(HSSFCell cell, HSSFRow row, HSSFSheet sheet, HSSFWorkbook workbook) {
+        ValueEval retval = BlankEval.INSTANCE;
+        if (cell != null) {
+            switch (cell.getCellType()) {
+            case HSSFCell.CELL_TYPE_NUMERIC:
+                retval = new NumberEval(cell.getNumericCellValue());
+                break;
+            case HSSFCell.CELL_TYPE_STRING:
+                retval = new StringEval(cell.getStringCellValue());
+                break;
+            case HSSFCell.CELL_TYPE_FORMULA:
+                retval = (ValueEval) internalEvaluate(cell, row, sheet, workbook);
+                break;
+            case HSSFCell.CELL_TYPE_BOOLEAN:
+                retval = cell.getBooleanCellValue() ? BoolEval.TRUE : BoolEval.FALSE;
+                break;
+            case HSSFCell.CELL_TYPE_BLANK:
+                retval = BlankEval.INSTANCE;
+                break;
+            case HSSFCell.CELL_TYPE_ERROR:
+                retval = ErrorEval.UNKNOWN_ERROR; // TODO: think about this...
+                break;
+            }
+        }
+        return retval;
+    }
+
