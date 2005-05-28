@@ -1,0 +1,77 @@
+	/**
+	 * For a given type (little endian bytes 3 and 4 in record header),
+	 *  byte array, start position and length:
+	 *  will return a Record object that will handle that record
+	 *
+	 * Remember that while PPT stores the record lengths as 8 bytes short
+	 *  (not including the size of the header), this code assumes you're
+	 *  passing in corrected lengths
+	 */
+	protected static Record createRecordForType(long type, byte[] b, int start, int len) {
+		// Default is to use UnknownRecordPlaceholder
+		// When you create classes for new Records, add them here
+		switch((int)type) {
+			// Document
+			case 1000:
+				return new DummyRecordWithChildren(b,start,len);
+				
+			// "Slide"
+			case 1006:
+				return new Slide(b,start,len);
+
+			// "SlideAtom"
+			case 1007:
+				return new SlideAtom(b,start,len);
+
+			// "Notes"
+			case 1008:
+				return new Notes(b,start,len);
+				
+			// "NotesAtom" (Details on Notes sheets)
+			case 1009:
+				return new NotesAtom(b,start,len);
+				
+			// "SlidePersistAtom" (Details on text for a sheet)
+			case 1011:
+				return new SlidePersistAtom(b,start,len);
+				
+			// MainMaster (MetaSheet lives inside the PPDrawing inside this)
+			case 1016:
+				return new DummyRecordWithChildren(b,start,len);
+
+			// PPDrawing (MetaSheet lives inside this)
+			case 1036:
+				return new PPDrawing(b,start,len);
+
+			// TextHeaderAtom (Holds details on following text)
+			case 3999:
+				return new TextHeaderAtom(b,start,len);
+				
+			// TextCharsAtom (Text in Unicode format)
+			case 4000:
+				return new TextCharsAtom(b,start,len);
+				
+			// TextByteAtom (Text in ascii format)
+			case 4008:
+				return new TextBytesAtom(b,start,len);
+				
+			// SlideListWithText (Many Sheets live inside here)
+			case 4080:
+				return new SlideListWithText(b,start,len);
+
+			// UserEditAtom (Holds pointers, last viewed etc)
+			case 4085:
+				return new UserEditAtom(b,start,len);
+
+			// PersistPtrFullBlock (Don't know what it holds, but do care about where it lives)
+			case 6001:
+				return new PersistPtrHolder(b,start,len);
+			// PersistPtrIncrementalBlock (Don't know what it holds, but do care about where it lives)
+			case 6002:
+				return new PersistPtrHolder(b,start,len);
+				
+			default:
+				return new UnknownRecordPlaceholder(b,start,len);
+		}
+	}
+

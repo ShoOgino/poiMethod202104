@@ -1,0 +1,32 @@
+  /**
+   * Scans through the supplied record array, looking for 
+   * a TextHeaderAtom followed by one of a TextBytesAtom or
+   * a TextCharsAtom. Builds up TextRuns from these
+   *
+   * @param records the records to build from
+   * @param found vector to add any found to
+   */
+  protected static void findTextRuns(Record[] records, Vector found) {
+	// Look for a TextHeaderAtom
+	for(int i=0; i<(records.length-1); i++) {
+		if(records[i] instanceof TextHeaderAtom) {
+			TextRun trun = null;
+			TextHeaderAtom tha = (TextHeaderAtom)records[i];
+			if(records[i+1] instanceof TextCharsAtom) {
+				TextCharsAtom tca = (TextCharsAtom)records[i+1];
+				trun = new TextRun(tha,tca);
+			} else if(records[i+1] instanceof TextBytesAtom) {
+				TextBytesAtom tba = (TextBytesAtom)records[i+1];
+				trun = new TextRun(tha,tba);
+			} else if(records[i+1].getRecordType() == 4010l) {
+				// Safe to ignore
+			} else {
+				System.err.println("Found a TextHeaderAtom not followed by a TextBytesAtom or TextCharsAtom: Followed by " + records[i+1].getRecordType());
+				continue;
+			}
+			found.add(trun);
+			i++;
+		}
+	}
+  }
+

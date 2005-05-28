@@ -1,0 +1,42 @@
+  public void walkTree(int depth, int pos, Record[] records) throws IOException {
+	int indent = depth;
+	String ind = "";
+	for(int i=0; i<indent; i++) { ind += " "; }
+
+	for(int i=0; i<records.length; i++) {
+		Record r = records[i];
+
+		// Figure out how big it is
+		int len = getDiskLen(r);
+
+		// Grab the type as hex
+		String hexType = makeHex((int)r.getRecordType(),4);
+		String rHexType = reverseHex(hexType);
+
+		// Grab the hslf.record type
+		Class c = r.getClass();
+		String cname = c.toString();
+		if(cname.startsWith("class ")) {
+			cname = cname.substring(6);
+		}
+		if(cname.startsWith("org.apache.poi.hslf.record.")) {
+			cname = cname.substring(27);
+		}
+
+		// Display the record
+		System.out.println(ind + "At position " + pos + " (" + makeHex(pos,6) + "):");
+		System.out.println(ind + " Record is of type " + cname);
+		System.out.println(ind + " Type is " + r.getRecordType() + " (" + hexType + " -> " + rHexType + " )");
+		System.out.println(ind + " Len is " + (len-8) + " (" + makeHex((len-8),8) + "), on disk len is " + len );
+		System.out.println();
+
+		// If it has children, show them
+		if(r.getChildRecords() != null) {
+			walkTree((depth+3),pos+8,r.getChildRecords());
+		}
+
+		// Wind on the position marker
+		pos += len;
+	}
+  }
+

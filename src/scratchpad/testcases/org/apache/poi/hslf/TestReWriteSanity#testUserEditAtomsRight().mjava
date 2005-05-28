@@ -1,0 +1,52 @@
+	public void testUserEditAtomsRight() throws Exception {
+		// Write out to a byte array
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ss.write(baos);
+
+		// Build an input stream of it
+		ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+
+		// Create a new one from that
+		HSLFSlideShow wss = new HSLFSlideShow(bais);
+
+		// Find the location of the PersistPtrIncrementalBlocks and 
+		// UserEditAtoms
+		Record[] r = wss.getRecords();
+		Hashtable pp = new Hashtable();
+		Hashtable ue = new Hashtable();
+		ue.put(new Integer(0),new Integer(0)); // Will show 0 if first
+		int pos = 0;
+		int lastUEPos = -1;
+
+		for(int i=0; i<r.length; i++) {
+			if(r[i] instanceof PersistPtrHolder) {
+				pp.put(new Integer(pos), r[i]);
+			}
+			if(r[i] instanceof UserEditAtom) {
+				ue.put(new Integer(pos), r[i]);
+				lastUEPos = pos;
+			}
+			
+			ByteArrayOutputStream bc = new ByteArrayOutputStream();
+			r[i].writeOut(bc);
+			pos += bc.size();
+		}
+
+		// Check that the UserEditAtom's point to right stuff
+		for(int i=0; i<r.length; i++) {
+			if(r[i] instanceof UserEditAtom) {
+				UserEditAtom uea = (UserEditAtom)r[i];
+				int luPos = uea.getLastUserEditAtomOffset();
+				int ppPos = uea.getPersistPointersOffset();
+
+				assertTrue(pp.containsKey(new Integer(ppPos)));
+				assertTrue(ue.containsKey(new Integer(luPos)));
+			}
+		}
+
+		// Check that the CurrentUserAtom points to the right UserEditAtom
+		CurrentUserAtom cua = wss.getCurrentUserAtom();
+		int listedUEPos = (int)cua.getCurrentEditOffset();
+		assertEquals(lastUEPos,listedUEPos);
+	}
+

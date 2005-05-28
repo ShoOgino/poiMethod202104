@@ -1,0 +1,35 @@
+	/**
+	 * Write the contents of the record back, so it can be written
+	 *  to disk
+	 * Walks the escher layer to get the contents
+	 */
+	public void writeOut(OutputStream out) throws IOException {
+		// Ensure the escher layer reflects the text changes
+		for(int i=0; i<textboxWrappers.length; i++) {
+			textboxWrappers[i].writeOut(null);
+		}
+
+		// Find the new size of the escher children;
+		int newSize = 0;
+		for(int i=0; i<childRecords.length; i++) {
+			newSize += childRecords[i].getRecordSize();
+		}
+
+		// Update the size (header bytes 5-8)
+		LittleEndian.putInt(_header,4,newSize);
+
+		// Write out our header
+		out.write(_header);
+
+		// Now grab the children's data
+		byte[] b = new byte[newSize];
+		int done = 0;
+		for(int i=0; i<childRecords.length; i++) {
+			int written = childRecords[i].serialize( done, b );
+			done += written;
+		}
+
+		// Finally, write out the children
+		out.write(b);
+	}
+

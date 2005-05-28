@@ -1,0 +1,45 @@
+	/** 
+	 * For the UserEdit Atom
+	 */
+	protected UserEditAtom(byte[] source, int start, int len) {
+		// Sanity Checking
+		if(len < 34) { len = 34; }
+
+		// Store where we currently live on disk
+		myLastOnDiskOffset = start;
+
+		// Get the header
+		_header = new byte[8];
+		System.arraycopy(source,start,_header,0,8);
+
+		// Get the last viewed slide ID
+		lastViewedSlideID = (int)LittleEndian.getInt(source,start+0+8);
+
+		// Get the PPT version
+		pptVersion = (int)LittleEndian.getInt(source,start+4+8);
+
+		// Get the offset to the previous incremental save's UserEditAtom
+		// This will be the byte offset on disk where the previous one 
+		//  starts, or 0 if this is the first one
+		lastUserEditAtomOffset = (int)LittleEndian.getInt(source,start+8+8);
+
+		// Get the offset to the persist pointers
+		// This will be the byte offset on disk where the preceding 
+		//  PersistPtrFullBlock or PersistPtrIncrementalBlock starts
+		persistPointersOffset = (int)LittleEndian.getInt(source,start+12+8);
+
+		// Get the persist reference for the document persist object
+		// Normally seems to be 1
+		docPersistRef = (int)LittleEndian.getInt(source,start+16+8);
+
+		// Maximum number of persist objects written
+		maxPersistWritten = (int)LittleEndian.getInt(source,start+20+8);
+		
+		// Last view type
+		lastViewType = (short)LittleEndian.getShort(source,start+24+8);
+
+		// There might be a few more bytes, which are a reserved field
+		reserved = new byte[len-26-8];
+		System.arraycopy(source,start+26+8,reserved,0,reserved.length);
+	}
+

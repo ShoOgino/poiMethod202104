@@ -1,0 +1,54 @@
+	/**
+	 * Writes ourselves back out
+	 */
+	public void writeOut(OutputStream out) throws IOException {
+		// Decide on the size
+		//  8 = atom header
+		//  20 = up to name
+		//  4 = revision
+		//  3 * len = ascii + unicode
+		int size = 8 + 20 + 4 + (3 * lastEditUser.length());
+		_contents = new byte[size];
+
+		// First we have a 8 byte atom header
+		System.arraycopy(atomHeader,0,_contents,0,4);	
+		// Size is 20+user len + revision len(4)
+		int atomSize = 20+4+lastEditUser.length();
+		LittleEndian.putInt(_contents,4,atomSize);
+
+		// Now we have the size of the details, which is 20
+		LittleEndian.putInt(_contents,8,20);
+
+		// Now the ppt magic number (4 bytes)
+		System.arraycopy(magicNumber,0,_contents,12,4);
+
+		// Now the current edit offset
+		LittleEndian.putInt(_contents,16,(int)currentEditOffset);
+
+		// Now the file versions, 2+2+1+1
+		LittleEndian.putShort(_contents,20,(short)docFinalVersionA);
+		LittleEndian.putShort(_contents,22,(short)docFinalVersionB);
+		_contents[24] = docMajorNo;
+		_contents[25] = docMinorNo;
+
+		// 2 bytes blank
+		_contents[26] = 0;
+		_contents[27] = 0;
+
+		// username in bytes in us ascii
+		byte[] asciiUN = new byte[lastEditUser.length()];
+		StringUtil.putCompressedUnicode(lastEditUser,asciiUN,0);
+		System.arraycopy(asciiUN,0,_contents,28,asciiUN.length);
+
+		// 4 byte release version
+		LittleEndian.putInt(_contents,28+asciiUN.length,(int)releaseVersion);
+
+		// username in unicode
+		byte [] ucUN = new byte[lastEditUser.length()*2];
+		StringUtil.putUnicodeLE(lastEditUser,ucUN,0);
+		System.arraycopy(ucUN,0,_contents,28+asciiUN.length+4,ucUN.length);
+
+		// Write out
+		out.write(_contents);
+	}
+

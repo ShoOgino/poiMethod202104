@@ -1,0 +1,43 @@
+	/** 
+	 * Create a new holder for slide records
+	 */
+	protected SlideListWithText(byte[] source, int start, int len) {
+		// Grab the header
+		_header = new byte[8];
+		System.arraycopy(source,start,_header,0,8);
+
+		// Find our children
+		_children = Record.findChildRecords(source,start+8,len-8);	
+
+		// Group our children together into SlideAtomsSets
+		// That way, model layer code can just grab the sets to use, 
+		//  without having to try to match the children together
+		Vector sets = new Vector();
+		for(int i=0; i<_children.length; i++) {
+			if(_children[i] instanceof SlidePersistAtom) {
+				// Find where the next SlidePersistAtom is
+				int endPos = i+1;
+				while(endPos < _children.length && !(_children[endPos] instanceof SlidePersistAtom)) {
+					endPos += 1;
+				}
+
+				// Now, if not empty, create a SlideAtomsSets
+				int clen = endPos - i - 1;
+				if(clen == 0) { continue; }
+				Record[] spaChildren = new Record[clen];
+				System.arraycopy(_children,i+1,spaChildren,0,clen);
+				SlideAtomsSet set = new SlideAtomsSet((SlidePersistAtom)_children[i],spaChildren);
+				sets.add(set);
+
+				// Wind on
+				i += clen;
+			}
+		}
+
+		// Turn the vector into an array
+		slideAtomsSets = new SlideAtomsSet[sets.size()];
+		for(int i=0; i<slideAtomsSets.length; i++) {
+			slideAtomsSets[i] = (SlideAtomsSet)sets.get(i);
+		}
+	}
+

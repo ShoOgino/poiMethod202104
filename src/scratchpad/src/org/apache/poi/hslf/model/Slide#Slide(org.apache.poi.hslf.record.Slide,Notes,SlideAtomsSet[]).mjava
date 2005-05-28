@@ -1,0 +1,55 @@
+  /**
+   * Constructs a Slide from the Slide record, and the SlideAtomsSets
+   *  for ones not embeded in the PPDrawing.
+   * Initialises TextRuns, to provide easier access to the text
+   *
+   * @param slide the Slide record we're based on
+   * @param atomSet the SlideAtomsSet to get the text from
+   */
+  public Slide(org.apache.poi.hslf.record.Slide slide, Notes notes, SlideAtomsSet[] atomSet) {
+	_slide = slide;
+	_notes = notes;
+	_atomSet = atomSet;
+
+	// Grab the sheet number
+	//_sheetNo = _slide.getSlideAtom().getSheetNumber();
+	_sheetNo = -1;
+
+	// Grab the TextRuns from the PPDrawing
+	_otherRuns = findTextRuns(_slide.getPPDrawing());
+
+
+	// Ensure we've only got only copy of each SlideAtomSet
+	// When in doubt, prefere the later one
+	Hashtable seenSets = new Hashtable();
+	Vector useSets = new Vector();
+	for(int i=0; i<_atomSet.length; i++) {
+		SlideAtomsSet set = _atomSet[i];
+		int id = set.getSlidePersistAtom().getRefID();
+		Integer idI = new Integer(id);
+		if(seenSets.containsKey(idI)) {
+			// Replace old one
+			Integer replacePos = (Integer)seenSets.get(idI);
+			useSets.set(replacePos.intValue(),set);
+		} else {
+			// Use for now
+			useSets.add(set);
+			seenSets.put(idI,new Integer(useSets.size()-1));
+		}
+	}
+
+	// For the text coming in from the SlideAtomsSet:
+	// Build up TextRuns from pairs of TextHeaderAtom and
+	//  one of TextBytesAtom or TextCharsAtom
+	Vector runSets = new Vector();
+	for(int i=0; i<useSets.size(); i++) {
+		SlideAtomsSet set = (SlideAtomsSet)useSets.get(i);
+		findTextRuns(set.getSlideRecords(),runSets);
+	}
+	// Build an array, more useful than a vector
+	_runs = new TextRun[runSets.size()];
+	for(int i=0; i<_runs.length; i++) {
+		_runs[i] = (TextRun)runSets.get(i);
+	}
+  }
+

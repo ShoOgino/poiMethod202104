@@ -1,0 +1,31 @@
+	/**
+	 * Default method for finding child records of a given record
+	 */
+	public static Record[] findChildRecords(byte[] b, int start, int len) {
+		Vector children = new Vector(5);
+
+		// Jump our little way along, creating records as we go
+		int pos = start;
+		while(pos <= (start+len-8)) {
+			long type = LittleEndian.getUShort(b,pos+2);
+			long rlen = LittleEndian.getUInt(b,pos+4);
+
+			// Sanity check the length
+			int rleni = (int)rlen;
+			if(rleni < 0) { rleni = 0; }
+
+//System.out.println("Found a " + type + " at pos " + pos + " (" + Integer.toHexString(pos) + "), len " + rlen);
+			Record r = createRecordForType(type,b,pos,8+rleni);
+			children.add(r);
+			pos += 8;
+			pos += rlen;
+		}
+
+		// Turn the vector into an array, and return
+		Record[] cRecords = new Record[children.size()];
+		for(int i=0; i < children.size(); i++) {
+			cRecords[i] = (Record)children.get(i);
+		}
+		return cRecords;
+	}
+

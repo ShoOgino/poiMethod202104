@@ -1,0 +1,35 @@
+	/**
+	 * Actually do the creation from a block of bytes
+	 */
+	private void init() {
+		// Grab the edit offset
+		currentEditOffset = LittleEndian.getUInt(_contents,16);
+
+		// Grab the versions
+		docFinalVersionA = LittleEndian.getUShort(_contents,20);
+		docFinalVersionB = LittleEndian.getUShort(_contents,22);
+		docMajorNo = _contents[24];
+		docMinorNo = _contents[25];
+
+		// Get the username length
+		long usernameLen = LittleEndian.getUShort(_contents,20);
+
+		// Use this to grab the revision
+		releaseVersion = LittleEndian.getUInt(_contents,28+(int)usernameLen);
+
+		// Grab the unicode username, if stored
+		int start = 28+(int)usernameLen+4;
+		int len = 2*(int)usernameLen;
+
+		if(_contents.length >= start+len) {
+			byte[] textBytes = new byte[len];
+			System.arraycopy(_contents,start,textBytes,0,len);
+			lastEditUser = StringUtil.getFromUnicodeLE(textBytes);
+		} else {
+			// Fake from the 8 bit version
+			byte[] textBytes = new byte[(int)usernameLen];
+			System.arraycopy(_contents,28,textBytes,0,(int)usernameLen);
+			lastEditUser = StringUtil.getFromCompressedUnicode(textBytes,0,(int)usernameLen);
+		}
+	}
+

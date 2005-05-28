@@ -1,0 +1,45 @@
+	/** 
+	 * For the Slide Atom
+	 */
+	protected SlideAtom(byte[] source, int start, int len) {
+		// Sanity Checking
+		if(len < 30) { len = 30; }
+
+		// Get the header
+		_header = new byte[8];
+		System.arraycopy(source,start,_header,0,8);
+
+		// Grab the 12 bytes that is "SSlideLayoutAtom"
+		byte[] SSlideLayoutAtomData = new byte[12];
+		System.arraycopy(source,start+8,SSlideLayoutAtomData,0,12);
+		// Use them to build up the SSlideLayoutAtom
+		layoutAtom = new SSlideLayoutAtom(SSlideLayoutAtomData);
+
+		// Get the IDs of the master and notes
+		masterID = (int)LittleEndian.getInt(source,start+12+8);
+		notesID = (int)LittleEndian.getInt(source,start+16+8);
+
+		// Grok the flags, stored as bits
+		int flags = LittleEndian.getUShort(source,start+20+8);
+		if((flags&4) == 4) {
+			followMasterBackground = true;
+		} else {
+			followMasterBackground = false;
+		}
+		if((flags&2) == 2) {
+			followMasterScheme = true;
+		} else {
+			followMasterScheme = false;
+		}
+		if((flags&1) == 1) {
+			followMasterObjects = true;
+		} else {
+			followMasterObjects = false;
+		}
+
+		// If there's any other bits of data, keep them about
+		// 8 bytes header + 20 bytes to flags + 2 bytes flags = 30 bytes
+		reserved = new byte[len-30];
+		System.arraycopy(source,start+30,reserved,0,reserved.length);
+	}
+
