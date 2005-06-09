@@ -1,0 +1,28 @@
+	/**
+	 * Adds a new slide, notes or similar, to be looked up by this.
+	 * For now, won't look for the most optimal on disk representation.
+	 */
+	public void addSlideLookup(int slideID, int posOnDisk) {
+		byte[] newPtrData = new byte[_ptrData.length + 8];
+		System.arraycopy(_ptrData,0,newPtrData,0,_ptrData.length);
+
+		// Add to the lookup hash
+		_slideLocations.put(new Integer(slideID), new Integer(posOnDisk));
+
+		// Build the info block
+		// First 20 bits = offset number = slide ID
+		// Remaining 12 bits = offset count = 1
+		int infoBlock = slideID;
+		infoBlock += (1 << 20);
+
+		// Write out the data for this
+		LittleEndian.putInt(newPtrData,newPtrData.length-8,infoBlock);
+		LittleEndian.putInt(newPtrData,newPtrData.length-4,posOnDisk);
+
+		// Save the new ptr data
+		_ptrData = newPtrData;
+
+		// Update the atom header
+		LittleEndian.putInt(_header,4,newPtrData.length);
+	}
+

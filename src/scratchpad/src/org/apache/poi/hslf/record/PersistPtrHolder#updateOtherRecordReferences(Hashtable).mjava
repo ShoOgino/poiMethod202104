@@ -1,0 +1,29 @@
+	/**
+	 * At write-out time, update the references to the sheets to their
+	 *  new positions 
+	 */
+	public void updateOtherRecordReferences(Hashtable oldToNewReferencesLookup) {
+		int[] slideIDs = getKnownSlideIDs();
+
+		// Loop over all the slides we know about
+		// Find where they used to live, and where they now live
+		// Then, update the right bit of _ptrData with their new location
+		for(int i=0; i<slideIDs.length; i++) {
+			Integer id = new Integer(slideIDs[i]);
+			Integer oldPos = (Integer)_slideLocations.get(id);
+			Integer newPos = (Integer)oldToNewReferencesLookup.get(oldPos);
+
+			if(newPos == null) {
+				throw new RuntimeException("Couldn't find the new location of the \"slide\" that used to be at " + oldPos);
+			}
+
+			// Write out the new location
+			Integer dataOffset = (Integer)_slideOffsetDataLocation.get(id);
+			LittleEndian.putInt(_ptrData,dataOffset.intValue(),newPos.intValue());
+
+			// Update our hashtable
+			_slideLocations.remove(id);
+			_slideLocations.put(id,newPos);
+		}
+	}
+
