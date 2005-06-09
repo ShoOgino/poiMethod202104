@@ -1,0 +1,52 @@
+    /**
+     * uses the relevant flags to decode the supplied RefVal
+     * @param eval
+     * @return
+     */
+    private ValueEval xlateRefEval(RefEval reval) {
+        ValueEval retval = null;
+        ValueEval eval = (ValueEval) reval.getInnerValueEval();
+        
+        // most common case - least worries :)
+        if (eval instanceof NumberEval) {
+            retval = (NumberEval) eval;
+        }
+        
+        // booleval
+        else if (eval instanceof BoolEval) {
+            retval = ((flags & REF_BOOL_IS_PARSED) > 0)
+                    ? (ValueEval) eval
+                    : BlankEval.INSTANCE;
+        } 
+        
+        // stringeval 
+        else if (eval instanceof StringEval) {
+            retval = xlateRefStringEval((StringEval) eval);
+        }
+        
+        // erroreval
+        else if (eval instanceof ErrorEval) {
+            retval = eval;
+        }
+        
+        // refeval
+        else if (eval instanceof RefEval) {
+            RefEval re = (RefEval) eval;
+            retval = xlateRefEval(re);
+        }
+        
+        else if (eval instanceof BlankEval) {
+            retval = xlateBlankEval(reval.isEvaluated() ? EVALUATED_REF_BLANK_IS_PARSED : REF_BLANK_IS_PARSED);
+        }
+        
+        // probably AreaEval ? then not acceptable.
+        else { 
+            throw new RuntimeException("Invalid ValueEval type passed for conversion: " + eval.getClass());
+        }
+
+        
+        
+
+        return retval;
+    }
+

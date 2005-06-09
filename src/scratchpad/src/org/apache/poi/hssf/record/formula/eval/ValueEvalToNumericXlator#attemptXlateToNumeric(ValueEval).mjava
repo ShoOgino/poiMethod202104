@@ -18,23 +18,20 @@
         }
         
         // booleval
-        else if (((flags | BOOL_IS_PARSED) > 0) && eval instanceof BoolEval) {
-            retval = (NumericValueEval) eval;
+        else if (eval instanceof BoolEval) {
+            retval = ((flags & BOOL_IS_PARSED) > 0)
+                ? (NumericValueEval) eval
+                : xlateBlankEval(BLANK_IS_PARSED);
         } 
         
         // stringeval 
         else if (eval instanceof StringEval) {
-            retval = handleStringEval((StringEval) eval);
+            retval = xlateStringEval((StringEval) eval); // TODO: recursive call needed
         }
         
         // refeval
         else if (eval instanceof RefEval) {
-            retval = handleRefEval((RefEval) eval);
-        }
-        
-        //blankeval
-        else if (eval instanceof BlankEval) {
-            retval = eval;
+            retval = xlateRefEval((RefEval) eval);
         }
         
         // erroreval
@@ -42,10 +39,15 @@
             retval = eval;
         }
         
+        else if (eval instanceof BlankEval) {
+            retval = xlateBlankEval(BLANK_IS_PARSED);
+        }
+        
         // probably AreaEval? then not acceptable.
         else {
             throw new RuntimeException("Invalid ValueEval type passed for conversion: " + eval.getClass());
         }
+        
         return retval;
     }
 

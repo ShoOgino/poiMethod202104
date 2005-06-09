@@ -7,11 +7,10 @@
 
         HSSFCell c = null;
         for (short colnum=getBeginCol(); colnum < endcolnum; colnum++) {
+            try {
             c = r.getCell(colnum);
-            if (c==null || c.getCellType() == HSSFCell.CELL_TYPE_BLANK)
+            if (c==null || c.getCellType() != HSSFCell.CELL_TYPE_FORMULA)
                 continue;
-            
-            assertEquals("Sanity check input cell type ", HSSFCell.CELL_TYPE_FORMULA, c.getCellType());
             
             HSSFFormulaEvaluator.CellValue actualValue = evaluator.evaluate(c);
             
@@ -19,6 +18,9 @@
             assertEquals("Formula: " + c.getCellFormula() 
                     + " @ " + getBeginRow() + ":" + colnum, 
                     expectedValueCell, actualValue);
+            } catch (RuntimeException re) {
+                throw new RuntimeException("CELL["+getBeginRow()+","+colnum+"]: "+re.getMessage(), re);
+            }
         }
     }
 
