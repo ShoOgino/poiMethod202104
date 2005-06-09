@@ -4,7 +4,10 @@
 			System.exit(1);
 		}
 
+
+		// Create the slideshow object, for normal working with
 		HSLFSlideShow ss = new HSLFSlideShow(args[0]);
+		fileContents = ss.getUnderlyingBytes();
 		System.out.println("");
 
 		// Find any persist ones first
@@ -20,6 +23,26 @@
 			if(r.getRecordType() == 6002l) {
 				// PersistPtrIncrementalBlock
 				System.out.println("Found PersistPtrIncrementalBlock at " + pos + " (" + Integer.toHexString(pos) + ")");
+				PersistPtrHolder pph = (PersistPtrHolder)r;
+
+				// Check the sheet offsets
+				int[] sheetIDs = pph.getKnownSlideIDs();
+				Hashtable sheetOffsets = pph.getSlideLocationsLookup();
+				for(int j=0; j<sheetIDs.length; j++) {
+					Integer id = new Integer(sheetIDs[j]);
+					Integer offset = (Integer)sheetOffsets.get(id);
+
+					System.out.println("  Knows about sheet " + id);
+					System.out.println("    That sheet lives at " + offset);
+
+					Record atPos = findRecordAtPos(offset.intValue());
+					System.out.println("    The record at that pos is of type " + atPos.getRecordType());
+					System.out.println("    The record at that pos has class " + atPos.getClass().getName());
+
+					if(! (atPos instanceof PositionDependentRecord)) {
+						System.out.println("    ** The record class isn't position aware! **");
+					}
+				}
 			}
 
 			// Increase the position by the on disk size
