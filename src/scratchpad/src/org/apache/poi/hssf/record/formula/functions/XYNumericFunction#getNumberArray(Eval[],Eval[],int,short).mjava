@@ -1,0 +1,50 @@
+    /**
+     * Returns a double array that contains values for the numeric cells
+     * from among the list of operands. Blanks and Blank equivalent cells
+     * are ignored. Error operands or cells containing operands of type
+     * that are considered invalid and would result in #VALUE! error in 
+     * excel cause this function to return null.
+     * 
+     * @param operands
+     * @param srcRow
+     * @param srcCol
+     * @return
+     */
+    protected double[][] getNumberArray(Eval[] xops, Eval[] yops, int srcRow, short srcCol) {
+        double[][] retval = new double[2][30];
+        int count = 0;
+        
+        if (xops.length > getMaxNumOperands() 
+                || yops.length > getMaxNumOperands()
+                || xops.length != yops.length) {
+            retval = null;
+        }
+        else {
+            
+            for (int i=0, iSize=xops.length; i<iSize; i++) {
+                Eval xEval = xops[i];
+                Eval yEval = yops[i];
+                
+                if (isNumberEval(xEval) && isNumberEval(yEval)) {
+                    retval[X] = ensureCapacity(retval[X], count);
+                    retval[Y] = ensureCapacity(retval[Y], count);
+                    retval[X][count] = getDoubleValue(xEval);
+                    retval[Y][count] = getDoubleValue(yEval);
+                    if (Double.isNaN(retval[X][count]) || Double.isNaN(retval[Y][count])) {
+                        retval = null;
+                        break;
+                    }
+                    count++;
+                }
+            }
+        }
+        
+        if (retval != null) {
+            double[][] temp = retval;
+            retval[X] = trimToSize(retval[X], count);
+            retval[Y] = trimToSize(retval[Y], count);
+        }
+        
+        return retval;
+    }
+

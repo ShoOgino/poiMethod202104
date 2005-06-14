@@ -1,0 +1,64 @@
+    /**
+     * Same as getNumberArray(Eval[], int, short) except that this
+     * takes Eval instead of Eval[].
+     * @param operand
+     * @param srcRow
+     * @param srcCol
+     * @return
+     */
+    protected double[] getNumberArray(Eval operand, int srcRow, short srcCol) {
+        double[] retval;
+        int count = 0;
+        
+        if (operand instanceof AreaEval) {
+            AreaEval ae = (AreaEval) operand;
+            ValueEval[] values = ae.getValues();
+            retval = new double[values.length];
+            for (int j=0, jSize=values.length; j<jSize; j++) {
+                /*
+                 * TODO: For an AreaEval, we are constructing a RefEval
+                 * per element.
+                 * For now this is a tempfix solution since this may
+                 * require a more generic fix at the level of
+                 * HSSFFormulaEvaluator where we store an array
+                 * of RefEvals as the "values" array. 
+                 */
+                RefEval re = (values[j] instanceof RefEval)
+                        ? new Ref2DEval(null, ((RefEval) values[j]).getInnerValueEval(), true)
+                        : new Ref2DEval(null, values[j], false);
+                ValueEval ve = singleOperandEvaluate(re, srcRow, srcCol);
+                
+                if (ve instanceof NumericValueEval) {
+                    NumericValueEval nve = (NumericValueEval) ve;
+                    retval = putInArray(retval, count++, nve.getNumberValue());
+                }
+                else if (ve instanceof BlankEval) {} // ignore operand
+                else {
+                    retval = null; // null => indicate to calling subclass that error occurred
+                    break;
+                }
+            }
+        }
+        else { // for ValueEvals other than AreaEval
+            retval = new double[1];
+            ValueEval ve = singleOperandEvaluate(operand, srcRow, srcCol);
+            
+            if (ve instanceof NumericValueEval) {
+                NumericValueEval nve = (NumericValueEval) ve;
+                retval = putInArray(retval, count++, nve.getNumberValue());
+            }
+            else if (ve instanceof BlankEval) {} // ignore operand
+            else {
+                retval = null; // null => indicate to calling subclass that error occurred
+            }
+        }
+        
+        if (retval != null && retval.length >= 1) {
+            double[] temp = retval;
+            retval = new double[count];
+            System.arraycopy(temp, 0, retval, 0, count);
+        }
+        
+        return retval;
+    }
+
