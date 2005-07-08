@@ -1,0 +1,51 @@
+public void walkTree(int depth, int startPos, int maxLen) {
+	int pos = startPos;
+	int endPos = startPos + maxLen;
+	int indent = depth;
+	while(pos <= endPos - 8) {
+		long type = LittleEndian.getUShort(_docstream,pos+2);
+		long len = LittleEndian.getUInt(_docstream,pos+4);
+		byte opt = _docstream[pos];
+
+		String ind = "";
+		for(int i=0; i<indent; i++) { ind += " "; }
+
+		System.out.println(ind + "At position " + pos + " (" + makeHex(pos) + "):");
+		System.out.println(ind + "Type is " + type + " (" + makeHex((int)type) + "), len is " + len + " (" + makeHex((int)len) + ")");
+
+		// See if we know about the type of it
+		String recordName = RecordTypes.recordName((int)type);
+
+		// Jump over header, and think about going on more
+		pos += 8;
+		if(recordName != null) {
+			System.out.println(ind + "That's a " + recordName);
+
+			// Now check if it's a container or not
+			int container = (int)opt & 0x0f;
+
+			if(type == 0L || (container != 0x0f)) {
+				System.out.println();
+			} else if (type == 1035l || type == 1036l) {
+				// Special Handling of 1035=PPDrawingGroup and 1036=PPDrawing
+				System.out.println();
+
+				if(ddfEscher) {
+					// Seems to be:
+					walkEscherDDF((indent+3),pos+8,(int)len-8);
+				} else if(basicEscher) {
+					walkEscherBasic((indent+3),pos+8,(int)len-8);
+				}
+			} else {
+				// General container record handling code
+				System.out.println();
+				walkTree((indent+2),pos,(int)len);
+			}
+		} else {
+			System.out.println(ind + "** unknown record **");
+			System.out.println();
+		}
+		pos += (int)len;
+	}
+  }
+

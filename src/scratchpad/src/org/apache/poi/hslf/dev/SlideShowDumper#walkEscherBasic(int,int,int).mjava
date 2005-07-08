@@ -1,0 +1,68 @@
+  /**
+   * Use the basic record format groking code to walk the Escher records
+   */
+  public void walkEscherBasic(int indent, int pos, int len) {
+	if(len < 8) { return; }
+
+	String ind = "";
+	for(int i=0; i<indent; i++) { ind += " "; }
+
+	long type = LittleEndian.getUShort(_docstream,pos+2);
+	long atomlen = LittleEndian.getUInt(_docstream,pos+4);
+	String typeS = makeHex((int)type);
+
+	System.out.println(ind + "At position " + pos + " (" + makeHex(pos) + "):");
+	System.out.println(ind + "Type is " + type + " (" + typeS + "), len is " + atomlen + " (" + makeHex((int)atomlen) + ")");
+
+	String typeName = RecordTypes.recordName((int)type);
+	if(typeName != null) {
+		System.out.println(ind + "That's an Escher Record: " + typeName);
+	} else {
+		System.out.println(ind + "(Unknown Escher Record)");
+	}
+
+
+	// Code to print the first 8 bytes
+//	System.out.print(ind);
+//	for(int i=0; i<8; i++) {
+//		short bv = _docstream[i+pos];
+//		if(bv < 0) { bv += 256; }
+//		System.out.print(i + "=" + bv + " (" + makeHex(bv) + ")  ");
+//	}
+//	System.out.println("");
+
+	// Record specific dumps
+	if(type == 61453l) {
+		// Text Box. Print out first 8 bytes of data, then 8 4 later
+		System.out.print(ind);
+		for(int i=8; i<16; i++) {
+			short bv = _docstream[i+pos];
+			if(bv < 0) { bv += 256; }
+			System.out.print(i + "=" + bv + " (" + makeHex(bv) + ")  ");
+		}
+		System.out.println("");
+		System.out.print(ind);
+		for(int i=20; i<28; i++) {
+			short bv = _docstream[i+pos];
+			if(bv < 0) { bv += 256; }
+			System.out.print(i + "=" + bv + " (" + makeHex(bv) + ")  ");
+		}
+		System.out.println("");
+	}
+
+
+	// Blank line before next entry
+	System.out.println("");
+
+	// Look in children if we are a container
+	if(type == 61443l || type == 61444l) {
+		walkEscherBasic((indent+3), pos+8, (int)atomlen);
+	}
+
+	// Keep going if not yet at end
+	if(atomlen < len) {
+		int atomleni = (int)atomlen;
+		walkEscherBasic(indent, pos+atomleni+8, len-atomleni-8);
+	}
+  }
+

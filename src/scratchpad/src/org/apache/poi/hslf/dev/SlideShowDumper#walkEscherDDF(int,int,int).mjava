@@ -1,0 +1,79 @@
+  /**
+   * Use the DDF code to walk the Escher records
+   */
+  public void walkEscherDDF(int indent, int pos, int len) {
+	if(len < 8) { return; }
+
+	String ind = "";
+	for(int i=0; i<indent; i++) { ind += " "; }
+
+	byte[] contents = new byte[len];
+	System.arraycopy(_docstream,pos,contents,0,len);
+	DefaultEscherRecordFactory erf = new DefaultEscherRecordFactory();
+	EscherRecord record = erf.createRecord(contents,0);
+
+	// For now, try filling in the fields
+	record.fillFields(contents,0,erf);
+
+	long atomType = LittleEndian.getUShort(contents,2);
+	// This lacks the 8 byte header size
+	long atomLen = LittleEndian.getUShort(contents,4);
+	// This (should) include the 8 byte header size
+	int recordLen = record.getRecordSize();
+
+
+	System.out.println(ind + "At position " + pos + " (" + makeHex(pos) + "):");
+	System.out.println(ind + "Type is " + atomType + " (" + makeHex((int)atomType) + "), len is " + atomLen + " (" + makeHex((int)atomLen) + ") (" + (atomLen+8) + ") - record claims " + recordLen);
+
+	// Check for corrupt / lying ones
+	if(recordLen != 8 && (recordLen != (atomLen+8))) {
+		System.out.println(ind + "** Atom length of " + atomLen + " (" + (atomLen+8) + ") doesn't match record length of " + recordLen);
+	}
+
+	// Print the record's details
+	if(record instanceof EscherContainerRecord) {
+		EscherContainerRecord ecr = (EscherContainerRecord)record;
+		System.out.println(ind + ecr.toString(false));
+		walkEscherDDF((indent+3), pos + 8, (int)atomLen );
+	} else {
+		System.out.println(ind + record.toString());
+	}
+
+	// Handle records that seem to lie
+	if(atomType == 61451l) {
+		// Normally claims a size of 8
+		recordLen = (int)atomLen + 8;
+	}
+	if(atomType == 61453l) {
+		// Returns EscherContainerRecord, but really msofbtClientTextbox
+		recordLen = (int)atomLen + 8;
+		record.fillFields( contents, 0, erf );
+		if(! (record instanceof EscherTextboxRecord)) {
+			System.out.println(ind + "** Really a msofbtClientTextbox !");
+		}
+	}
+
+	// Decide on what to do, based on how the lenghts match up
+	if(recordLen == 8 && atomLen > 8 ) {
+		// Assume it has children, rather than being corrupted
+		walkEscherDDF((indent+3), pos + 8, (int)atomLen );
+
+		// Wind on our length + our header
+		pos += atomLen;
+		pos += 8;
+		len -= atomLen;
+		len -= 8;
+	} else {
+		// No children, wind on our real length
+		pos += atomLen;
+		pos += 8;
+		len -= atomLen;
+		len -= 8;
+	}
+
+	// Move on to the next one, if we're not at the end yet
+	if(len >= 8) {
+		walkEscherDDF(indent, pos, len );
+	}
+  }
+
