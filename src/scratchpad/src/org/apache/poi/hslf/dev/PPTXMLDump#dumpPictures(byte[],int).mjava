@@ -1,0 +1,34 @@
+    /**
+     * Dumps the Pictures OLE stream into XML.
+     *
+     * @param data from the Pictures OLE data stream
+     * @param padding
+     * @throws java.io.IOException
+     */
+    public void dumpPictures(byte[] data, int padding) throws IOException {
+        int pos = 0;
+        while (pos < data.length) {
+            byte[] header = new byte[PICT_HEADER_SIZE];
+
+            System.arraycopy(data, pos, header, 0, header.length);
+            int size = LittleEndian.getInt(header, 4) - 17;
+            byte[] pictdata = new byte[size];
+            System.arraycopy(data, pos + PICT_HEADER_SIZE, pictdata, 0, pictdata.length);
+            pos += PICT_HEADER_SIZE + size;
+
+            padding++;
+            write(out, "<picture size=\""+size+"\" type=\""+getPictureType(header)+"\">" + CR, padding);
+            padding++;
+            write(out, "<header>" + CR, padding);
+            dump(out, header, 0, header.length, padding, true);
+            write(out, "</header>" + CR, padding);
+            write(out, "<imgdata>" + CR, padding);
+            dump(out, pictdata, 0, Math.min(pictdata.length, 100), padding, true);
+            write(out, "</imgdata>" + CR, padding);
+            padding--;
+            write(out, "</picture>" + CR, padding);
+            padding--;
+
+        }
+    }
+
