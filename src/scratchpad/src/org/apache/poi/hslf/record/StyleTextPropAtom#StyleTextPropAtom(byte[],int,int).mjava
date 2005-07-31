@@ -1,0 +1,52 @@
+	/** 
+	 * For the Text Style Properties (StyleTextProp) Atom
+	 */
+	protected StyleTextPropAtom(byte[] source, int start, int len) {
+		// Sanity Checking - we're always at least 8+10 bytes long
+		if(len < 18) {
+			len = 18;
+			if(source.length - start < 18) {
+				throw new RuntimeException("Not enough data to form a StyleTextPropAtom (min size 18 bytes long) - found " + (source.length - start));
+			}
+		}
+
+		// Get the header
+		_header = new byte[8];
+		System.arraycopy(source,start,_header,0,8);
+
+		// Grab the paragraph style stuff
+		paraStyleLen = (short)LittleEndian.getShort(source,start+8+0);
+		paraStyle1 = (int)LittleEndian.getInt(source,start+8+2);
+		paraStyle2 = (int)LittleEndian.getInt(source,start+8+6);
+
+		// While we have the data, grab the character styles
+		Vector cp = new Vector();
+		int cpos = 0;
+		while(cpos <= len-8-10-8) { // Min size is 8, then 8+10 in
+			CharacterStyle cs;
+			
+			short clen = LittleEndian.getShort(source,start+8+10+cpos);
+			cpos += 2;
+			int s1 = (int)LittleEndian.getInt(source,start+8+10+cpos);
+			cpos += 4;
+			if(s1 == 0) {
+				short s3 = LittleEndian.getShort(source,start+8+10+cpos);
+				cpos += 2;
+				cs = new CharacterStyle(clen,s1,0,s3);
+			} else {
+				int s2 = (int)LittleEndian.getInt(source,start+8+10+cpos);
+				cpos += 4;
+				cs = new CharacterStyle(clen,s1,s2,(short)0);
+			}
+			cp.add(cs);
+		}
+		charStyles = new CharacterStyle[cp.size()];
+		for(int i=0; i<charStyles.length; i++) {
+			charStyles[i] = (CharacterStyle)cp.get(i);
+		}
+
+		// Chuck anything that doesn't fit somewhere for safe keeping
+		reserved = new byte[len-8-10-cpos];
+		System.arraycopy(source,start+8+10+cpos,reserved,0,reserved.length);
+	}
+
