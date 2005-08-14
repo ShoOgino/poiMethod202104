@@ -1,0 +1,39 @@
+	public static void main(String[] args) throws Exception {
+		if(args.length < 1) {
+			System.err.println("Need to give a filename");
+			System.exit(1);
+		}
+
+		HSLFSlideShow ss = new HSLFSlideShow(args[0]);
+
+		// Find the documents, and then their SLWT
+		Record[] records = ss.getRecords();
+		for(int i=0; i<records.length; i++) {
+			if(records[i].getRecordType() == 1000l) {
+				Record docRecord = records[i];
+				Record[] docChildren = docRecord.getChildRecords();
+				for(int j=0; j<docChildren.length; j++) {
+					if(docChildren[j] instanceof SlideListWithText) {
+						Record[] slwtChildren = docChildren[j].getChildRecords();
+
+						int lastTextLen = -1;
+						for(int k=0; k<slwtChildren.length; k++) {
+							if(slwtChildren[k] instanceof TextCharsAtom) {
+								lastTextLen = ((TextCharsAtom)slwtChildren[k]).getText().length();
+							}
+							if(slwtChildren[k] instanceof TextBytesAtom) {
+								lastTextLen = ((TextBytesAtom)slwtChildren[k]).getText().length();
+							}
+
+							if(slwtChildren[k] instanceof StyleTextPropAtom) {
+								StyleTextPropAtom stpa = (StyleTextPropAtom)slwtChildren[k];
+								stpa.setParentTextSize(lastTextLen);
+								showStyleTextPropAtom(stpa);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
