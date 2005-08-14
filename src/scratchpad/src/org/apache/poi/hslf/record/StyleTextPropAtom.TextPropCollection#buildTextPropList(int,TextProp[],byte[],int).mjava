@@ -1,0 +1,30 @@
+		/**
+		 * For an existing set of text properties, build the list of 
+		 *  properties coded for in a given run of properties.
+		 * @return the number of bytes that were used encoding the properties list
+		 */
+		public int buildTextPropList(int containsField, TextProp[] potentialProperties, byte[] data, int dataOffset) {
+			int bytesPassed = 0;
+
+			// For each possible entry, see if we match the mask
+			// If we do, decode that, save it, and shuffle on
+			for(int i=0; i<potentialProperties.length; i++) {
+				if((containsField & potentialProperties[i].getMask()) != 0) {
+					// Bingo, contained
+					TextProp prop = (TextProp)potentialProperties[i].clone();
+					int val = 0;
+					if(prop.getSize() == 2) {
+						val = LittleEndian.getShort(data,dataOffset+bytesPassed);
+					} else {
+						val = LittleEndian.getInt(data,dataOffset+bytesPassed);
+					}
+					prop.setValue(val);
+					bytesPassed += prop.getSize();
+					textPropList.add(prop);
+				}
+			}
+
+			// Return how many bytes were used
+			return bytesPassed;
+		}
+

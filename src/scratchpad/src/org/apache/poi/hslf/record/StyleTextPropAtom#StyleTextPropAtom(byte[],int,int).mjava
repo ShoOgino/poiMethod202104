@@ -14,54 +14,14 @@
 		_header = new byte[8];
 		System.arraycopy(source,start,_header,0,8);
 
-		// Grab the paragraph style stuff
-		paraStyleLen = (short)LittleEndian.getShort(source,start+8+0);
-		paraStyle1 = (int)LittleEndian.getInt(source,start+8+2);
-		paraStyle2 = (int)LittleEndian.getInt(source,start+8+6);
+		// Save the contents of the atom, until we're asked to go and
+		//  decode them (via a call to setParentTextSize(int)
+		rawContents = new byte[len-8];
+		System.arraycopy(source,start+8,rawContents,0,rawContents.length);
+		reserved = new byte[0];
 
-		// While we have the data, grab the character styles
-		Vector cp = new Vector();
-		int cpos = 0;
-		int oldCpos = 0;
-		boolean overshot = false;
-
-		// Min size is 8, everything starts 8+10 in to the record
-		while((cpos <= len-8-10-8) && !overshot) { 
-			CharacterStyle cs;
-			
-			short clen = LittleEndian.getShort(source,start+8+10+cpos);
-			cpos += 2;
-			int s1 = (int)LittleEndian.getInt(source,start+8+10+cpos);
-			cpos += 4;
-			if(s1 == 0) {
-				short s3 = LittleEndian.getShort(source,start+8+10+cpos);
-				cpos += 2;
-				cs = new CharacterStyle(clen,s1,0,s3);
-			} else {
-				int s2 = (int)LittleEndian.getInt(source,start+8+10+cpos);
-				cpos += 4;
-				cs = new CharacterStyle(clen,s1,s2,(short)0);
-			}
-
-			// Only add if it won't push us past the end of the record
-			if(cpos <= (len-8-10)) {
-				cp.add(cs);
-				oldCpos = cpos;
-			} else {
-				// Long CharacterStyle, but only enough data for a short one!
-				// Rewind back to the end of the last CharacterStyle
-				cpos = oldCpos;
-				overshot = true;
-			}
-		}
-		charStyles = new CharacterStyle[cp.size()];
-		for(int i=0; i<charStyles.length; i++) {
-			charStyles[i] = (CharacterStyle)cp.get(i);
-		}
-
-		// Chuck anything that doesn't make a complete CharacterStyle 
-		// somewhere for safe keeping
-		reserved = new byte[len-8-10-cpos];
-		System.arraycopy(source,start+8+10+cpos,reserved,0,reserved.length);
+		// Set empty linked lists, ready for when they call setParentTextSize
+		paragraphStyles = new LinkedList();
+		charStyles = new LinkedList();
 	}
 

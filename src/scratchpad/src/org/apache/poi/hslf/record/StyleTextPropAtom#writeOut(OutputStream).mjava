@@ -3,29 +3,19 @@
 	 *  to disk
 	 */
 	public void writeOut(OutputStream out) throws IOException {
-		// Grab the size of the character styles
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		for(int i=0; i<charStyles.length; i++) {
-			charStyles[i].writeOut(baos);
-		}
+		// First thing to do is update the raw bytes of the contents, based
+		//  on the properties
+		updateRawContents();
 
-		// Figure out the new size
-		//    Para->10 + Chars + Reserved
-		int newSize = 10 + baos.size() + reserved.length;
-		// Update the size (header bytes 5-8)
+		// Now ensure that the header size is correct
+		int newSize = rawContents.length + reserved.length;
 		LittleEndian.putInt(_header,4,newSize);
-	
 
 		// Write out the (new) header
 		out.write(_header);
 
-		// Write out the paragraph bits
-		writeLittleEndian(paraStyleLen,out);
-		writeLittleEndian(paraStyle1,out);
-		writeLittleEndian(paraStyle2,out);
-
-		// Write out the character bits
-		out.write(baos.toByteArray());
+		// Write out the styles
+		out.write(rawContents);
 
 		// Write out any extra bits
 		out.write(reserved);
