@@ -1,24 +1,28 @@
     public void testExtendedStrings()
             throws Exception
     {
-        byte[] bytes = HexRead.readData( _test_file_path + File.separator + "extendedtextstrings.txt", "rich-header" );
-        BinaryTree strings = new BinaryTree();
-        SSTDeserializer deserializer = new SSTDeserializer( strings );
-        deserializer.manufactureStrings( bytes, 0);
+        byte[] header = HexRead.readData( _test_file_path + File.separator + "extendedtextstrings.txt", "rich-header" );
         byte[] continueBytes = HexRead.readData( _test_file_path + File.separator + "extendedtextstrings.txt", "rich-continue1" );
-        deserializer.processContinueRecord( continueBytes );
+        continueBytes = TestcaseRecordInputStream.mergeDataAndSid(ContinueRecord.sid, (short)continueBytes.length, continueBytes);
+        TestcaseRecordInputStream in = new TestcaseRecordInputStream((short)0, (short)header.length, joinArray(header, continueBytes));
+        
+        IntMapper strings = new IntMapper();
+        SSTDeserializer deserializer = new SSTDeserializer( strings );
+        deserializer.manufactureStrings( 1, in);
 
-        assertEquals( "At a dinner party orAt At At ", strings.get( new Integer( 0 ) ) + "" );
+        assertEquals( "At a dinner party orAt At At ", strings.get( 0  ) + "" );
 
 
-        bytes = HexRead.readData( _test_file_path + File.separator + "extendedtextstrings.txt", "norich-header" );
-        strings = new BinaryTree();
-        deserializer = new SSTDeserializer( strings );
-        deserializer.manufactureStrings( bytes, 0);
+        header = HexRead.readData( _test_file_path + File.separator + "extendedtextstrings.txt", "norich-header" );
         continueBytes = HexRead.readData( _test_file_path + File.separator + "extendedtextstrings.txt", "norich-continue1" );
-        deserializer.processContinueRecord( continueBytes );
+        continueBytes = TestcaseRecordInputStream.mergeDataAndSid(ContinueRecord.sid, (short)continueBytes.length, continueBytes);
+        in = new TestcaseRecordInputStream((short)0, (short)header.length, joinArray(header, continueBytes));
+        
+        strings = new IntMapper();
+        deserializer = new SSTDeserializer( strings );
+        deserializer.manufactureStrings( 1, in);
 
-        assertEquals( "At a dinner party orAt At At ", strings.get( new Integer( 0 ) ) + "" );
+        assertEquals( "At a dinner party orAt At At ", strings.get( 0 ) + "" );
 
     }
 

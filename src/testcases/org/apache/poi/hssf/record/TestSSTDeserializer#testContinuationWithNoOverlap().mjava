@@ -1,15 +1,16 @@
     public void testContinuationWithNoOverlap()
             throws Exception
     {
-        byte[] bytes = HexRead.readData( _test_file_path + File.separator + "evencontinuation.txt", "header" );
-        BinaryTree strings = new BinaryTree();
-        SSTDeserializer deserializer = new SSTDeserializer( strings );
-        deserializer.manufactureStrings( bytes, 0);
+        byte[] header = HexRead.readData( _test_file_path + File.separator + "evencontinuation.txt", "header" );
         byte[] continueBytes = HexRead.readData( _test_file_path + File.separator + "evencontinuation.txt", "continue1" );
-        deserializer.processContinueRecord( continueBytes );
+        continueBytes = TestcaseRecordInputStream.mergeDataAndSid(ContinueRecord.sid, (short)continueBytes.length, continueBytes);
+        TestcaseRecordInputStream in = new TestcaseRecordInputStream((short)0, (short)header.length, joinArray(header, continueBytes));
 
-        assertEquals( "At a dinner party or", strings.get( new Integer( 0 ) ) + "" );
-        assertEquals( "At a dinner party", strings.get( new Integer( 1 ) ) + "" );
+        IntMapper strings = new IntMapper();
+        SSTDeserializer deserializer = new SSTDeserializer( strings );
+        deserializer.manufactureStrings( 2, in);
 
+        assertEquals( "At a dinner party or", strings.get( 0 ) + "" );
+        assertEquals( "At a dinner party", strings.get( 1 ) + "" );
     }
 

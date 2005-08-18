@@ -1,0 +1,42 @@
+    /**
+     * Create a byte array consisting of an SST record and any
+     * required Continue records, ready to be written out.
+     * <p>
+     * If an SST record and any subsequent Continue records are read
+     * in to create this instance, this method should produce a byte
+     * array that is identical to the byte array produced by
+     * concatenating the input records' data.
+     *
+     * @return the byte array
+     */
+    public int serialize(int offset, byte[] data )
+    {
+      UnicodeString.UnicodeRecordStats stats = new UnicodeString.UnicodeRecordStats();
+      sstRecordHeader.writeSSTHeader( stats, data, 0 + offset, 0 );
+      int pos = offset + SSTRecord.SST_RECORD_OVERHEAD;
+
+        for ( int k = 0; k < strings.size(); k++ )
+        {
+            if (k % ExtSSTRecord.DEFAULT_BUCKET_SIZE == 0)
+            {
+              int index = k/ExtSSTRecord.DEFAULT_BUCKET_SIZE;
+              if (index < ExtSSTRecord.MAX_BUCKETS) {
+                //Excel only indexes the first 128 buckets.
+              bucketAbsoluteOffsets[index] = pos-offset;
+              bucketRelativeOffsets[index] = pos-offset;
+              }
+            }
+          UnicodeString s = getUnicodeString(k);
+          pos += s.serialize(stats, pos, data);
+            }
+      //Check to see if there is a hanging continue record length
+      if (stats.lastLengthPos != -1) {
+        short lastRecordLength = (short)(pos - stats.lastLengthPos-2);
+        if (lastRecordLength > 8224)
+          throw new InternalError();
+
+        LittleEndian.putShort(data, stats.lastLengthPos, lastRecordLength);
+                  }
+      return pos - offset;
+                }
+

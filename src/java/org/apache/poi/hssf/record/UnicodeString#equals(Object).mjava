@@ -13,8 +13,52 @@
         }
         UnicodeString other = ( UnicodeString ) o;
 
-        return ((field_1_charCount == other.field_1_charCount)
+        //Ok lets do this in stages to return a quickly, first check the actual string
+        boolean eq = ((field_1_charCount == other.field_1_charCount)
                 && (field_2_optionflags == other.field_2_optionflags)
                 && field_3_string.equals(other.field_3_string));
+        if (!eq) return false;
+
+        //Ok string appears to be equal but now lets compare formatting runs
+        if ((field_4_format_runs == null) && (other.field_4_format_runs == null))
+          //Strings are equal, and there are not formtting runs.
+          return true;
+        if (((field_4_format_runs == null) && (other.field_4_format_runs != null)) ||
+             (field_4_format_runs != null) && (other.field_4_format_runs == null))
+           //Strings are equal, but one or the other has formatting runs
+           return false;
+
+        //Strings are equal, so now compare formatting runs.
+        int size = field_4_format_runs.size();
+        if (size != other.field_4_format_runs.size())
+          return false;
+
+        for (int i=0;i<size;i++) {
+          FormatRun run1 = (FormatRun)field_4_format_runs.get(i);
+          FormatRun run2 = (FormatRun)other.field_4_format_runs.get(i);
+
+          if (!run1.equals(run2))
+            return false;
+    }
+
+        //Well the format runs are equal as well!, better check the ExtRst data
+        //Which by the way we dont know how to decode!
+        if ((field_5_ext_rst == null) && (other.field_5_ext_rst == null))
+          return true;
+        if (((field_5_ext_rst == null) && (other.field_5_ext_rst != null)) ||
+            ((field_5_ext_rst != null) && (other.field_5_ext_rst == null)))
+          return false;
+        size = field_5_ext_rst.length;
+        if (size != field_5_ext_rst.length)
+          return false;
+
+        //Check individual bytes!
+        for (int i=0;i<size;i++) {
+          if (field_5_ext_rst[i] != other.field_5_ext_rst[i])
+            return false;
+        }
+        //Phew!! After all of that we have finally worked out that the strings
+        //are identical.
+        return true;
     }
 

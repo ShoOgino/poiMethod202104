@@ -6,7 +6,6 @@
     public void testSSTRecordBug()
             throws IOException
     {
-
         // create an SSTRecord and write a certain pattern of strings
         // to it ... then serialize it and verify the content
         SSTRecord record = new SSTRecord();
@@ -14,7 +13,7 @@
         // the record will start with two integers, then this string
         // ... that will eat up 16 of the 8224 bytes that the record
         // can hold
-        record.addString( "Hello" );
+        record.addString( new UnicodeString("Hello") );
 
         // now we have an additional 8208 bytes, which is an exact
         // multiple of 16 bytes
@@ -22,13 +21,19 @@
 
         for ( int k = 0; k < 2000; k++ )
         {
-            record.addString( String.valueOf( testvalue++ ) );
+            record.addString( new UnicodeString(String.valueOf( testvalue++ )) );
         }
         byte[] content = new byte[record.getRecordSize()];
 
         record.serialize( 0, content );
+        assertEquals(8224, LittleEndian.getShort(content, 2));
+        assertEquals(ContinueRecord.sid, LittleEndian.getShort(content, 8228));
+        assertEquals(8224, LittleEndian.getShort(content, 8228+2));
         assertEquals( (byte) 13, content[4 + 8228] );
+        assertEquals(ContinueRecord.sid, LittleEndian.getShort(content, 2*8228));
+        assertEquals(8224, LittleEndian.getShort(content, 8228*2+2));
         assertEquals( (byte) 13, content[4 + 8228 * 2] );
+        assertEquals(ContinueRecord.sid, LittleEndian.getShort(content, 3*8228));
         assertEquals( (byte) 13, content[4 + 8228 * 3] );
     }
 

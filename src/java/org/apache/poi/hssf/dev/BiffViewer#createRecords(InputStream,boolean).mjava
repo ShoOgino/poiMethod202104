@@ -12,64 +12,27 @@
     public static Record[] createRecords(InputStream in, boolean dump)
              throws RecordFormatException {
         ArrayList records = new ArrayList();
-//        Record last_record = null;
-        int loc = 0;
-
         RecordDetails activeRecord = null;
 
         try {
-//            long  offset  = 0;
-            short rectype = 0;
-
-            do {
-                rectype = LittleEndian.readShort(in);
-                int startloc = loc;
-                loc += 2;
-                if (rectype != 0) {
-                    short recsize = LittleEndian.readShort(in);
-
-                    loc += 2;
-                    byte[] data = new byte[(int) recsize];
-
-                    in.read(data);
-                    loc += recsize;
-                    Record record = createRecord(rectype, recsize, data );
-//                    if (record.getSid() == DrawingGroupRecord.sid)
-//                    {
-//                        if (activeRecord.getRecord().getSid() == DrawingGroupRecord.sid)
-//                        {
-//                            DrawingGroupRecord dg = (DrawingGroupRecord) activeRecord.getRecord();
-//                            System.out.println( "Joined" );
-//                            dg.join( (AbstractEscherHolderRecord) record );
-//                        }
-//                        else
-//                        {
-//                            records.add(record);
-//                            if (activeRecord != null)
-//                                activeRecord.dump();
-//                            activeRecord = new RecordDetails(rectype, recsize, startloc, data, record);
-//                        }
-//                    }
-//                    else
+          BiffviewRecordInputStream recStream = new BiffviewRecordInputStream(in);
+          while (recStream.hasNextRecord()) {
+            recStream.nextRecord();
+            if (recStream.getSid() != 0) {
+              Record record = createRecord (recStream);
                     if (record.getSid() != ContinueRecord.sid)
                     {
                         records.add(record);
                         if (activeRecord != null)
                             activeRecord.dump();
-                        activeRecord = new RecordDetails(rectype, recsize, startloc, data, record);
-                    }
-                    else
-                    {
-                        activeRecord.getRecord().processContinueRecord(data);
+                  activeRecord = new RecordDetails(recStream.getSid(), recStream.getLength(), (int)recStream.getPos(), record);
                     }
                     if (dump) {
-                        dumpRaw(rectype, recsize, data);
+                recStream.dumpBytes();
+              }
                     }
                 }
-            } while (rectype != 0);
-
             activeRecord.dump();
-
         } catch (IOException e) {
             throw new RecordFormatException("Error reading bytes");
         }

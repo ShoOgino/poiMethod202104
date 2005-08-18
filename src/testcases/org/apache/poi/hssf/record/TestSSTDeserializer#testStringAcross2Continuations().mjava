@@ -4,17 +4,21 @@
     public void testStringAcross2Continuations()
             throws Exception
     {
-        byte[] bytes = HexRead.readData( _test_file_path + File.separator + "stringacross2continuations.txt", "header" );
-        BinaryTree strings = new BinaryTree();
+        byte[] header = HexRead.readData( _test_file_path + File.separator + "stringacross2continuations.txt", "header" );
+        byte[] continue1 = HexRead.readData( _test_file_path + File.separator + "stringacross2continuations.txt", "continue1" );
+        continue1 = TestcaseRecordInputStream.mergeDataAndSid(ContinueRecord.sid, (short)continue1.length, continue1);
+        byte[] continue2 = HexRead.readData( _test_file_path + File.separator + "stringacross2continuations.txt", "continue2" );
+        continue2 = TestcaseRecordInputStream.mergeDataAndSid(ContinueRecord.sid, (short)continue2.length, continue2);
+        
+        byte[] bytes = joinArray(header, continue1);
+        bytes = joinArray(bytes, continue2);
+        TestcaseRecordInputStream in = new TestcaseRecordInputStream((short)0, (short)header.length, bytes);
+
+        IntMapper strings = new IntMapper();
         SSTDeserializer deserializer = new SSTDeserializer( strings );
-        deserializer.manufactureStrings( bytes, 0);
-        bytes = HexRead.readData( _test_file_path + File.separator + "stringacross2continuations.txt", "continue1" );
-        deserializer.processContinueRecord( bytes );
-        bytes = HexRead.readData( _test_file_path + File.separator + "stringacross2continuations.txt", "continue2" );
-        deserializer.processContinueRecord( bytes );
+        deserializer.manufactureStrings( 2, in);
 
-        assertEquals( "At a dinner party or", strings.get( new Integer( 0 ) ) + "" );
-        assertEquals( "At a dinner partyAt a dinner party", strings.get( new Integer( 1 ) ) + "" );
-
+        assertEquals( "At a dinner party or", strings.get(  0 ) + "" );
+        assertEquals( "At a dinner partyAt a dinner party", strings.get( 1 ) + "" );
     }
 

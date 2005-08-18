@@ -14,17 +14,29 @@
         if (startIndex == endIndex)
             return;
 
-        Integer from = new Integer(startIndex);
-        Integer to = new Integer(endIndex);
-        short fontAtIndex = NO_FONT;
-        if (endIndex != length())
-            fontAtIndex = getFontAtIndex(endIndex);
-        formattingRuns.subMap(from, to).clear();
-        formattingRuns.put(from, new Short(fontIndex));
-        if (endIndex != length())
-        {
-            if (fontIndex != fontAtIndex)
-                formattingRuns.put(to, new Short(fontAtIndex));
+        //Need to check what the font is currently, so we can reapply it after
+        //the range is completed
+        short currentFont = NO_FONT;
+        if (endIndex != length()) {
+          currentFont = this.getFontAtIndex(startIndex);
         }
+
+        //Need to clear the current formatting between the startIndex and endIndex
+        string = cloneStringIfRequired();
+        Iterator formatting = string.formatIterator();
+        if (formatting != null) {
+          while (formatting.hasNext()) {
+            UnicodeString.FormatRun r = (UnicodeString.FormatRun)formatting.next();
+            if ((r.getCharacterPos() >= startIndex) && (r.getCharacterPos() < endIndex))
+              formatting.remove();
+          }
+        }
+
+
+        string.addFormatRun(new UnicodeString.FormatRun((short)startIndex, fontIndex));
+        if (endIndex != length())
+          string.addFormatRun(new UnicodeString.FormatRun((short)endIndex, currentFont));
+          
+        addToSSTIfRequired();
     }
 

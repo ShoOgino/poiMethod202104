@@ -1,0 +1,175 @@
+    public int serialize(UnicodeRecordStats stats, final int offset, byte [] data)
+    {
+      int pos = offset;
+
+      //Basic string overhead
+      pos = writeContinueIfRequired(stats, 3, pos, data);
+        // byte[] retval = new byte[ 3 + (getString().length() * charsize)];
+      LittleEndian.putShort(data, pos, getCharCount());
+      pos += 2;
+      data[ pos ] = getOptionFlags();
+      pos += 1;
+      stats.recordSize += 3;
+      stats.remainingSize-= 3;
+
+      if (isRichText()) {
+        if (field_4_format_runs != null) {
+          pos = writeContinueIfRequired(stats, 2, pos, data);
+
+          LittleEndian.putShort(data, pos, (short) field_4_format_runs.size());
+          pos += 2;
+          stats.recordSize += 2;
+          stats.remainingSize -= 2;
+        }
+      }
+      if ( isExtendedText() )
+      {
+        if (this.field_5_ext_rst != null) {
+          pos = writeContinueIfRequired(stats, 4, pos, data);
+
+          LittleEndian.putInt(data, pos, field_5_ext_rst.length);
+          pos += 4;
+          stats.recordSize += 4;
+          stats.remainingSize -= 4;
+        }
+      }
+
+      int charsize = isUncompressedUnicode() ? 2 : 1;
+      int strSize = (getString().length() * charsize);
+
+      byte[] strBytes = null;
+        try {
+              //JMH Why does this do this?
+            String unicodeString = new String(getString().getBytes("Unicode"),"Unicode");
+              if (!isUncompressedUnicode())
+            {
+                strBytes = unicodeString.getBytes("ISO-8859-1");
+            }
+            else
+            {
+                  strBytes = unicodeString.getBytes("UTF-16LE");
+            }
+        }
+        catch (Exception e) {
+            try {
+              if (!isUncompressedUnicode()) {
+                strBytes = getString().getBytes("ISO-8859-1");
+            }
+              else {
+                strBytes = getString().getBytes("UTF-16LE");
+            }
+            } catch (Exception ex) {
+              throw new InternalError();
+        }
+          }
+          if (strSize != strBytes.length)
+            throw new InternalError("That shouldnt have happened!");
+
+      //Check to see if the offset occurs mid string, if so then we need to add
+      //the byte to start with that represents the first byte of the continue record.
+      if (strSize > stats.remainingSize) {
+        //Ok the offset occurs half way through the string, that means that
+        //we need an extra byte after the continue record ie we didnt finish
+        //writing out the string the 1st time through
+
+        //But hang on, how many continue records did we span? What if this is
+        //a REALLY long string. We need to work this all out.
+        int ammountThatCantFit = strSize;
+        int strPos = 0;
+        while (ammountThatCantFit > 0) {
+          int ammountWritten = Math.min(stats.remainingSize, ammountThatCantFit);
+          //Make sure that the ammount that cant fit takes into account
+          //whether we are writing double byte unicode
+          if (isUncompressedUnicode()) {
+            //We have the '-1' here because whether this is the first record or
+            //subsequent continue records, there is always the case that the
+            //number of bytes in a string on doube byte boundaries is actually odd.
+            if ( ( (ammountWritten ) % 2) == 1)
+              ammountWritten--;
+          }
+          System.arraycopy(strBytes, strPos, data, pos, ammountWritten);
+          pos += ammountWritten;
+          strPos += ammountWritten;
+          stats.recordSize += ammountWritten;
+          stats.remainingSize -= ammountWritten;
+
+          //Ok lets subtract what we can write
+          ammountThatCantFit -= ammountWritten;
+
+          //Each iteration of this while loop is another continue record, unless
+          //everything  now fits.
+          if (ammountThatCantFit > 0) {
+            //We know that a continue WILL be requied, but use this common method
+            pos = writeContinueIfRequired(stats, ammountThatCantFit, pos, data);
+
+            //The first byte after a continue mid string is the extra byte to
+            //indicate if this run is compressed or not.
+            data[pos] = (byte) (isUncompressedUnicode() ? 0x1 : 0x0);
+            pos++;
+            stats.recordSize++;
+            stats.remainingSize --;
+          }
+        }
+      } else {
+        if (strSize > (data.length-pos))
+          System.out.println("Hmm shouldnt happen");
+        //Ok the string fits nicely in the remaining size
+        System.arraycopy(strBytes, 0, data, pos, strSize);
+        pos += strSize;
+        stats.recordSize += strSize;
+        stats.remainingSize -= strSize;
+      }
+
+
+      if (isRichText() && (field_4_format_runs != null)) {
+        int count = field_4_format_runs.size();
+
+        //This will ensure that a run does not split a continue
+        for (int i=0;i<count;i++) {
+          pos = writeContinueIfRequired(stats, 4, pos, data);
+          FormatRun r = (FormatRun)field_4_format_runs.get(i);
+          LittleEndian.putShort(data, pos, r.character);
+          pos += 2;
+          LittleEndian.putShort(data, pos, r.fontIndex);
+          pos += 2;
+
+          //Each run count is four bytes
+          stats.recordSize += 4;
+          stats.remainingSize -=4;
+        }
+      }
+
+      if (isExtendedText() && (field_5_ext_rst != null)) {
+        //Ok ExtRst is actually not documented, so i am going to hope
+        //that we can actually continue on byte boundaries
+        int ammountThatCantFit = field_5_ext_rst.length - stats.remainingSize;
+        int extPos = 0;
+        if (ammountThatCantFit > 0) {
+          while (ammountThatCantFit > 0) {
+            //So for this record we have already written
+            int ammountWritten = Math.min(stats.remainingSize, ammountThatCantFit);
+            System.arraycopy(field_5_ext_rst, extPos, data, pos, ammountWritten);
+            pos += ammountWritten;
+            extPos += ammountWritten;
+            stats.recordSize += ammountWritten;
+            stats.remainingSize -= ammountWritten;
+
+            //Ok lets subtract what we can write
+            ammountThatCantFit -= ammountWritten;
+            if (ammountThatCantFit > 0) {
+              pos = writeContinueIfRequired(stats, 1, pos, data);
+            }
+          }
+        } else {
+          //We can fit wholey in what remains.
+          System.arraycopy(field_5_ext_rst, 0, data, pos, field_5_ext_rst.length);
+          pos +=  field_5_ext_rst.length;
+          stats.remainingSize -= field_5_ext_rst.length;
+          stats.recordSize += field_5_ext_rst.length;
+        }
+      }
+
+        return pos - offset;
+        //jmh return getRecordSize();
+    }
+

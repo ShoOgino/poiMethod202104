@@ -1,0 +1,25 @@
+    private int writeContinueIfRequired(UnicodeRecordStats stats, final int requiredSize, int offset, byte[] data) {
+      //Basic string overhead
+      if (stats.remainingSize < requiredSize) {
+        //Check if be are already in a continue record, if so make sure that
+        //we go back and write out our length
+        if (stats.lastLengthPos != -1) {
+          short lastRecordLength = (short)(offset - stats.lastLengthPos - 2);
+          if (lastRecordLength > 8224)
+            throw new InternalError();
+          LittleEndian.putShort(data, stats.lastLengthPos, lastRecordLength);
+        }
+
+        LittleEndian.putShort(data, offset, ContinueRecord.sid);
+        offset+=2;
+        //Record the location of the last continue legnth position, but dont write
+        //anything there yet (since we dont know what it will be!)
+        stats.lastLengthPos = offset;
+        offset += 2;
+
+        stats.recordSize += 4;
+        stats.remainingSize = SSTRecord.MAX_RECORD_SIZE-4;
+      }
+      return offset;
+        }
+

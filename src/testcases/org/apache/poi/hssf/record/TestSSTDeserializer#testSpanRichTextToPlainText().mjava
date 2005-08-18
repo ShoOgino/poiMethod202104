@@ -1,13 +1,16 @@
     public void testSpanRichTextToPlainText()
             throws Exception
     {
-        byte[] bytes = HexRead.readData( _test_file_path + File.separator + "richtextdata.txt", "header" );
-        BinaryTree strings = new BinaryTree();
-        SSTDeserializer deserializer = new SSTDeserializer( strings );
-        deserializer.manufactureStrings( bytes, 0);
+      byte[] header = HexRead.readData( _test_file_path + File.separator + "richtextdata.txt", "header" );
         byte[] continueBytes = HexRead.readData( _test_file_path + File.separator + "richtextdata.txt", "continue1" );
-        deserializer.processContinueRecord( continueBytes );
+      continueBytes = TestcaseRecordInputStream.mergeDataAndSid(ContinueRecord.sid, (short)continueBytes.length, continueBytes);
+      TestcaseRecordInputStream in = new TestcaseRecordInputStream((short)0, (short)header.length, joinArray(header, continueBytes));
+      
 
-        assertEquals( "At a dinner party orAt At At ", strings.get( new Integer( 0 ) ) + "" );
+        IntMapper strings = new IntMapper();
+        SSTDeserializer deserializer = new SSTDeserializer( strings );
+        deserializer.manufactureStrings(1, in );
+
+        assertEquals( "At a dinner party orAt At At ", strings.get( 0 ) + "" );
     }
 

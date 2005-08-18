@@ -1,0 +1,73 @@
+    /**
+     * called by the constructor, should set class level fields.  Should throw
+     * runtime exception for bad/icomplete data.
+     *
+     * @param data raw data
+     * @param size size of data
+     * @param offset of the records data (provided a big array of the file)
+     */
+    protected void fillFields(RecordInputStream in)
+        {
+        field_1_charCount   = in.readShort();
+        field_2_optionflags = in.readByte();
+
+        int runCount = 0;
+        int extensionLength = 0;
+        //Read the number of rich runs if rich text.
+        if ( isRichText() )
+        {
+            runCount = in.readShort();
+        }
+        //Read the size of extended data if present.
+        if ( isExtendedText() )
+        {
+            extensionLength = in.readInt();
+        }
+
+        //Now need to get the string data.
+        //Turn off autocontinuation so that we can catch the continue boundary
+        in.setAutoContinue(false);
+        StringBuffer tmpString = new StringBuffer(field_1_charCount);
+        int stringCharCount = field_1_charCount;
+        boolean isUncompressed = ((field_2_optionflags & 1) == 0);
+        while (stringCharCount != 0) {
+          if (in.remaining() == 0) {
+            if (in.isContinueNext()) {
+              in.nextRecord();
+              //Check if we are now reading, compressed or uncompressed unicode.
+              byte optionflags = in.readByte();
+              isUncompressed = ((optionflags & 1) == 0);
+            } else
+              throw new RecordFormatException("Expected continue record.");
+          }
+          if (isUncompressed) {
+            char ch = (char)in.readByte();
+            tmpString.append(ch);
+          } else {
+            char ch = (char) in.readShort();
+            tmpString.append(ch);
+          }
+          stringCharCount --;
+        }
+        field_3_string = tmpString.toString();
+        //Turn back on autocontinuation
+        in.setAutoContinue(true);
+
+
+        if (isRichText() && (runCount > 0)) {
+          field_4_format_runs = new ArrayList(runCount);
+          for (int i=0;i<runCount;i++) {
+            field_4_format_runs.add(new FormatRun(in.readShort(), in.readShort()));
+            //read reserved
+            //in.readInt();
+            }
+        }
+
+        if (isExtendedText() && (extensionLength > 0)) {
+          field_5_ext_rst = new byte[extensionLength];
+          for (int i=0;i<extensionLength;i++) {
+            field_5_ext_rst[i] = in.readByte();
+            }
+        }
+    }
+

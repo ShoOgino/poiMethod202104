@@ -1,0 +1,29 @@
+    /**
+     *  UTF8:
+     *	sid + len + bof + flags + len(str) + unicode +   str
+     *	 2  +  2  +  4  +   2   +    1     +    1    + len(str)
+     *
+     * 	UNICODE:
+     *	sid + len + bof + flags + len(str) + unicode +   str
+     *	 2  +  2  +  4  +   2   +    1     +    1    + 2 * len(str)
+     *
+     */
+
+    protected void fillFields( RecordInputStream in )
+    {
+        field_1_position_of_BOF = in.readInt();	// bof
+        field_2_option_flags = in.readShort();	// flags
+        field_3_sheetname_length = in.readByte();						// len(str)
+        field_4_compressed_unicode_flag = in.readByte();						// unicode
+
+        int nameLength = LittleEndian.ubyteToInt( field_3_sheetname_length );
+        if ( ( field_4_compressed_unicode_flag & 0x01 ) == 1 )
+        {
+            field_5_sheetname = in.readUnicodeLEString(nameLength);
+        }
+        else
+        {
+            field_5_sheetname = in.readCompressedUnicode(nameLength);
+        }
+    }
+

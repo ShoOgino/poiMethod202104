@@ -13,13 +13,13 @@
                     new byte[9000], new byte[7433], new byte[9002],
                     new byte[16998]
                 };
-        String[] strings = new String[bstrings.length];
+        UnicodeString[] strings = new UnicodeString[bstrings.length];
         int total_length = 0;
 
         for ( int k = 0; k < bstrings.length; k++ )
         {
             Arrays.fill( bstrings[k], (byte) ( 'a' + k ) );
-            strings[k] = new String( bstrings[k] );
+            strings[k] = new UnicodeString( new String(bstrings[k]) );
             record.addString( strings[k] );
             total_length += 3 + bstrings[k].length;
         }
@@ -36,27 +36,12 @@
 
         record.serialize( 0, content );
         assertEquals( total_length, content.length );
-        for ( int index = 0; index != content.length; )
-        {
-            short record_type = LittleEndian.getShort( content, index );
 
-            index += LittleEndianConsts.SHORT_SIZE;
-            short record_length = LittleEndian.getShort( content, index );
+        //Deserialize the record.
+        RecordInputStream recStream = new RecordInputStream(new ByteArrayInputStream(content));
+        recStream.nextRecord();
+        record = new SSTRecord(recStream);
 
-            index += LittleEndianConsts.SHORT_SIZE;
-            byte[] data = new byte[record_length];
-
-            System.arraycopy( content, index, data, 0, record_length );
-            index += record_length;
-            if ( record_type == SSTRecord.sid )
-            {
-                record = new SSTRecord( record_type, record_length, data );
-            }
-            else
-            {
-                record.processContinueRecord( data );
-            }
-        }
         assertEquals( strings.length, record.getNumStrings() );
         assertEquals( strings.length, record.getNumUniqueStrings() );
         assertEquals( strings.length, record.countStrings() );
@@ -71,14 +56,14 @@
             if ( ( bstrings[k].length % 2 ) == 1 )
             {
                 Arrays.fill( bstrings[k], (byte) ( 'a' + k ) );
-                strings[k] = new String( bstrings[k] );
+                strings[k] = new UnicodeString( new String(bstrings[k]) );
             }
             else
             {
                 char[] data = new char[bstrings[k].length / 2];
 
                 Arrays.fill( data, (char) ( '\u2122' + k ) );
-                strings[k] = new String( data );
+                strings[k] = new UnicodeString(new String( data ));
             }
             record.addString( strings[k] );
         }
@@ -86,27 +71,11 @@
         record.serialize( 0, content );
         total_length--;
         assertEquals( total_length, content.length );
-        for ( int index = 0; index != content.length; )
-        {
-            short record_type = LittleEndian.getShort( content, index );
 
-            index += LittleEndianConsts.SHORT_SIZE;
-            short record_length = LittleEndian.getShort( content, index );
+        recStream = new RecordInputStream(new ByteArrayInputStream(content));
+        recStream.nextRecord();
+        record = new SSTRecord(recStream);
 
-            index += LittleEndianConsts.SHORT_SIZE;
-            byte[] data = new byte[record_length];
-
-            System.arraycopy( content, index, data, 0, record_length );
-            index += record_length;
-            if ( record_type == SSTRecord.sid )
-            {
-                record = new SSTRecord( record_type, record_length, data );
-            }
-            else
-            {
-                record.processContinueRecord( data );
-            }
-        }
         assertEquals( strings.length, record.getNumStrings() );
         assertEquals( strings.length, record.getNumUniqueStrings() );
         assertEquals( strings.length, record.countStrings() );
