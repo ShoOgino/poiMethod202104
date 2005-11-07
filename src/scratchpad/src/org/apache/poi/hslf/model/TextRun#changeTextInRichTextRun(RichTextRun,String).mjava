@@ -1,0 +1,46 @@
+	/**
+	 * Handles an update to the text stored in one of the Rich Text Runs
+	 * @param run
+	 * @param s
+	 */
+	public synchronized void changeTextInRichTextRun(RichTextRun run, String s) {
+		// Figure out which run it is
+		int runID = -1;
+		for(int i=0; i<_rtRuns.length; i++) {
+			if(run.equals(_rtRuns[i])) {
+				runID = i;
+			}
+		}
+		if(runID == -1) {
+			throw new IllegalArgumentException("Supplied RichTextRun wasn't from this TextRun");
+		}
+		
+		// Update the text length for its Paragraph and Character stylings
+		LinkedList pStyles = _styleAtom.getParagraphStyles();
+		LinkedList cStyles = _styleAtom.getCharacterStyles();
+		TextPropCollection pCol = (TextPropCollection)pStyles.get(runID);
+		TextPropCollection cCol = (TextPropCollection)cStyles.get(runID);
+		pCol.updateTextSize(s.length());
+		cCol.updateTextSize(s.length());
+		
+		// Build up the new text
+		// As we go through, update the start position for all subsequent runs
+		// The building relies on the old text still being present
+		StringBuffer newText = new StringBuffer();
+		for(int i=0; i<_rtRuns.length; i++) {
+			// Update start position
+			if(i > runID) {
+				_rtRuns[i].updateStartPosition(newText.length());
+			}
+			// Grab new text
+			if(i != runID) {
+				newText.append(_rtRuns[i].getRawText());
+			} else {
+				newText.append(s);
+			}
+		}
+		
+		// Save the new text
+		storeText(newText.toString());
+	}
+

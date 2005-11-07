@@ -1,29 +1,27 @@
 	/**
-	 * Changes the text. Chance are, this won't work just yet, because
-	 *  we also need to update some other bits of the powerpoint file
-	 *  to match the change in the Text Atom, especially byte offsets
+	 * Changes the text, and sets it all to have the same styling
+	 *  as the the first character has. 
+	 * If you care about styling, do setText on a RichTextRun instead 
 	 */
-	public void setText(String s) {
-		// If size changed, warn
-		if(s.length() != getText().length()) {
-			System.err.println("Warning: Your powerpoint file may no longer readable by powerpoint, as the text run has changed size!");
-		}
+	public synchronized void setText(String s) {
+		// Save the new text to the atoms
+		storeText(s);
 
-		if(_isUnicode) {
-			// The atom can safely convert to unicode
-			_charAtom.setText(s);
-		} else {
-			// Will it fit in a 8 bit atom?
-			boolean hasMultibyte = StringUtil.hasMultibyte(s);
-			if(! hasMultibyte) {
-				// Fine to go into 8 bit atom
-				byte[] text = new byte[s.length()];
-				StringUtil.putCompressedUnicode(s,text,0);
-				_byteAtom.setText(text);
-			} else {
-				throw new RuntimeException("Setting of unicode text is currently only possible for Text Runs that are Unicode in the file, sorry. For now, please convert that text to us-ascii and re-try it");
-			}
-		}
+		// Now handle record stylings:
+		//  everthing gets the same style that the first block has
+		LinkedList pStyles = _styleAtom.getParagraphStyles();
+		while(pStyles.size() > 1) { pStyles.removeLast(); }
 		
+		LinkedList cStyles = _styleAtom.getCharacterStyles();
+		while(cStyles.size() > 1) { cStyles.removeLast(); }
+		
+		TextPropCollection pCol = (TextPropCollection)pStyles.getFirst();
+		TextPropCollection cCol = (TextPropCollection)cStyles.getFirst();
+		pCol.updateTextSize(s.length());
+		cCol.updateTextSize(s.length());
+		
+		// Finally, zap and re-do the RichTextRuns
+		_rtRuns = new RichTextRun[1];
+		_rtRuns[0] = new RichTextRun(this,0,s.length());
 	}
 
