@@ -2,6 +2,13 @@
 	 * Saves the given string to the records. Doesn't touch the stylings. 
 	 */
 	private void storeText(String s) {
+		// Remove a single trailing \n, as there is an implicit one at the
+		//  end of every record
+		if(s.endsWith("\n")) {
+			s = s.substring(0, s.length()-1);
+		}
+		
+		// Store in the appropriate record
 		if(_isUnicode) {
 			// The atom can safely convert to unicode
 			_charAtom.setText(s);
@@ -14,7 +21,27 @@
 				StringUtil.putCompressedUnicode(s,text,0);
 				_byteAtom.setText(text);
 			} else {
-				throw new RuntimeException("Setting of unicode text is currently only possible for Text Runs that are Unicode in the file, sorry. For now, please convert that text to us-ascii and re-try it");
+				// Need to swap a TextBytesAtom for a TextCharsAtom
+				
+				// Build the new TextCharsAtom
+				_charAtom = new TextCharsAtom();
+				_charAtom.setText(s);
+				
+				// Use the TextHeaderAtom to do the swap on the parent
+				RecordContainer parent = _headerAtom.getParentRecord();
+				Record[] cr = parent.getChildRecords();
+				for(int i=0; i<cr.length; i++) {
+					// Look for TextBytesAtom
+					if(cr[i].equals(_byteAtom)) {
+						// Found it, so replace, then all done
+						cr[i] = _charAtom;
+						break;
+					}
+				}
+				
+				// Flag the change
+				_byteAtom = null;
+				_isUnicode = true;
 			}
 		}
 	}
