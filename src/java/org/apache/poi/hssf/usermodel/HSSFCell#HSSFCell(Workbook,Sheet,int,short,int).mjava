@@ -10,8 +10,6 @@
      *                CELL_TYPE_BOOLEAN, CELL_TYPE_ERROR
      *                Type of cell
      * @see org.apache.poi.hssf.usermodel.HSSFRow#createCell(short,int)
-     * @deprecated As of 22-Jan-2002 use @see org.apache.poi.hssf.usermodel.HSSFRow#createCell(short)
-     * and use setCellValue to specify the type lazily.
      */
 
     //protected HSSFCell(Workbook book, Sheet sheet, short row, short col,
@@ -19,67 +17,12 @@
                        int type)
     {
         checkBounds(col);
-        cellNum      = col;
-        this.row     = row;
-        cellType     = type;
-        cellStyle    = null;
-        cellValue    = 0;
+        cellType     = -1; // Force 'setCellType' to create a first Record
         stringValue  = null;
-        booleanValue = false;
-        errorValue   = ( byte ) 0;
         this.book    = book;
         this.sheet   = sheet;
-        switch (type)
-        {
-
-            case CELL_TYPE_NUMERIC :
-                record = new NumberRecord();
-                (( NumberRecord ) record).setColumn(col);
-                (( NumberRecord ) record).setRow(row);
-                (( NumberRecord ) record).setValue(( short ) 0);
-                (( NumberRecord ) record).setXFIndex(( short ) 0);
-                break;
-
-            case CELL_TYPE_STRING :
-                record = new LabelSSTRecord();
-                (( LabelSSTRecord ) record).setColumn(col);
-                (( LabelSSTRecord ) record).setRow(row);
-                (( LabelSSTRecord ) record).setXFIndex(( short ) 0);
-                break;
-
-            case CELL_TYPE_BLANK :
-                record = new BlankRecord();
-                (( BlankRecord ) record).setColumn(col);
-                (( BlankRecord ) record).setRow(row);
-                (( BlankRecord ) record).setXFIndex(( short ) 0);
-                break;
-
-            case CELL_TYPE_FORMULA :
-                FormulaRecord formulaRecord = new FormulaRecord();
-                record = new FormulaRecordAggregate(formulaRecord,null);
-                formulaRecord.setColumn(col);
-                formulaRecord.setRow(row);
-                formulaRecord.setXFIndex(( short ) 0);
-            case CELL_TYPE_BOOLEAN :
-                record = new BoolErrRecord();
-                (( BoolErrRecord ) record).setColumn(col);
-                (( BoolErrRecord ) record).setRow(row);
-                (( BoolErrRecord ) record).setXFIndex(( short ) 0);
-                (( BoolErrRecord ) record).setValue(false);
-                break;
-
-            case CELL_TYPE_ERROR :
-                record = new BoolErrRecord();
-                (( BoolErrRecord ) record).setColumn(col);
-                (( BoolErrRecord ) record).setRow(row);
-                (( BoolErrRecord ) record).setXFIndex(( short ) 0);
-                (( BoolErrRecord ) record).setValue(( byte ) 0);
-                break;
-        }
-
-        int xfindex = sheet.getXFIndexForColAt(col);
-        ExtendedFormatRecord xf = book.getExFormatAt(xfindex);
-
-        setCellStyle(new HSSFCellStyle(( short ) 0xf, xf));
+        
+        short xfindex = sheet.getXFIndexForColAt(col);
+        setCellType(type,false,row,col,xfindex);
     }
 
