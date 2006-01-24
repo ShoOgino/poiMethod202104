@@ -1,0 +1,84 @@
+  /**
+   * This constructor loads a Word document from a POIFSFileSystem
+   *
+   * @param filesystem The POIFSFileSystem that contains the Word document.
+   * @throws IOException If there is an unexpected IOException from the passed
+   *         in POIFSFileSystem.
+   */
+  public HWPFDocument(POIFSFileSystem filesystem) throws IOException
+  {
+    // read in the main stream.
+    DocumentEntry documentProps =
+       (DocumentEntry)filesystem.getRoot().getEntry("WordDocument");
+    _mainStream = new byte[documentProps.getSize()];
+    filesystem.createDocumentInputStream("WordDocument").read(_mainStream);
+
+    // use the fib to determine the name of the table stream.
+    _fib = new FileInformationBlock(_mainStream);
+
+    String name = "0Table";
+    if (_fib.isFWhichTblStm())
+    {
+      name = "1Table";
+    }
+
+    // read in the table stream.
+    DocumentEntry tableProps =
+      (DocumentEntry)filesystem.getRoot().getEntry(name);
+    _tableStream = new byte[tableProps.getSize()];
+    filesystem.createDocumentInputStream(name).read(_tableStream);
+
+    _fib.fillVariableFields(_mainStream, _tableStream);
+
+    // read in the data stream.
+    try
+    {
+      DocumentEntry dataProps =
+          (DocumentEntry) filesystem.getRoot().getEntry("Data");
+      _dataStream = new byte[dataProps.getSize()];
+      filesystem.createDocumentInputStream("Data").read(_dataStream);
+    }
+    catch(java.io.FileNotFoundException e)
+    {
+        _dataStream = new byte[0];
+    }
+
+    // get the start of text in the main stream
+    int fcMin = _fib.getFcMin();
+
+    // load up our standard structures.
+    _dop = new DocumentProperties(_tableStream, _fib.getFcDop());
+    _cft = new ComplexFileTable(_mainStream, _tableStream, _fib.getFcClx(), fcMin);
+    _tpt = _cft.getTextPieceTable();
+    _cbt = new CHPBinTable(_mainStream, _tableStream, _fib.getFcPlcfbteChpx(), _fib.getLcbPlcfbteChpx(), fcMin);
+    _pbt = new PAPBinTable(_mainStream, _tableStream, _dataStream, _fib.getFcPlcfbtePapx(), _fib.getLcbPlcfbtePapx(), fcMin);
+
+    // Word XP puts in a zero filled buffer in front of the text and it screws
+    // up my system for offsets. This is an adjustment.
+    int cpMin = _tpt.getCpMin();
+    if (cpMin > 0)
+    {
+      _cbt.adjustForDelete(0, 0, cpMin);
+      _pbt.adjustForDelete(0, 0, cpMin);
+    }
+
+    _st = new SectionTable(_mainStream, _tableStream, _fib.getFcPlcfsed(), _fib.getLcbPlcfsed(), fcMin, getTextTable().getTextPieces());
+    _ss = new StyleSheet(_tableStream, _fib.getFcStshf());
+    _ft = new FontTable(_tableStream, _fib.getFcSttbfffn(), _fib.getLcbSttbfffn());
+
+    int listOffset = _fib.getFcPlcfLst();
+    int lfoOffset = _fib.getFcPlfLfo();
+    if (listOffset != 0 && _fib.getLcbPlcfLst() != 0)
+    {
+      _lt = new ListTables(_tableStream, _fib.getFcPlcfLst(), _fib.getFcPlfLfo());
+    }
+
+    PlexOfCps plc = new PlexOfCps(_tableStream, _fib.getFcPlcffldMom(), _fib.getLcbPlcffldMom(), 2);
+    for (int x = 0; x < plc.length(); x++)
+    {
+      GenericPropertyNode node = plc.getProperty(x);
+      byte[] fld = node.getBytes();
+      int breakpoint = 0;
+    }
+  }
+
