@@ -1,0 +1,49 @@
+    /**
+     * <p>Tests reading custom properties from a section including reading
+     * custom properties which are not pure.</p>
+     */
+    public void testGetCustomerProperties()
+    {
+        final int ID_1 = 2;
+        final int ID_2 = 3;
+        final String NAME_1 = "Schl�ssel �";
+        final String VALUE_1 = "Wert 1";
+        final Map dictionary = new HashMap();
+
+        DocumentSummaryInformation dsi = PropertySetFactory.newDocumentSummaryInformation();
+        CustomProperties cps;
+        MutableSection s;
+
+        /* A document summary information set stream by default does have custom properties. */
+        cps = dsi.getCustomProperties();
+        assertEquals(null, cps);
+
+        /* Test an empty custom properties set. */
+        s = new MutableSection();
+        s.setFormatID(SectionIDMap.DOCUMENT_SUMMARY_INFORMATION_ID[1]);
+        // s.setCodepage(Constants.CP_UNICODE);
+        dsi.addSection(s);
+        cps = dsi.getCustomProperties();
+        assertEquals(0, cps.size());
+
+        /* Add a custom property. */
+        MutableProperty p = new MutableProperty();
+        p.setID(ID_1);
+        p.setType(Variant.VT_LPWSTR);
+        p.setValue(VALUE_1);
+        s.setProperty(p);
+        dictionary.put(new Long(ID_1), NAME_1);
+        s.setDictionary(dictionary);
+        cps = dsi.getCustomProperties();
+        assertEquals(1, cps.size());
+        assertTrue(cps.isPure());
+
+        /* Add another custom property. */
+        s.setProperty(ID_2, Variant.VT_LPWSTR, VALUE_1);
+        dictionary.put(new Long(ID_2), NAME_1);
+        s.setDictionary(dictionary);
+        cps = dsi.getCustomProperties();
+        assertEquals(1, cps.size());
+        assertFalse(cps.isPure());
+    }
+

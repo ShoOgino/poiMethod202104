@@ -1,0 +1,76 @@
+    /**
+     * <p>Tests the simplified custom properties by reading them from the
+     * available test files.</p>
+     *
+     * @throws Throwable if anything goes wrong.
+     */
+    public void testReadCustomPropertiesFromFiles() throws Throwable
+    {
+        final AllDataFilesTester.TestTask task = new AllDataFilesTester.TestTask()
+        {
+            public void runTest(final File file) throws FileNotFoundException,
+                    IOException, NoPropertySetStreamException,
+                    MarkUnsupportedException,
+                    UnexpectedPropertySetTypeException
+            {
+                /* Read a test document <em>doc</em> into a POI filesystem. */
+                final POIFSFileSystem poifs = new POIFSFileSystem(new FileInputStream(file));
+                final DirectoryEntry dir = poifs.getRoot();
+                DocumentEntry dsiEntry = null;
+                try
+                {
+                    dsiEntry = (DocumentEntry) dir.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME);
+                }
+                catch (FileNotFoundException ex)
+                {
+                    /*
+                     * A missing document summary information stream is not an error
+                     * and therefore silently ignored here.
+                     */
+                }
+
+                /*
+                 * If there is a document summry information stream, read it from
+                 * the POI filesystem, else create a new one.
+                 */
+                DocumentSummaryInformation dsi;
+                if (dsiEntry != null)
+                {
+                    final DocumentInputStream dis = new DocumentInputStream(dsiEntry);
+                    final PropertySet ps = new PropertySet(dis);
+                    dsi = new DocumentSummaryInformation(ps);
+                }
+                else
+                    dsi = PropertySetFactory.newDocumentSummaryInformation();
+                final CustomProperties cps = dsi.getCustomProperties();
+                
+                if (cps == null)
+                    /* The document does not have custom properties. */
+                    return;
+
+                for (final Iterator i = cps.entrySet().iterator(); i.hasNext();)
+                {
+                    final Map.Entry e = (Entry) i.next();
+                    final CustomProperty cp = (CustomProperty) e.getValue();
+                    cp.getName();
+                    cp.getValue();
+                }
+            }
+        };
+
+        final String dataDirName = System.getProperty("HPSF.testdata.path");
+        final File dataDir = new File(dataDirName);
+        final File[] docs = dataDir.listFiles(new FileFilter()
+        {
+            public boolean accept(final File file)
+            {
+                return file.isFile() && file.getName().startsWith("Test");
+            }
+        });
+
+        for (int i = 0; i < docs.length; i++)
+        {
+            task.runTest(docs[i]);
+        }
+    }
+

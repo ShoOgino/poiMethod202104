@@ -1,0 +1,78 @@
+    /**
+     * <p>This test method checks whether DocumentSummary information streams
+     * can be read. This is done by opening all "Test*" files in the directrory
+     * pointed to by the "HPSF.testdata.path" system property, trying to extract
+     * the document summary information stream in the root directory and calling
+     * its get... methods.</p>
+     * @throws IOException 
+     * @throws FileNotFoundException 
+     * @throws MarkUnsupportedException 
+     * @throws NoPropertySetStreamException 
+     * @throws UnexpectedPropertySetTypeException 
+     */
+    public void testReadDocumentSummaryInformation()
+            throws FileNotFoundException, IOException,
+            NoPropertySetStreamException, MarkUnsupportedException,
+            UnexpectedPropertySetTypeException
+    {
+        final String dataDirName = System.getProperty("HPSF.testdata.path");
+        final File dataDir = new File(dataDirName);
+        final File[] docs = dataDir.listFiles(new FileFilter()
+        {
+            public boolean accept(final File file)
+            {
+                return file.isFile() && file.getName().startsWith("Test");
+            }});
+        for (int i = 0; i < docs.length; i++)
+        {
+            final File doc = docs[i];
+            System.out.println("Reading file " + doc);
+
+            /* Read a test document <em>doc</em> into a POI filesystem. */
+            final POIFSFileSystem poifs = new POIFSFileSystem(new FileInputStream(doc));
+            final DirectoryEntry dir = poifs.getRoot();
+            DocumentEntry dsiEntry = null;
+            try
+            {
+                dsiEntry = (DocumentEntry) dir.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME);
+            }
+            catch (FileNotFoundException ex)
+            {
+                /*
+                 * A missing document summary information stream is not an error
+                 * and therefore silently ignored here.
+                 */
+            }
+
+            /*
+             * If there is a document summry information stream, read it from
+             * the POI filesystem.
+             */
+            if (dsiEntry != null)
+            {
+                final DocumentInputStream dis = new DocumentInputStream(dsiEntry);
+                final PropertySet ps = new PropertySet(dis);
+                final DocumentSummaryInformation dsi = new DocumentSummaryInformation(ps);
+                
+                /* Execute the get... methods. */
+                dsi.getByteCount();
+                dsi.getByteOrder();
+                dsi.getCategory();
+                dsi.getCompany();
+                dsi.getCustomProperties();
+                // FIXME dsi.getDocparts();
+                // FIXME dsi.getHeadingPair();
+                dsi.getHiddenCount();
+                dsi.getLineCount();
+                dsi.getLinksDirty();
+                dsi.getManager();
+                dsi.getMMClipCount();
+                dsi.getNoteCount();
+                dsi.getParCount();
+                dsi.getPresentationFormat();
+                dsi.getScale();
+                dsi.getSlideCount();
+            }
+        }
+    }
+

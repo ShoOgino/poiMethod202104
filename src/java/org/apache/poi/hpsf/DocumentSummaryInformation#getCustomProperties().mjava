@@ -1,29 +1,34 @@
     /**
-     * <p>Gets the custom properties as a map from the property name to
-     * value.</p>
+     * <p>Gets the custom properties.</p>
      * 
-     * @return The custom properties if any exist, <code>null</code> otherwise.
-     * @since 2003-10-22
+     * @return The custom properties.
+     * @since 2006-02-09
      */
-    public Map getCustomProperties()
+    public CustomProperties getCustomProperties()
     {
-        Map nameToValue = null;
+        CustomProperties cps = null;
         if (getSectionCount() >= 2)
         {
+            cps = new CustomProperties();
             final Section section = (Section) getSections().get(1);
-            final Map pidToName = 
-                      (Map) section.getProperty(PropertyIDMap.PID_DICTIONARY);
-            if (pidToName != null)
+            final Map dictionary = section.getDictionary();
+            final Property[] properties = section.getProperties();
+            int propertyCount = 0;
+            for (int i = 0; i < properties.length; i++)
             {
-                nameToValue = new HashMap(pidToName.size());
-                for (Iterator i = pidToName.entrySet().iterator(); i.hasNext();)
+                final Property p = properties[i];
+                final long id = p.getID();
+                if (id != 0 && id != 1)
                 {
-                    final Map.Entry e = (Map.Entry) i.next();
-                    final long pid = ((Number) e.getKey()).longValue();
-                    nameToValue.put(e.getValue(), section.getProperty(pid));
+                    propertyCount++;
+                    final CustomProperty cp = new CustomProperty(p,
+                            (String) dictionary.get(new Long(id)));
+                    cps.put(cp.getName(), cp);
                 }
             }
+            if (cps.size() != propertyCount)
+                cps.setPure(false);
         }
-        return nameToValue;
+        return cps;
     }
 

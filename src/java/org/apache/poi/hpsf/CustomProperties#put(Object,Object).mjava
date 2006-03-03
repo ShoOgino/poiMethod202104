@@ -1,0 +1,36 @@
+    /**
+     * <p>Puts a {@link CustomProperty} into this map. It is assumed that the
+     * {@link CustomProperty} already has a valid ID. Otherwise use
+     * {@link #put(CustomProperty)}.</p>
+     */
+    public Object put(final Object name, final Object customProperty) throws ClassCastException
+    {
+        final CustomProperty cp = (CustomProperty) customProperty;
+        if (name == null)
+        {
+            /* Ignoring a property without a name. */
+            isPure = false;
+            return null;
+        }
+        if (!(name instanceof String))
+            throw new ClassCastException("The name of a custom property must " +
+                    "be a java.lang.String, but it is a " +
+                    name.getClass().getName());
+        if (!(name.equals(cp.getName())))
+            throw new IllegalArgumentException("Parameter \"name\" (" + name +
+                    ") and custom property's name (" + cp.getName() +
+                    ") do not match.");
+
+        /* Register name and ID in the dictionary. Mapping in both directions is possible. If there is already a  */
+        final Long idKey = new Long(cp.getID());
+        final Object oldID = dictionaryNameToID.get(name);
+        dictionaryIDToName.remove(oldID);
+        dictionaryNameToID.put(name, idKey);
+        dictionaryIDToName.put(idKey, name);
+
+        /* Put the custom property into this map. */
+        final Object oldCp = super.remove(oldID);
+        super.put(idKey, cp);
+        return oldCp;
+    }
+
