@@ -1,0 +1,47 @@
+    public void testGraphics() throws Exception {
+    	// Starts off empty
+    	assertEquals(0, ppt.getSlides().length);
+    	
+    	// Add a slide
+        Slide slide = ppt.createSlide();
+    	assertEquals(1, ppt.getSlides().length);
+
+    	// Add some stuff into it
+        ShapeGroup group = new ShapeGroup();
+        Dimension pgsize = ppt.getPageSize();
+        java.awt.Rectangle bounds = new java.awt.Rectangle(0, 0, (int)pgsize.getWidth(), (int)pgsize.getHeight());
+        group.setAnchor(bounds);
+        slide.addShape(group);
+
+        PPGraphics2D graphics = new PPGraphics2D(group);
+        graphics.setColor(Color.blue);
+        graphics.draw(new Rectangle(1296, 2544, 1344, 0));
+
+        graphics.setColor(Color.red);
+        graphics.setStroke(new BasicStroke((float)2.5));
+        graphics.drawLine(500, 500, 1500, 2500);
+
+        graphics.setColor(Color.green);
+        graphics.setPaint(Color.gray);
+        graphics.drawOval(4000, 1000, 1000, 1000);
+
+        // Write the file out
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ppt.write(out);
+        out.close();
+
+        // And read it back in
+        ppt = new SlideShow(new HSLFSlideShow(new ByteArrayInputStream(out.toByteArray())));
+        assertEquals(1, ppt.getSlides().length);
+
+        slide = ppt.getSlides()[0];
+        Shape[] shape = slide.getShapes();
+        assertEquals(shape.length, 1); //group shape
+
+        assertTrue(shape[0] instanceof ShapeGroup); //group shape
+
+        group = (ShapeGroup)shape[0];
+        shape = group.getShapes();
+        assertEquals(shape.length, 7);
+    }
+
