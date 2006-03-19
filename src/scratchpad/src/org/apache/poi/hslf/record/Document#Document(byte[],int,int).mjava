@@ -1,0 +1,39 @@
+	/** 
+	 * Set things up, and find our more interesting children
+	 */
+	protected Document(byte[] source, int start, int len) {
+		// Grab the header
+		_header = new byte[8];
+		System.arraycopy(source,start,_header,0,8);
+
+		// Find our children
+		_children = Record.findChildRecords(source,start+8,len-8);
+		
+		// Our first one should be a document atom
+		if(! (_children[0] instanceof DocumentAtom)) {
+			throw new IllegalStateException("The first child of a Document must be a DocumentAtom");
+		}
+		documentAtom = (DocumentAtom)_children[0];
+		
+		// Find how many SlideListWithTexts we have
+		// Also, grab the Environment record on our way past
+		int slwtcount = 0;
+		for(int i=1; i<_children.length; i++) {
+			if(_children[i] instanceof SlideListWithText) {
+				slwtcount++;
+			}
+			if(_children[i].getRecordType() == RecordTypes.Environment.typeID) {
+				environment = _children[i];
+			}
+		}
+		// Now grab them all
+		slwts = new SlideListWithText[slwtcount];
+		slwtcount = 0;
+		for(int i=1; i<_children.length; i++) {
+			if(_children[i] instanceof SlideListWithText) {
+				slwts[slwtcount] = (SlideListWithText)_children[i];
+				slwtcount++;
+			}
+		}
+	}
+
