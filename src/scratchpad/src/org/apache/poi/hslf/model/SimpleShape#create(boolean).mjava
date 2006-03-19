@@ -1,0 +1,39 @@
+    /**
+     * Create a new Shape
+     *
+     * @param isChild   <code>true</code> if the Line is inside a group, <code>false</code> otherwise
+     * @return the record container which holds this shape
+     */
+    protected EscherContainerRecord create(boolean isChild) {
+        EscherContainerRecord spContainer = new EscherContainerRecord();
+        spContainer.setRecordId( EscherContainerRecord.SP_CONTAINER );
+        //spContainer.setOptions((short)15);
+
+        EscherSpRecord sp = new EscherSpRecord();
+        int flags = EscherSpRecord.FLAG_HAVEANCHOR | EscherSpRecord.FLAG_HASSHAPETYPE;
+        if (isChild) flags |= EscherSpRecord.FLAG_CHILD;
+        sp.setFlags(flags);
+        spContainer.addChildRecord(sp);
+
+        EscherOptRecord opt = new EscherOptRecord();
+        opt.setRecordId(EscherOptRecord.RECORD_ID);
+        spContainer.addChildRecord(opt);
+
+        EscherRecord anchor;
+        if(isChild) anchor = new EscherChildAnchorRecord();
+        else {
+            anchor = new EscherClientAnchorRecord();
+
+            //hack. internal variable EscherClientAnchorRecord.shortRecord can be
+            //initialized only in fillFields(). We need to set shortRecord=false;
+            byte[] header = new byte[16];
+            LittleEndian.putUShort(header, 0, 0);
+            LittleEndian.putUShort(header, 2, 0);
+            LittleEndian.putInt(header, 4, 8);
+            anchor.fillFields(header, 0, null);
+        }
+        spContainer.addChildRecord(anchor);
+
+        return spContainer;
+    }
+

@@ -1,0 +1,32 @@
+    /**
+     * Sets the anchor (the bounding box rectangle) of this shape.
+     * All coordinates should be expressed in Master units (576 dpi).
+     *
+     * @param anchor new anchor
+     */
+    public void setAnchor(java.awt.Rectangle anchor){
+
+        EscherContainerRecord spContainer = (EscherContainerRecord)_escherContainer.getChildRecords().get(0);
+
+        EscherClientAnchorRecord clientAnchor = (EscherClientAnchorRecord)getEscherChild(spContainer, EscherClientAnchorRecord.RECORD_ID);
+        //hack. internal variable EscherClientAnchorRecord.shortRecord can be
+        //initialized only in fillFields(). We need to set shortRecord=false;
+        byte[] header = new byte[16];
+        LittleEndian.putUShort(header, 0, 0);
+        LittleEndian.putUShort(header, 2, 0);
+        LittleEndian.putInt(header, 4, 8);
+        clientAnchor.fillFields(header, 0, null);
+
+        clientAnchor.setFlag((short)anchor.y);
+        clientAnchor.setCol1((short)anchor.x);
+        clientAnchor.setDx1((short)(anchor.width + anchor.x));
+        clientAnchor.setRow1((short)(anchor.height + anchor.y));
+
+        EscherSpgrRecord spgr = (EscherSpgrRecord)getEscherChild(spContainer, EscherSpgrRecord.RECORD_ID);
+
+        spgr.setRectX1(anchor.x);
+        spgr.setRectY1(anchor.y);
+        spgr.setRectX2(anchor.x + anchor.width);
+        spgr.setRectY2(anchor.y + anchor.height);
+    }
+
