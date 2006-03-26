@@ -1,0 +1,64 @@
+    /**
+     * Adds a picture to this presentation and returns the associated index.
+     *
+     * @param data      picture data
+     * @param format    the format of the picture.  One of constans defined in the <code>Picture</code> class.
+     * @return          the index to this picture (1 based).
+     */
+    public int addPicture(byte[] data, int format) {
+        byte[] uid = PictureData.getChecksum(data);
+
+        EscherContainerRecord bstore;
+        int offset = 0;
+
+        EscherContainerRecord dggContainer = _documentRecord.getPPDrawingGroup().getDggContainer();
+        bstore = (EscherContainerRecord)Shape.getEscherChild(dggContainer, EscherContainerRecord.BSTORE_CONTAINER);
+        if (bstore == null){
+            bstore = new EscherContainerRecord();
+            bstore.setRecordId( EscherContainerRecord.BSTORE_CONTAINER);
+
+            List child = dggContainer.getChildRecords();
+            for ( int i = 0; i < child.size(); i++ ) {
+                EscherRecord rec = (EscherRecord)child.get(i);
+                if (rec.getRecordId() == EscherOptRecord.RECORD_ID){
+                    child.add(i, bstore);
+                    i++;
+                }
+            }
+            dggContainer.setChildRecords(child);
+        } else {
+            List lst = bstore.getChildRecords();
+            for ( int i = 0; i < lst.size(); i++ ) {
+                EscherBSERecord bse = (EscherBSERecord) lst.get(i);
+                if (Arrays.equals(bse.getUid(), uid)){
+                    return i + 1;
+                }
+                offset += bse.getSize();
+             }
+        }
+
+        EscherBSERecord bse = new EscherBSERecord();
+        bse.setRecordId(EscherBSERecord.RECORD_ID);
+        bse.setOptions( (short) ( 0x0002 | ( format << 4 ) ) );
+        bse.setSize(data.length + PictureData.HEADER_SIZE);
+        bse.setUid(uid);
+        bse.setBlipTypeMacOS((byte)format);
+        bse.setBlipTypeWin32((byte)format);
+
+        bse.setRef(1);
+        bse.setOffset(offset);
+
+        bstore.addChildRecord(bse);
+        int count = bstore.getChildRecords().size();
+        bstore.setOptions((short)( (count << 4) | 0xF ));
+
+        PictureData pict = new PictureData();
+        pict.setUID(uid);
+        pict.setData(data);
+        pict.setType(format);
+
+        _hslfSlideShow.addPicture(pict);
+
+        return count;
+    }
+
