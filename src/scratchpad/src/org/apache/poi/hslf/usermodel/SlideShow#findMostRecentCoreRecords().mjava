@@ -34,9 +34,10 @@
 	// We now know how many unique special records we have, so init
 	//  the array
 	_mostRecentCoreRecords = new Record[mostRecentByBytes.size()];
-
-	// Also, work out where we're going to put them in the array
-	Hashtable slideIDtoRecordLookup = new Hashtable();
+	
+	// We'll also want to be able to turn the slide IDs into a position
+	//  in this array
+	_sheetIdToCoreRecordsLookup = new Hashtable();
 	int[] allIDs = new int[_mostRecentCoreRecords.length];
 	Enumeration ids = mostRecentByBytes.keys();
 	for(int i=0; i<allIDs.length; i++) {
@@ -45,8 +46,10 @@
 	}
 	Arrays.sort(allIDs);
 	for(int i=0; i<allIDs.length; i++) {
-		slideIDtoRecordLookup.put(new Integer(allIDs[i]), new Integer(i));
+		_sheetIdToCoreRecordsLookup.put(new Integer(allIDs[i]), new Integer(i));
 	}
+	// Capture the ID of the highest sheet
+	_highestSheetId = allIDs[(allIDs.length-1)];
 
 	// Now convert the byte offsets back into record offsets
 	for(int i=0; i<_records.length; i++) {
@@ -62,11 +65,10 @@
 				if(thatRecordAt.equals(recordAt)) {
 					// Bingo. Now, where do we store it?
 					Integer storeAtI = 
-						(Integer)slideIDtoRecordLookup.get(thisID);
+						(Integer)_sheetIdToCoreRecordsLookup.get(thisID);
 					int storeAt = storeAtI.intValue();
 					
 					// Tell it its Sheet ID, if it cares
-					// TODO: Check that this is the right ID to feed in
 					if(pdr instanceof PositionDependentRecordContainer) {
 						PositionDependentRecordContainer pdrc = 
 							(PositionDependentRecordContainer)_records[i];
@@ -82,10 +84,15 @@
 	
 	// Now look for the interesting records in there
 	for(int i=0; i<_mostRecentCoreRecords.length; i++) {
-		// Find the Document, and interesting things in it
-		if(_mostRecentCoreRecords[i].getRecordType() == RecordTypes.Document.typeID) {
-			_documentRecord = (Document)_mostRecentCoreRecords[i];
-			_fonts = _documentRecord.getEnvironment().getFontCollection();
+		// Check there really is a record at this number
+		if(_mostRecentCoreRecords[i] != null) {
+			// Find the Document, and interesting things in it
+			if(_mostRecentCoreRecords[i].getRecordType() == RecordTypes.Document.typeID) {
+				_documentRecord = (Document)_mostRecentCoreRecords[i];
+				_fonts = _documentRecord.getEnvironment().getFontCollection();
+			}
+		} else {
+			System.err.println("No core record found with ID " + (i+1) + " based on PersistPtr lookup");
 		}
 	}
   }

@@ -20,15 +20,20 @@
 
   		// Grab the SlidePersistAtom with the highest Slide Number.
   		// (Will stay as null if no SlidePersistAtom exists yet in
-  		//  the slide)
+  		//  the slide, or only master slide's ones do)
   		SlidePersistAtom prev = null;
   		for(int i=0; i<slwts.length; i++) {
   			SlideAtomsSet[] sas = slwts[i].getSlideAtomsSets();
   			for(int j=0; j<sas.length; j++) {
   				SlidePersistAtom spa = sas[j].getSlidePersistAtom();
-  				if(prev == null) { prev = spa; }
-  				if(prev.getSlideIdentifier() < spa.getSlideIdentifier()) {
-  					prev = spa;
+  				if(spa.getSlideIdentifier() < 0) {
+  					// This is for a master slide
+  				} else {
+  					// Must be for a real slide
+  	  				if(prev == null) { prev = spa; }
+  	  				if(prev.getSlideIdentifier() < spa.getSlideIdentifier()) {
+  	  					prev = spa;
+  	  				}
   				}
   			}
   		}
@@ -36,11 +41,12 @@
   		// Set up a new  SlidePersistAtom for this slide 
   		SlidePersistAtom sp = new SlidePersistAtom();
 
-  		// Refernce is the 1-based index of the slide container in 
-  		//  the document root.
+  		// Reference is the 1-based index of the slide container in 
+  		//  the PersistPtr root.
   		// It always starts with 3 (1 is Document, 2 is MainMaster, 3 is 
-  		//  the first slide)
-  		sp.setRefID(prev == null ? 3 : (prev.getRefID() + 1));
+  		//  the first slide), but quicksaves etc can leave gaps
+  		_highestSheetId++;
+  		sp.setRefID(_highestSheetId);
   		// First slideId is always 256
   		sp.setSlideIdentifier(prev == null ? 256 : (prev.getSlideIdentifier() + 1));
   		
@@ -49,7 +55,7 @@
   		
   		
   		// Create a new Slide
-  		Slide slide = new Slide(sp.getRefID(), _slides.length+1);
+  		Slide slide = new Slide(sp.getSlideIdentifier(), sp.getRefID(), _slides.length+1);
   		// Add in to the list of Slides
   		Slide[] s = new Slide[_slides.length+1];
   		System.arraycopy(_slides, 0, s, 0, _slides.length);
