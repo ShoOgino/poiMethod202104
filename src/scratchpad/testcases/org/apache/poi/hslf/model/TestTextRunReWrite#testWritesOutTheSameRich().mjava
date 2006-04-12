@@ -1,0 +1,57 @@
+    public void testWritesOutTheSameRich() throws Exception {
+    	// Grab the first text run on the first sheet
+    	TextRun tr1 = ss.getSlides()[0].getTextRuns()[0];
+    	
+    	// Get the first rich text run
+    	RichTextRun rtr1 = tr1.getRichTextRuns()[0];
+    	
+    	
+    	// Check that the text sizes are as expected
+    	assertEquals(1, tr1.getRichTextRuns().length);
+    	assertEquals(30, tr1.getText().length());
+    	assertEquals(30, tr1.getRichTextRuns()[0].getText().length());
+    	assertEquals(30, rtr1.getLength());
+    	assertEquals(30, rtr1.getText().length());
+    	assertEquals(31, rtr1._getRawCharacterStyle().getCharactersCovered());
+    	assertEquals(31, rtr1._getRawParagraphStyle().getCharactersCovered());
+    	
+    	// Set the text to be as it is now
+    	rtr1.setText( rtr1.getText() );
+    	rtr1 = tr1.getRichTextRuns()[0];
+    	
+    	// Check that the text sizes are still as expected
+    	assertEquals(1, tr1.getRichTextRuns().length);
+    	assertEquals(30, tr1.getText().length());
+    	assertEquals(30, tr1.getRichTextRuns()[0].getText().length());
+    	assertEquals(30, rtr1.getLength());
+    	assertEquals(30, rtr1.getText().length());
+    	assertEquals(31, rtr1._getRawCharacterStyle().getCharactersCovered());
+    	assertEquals(31, rtr1._getRawParagraphStyle().getCharactersCovered());
+    	
+    	
+		// Write the slideshow out to a byte array
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ss.write(baos);
+
+		// Build an input stream of it
+		ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+
+		// Use POIFS to query that lot
+		POIFSFileSystem npfs = new POIFSFileSystem(bais);
+
+		// Check that the "PowerPoint Document" sections have the same size
+		DocumentEntry oProps = (DocumentEntry)pfs.getRoot().getEntry("PowerPoint Document");
+		DocumentEntry nProps = (DocumentEntry)npfs.getRoot().getEntry("PowerPoint Document");
+		assertEquals(oProps.getSize(),nProps.getSize());
+
+		// Check that they contain the same data
+		byte[] _oData = new byte[oProps.getSize()];
+		byte[] _nData = new byte[nProps.getSize()];
+		pfs.createDocumentInputStream("PowerPoint Document").read(_oData);
+		npfs.createDocumentInputStream("PowerPoint Document").read(_nData);
+		for(int i=0; i<_oData.length; i++) {
+			System.out.println(i + "\t" + Integer.toHexString(i) + "\t" + _oData[i]);
+			assertEquals(_oData[i], _nData[i]);
+		}
+	}
+
