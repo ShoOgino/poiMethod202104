@@ -1,0 +1,49 @@
+    /**
+     * Verify that we can add TextBox shapes to a slide
+     * @throws Exception
+     */
+    public void testTextBoxWrite() throws Exception {
+        ppt = new SlideShow();
+        Slide sl = ppt.createSlide();
+
+        TextBox txtbox = new TextBox();
+        txtbox.setText("Hello, World!");
+        txtbox.setFontSize(42);
+        txtbox.setBold(true);
+        txtbox.setItalic(true);
+
+        sl.addShape(txtbox);
+
+        txtbox = new TextBox();
+        txtbox.setText("Plain text in default font");
+        sl.addShape(txtbox);
+
+        assertEquals(sl.getShapes().length, 2);
+        
+        //serialize and read again
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ppt.write(out);
+        out.close();
+
+        ppt = new SlideShow(new HSLFSlideShow(new ByteArrayInputStream(out.toByteArray())));
+        sl = ppt.getSlides()[0];
+        assertEquals(sl.getShapes().length, 2);
+
+        Shape[] sh = sl.getShapes();
+        for (int i = 0; i < sh.length; i++) {
+            assertTrue(sh[i] instanceof TextBox);
+            txtbox = (TextBox)sh[i];
+            String text = txtbox.getText();
+            assertNotNull(text);
+
+            assertEquals(txtbox.getRichTextRuns().length, 1);
+            RichTextRun rt = txtbox.getRichTextRuns()[0];
+
+            if (text.equals("Hello, World!")){
+                assertEquals(42, rt.getFontSize());
+                assertTrue(rt.isBold());
+                assertTrue(rt.isItalic());
+            }
+        }
+    }
+
