@@ -19,21 +19,31 @@
 		ensureStyleAtomPresent();
 		
 		// Update the text length for its Paragraph and Character stylings
+		// If it's shared:
+		//   * calculate the new length based on the run's old text
+		//   * this should leave in any +1's for the end of block if needed
+		// If it isn't shared:
+		//   * reset the length, to the new string's length
+		//   * add on +1 if the last block
+		// The last run needs its stylings to be 1 longer than the raw
+		//  text is. This is to define the stylings that any new text
+		//  that is added will inherit
 		TextPropCollection pCol = run._getRawParagraphStyle();
 		TextPropCollection cCol = run._getRawCharacterStyle();
-		// Character style covers the new run
-		cCol.updateTextSize(s.length());
-		// Paragraph might cover other runs to, so remove old size and add new one
-		pCol.updateTextSize( pCol.getCharactersCovered() - run.getLength() + s.length());
-		
-		// If we were dealing with the last RichTextRun in the set, then
-		//  we need to tell the Character TextPropCollections a size 1 bigger 
-		//  than it really is
-		// (The Paragraph one will keep the extra 1 length from before)
-		// This extra style length is used to indicate that new text in
-		//  the paragraph should go into this set of styling
+		int newSize = s.length();
 		if(runID == _rtRuns.length-1) {
-			cCol.updateTextSize( cCol.getCharactersCovered() + 1 );
+			newSize++;
+		}
+		
+		if(run._isParagraphStyleShared()) {
+			pCol.updateTextSize( pCol.getCharactersCovered() - run.getLength() + s.length() );
+		} else {
+			pCol.updateTextSize(newSize);
+		}
+		if(run._isCharacterStyleShared()) {
+			cCol.updateTextSize( cCol.getCharactersCovered() - run.getLength() + s.length() );
+		} else {
+			cCol.updateTextSize(newSize);
 		}
 		
 		// Build up the new text
