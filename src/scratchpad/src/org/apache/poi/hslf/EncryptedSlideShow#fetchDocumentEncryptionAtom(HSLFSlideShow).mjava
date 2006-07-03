@@ -1,0 +1,53 @@
+	/**
+	 * Return the DocumentEncryptionAtom for a HSLFSlideShow, or
+	 *  null if there isn't one.
+	 * @return a DocumentEncryptionAtom, or null if there isn't one
+	 */
+	public static DocumentEncryptionAtom fetchDocumentEncryptionAtom(HSLFSlideShow hss) {
+		// Will be the last Record pointed to by the 
+		//  first PersistPrtHolder, if there is one
+		
+		CurrentUserAtom cua = hss.getCurrentUserAtom();
+		if(cua.getCurrentEditOffset() != 0) {
+			// Grab the details of the UserEditAtom there
+			Record r = Record.buildRecordAtOffset(
+					hss.getUnderlyingBytes(),
+					(int)cua.getCurrentEditOffset()
+			);
+			if(! (r instanceof UserEditAtom)) { return null; }
+			UserEditAtom uea = (UserEditAtom)r;
+			
+			// Now get the PersistPtrHolder
+			Record r2 = Record.buildRecordAtOffset(
+					hss.getUnderlyingBytes(),
+					uea.getPersistPointersOffset()
+			);
+			if(! (r2 instanceof PersistPtrHolder)) { return null; }
+			PersistPtrHolder pph = (PersistPtrHolder)r2;
+			
+			// Now get the last record
+			int[] slideIds = pph.getKnownSlideIDs();
+			int maxSlideId = -1;
+			for(int i=0; i<slideIds.length; i++) {
+				if(slideIds[i] > maxSlideId) { maxSlideId = slideIds[i]; }
+			}
+			if(maxSlideId == -1) { return null; }
+			
+			int offset = (
+					(Integer)pph.getSlideLocationsLookup().get(
+							new Integer(maxSlideId)
+					) ).intValue();
+			Record r3 = Record.buildRecordAtOffset(
+					hss.getUnderlyingBytes(),
+					offset
+			);
+			
+			// If we have a DocumentEncryptionAtom, it'll be this one
+			if(r3 instanceof DocumentEncryptionAtom) {
+				return (DocumentEncryptionAtom)r3;
+			}
+		}
+		
+		return null;
+	}
+
