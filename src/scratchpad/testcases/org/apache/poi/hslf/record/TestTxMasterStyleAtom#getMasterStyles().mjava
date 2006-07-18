@@ -1,0 +1,40 @@
+    /**
+     * Collect all TxMasterStyleAtom records contained in the supplied slide show.
+     * There must be a TxMasterStyleAtom per each type of text defined in TextHeaderAtom
+     */
+    protected TxMasterStyleAtom[] getMasterStyles(){
+        ArrayList lst = new ArrayList();
+
+        Record[] core = _ppt.getMostRecentCoreRecords();
+        for (int i = 0; i < core.length; i++) {
+            if(core[i].getRecordType() == RecordTypes.MainMaster.typeID){
+                Record[] rec = core[i].getChildRecords();
+                int cnt = 0;
+                for (int j = 0; j < rec.length; j++) {
+                    if (rec[j] instanceof TxMasterStyleAtom) {
+                        lst.add(rec[j]);
+                        cnt++;
+                    }
+                }
+                assertEquals("MainMaster must contain 7 TxMasterStyleAtoms ", 7, cnt);
+            } else if(core[i].getRecordType() == RecordTypes.Document.typeID){
+                TxMasterStyleAtom txstyle = null;
+                Document doc = (Document)core[i];
+                Record[] rec = doc.getEnvironment().getChildRecords();
+                for (int j = 0; j < rec.length; j++) {
+                    if (rec[j] instanceof TxMasterStyleAtom) {
+                        if (txstyle != null)  fail("Document.Environment must contain 1 TxMasterStyleAtom");
+                        txstyle = (TxMasterStyleAtom)rec[j];
+                    }
+                }
+                assertNotNull("TxMasterStyleAtom not found in Document.Environment", txstyle);
+
+                assertEquals("Document.Environment must contain TxMasterStyleAtom  with type=TextHeaderAtom.OTHER_TYPE",
+                        TextHeaderAtom.OTHER_TYPE, txstyle.getTextType());
+                lst.add(txstyle);
+            }
+        }
+
+        return (TxMasterStyleAtom[])lst.toArray(new TxMasterStyleAtom[lst.size()]);
+    }
+
