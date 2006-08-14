@@ -1,0 +1,38 @@
+  /**
+   * Tests reading in the entries, comparing them against the expected entries.
+   * Then tests writing the document out and reading the entries yet again.
+   *
+   * @throws Exception if an unexpected error occurs.
+   */
+  public void testReadWrite()
+    throws Exception
+  {
+    // This document is widely available on the internet as "blair.doc".
+    // I tried stripping the content and saving the document but my version
+    // of Word (from Office XP) strips this table out.
+    InputStream stream = new BufferedInputStream(new FileInputStream(testFile));
+    HWPFDocument doc;
+    try
+    {
+      doc = new HWPFDocument(stream);
+    }
+    finally
+    {
+      stream.close();
+    }
+
+    // Check what we just read.
+    assertEquals("List of saved-by entries was not as expected",
+                 expected, doc.getSavedByTable().getEntries());
+
+    // Now write the entire document out, and read it back in...
+    ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+    doc.write(byteStream);
+    InputStream copyStream = new ByteArrayInputStream(byteStream.toByteArray());
+    HWPFDocument copy = new HWPFDocument(copyStream);
+
+    // And check again.
+    assertEquals("List of saved-by entries was incorrect after writing",
+                 expected, copy.getSavedByTable().getEntries());
+  }
+
