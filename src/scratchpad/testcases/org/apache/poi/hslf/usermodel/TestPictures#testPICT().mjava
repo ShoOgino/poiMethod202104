@@ -1,0 +1,46 @@
+    /**
+     * Test read/write Macintosh PICT
+     */
+    public void testPICT() throws Exception {
+        SlideShow ppt = new SlideShow();
+
+        Slide slide = ppt.createSlide();
+        File img = new File(cwd, "cow.pict");
+        int idx = ppt.addPicture(img, Picture.PICT);
+        Picture pict = new Picture(idx);
+        assertEquals(idx, pict.getPictureIndex());
+        slide.addShape(pict);
+
+        //serialize and read again
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ppt.write(out);
+        out.close();
+
+        ppt = new SlideShow(new HSLFSlideShow(new ByteArrayInputStream(out.toByteArray())));
+
+        //make sure we can read this picture shape and it refers to the correct picture data
+        Shape[] sh = ppt.getSlides()[0].getShapes();
+        assertEquals(1, sh.length);
+        pict = (Picture)sh[0];
+        assertEquals(idx, pict.getPictureIndex());
+
+        //check picture data
+        PictureData[] pictures = ppt.getPictureData();
+        //the Picture shape refers to the PictureData object in the Presentation
+        assertEquals(pict.getPictureData(), pictures[0]);
+
+        assertEquals(1, pictures.length);
+        assertEquals(Picture.PICT, pictures[0].getType());
+        assertTrue(pictures[0] instanceof PICT);
+        //compare the content of the initial file with what is stored in the PictureData
+        byte[] src_bytes = read(img);
+        byte[] ppt_bytes = pictures[0].getData();
+        assertEquals(src_bytes.length, ppt_bytes.length);
+        //in PICT the first 512 bytes are MAC specific and may not be preserved, ignore them
+        byte[] b1 = new byte[src_bytes.length-512];
+        System.arraycopy(src_bytes, 512, b1, 0, b1.length);
+        byte[] b2 = new byte[ppt_bytes.length-512];
+        System.arraycopy(ppt_bytes, 512, b2, 0, b2.length);
+        assertTrue(Arrays.equals(b1, b2));
+    }
+

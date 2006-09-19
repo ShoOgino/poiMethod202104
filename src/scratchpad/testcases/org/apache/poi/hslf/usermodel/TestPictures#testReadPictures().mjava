@@ -1,15 +1,68 @@
+    /**
+     * Read pictures in different formats from a reference slide show
+     */
     public void testReadPictures() throws Exception {
 
-        HSLFSlideShow ppt = new HSLFSlideShow(filename);
-        PictureData[] pict = ppt.getPictures();
-        assertNotNull(pict);
-        for (int i = 0; i < pict.length; i++) {
-            byte[] data = pict[i].getData();
+        byte[] src_bytes, ppt_bytes, b1, b2;
+        Picture pict;
+        PictureData pdata;
 
-            BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
-            assertNotNull(img);
-            assertEquals(Picture.PNG, pict[i].getType());
-        }
-        ppt.close();
+        SlideShow ppt = new SlideShow(new HSLFSlideShow(new File(cwd, "pictures.ppt").getPath()));
+        Slide[] slides = ppt.getSlides();
+        PictureData[] pictures = ppt.getPictureData();
+        assertEquals(5, pictures.length);
+
+        pict = (Picture)slides[0].getShapes()[0]; //the first slide contains JPEG
+        pdata = pict.getPictureData();
+        assertTrue(pdata instanceof JPEG);
+        assertEquals(Picture.JPEG, pdata.getType());
+        src_bytes = pdata.getData();
+        ppt_bytes = read(new File(cwd, "clock.jpg"));
+        assertTrue(Arrays.equals(src_bytes, ppt_bytes));
+
+        pict = (Picture)slides[1].getShapes()[0]; //the second slide contains PNG
+        pdata = pict.getPictureData();
+        assertTrue(pdata instanceof PNG);
+        assertEquals(Picture.PNG, pdata.getType());
+        src_bytes = pdata.getData();
+        ppt_bytes = read(new File(cwd, "tomcat.png"));
+        assertTrue(Arrays.equals(src_bytes, ppt_bytes));
+
+        pict = (Picture)slides[2].getShapes()[0]; //the third slide contains WMF
+        pdata = pict.getPictureData();
+        assertTrue(pdata instanceof WMF);
+        assertEquals(Picture.WMF, pdata.getType());
+        src_bytes = pdata.getData();
+        ppt_bytes = read(new File(cwd, "santa.wmf"));
+        assertEquals(src_bytes.length, ppt_bytes.length);
+        //ignore the first 22 bytes - it is a WMF metafile header
+        b1 = new byte[src_bytes.length-22];
+        System.arraycopy(src_bytes, 22, b1, 0, b1.length);
+        b2 = new byte[ppt_bytes.length-22];
+        System.arraycopy(ppt_bytes, 22, b2, 0, b2.length);
+        assertTrue(Arrays.equals(b1, b2));
+
+        pict = (Picture)slides[3].getShapes()[0]; //the forth slide contains PICT
+        pdata = pict.getPictureData();
+        assertTrue(pdata instanceof PICT);
+        assertEquals(Picture.PICT, pdata.getType());
+        src_bytes = pdata.getData();
+        ppt_bytes = read(new File(cwd, "cow.pict"));
+        assertEquals(src_bytes.length, ppt_bytes.length);
+        //ignore the first 512 bytes - it is a MAC specific crap
+        b1 = new byte[src_bytes.length-512];
+        System.arraycopy(src_bytes, 512, b1, 0, b1.length);
+        b2 = new byte[ppt_bytes.length-512];
+        System.arraycopy(ppt_bytes, 512, b2, 0, b2.length);
+        assertTrue(Arrays.equals(b1, b2));
+
+        pict = (Picture)slides[4].getShapes()[0]; //the fifth slide contains EMF
+        pdata = pict.getPictureData();
+        assertTrue(pdata instanceof EMF);
+        assertEquals(Picture.EMF, pdata.getType());
+        src_bytes = pdata.getData();
+        ppt_bytes = read(new File(cwd, "wrench.emf"));
+        assertTrue(Arrays.equals(src_bytes, ppt_bytes));
+
     }
 

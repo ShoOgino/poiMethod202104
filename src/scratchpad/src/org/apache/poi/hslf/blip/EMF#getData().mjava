@@ -1,0 +1,26 @@
+    /**
+     * Extract compressed EMF data from a ppt
+     */
+    public byte[] getData(){
+        try {
+            byte[] rawdata = getRawData();
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            InputStream is = new ByteArrayInputStream( rawdata );
+            Header header = new Header();
+            header.read(rawdata, CHECKSUM_SIZE);
+            is.skip(header.getSize() + CHECKSUM_SIZE);
+
+            InflaterInputStream inflater = new InflaterInputStream( is );
+            byte[] chunk = new byte[4096];
+            int count;
+            while ((count = inflater.read(chunk)) >=0 ) {
+                out.write(chunk,0,count);
+            }
+            inflater.close();
+            return out.toByteArray();
+        } catch (IOException e){
+            throw new RuntimeException(e);
+        }
+    }
+
