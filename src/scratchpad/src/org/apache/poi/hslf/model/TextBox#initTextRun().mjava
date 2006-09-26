@@ -1,10 +1,11 @@
     private void initTextRun(){
-
         TextHeaderAtom tha = null;
         TextCharsAtom tca = null;
         TextBytesAtom tba = null;
         StyleTextPropAtom sta = null;
         OutlineTextRefAtom ota = null;
+        
+        // Find the interesting child records 
         Record[] child = _txtbox.getChildRecords();
         for (int i = 0; i < child.length; i++) {
             if (child[i] instanceof TextHeaderAtom) tha = (TextHeaderAtom)child[i];
@@ -14,8 +15,10 @@
             else if (child[i] instanceof TextCharsAtom) tca = (TextCharsAtom)child[i];
         }
 
-        if (ota != null){
-            //TextHeaderAtom, TextBytesAtom and  StyleTextPropAtom are stored outside of  EscherContainerRecord
+        // Special handling for cases where there's an OutlineTextRefAtom
+        if (ota != null) {
+            // TextHeaderAtom, TextBytesAtom and StyleTextPropAtom are
+        	//  stored outside of  EscherContainerRecord
             int idx = ota.getTextIndex();
             Slide sl = (Slide)getSheet();
             Record[] rec = sl.getSlideAtomsSet().getSlideRecords();
@@ -35,7 +38,17 @@
                 }
             }
         }
-        if(tba != null) _txtrun = new TextRun(tha,tba,sta);
-        else if (tca != null) _txtrun = new TextRun(tha,tca,sta);
+        
+        // If we found the records we needed, create a TextRun
+        if(tba != null) {
+        	// Bytes based Text Run
+        	_txtrun = new TextRun(tha,tba,sta);
+        } else if (tca != null) {
+        	// Characters (unicode) based Text Run
+        	_txtrun = new TextRun(tha,tca,sta);
+        } else {
+        	// Empty text box
+        	System.err.println("Warning - no text records found for TextBox");
+        }
     }
 
