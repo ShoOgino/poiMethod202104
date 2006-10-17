@@ -1,0 +1,33 @@
+    /**
+     * Check we can dynamically assign a slide master to a slide.
+     */
+    public void testChangeSlideMaster() throws Exception {
+        SlideShow ppt = new SlideShow(new HSLFSlideShow(home + "/slide_master.ppt"));
+        SlideMaster[] master = ppt.getSlidesMasters();
+        Slide[] slide = ppt.getSlides();
+        int sheetNo;
+
+        //each slide uses its own master
+        assertEquals(slide[0].getMasterSheet()._getSheetNumber(), master[0]._getSheetNumber());
+        assertEquals(slide[1].getMasterSheet()._getSheetNumber(), master[1]._getSheetNumber());
+
+        //all slides use the first master slide
+        sheetNo = master[0]._getSheetNumber();
+        for (int i = 0; i < slide.length; i++) {
+            slide[i].setMasterSheet(master[0]);
+        }
+
+        ByteArrayOutputStream out;
+
+        out = new ByteArrayOutputStream();
+        ppt.write(out);
+        out.close();
+
+        ppt = new SlideShow(new HSLFSlideShow(new ByteArrayInputStream(out.toByteArray())));
+        master = ppt.getSlidesMasters();
+        slide = ppt.getSlides();
+        for (int i = 0; i < slide.length; i++) {
+            assertEquals(sheetNo, slide[i].getMasterSheet()._getSheetNumber());
+        }
+    }
+

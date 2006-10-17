@@ -1,8 +1,45 @@
     public void fill(Shape shape){
-        if (paint instanceof Color){
-            Color color = (Color)paint;
+        if(clip != null) {
+            java.awt.Rectangle bounds = getTransform().createTransformedShape(shape).getBounds();
+            if (bounds.width == 0) bounds.width = 1;
+            if (bounds.height == 0) bounds.height = 1;
+             if (!clip.getBounds().contains(bounds)) {
+                return;
+            }
+        }
+        PathIterator it = shape.getPathIterator(transform);
+        ArrayList pnt = new ArrayList();
+        double[] coords = new double[6];
+        while(!it.isDone()){
+            int type = it.currentSegment(coords);
+            if (type != PathIterator.SEG_CLOSE) {
+                pnt.add(new Point((int)coords[0], (int)coords[1]));
+            }
+            it.next();
+        }
+        int[] xPoints= new int[pnt.size()];
+        int[] yPoints= new int[pnt.size()];
+        for (int i = 0; i < pnt.size(); i++) {
+            Point p = (Point)pnt.get(i);
+            xPoints[i] = p.x;
+            yPoints[i] = p.y;
         }
 
-        throw new RuntimeException("Not implemented");
+        AutoShape r = new AutoShape(ShapeTypes.Rectangle);
+        if (paint instanceof Color){
+            Color color = (Color)paint;
+            r.setFillColor(color);
+        }
+        if(getColor() != null) r.setLineColor(getColor());
+        if (stroke instanceof BasicStroke){
+            BasicStroke bs = (BasicStroke)stroke;
+            r.setLineWidth(bs.getLineWidth());
+            float[] dash = bs.getDashArray();
+            if (dash != null) r.setLineDashing(Line.PEN_DASH);
+        }
+
+        java.awt.Rectangle bounds = transform.createTransformedShape(shape).getBounds();
+        r.setAnchor(bounds);
+        group.addShape(r);
     }
 

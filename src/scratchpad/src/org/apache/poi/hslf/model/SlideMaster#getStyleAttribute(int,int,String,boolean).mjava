@@ -1,0 +1,31 @@
+    /**
+     * Pickup a style attribute from the master.
+     * This is the "workhorse" which returns the default style attrubutes. 
+     */
+    public TextProp getStyleAttribute(int txtype, int level, String name, boolean isCharacter) {
+
+        TextProp prop = null;
+        for (int i = level; i >= 0; i--) {
+            TextPropCollection[] styles =
+                    isCharacter ? _txmaster[txtype].getCharacterStyles() : _txmaster[txtype].getParagraphStyles();
+            if (i < styles.length) prop = styles[i].findByName(name);
+            if (prop != null) break;
+        }
+        if (prop == null) {
+            switch (txtype) {
+                case TextHeaderAtom.CENTRE_BODY_TYPE:
+                case TextHeaderAtom.HALF_BODY_TYPE:
+                case TextHeaderAtom.QUARTER_BODY_TYPE:
+                    txtype = TextHeaderAtom.BODY_TYPE;
+                    break;
+                case TextHeaderAtom.CENTER_TITLE_TYPE:
+                    txtype = TextHeaderAtom.TITLE_TYPE;
+                    break;
+                default:
+                    return null;
+            }
+            prop = getStyleAttribute(txtype, level, name, isCharacter);
+        }
+        return prop;
+    }
+
