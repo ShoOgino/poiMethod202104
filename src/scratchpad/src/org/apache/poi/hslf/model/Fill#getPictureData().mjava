@@ -1,0 +1,28 @@
+    /**
+     * <code>PictureData</code> object used in a texture, pattern of picture fill.
+     */
+    public PictureData getPictureData(){
+        EscherOptRecord opt = (EscherOptRecord)Shape.getEscherChild(shape.getSpContainer(), EscherOptRecord.RECORD_ID);
+        EscherSimpleProperty p = (EscherSimpleProperty)Shape.getEscherProperty(opt, EscherProperties.FILL__PATTERNTEXTURE);
+        if (p == null) return null;
+
+        SlideShow ppt = shape.getSheet().getSlideShow();
+        PictureData[] pict = ppt.getPictureData();
+        Document doc = ppt.getDocumentRecord();
+
+        EscherContainerRecord dggContainer = doc.getPPDrawingGroup().getDggContainer();
+        EscherContainerRecord bstore = (EscherContainerRecord)Shape.getEscherChild(dggContainer, EscherContainerRecord.BSTORE_CONTAINER);
+
+        java.util.List lst = bstore.getChildRecords();
+        int idx = p.getPropertyValue();
+        EscherBSERecord bse = (EscherBSERecord)lst.get(idx);
+        for ( int i = 0; i < pict.length; i++ ) {
+			if (pict[i].getOffset() ==  bse.getOffset()){
+                return pict[i];
+            }
+        }
+        throw new RuntimeException("Picture data not found: \n" +
+                "  bse: " + bse + " at " + bse.getOffset() );
+
+    }
+
