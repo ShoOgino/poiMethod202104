@@ -1,0 +1,34 @@
+  private void fillImageContent()
+  {
+    byte[] rawContent = getRawContent();
+
+    // HACK: Detect compressed images.  In reality there should be some way to determine
+    //       this from the first 32 bytes, but I can't see any similarity between all the
+    //       samples I have obtained, nor any similarity in the data block contents.
+    if (matchSignature(rawContent, COMPRESSED1, 32) || matchSignature(rawContent, COMPRESSED2, 32))
+    {
+      try
+      {
+        InflaterInputStream in = new InflaterInputStream(
+          new ByteArrayInputStream(rawContent, 33, rawContent.length - 33));
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buf = new byte[4096];
+        int readBytes;
+        while ((readBytes = in.read(buf)) > 0)
+        {
+          out.write(buf, 0, readBytes);
+        }
+        content = out.toByteArray();
+      }
+      catch (IOException e)
+      {
+        // Problems reading from the actual ByteArrayInputStream should never happen
+        // so this will only ever be a ZipException.
+        log.log(POILogger.INFO, "Possibly corrupt compression or non-compressed data", e);
+      }
+    } else {
+      // Raw data is not compressed.
+      content = rawContent;
+    }
+  }
+
