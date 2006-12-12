@@ -1,0 +1,29 @@
+    /**
+     * Test sorting of properties in <code>DirectoryProperty</code>
+     */
+    public void testSortProperties() throws IOException {
+        InputStream is = new FileInputStream(testFile);
+        POIFSFileSystem fs = new POIFSFileSystem(is);
+        is.close();
+        Property[] props = getVBAProperties(fs);
+
+        assertEquals(_entries.length, props.length);
+
+        // (1). See that there is a problem with the old case-sensitive property comparartor
+        Arrays.sort(props, new CaseSensitivePropertyComparator());
+        try {
+            for (int i = 0; i < props.length; i++) {
+                assertEquals(_entries[i], props[i].getName());
+            }
+            fail("case-sensitive property comparator returns properties in wrong order");
+        } catch (ComparisonFailure e){
+            ; // as expected
+        }
+
+        // (2) Verify that the fixed proeprty comparator works right
+        Arrays.sort(props, new DirectoryProperty.PropertyComparator());
+        for (int i = 0; i < props.length; i++) {
+            assertEquals(_entries[i], props[i].getName());
+        }
+    }
+

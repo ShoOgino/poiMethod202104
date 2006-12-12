@@ -1,0 +1,23 @@
+    /**
+     * Serialize file system and verify that the order of properties is the same as in the original file.
+     */
+    public void testSerialization() throws IOException {
+        InputStream is = new FileInputStream(testFile);
+        POIFSFileSystem fs = new POIFSFileSystem(is);
+        is.close();
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        fs.writeFilesystem(out);
+        out.close();
+        is = new ByteArrayInputStream(out.toByteArray());
+        fs = new POIFSFileSystem(is);
+        is.close();
+        Property[] props = getVBAProperties(fs);
+        Arrays.sort(props, new DirectoryProperty.PropertyComparator());
+
+        assertEquals(_entries.length, props.length);
+        for (int i = 0; i < props.length; i++) {
+            assertEquals(_entries[i], props[i].getName());
+        }
+    }
+
