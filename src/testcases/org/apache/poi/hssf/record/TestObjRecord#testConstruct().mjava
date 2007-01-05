@@ -1,0 +1,26 @@
+    public void testConstruct() {
+        ObjRecord record = new ObjRecord();
+        CommonObjectDataSubRecord ftCmo = new CommonObjectDataSubRecord();
+        ftCmo.setObjectType( CommonObjectDataSubRecord.OBJECT_TYPE_COMMENT);
+        ftCmo.setObjectId( (short) 1024 );
+        ftCmo.setLocked( true );
+        ftCmo.setPrintable( true );
+        ftCmo.setAutofill( true );
+        ftCmo.setAutoline( true );
+        record.addSubRecord(ftCmo);
+        EndSubRecord ftEnd = new EndSubRecord();
+        record.addSubRecord(ftEnd);
+
+        //serialize and read again
+        byte [] recordBytes = record.serialize();
+        //cut off the record header
+        byte [] bytes = new byte[recordBytes.length-4];
+        System.arraycopy(recordBytes, 4, bytes, 0, bytes.length);
+
+        record = new ObjRecord(new TestcaseRecordInputStream(ObjRecord.sid, (short)bytes.length, bytes));
+        List subrecords = record.getSubRecords();
+        assertEquals( 2, subrecords.size() );
+        assertTrue( subrecords.get(0) instanceof CommonObjectDataSubRecord);
+        assertTrue( subrecords.get(1) instanceof EndSubRecord );
+    }
+
