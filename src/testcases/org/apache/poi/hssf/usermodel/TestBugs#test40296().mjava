@@ -1,0 +1,29 @@
+    /**
+     * Bug 40296:  	HSSFCell.setCellFormula throws
+     *   ClassCastException if cell is created using HSSFRow.createCell(short column, int type)
+     */
+    public void test40296() throws Exception {
+        HSSFWorkbook wb = new HSSFWorkbook();
+
+        HSSFWorkbook workBook = new HSSFWorkbook();
+        HSSFSheet workSheet = workBook.createSheet("Sheet1");
+        HSSFCell cell;
+        HSSFRow row;
+
+        row = workSheet.createRow(0);
+        cell = row.createCell((short)0, HSSFCell.CELL_TYPE_NUMERIC);
+        cell.setCellValue(1.0);
+        cell = row.createCell((short)1, HSSFCell.CELL_TYPE_NUMERIC);
+        cell.setCellValue(2.0);
+        cell = row.createCell((short)2, HSSFCell.CELL_TYPE_FORMULA);
+        cell.setCellFormula("SUM(A1:B1)");
+
+        //serialize and read again
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        wb.write(out);
+        out.close();
+
+        wb = new HSSFWorkbook(new ByteArrayInputStream(out.toByteArray()));
+        assertTrue("No Exceptions while reading file", true);
+    }
+
