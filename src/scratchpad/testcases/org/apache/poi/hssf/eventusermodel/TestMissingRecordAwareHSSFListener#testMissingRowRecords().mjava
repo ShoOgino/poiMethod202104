@@ -1,0 +1,63 @@
+	public void testMissingRowRecords() throws Exception {
+		File f = new File(dirname + "/MissingBits.xls");
+		
+		HSSFRequest req = new HSSFRequest();
+		MockHSSFListener mockListen = new MockHSSFListener();
+		MissingRecordAwareHSSFListener listener = new MissingRecordAwareHSSFListener(mockListen);
+		req.addListenerForAllRecords(listener);
+		
+		POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(f));
+		HSSFEventFactory factory = new HSSFEventFactory();
+		factory.processWorkbookEvents(req, fs);
+		
+		// Check we got the dummy records
+		Record[] r = (Record[])
+			mockListen.records.toArray(new Record[mockListen.records.size()]);
+		
+		// We have rows 0, 1, 2, 20 and 21
+		int row0 = -1;
+		for(int i=0; i<r.length; i++) {
+			if(r[i] instanceof RowRecord) {
+				RowRecord rr = (RowRecord)r[i];
+				if(rr.getRowNumber() == 0) { row0 = i; }
+			}
+		}
+		assertTrue(row0 > -1);
+		
+		// Following row 0, we should have 1, 2, then dummy, then 20+21+22
+		assertTrue(r[row0] instanceof RowRecord);
+		assertTrue(r[row0+1] instanceof RowRecord);
+		assertTrue(r[row0+2] instanceof RowRecord);
+		assertTrue(r[row0+3] instanceof MissingRowDummyRecord);
+		assertTrue(r[row0+4] instanceof MissingRowDummyRecord);
+		assertTrue(r[row0+5] instanceof MissingRowDummyRecord);
+		assertTrue(r[row0+6] instanceof MissingRowDummyRecord);
+		// ...
+		assertTrue(r[row0+18] instanceof MissingRowDummyRecord);
+		assertTrue(r[row0+19] instanceof MissingRowDummyRecord);
+		assertTrue(r[row0+20] instanceof RowRecord);
+		assertTrue(r[row0+21] instanceof RowRecord);
+		assertTrue(r[row0+22] instanceof RowRecord);
+		
+		// Check things had the right row numbers
+		RowRecord rr;
+		rr = (RowRecord)r[row0+2];
+		assertEquals(2, rr.getRowNumber());
+		rr = (RowRecord)r[row0+20];
+		assertEquals(20, rr.getRowNumber());
+		rr = (RowRecord)r[row0+21];
+		assertEquals(21, rr.getRowNumber());
+		
+		MissingRowDummyRecord mr;
+		mr = (MissingRowDummyRecord)r[row0+3];
+		assertEquals(3, mr.getRowNumber());
+		mr = (MissingRowDummyRecord)r[row0+4];
+		assertEquals(4, mr.getRowNumber());
+		mr = (MissingRowDummyRecord)r[row0+5];
+		assertEquals(5, mr.getRowNumber());
+		mr = (MissingRowDummyRecord)r[row0+18];
+		assertEquals(18, mr.getRowNumber());
+		mr = (MissingRowDummyRecord)r[row0+19];
+		assertEquals(19, mr.getRowNumber());
+	}
+

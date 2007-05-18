@@ -1,0 +1,138 @@
+	public void processRecord(Record record) {
+		int thisRow = -1;
+		int thisColumn = -1;
+		
+		switch (record.getSid())
+        {
+            // the BOFRecord can represent either the beginning of a sheet or the workbook
+            case BOFRecord.sid:
+                BOFRecord bof = (BOFRecord) record;
+                if (bof.getType() == bof.TYPE_WORKBOOK)
+                {
+                	// Reset the row and column counts - new workbook
+                	lastSeenRow = -1;
+                	lastSeenColumn = -1;
+                    //System.out.println("Encountered workbook");
+                } else if (bof.getType() == bof.TYPE_WORKSHEET)
+                {
+                	// Reset the row and column counts - new sheet
+                	lastSeenRow = -1;
+                	lastSeenColumn = -1;
+                    //System.out.println("Encountered sheet reference");
+                }
+                break;
+            case BoundSheetRecord.sid:
+                BoundSheetRecord bsr = (BoundSheetRecord) record;
+                System.out.println("New sheet named: " + bsr.getSheetname());
+                break;
+            case RowRecord.sid:
+                RowRecord rowrec = (RowRecord) record;
+                //System.out.println("Row " + rowrec.getRowNumber() + " found, first column at "
+                //        + rowrec.getFirstCol() + " last column at " + rowrec.getLastCol());
+                
+                // If there's a jump in rows, fire off missing row records
+                if(lastSeenRow+1 < rowrec.getRowNumber()) {
+                	for(int i=(lastSeenRow+1); i<rowrec.getRowNumber(); i++) {
+                		MissingRowDummyRecord dr = new MissingRowDummyRecord(i);
+                		childListener.processRecord(dr);
+                	}
+                }
+                
+                // Record this as the last row we saw
+                lastSeenRow = rowrec.getRowNumber();
+                break;
+                
+                
+            // These are all the "cell" records
+                
+            case BlankRecord.sid:
+            	BlankRecord brec = (BlankRecord) record;
+                thisRow = brec.getRow();
+                thisColumn = brec.getColumn();
+            case BoolErrRecord.sid:
+            	BoolErrRecord berec = (BoolErrRecord) record;
+                thisRow = berec.getRow();
+                thisColumn = berec.getColumn();
+            case FormulaRecord.sid:
+            	FormulaRecord frec = (FormulaRecord) record;
+            	thisRow = frec.getRow();
+            	thisColumn = frec.getColumn();
+            case LabelRecord.sid:
+            	LabelRecord lrec = (LabelRecord) record;
+                thisRow = lrec.getRow();
+                thisColumn = lrec.getColumn();
+                //System.out.println("Cell found containing String "
+                //        + " at row " + lrec.getRow() + " and column " + lrec.getColumn());
+                break;
+            case LabelSSTRecord.sid:
+            	LabelSSTRecord lsrec = (LabelSSTRecord) record;
+                thisRow = lsrec.getRow();
+                thisColumn = lsrec.getColumn();
+                //System.out.println("Cell found containing String "
+                //        + " at row " + lsrec.getRow() + " and column " + lsrec.getColumn());
+                break;
+            case NoteRecord.sid:
+            	NoteRecord nrec = (NoteRecord) record;
+            	thisRow = nrec.getRow();
+            	thisColumn = nrec.getColumn();
+            case NumberRecord.sid:
+                NumberRecord numrec = (NumberRecord) record;
+                thisRow = numrec.getRow();
+                thisColumn = numrec.getColumn();
+                //System.out.println("Cell found with value " + numrec.getValue()
+                //        + " at row " + numrec.getRow() + " and column " + numrec.getColumn());
+                break;
+            case RKRecord.sid:
+            	RKRecord rkrec = (RKRecord) record;
+            	thisRow = rkrec.getRow();
+            	thisColumn = rkrec.getColumn();
+            default:
+            	//System.out.println(record.getClass());
+            	break;
+        }
+    	System.out.println(record.getClass());
+		
+		// Do we need to fire dummy end-of-row records?
+		if(thisRow != lastSeenRow) {
+			for(int i=lastSeenRow; i<thisRow; i++) {
+				int cols = -1;
+				if(i == lastSeenRow) {
+					cols = lastSeenColumn;
+				}
+				LastCellOfRowDummyRecord r = new LastCellOfRowDummyRecord(i, cols);
+				childListener.processRecord(r);
+			}
+		}
+		// If we've finished with the columns, then fire the final
+		//  dummy end-of-row record
+		if(lastSeenRow != -1 && lastSeenColumn != -1 && thisRow == -1) {
+			LastCellOfRowDummyRecord r = new LastCellOfRowDummyRecord(lastSeenRow, lastSeenColumn);
+			childListener.processRecord(r);
+			
+			lastSeenRow = -1;
+			lastSeenColumn = -1;
+		}
+		
+		// If we've moved onto a new row, the ensure we re-set
+		//  the column counter
+		if(thisRow != lastSeenRow) {
+			lastSeenColumn = -1;
+		}
+		
+		// Do we need to fire dummy cell records?
+		if(lastSeenColumn != (thisColumn-1)) {
+			for(int i=lastSeenColumn+1; i<thisColumn; i++) {
+				MissingCellDummyRecord r = new MissingCellDummyRecord(thisRow, i);
+				childListener.processRecord(r);
+			}
+		}
+		
+		// Update cell and row counts if doing cells
+		if(thisColumn != -1) {
+			lastSeenRow = thisRow;
+			lastSeenColumn = thisColumn;
+		}
+		
+		childListener.processRecord(record);
+	}
+

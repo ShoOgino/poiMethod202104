@@ -1,0 +1,113 @@
+	public void testMissingCellRecords() throws Exception {
+		File f = new File(dirname + "/MissingBits.xls");
+		
+		HSSFRequest req = new HSSFRequest();
+		MockHSSFListener mockListen = new MockHSSFListener();
+		MissingRecordAwareHSSFListener listener = new MissingRecordAwareHSSFListener(mockListen);
+		req.addListenerForAllRecords(listener);
+		
+		POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(f));
+		HSSFEventFactory factory = new HSSFEventFactory();
+		factory.processWorkbookEvents(req, fs);
+		
+		// Check we got the dummy records
+		Record[] r = (Record[])
+			mockListen.records.toArray(new Record[mockListen.records.size()]);
+		
+		// Find the cell at 0,0
+		int cell00 = -1;
+		for(int i=0; i<r.length; i++) {
+			if(r[i] instanceof LabelSSTRecord) {
+				LabelSSTRecord lr = (LabelSSTRecord)r[i];
+				if(lr.getRow() == 0 && lr.getColumn() == 0) { cell00 = i; }
+			}
+		}
+		assertTrue(cell00 > -1);
+		
+		// We have rows 0, 1, 2, 20 and 21
+		// Row 0 has 1 entry, 0
+		// Row 1 has 4 entries, 0+3
+		// Row 2 has 6 entries, 0+5
+		// Row 20 has 5 entries, 0-5
+		// Row 21 has 7 entries, 0+1+3+5+6
+		// Row 22 has 12 entries, 0+3+4+11
+		
+		// Row 0
+		assertFalse(r[cell00+0] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+1] instanceof MissingCellDummyRecord);
+		
+		// Row 1
+		assertFalse(r[cell00+2] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+3] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+4] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+5] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+6] instanceof MissingCellDummyRecord);
+		
+		// Row 2
+		assertFalse(r[cell00+7] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+8] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+9] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+10] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+11] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+12] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+13] instanceof MissingCellDummyRecord);
+		
+		// Row 3-19
+		assertFalse(r[cell00+14] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+15] instanceof MissingCellDummyRecord);
+		
+		// Row 20
+		assertFalse(r[cell00+31] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+32] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+33] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+34] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+35] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+36] instanceof MissingCellDummyRecord);
+		
+		// Row 21
+		assertFalse(r[cell00+37] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+38] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+39] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+40] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+41] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+42] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+43] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+44] instanceof MissingCellDummyRecord);
+		
+		// Row 22
+		assertFalse(r[cell00+45] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+46] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+47] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+48] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+49] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+50] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+51] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+52] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+53] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+54] instanceof MissingCellDummyRecord);
+		assertTrue(r[cell00+55] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+56] instanceof MissingCellDummyRecord);
+		assertFalse(r[cell00+57] instanceof MissingCellDummyRecord);
+		
+		// Check some numbers
+		MissingCellDummyRecord mc;
+		
+		mc = (MissingCellDummyRecord)r[cell00+3];
+		assertEquals(1, mc.getRow());
+		assertEquals(1, mc.getColumn());
+		mc = (MissingCellDummyRecord)r[cell00+4];
+		assertEquals(1, mc.getRow());
+		assertEquals(2, mc.getColumn());
+		
+		mc = (MissingCellDummyRecord)r[cell00+8];
+		assertEquals(2, mc.getRow());
+		assertEquals(1, mc.getColumn());
+		mc = (MissingCellDummyRecord)r[cell00+9];
+		assertEquals(2, mc.getRow());
+		assertEquals(2, mc.getColumn());
+		
+		mc = (MissingCellDummyRecord)r[cell00+55];
+		assertEquals(22, mc.getRow());
+		assertEquals(10, mc.getColumn());
+	}
+
