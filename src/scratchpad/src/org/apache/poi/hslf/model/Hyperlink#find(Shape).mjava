@@ -1,0 +1,29 @@
+    /**
+     * Find hyperlink assigned to the supplied shape
+     *
+     * @param shape  <code>Shape</code> to lookup hyperlink in
+     * @return found hyperlink or <code>null</code>
+     */
+    protected static Hyperlink find(Shape shape){
+        ArrayList lst = new ArrayList();
+        SlideShow ppt = shape.getSheet().getSlideShow();
+        //document-level container which stores info about all links in a presentation
+        ExObjList exobj = ppt.getDocumentRecord().getExObjList();
+        if (exobj == null) {
+            return null;
+        }
+
+        EscherContainerRecord spContainer = shape.getSpContainer();
+        List spchild = spContainer.getChildRecords();
+        for (Iterator it = spchild.iterator(); it.hasNext(); ) {
+            EscherRecord obj = (EscherRecord)it.next();
+            if (obj.getRecordId() ==  EscherClientDataRecord.RECORD_ID){
+                byte[] data = ((EscherContainerRecord)obj).serialize();
+                Record[] records = Record.findChildRecords(data, 8, data.length-8);
+                if(records != null) find(records, exobj, lst);
+            }
+        }
+
+        return lst.size() == 1 ? (Hyperlink)lst.get(0) : null;
+    }
+
