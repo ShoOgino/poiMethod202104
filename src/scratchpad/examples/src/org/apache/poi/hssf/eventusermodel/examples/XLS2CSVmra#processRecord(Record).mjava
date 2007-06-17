@@ -9,6 +9,18 @@
 		
 		switch (record.getSid())
         {
+		case SSTRecord.sid:
+			sstRecord = (SSTRecord) record;
+			break;
+		case FormatRecord.sid:
+			FormatRecord fr = (FormatRecord) record;
+			customFormatRecords.put(new Integer(fr.getIndexCode()), fr);
+			break;
+		case ExtendedFormatRecord.sid:
+			ExtendedFormatRecord xr = (ExtendedFormatRecord) record;
+			xfRecords.add(xr);
+			break;
+			
         case BlankRecord.sid:
         	BlankRecord brec = (BlankRecord) record;
         	
@@ -28,7 +40,13 @@
         	
         	thisRow = frec.getRow();
         	thisColumn = frec.getColumn();
-        	thisStr = '"' + frec.toString() + '"';
+        	
+        	if(outputFormulaValues) {
+                thisStr = formatNumberDateCell(frec, frec.getValue());
+        	} else {
+        		// TODO: Output the formula string
+        		thisStr = '"' + frec.toString() + '"';
+        	}
             break;
         case LabelRecord.sid:
         	LabelRecord lrec = (LabelRecord) record;
@@ -42,13 +60,18 @@
         	
             thisRow = lsrec.getRow();
             thisColumn = lsrec.getColumn();
-            thisStr = '"' + "(TODO)" + '"';
+            if(sstRecord == null) {
+            	thisStr = '"' + "(No SST Record, can't identify string)" + '"';
+            } else {
+            	thisStr = '"' + sstRecord.getString(lsrec.getSSTIndex()).toString() + '"';
+            }
             break;
         case NoteRecord.sid:
         	NoteRecord nrec = (NoteRecord) record;
         	
         	thisRow = nrec.getRow();
         	thisColumn = nrec.getColumn();
+        	// TODO: Find object to match nrec.getShapeId()
         	thisStr = '"' + "(TODO)" + '"';
             break;
         case NumberRecord.sid:
@@ -56,7 +79,9 @@
             
             thisRow = numrec.getRow();
             thisColumn = numrec.getColumn();
-            thisStr = Double.toString(numrec.getValue()); // TODO: Formatting
+            
+            // Format
+            thisStr = formatNumberDateCell(numrec, numrec.getValue());
             break;
         case RKRecord.sid:
         	RKRecord rkrec = (RKRecord) record;
@@ -68,6 +93,11 @@
         default:
         	break;
         }
+		
+		// Handle new row
+		if(thisRow != -1 && thisRow != lastRowNumber) {
+			lastColumnNumber = -1;
+		}
 		
 		// Handle missing column
 		if(record instanceof MissingCellDummyRecord) {
@@ -95,10 +125,15 @@
 		if(record instanceof LastCellOfRowDummyRecord) {
 			// Print out any missing commas if needed
 			if(minColumns > 0) {
-				for(int i=lastColumnNumber; i<(minColumns-1); i++) {
+				// Columns are 0 based
+				if(lastColumnNumber == -1) { lastColumnNumber = 0; }
+				for(int i=lastColumnNumber; i<(minColumns); i++) {
 					output.print(',');
 				}
 			}
+			
+			// We're onto a new row
+			lastColumnNumber = -1;
 			
 			// End the row
 			output.println();

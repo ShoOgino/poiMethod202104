@@ -1,0 +1,46 @@
+	/**
+	 * Formats a number or date cell, be that a real number, or the 
+	 *  answer to a formula
+	 */
+	private String formatNumberDateCell(CellValueRecordInterface cell, double value) {
+        // Get the built in format, if there is one
+        ExtendedFormatRecord xfr = (ExtendedFormatRecord)
+        	xfRecords.get(cell.getXFIndex());
+        if(xfr == null) {
+        	System.err.println("Cell " + cell.getRow() + "," + cell.getColumn() + " uses XF with index " + cell.getXFIndex() + ", but we don't have that");
+            return Double.toString(value);
+        } else {
+        	int formatIndex = xfr.getFormatIndex();
+        	String format;
+        	if(formatIndex >= HSSFDataFormat.getNumberOfBuiltinBuiltinFormats()) {
+        		FormatRecord tfr = (FormatRecord)customFormatRecords.get(new Integer(formatIndex));
+        		format = tfr.getFormatString();
+        	} else {
+            	format = HSSFDataFormat.getBuiltinFormat(xfr.getFormatIndex());
+        	}
+        	
+        	// Is it a date?
+        	if(HSSFDateUtil.isADateFormat(formatIndex,format) &&
+        			HSSFDateUtil.isValidExcelDate(value)) {
+        		// Java wants M not m for month
+        		format = format.replace('m','M');
+        		// Change \- into -, if it's there
+        		format = format.replace("\\-","-");
+        		
+        		// Format as a date
+        		Date d = HSSFDateUtil.getJavaDate(value);
+        		DateFormat df = new SimpleDateFormat(format);
+	            return df.format(d);
+        	} else {
+        		if(format == "General") {
+        			// Some sort of wierd default
+        			return Double.toString(value);
+        		}
+        		
+        		// Format as a number
+	            DecimalFormat df = new DecimalFormat(format);
+	            return df.format(value);
+        	}
+        }
+	}
+
