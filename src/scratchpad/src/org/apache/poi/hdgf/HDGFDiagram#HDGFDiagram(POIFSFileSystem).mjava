@@ -1,0 +1,29 @@
+	public HDGFDiagram(POIFSFileSystem fs) throws IOException {
+		filesystem = fs;
+		
+		DocumentEntry docProps =
+			(DocumentEntry)filesystem.getRoot().getEntry("VisioDocument");
+
+		// Grab the document stream
+		_docstream = new byte[docProps.getSize()];
+		filesystem.createDocumentInputStream("VisioDocument").read(_docstream);
+		
+		// Check it's really visio
+		String typeString = new String(_docstream, 0, 20);
+		if(! typeString.equals(VISIO_HEADER)) {
+			throw new IllegalArgumentException("Wasn't a valid visio document, started with " + typeString);
+		}
+		
+		// Grab the version number, 0x1a -> 0x1b
+		version = LittleEndian.getShort(_docstream, 0x1a);
+		// Grab the document size, 0x1c -> 0x1f
+		docSize = LittleEndian.getUInt(_docstream, 0x1c);
+		// ??? 0x20 -> 0x23
+		
+		// Grab the pointer to the trailer
+		trailerPointer = VisioPointer.getPointerAt(_docstream, 0x24);
+		
+		// And now grab the trailer
+		trailer = new CompressedPointerBlock(trailerPointer, _docstream);
+	}
+

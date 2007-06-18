@@ -1,0 +1,39 @@
+		/**
+		 * Splits the data up into header + contents, and processes 
+		 */
+		protected void processData(byte[] data, int offset, int len) {
+			if(len > data.length - offset) {
+				len = data.length - offset;
+			}
+			if(offset < 0) { len = 0; }
+			
+			contents = new byte[len];
+			if(len > 0)
+				System.arraycopy(data, offset, contents, 0, contents.length);
+			
+			// If we're of type 20, we have child pointers
+			if(len > 0 && (pointer.type == 20 || pointer.destinationHasPointers())) {
+				// Grab the offset to the number of pointers
+				int nPointersAt = (int)LittleEndian.getUInt(contents, 0);
+				int numPointers = (int)LittleEndian.getUInt(contents, nPointersAt);
+				int unknownA = (int)LittleEndian.getUInt(contents, nPointersAt+4);
+				
+				pointers = new VisioPointer[numPointers];
+				int pos = nPointersAt + 8;
+				for(int i=0; i<numPointers; i++) {
+					pointers[i] = VisioPointer.getPointerAt(contents, pos);
+					pos += 18;
+				}
+			}
+			
+			// If we have strings, try to make sense of them
+			if(len > 0 && (pointer.destinationHasStrings())) {
+				for(int i=0; i<64; i+=1) {
+					short s = LittleEndian.getShort(contents, i);
+					long l = LittleEndian.getUInt(contents, i);
+					System.err.println(i + "\t" + s + "\t" + Integer.toHexString(s));
+					System.err.println(i + "\t" + l + "\t" + Long.toHexString(l));
+				}
+			}
+		}
+
