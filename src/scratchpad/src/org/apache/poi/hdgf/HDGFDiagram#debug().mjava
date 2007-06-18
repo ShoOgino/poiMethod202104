@@ -1,37 +1,40 @@
 	public void debug() throws IOException {
-		System.err.println("Trailer is at " + trailerPointer.offset);
-		System.err.println("Trailer has type " + trailerPointer.type);
-		System.err.println("Trailer has length " + trailerPointer.length);
-		System.err.println("Trailer has format " + trailerPointer.format);
+		System.err.println("Trailer is at " + trailerPointer.getOffset());
+		System.err.println("Trailer has type " + trailerPointer.getType());
+		System.err.println("Trailer has length " + trailerPointer.getLength());
+		System.err.println("Trailer has format " + trailerPointer.getFormat());
 		
-		for(int i=0; i<trailer.getPointers().length; i++) {
-			VisioPointer ptr = trailer.getPointers()[i];
+		for(int i=0; i<trailer.getPointedToStreams().length; i++) {
+			Stream stream = trailer.getPointedToStreams()[i];
+			Pointer ptr = stream.getPointer();
 			
 			System.err.println("Looking at pointer " + i);
-			System.err.println("\tType is " + ptr.type + "\t\t" + Integer.toHexString(ptr.type));
-			System.err.println("\tOffset is " + ptr.offset + "\t\t" + Long.toHexString(ptr.offset));
-			System.err.println("\tAddress is " + ptr.address + "\t" + Long.toHexString(ptr.address));
-			System.err.println("\tLength is " + ptr.length + "\t\t" + Long.toHexString(ptr.length));
-			System.err.println("\tFormat is " + ptr.format + "\t\t" + Long.toHexString(ptr.format));
+			System.err.println("\tType is " + ptr.getType() + "\t\t" + Integer.toHexString(ptr.getType()));
+			System.err.println("\tOffset is " + ptr.getOffset() + "\t\t" + Long.toHexString(ptr.getOffset()));
+			System.err.println("\tAddress is " + ptr.getAddress() + "\t" + Long.toHexString(ptr.getAddress()));
+			System.err.println("\tLength is " + ptr.getLength() + "\t\t" + Long.toHexString(ptr.getLength()));
+			System.err.println("\tFormat is " + ptr.getFormat() + "\t\t" + Long.toHexString(ptr.getFormat()));
 			System.err.println("\tCompressed is " + ptr.destinationCompressed());
+			System.err.println("\tStream is " + stream.getClass());
 			
-			if(ptr.destinationHasPointers()) {
-				PointerBlock pb = PointerBlock.createAppropriateBlock(ptr, _docstream);
+			if(stream instanceof PointerContainingStream) {
+				PointerContainingStream pcs = (PointerContainingStream)stream;
 				
-				if(pb.getPointers() != null && pb.getPointers().length > 0) {
-					System.err.println("\tContains " + pb.getPointers().length + " other pointers");
-					for(int j=0; j<pb.getPointers().length; j++) {
-						VisioPointer sptr = pb.getPointers()[j];
-						System.err.println("\t\t" + j + " - Type is " + sptr.type + "\t\t" + Integer.toHexString(sptr.type));
-						System.err.println("\t\t" + j + " - Length is " + sptr.length + "\t\t" + Long.toHexString(sptr.length));
+				if(pcs.getPointedToStreams() != null && pcs.getPointedToStreams().length > 0) {
+					System.err.println("\tContains " + pcs.getPointedToStreams().length + " other pointers/streams");
+					for(int j=0; j<pcs.getPointedToStreams().length; j++) {
+						Stream ss = pcs.getPointedToStreams()[j];
+						Pointer sptr = ss.getPointer();
+						System.err.println("\t\t" + j + " - Type is " + sptr.getType() + "\t\t" + Integer.toHexString(sptr.getType()));
+						System.err.println("\t\t" + j + " - Length is " + sptr.getLength() + "\t\t" + Long.toHexString(sptr.getLength()));
 					}
 				}
 			}
 			
-			if(ptr.destinationHasStrings()) {
-				System.err.println("**strings**");
-				PointerBlock pb = PointerBlock.createAppropriateBlock(ptr, _docstream);
-				System.err.println(pb.contents.length);
+			if(stream instanceof StringsStream) {
+				System.err.println("\t\t**strings**");
+				StringsStream ss = (StringsStream)stream;
+				System.err.println("\t\t" + ss._getContentsLength());
 			}
 		}
 	}
