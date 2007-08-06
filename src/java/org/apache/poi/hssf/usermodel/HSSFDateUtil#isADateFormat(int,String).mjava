@@ -8,7 +8,7 @@
      *  non US date formats.
      *  
      * @param formatIndex The index of the format, eg from ExtendedFormatRecord.getFormatIndex
-     * @param formatString The format string
+     * @param formatString The format string, eg from FormatRecord.getFormatString
      * @see #isInternalDateFormat(int)
      */
     public static boolean isADateFormat(int formatIndex, String formatString) {
@@ -22,12 +22,26 @@
     		return false;
     	}
     	
+    	String fs = formatString;
+    	
     	// Translate \- into just -, before matching
-    	String fs = formatString.replaceAll("\\\\-","-");
+    	fs = fs.replaceAll("\\\\-","-");
+    	// And \, into ,
+    	fs = fs.replaceAll("\\\\,",",");
+    	// And '\ ' into ' '
+    	fs = fs.replaceAll("\\\\ "," ");
+    	
+    	// If it end in ;@, that's some crazy dd/mm vs mm/dd
+    	//  switching stuff, which we can ignore
+    	fs = fs.replaceAll(";@", "");
+    	
+    	// If it starts with [$-...], then it is a date, but
+    	//  who knows what that starting bit is all about
+    	fs = fs.replaceAll("\\[\\$\\-.*?\\]", "");
     	
     	// Otherwise, check it's only made up of:
-    	//  y m d - /
-    	if(fs.matches("^[ymd\\-/]+$")) {
+    	//  y m d - / ,
+    	if(fs.matches("^[ymd\\-/, ]+$")) {
     		return true;
     	}
     	
