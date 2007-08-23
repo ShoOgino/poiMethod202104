@@ -1,0 +1,25 @@
+	public void testWithCrazyContinueRecords() throws Exception {
+		// Some files have crazy ordering of their continue records
+		// Check that we don't break on them (bug #42844)
+
+		File f = new File(dirname + "/ContinueRecordProblem.xls");
+		
+		HSSFRequest req = new HSSFRequest();
+		MockHSSFListener mockListen = new MockHSSFListener();
+		req.addListenerForAllRecords(mockListen);
+		
+		POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(f));
+		HSSFEventFactory factory = new HSSFEventFactory();
+		factory.processWorkbookEvents(req, fs);
+
+		// Check we got the records
+		assertTrue( mockListen.records.size() > 100 );
+
+		// And none of them are continue ones
+		Record[] r = (Record[])mockListen.records.toArray( 
+							new Record[mockListen.records.size()] );
+		for(int i=0; i<r.length; i++) {
+			assertFalse( r[i] instanceof ContinueRecord );
+		}
+	}
+
