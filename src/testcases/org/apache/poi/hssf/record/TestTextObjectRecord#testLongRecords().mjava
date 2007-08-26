@@ -1,0 +1,30 @@
+    /**
+     * Test that TextObjectRecord serializes logs records properly.
+     */
+    public void testLongRecords() {
+        int[] length = {1024, 2048, 4096, 8192, 16384}; //test against strings of different length
+        for (int i = 0; i < length.length; i++) {
+            StringBuffer buff = new StringBuffer(length[i]);
+            for (int j = 0; j < length[i]; j++) {
+                buff.append("x");
+            }
+            HSSFRichTextString str = new HSSFRichTextString(buff.toString());
+
+            TextObjectRecord obj = new TextObjectRecord();
+            int frLength = ( str.numFormattingRuns() + 1 ) * 8;
+            obj.setFormattingRunLength( (short) frLength );
+            obj.setTextLength( (short) str.length() );
+            obj.setStr( str );
+
+            byte [] data = obj.serialize();
+            RecordInputStream is = new RecordInputStream(new ByteArrayInputStream(data));
+            is.nextRecord();
+            TextObjectRecord record = new TextObjectRecord(is);
+            str = record.getStr();
+
+            assertEquals(buff.length(), str.length());
+            assertEquals(buff.toString(), str.getString());
+        }
+
+    }
+
