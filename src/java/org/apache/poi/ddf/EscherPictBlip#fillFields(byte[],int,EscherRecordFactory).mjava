@@ -1,0 +1,43 @@
+    /**
+     * This method deserializes the record from a byte array.
+     *
+     * @param data          The byte array containing the escher record information
+     * @param offset        The starting offset into <code>data</code>.
+     * @param recordFactory May be null since this is not a container record.
+     * @return The number of bytes read from the byte array.
+     */
+    public int fillFields( byte[] data, int offset, EscherRecordFactory recordFactory )
+    {
+        int bytesAfterHeader = readHeader( data, offset );
+        int pos = offset + HEADER_SIZE;
+
+        field_1_UID = new byte[16];
+        System.arraycopy( data, pos, field_1_UID, 0, 16 ); pos += 16;
+        field_2_cb = LittleEndian.getInt( data, pos ); pos += 4;
+        field_3_rcBounds_x1 = LittleEndian.getInt( data, pos ); pos += 4;
+        field_3_rcBounds_y1 = LittleEndian.getInt( data, pos ); pos += 4;
+        field_3_rcBounds_x2 = LittleEndian.getInt( data, pos ); pos += 4;
+        field_3_rcBounds_y2 = LittleEndian.getInt( data, pos ); pos += 4;
+        field_4_ptSize_w = LittleEndian.getInt( data, pos ); pos += 4;
+        field_4_ptSize_h = LittleEndian.getInt( data, pos ); pos += 4;
+        field_5_cbSave = LittleEndian.getInt( data, pos ); pos += 4;
+        field_6_fCompression = data[pos]; pos++;
+        field_7_fFilter = data[pos]; pos++;
+
+        raw_pictureData = new byte[field_5_cbSave];
+        System.arraycopy( data, pos, raw_pictureData, 0, field_5_cbSave );
+
+        // 0 means DEFLATE compression
+        // 0xFE means no compression
+        if (field_6_fCompression == 0)
+        {
+            field_pictureData = inflatePictureData(raw_pictureData);
+        }
+        else
+        {
+            field_pictureData = raw_pictureData;
+        }
+
+        return bytesAfterHeader + HEADER_SIZE;
+    }
+

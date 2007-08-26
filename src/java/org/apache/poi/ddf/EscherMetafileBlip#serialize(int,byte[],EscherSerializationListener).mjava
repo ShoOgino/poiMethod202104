@@ -1,0 +1,38 @@
+    /**
+     * Serializes the record to an existing byte array.
+     *
+     * @param offset    the offset within the byte array
+     * @param data      the data array to serialize to
+     * @param listener  a listener for begin and end serialization events.  This
+     *                  is useful because the serialization is
+     *                  hierarchical/recursive and sometimes you need to be able
+     *                  break into that.
+     * @return the number of bytes written.
+     */
+    public int serialize( int offset, byte[] data, EscherSerializationListener listener )
+    {
+        listener.beforeRecordSerialize(offset, getRecordId(), this);
+
+        int pos = offset;
+        LittleEndian.putShort( data, pos, getOptions() ); pos += 2;
+        LittleEndian.putShort( data, pos, getRecordId() ); pos += 2;
+        LittleEndian.putInt( data, getRecordSize() - HEADER_SIZE ); pos += 4;
+
+        System.arraycopy( field_1_UID, 0, data, pos, 16 ); pos += 16;
+        LittleEndian.putInt( data, pos, field_2_cb ); pos += 4;
+        LittleEndian.putInt( data, pos, field_3_rcBounds_x1 ); pos += 4;
+        LittleEndian.putInt( data, pos, field_3_rcBounds_y1 ); pos += 4;
+        LittleEndian.putInt( data, pos, field_3_rcBounds_x2 ); pos += 4;
+        LittleEndian.putInt( data, pos, field_3_rcBounds_y2 ); pos += 4;
+        LittleEndian.putInt( data, pos, field_4_ptSize_w ); pos += 4;
+        LittleEndian.putInt( data, pos, field_4_ptSize_h ); pos += 4;
+        LittleEndian.putInt( data, pos, field_5_cbSave ); pos += 4;
+        data[pos] = field_6_fCompression; pos++;
+        data[pos] = field_7_fFilter; pos++;
+
+        System.arraycopy( raw_pictureData, 0, data, pos, raw_pictureData.length );
+
+        listener.afterRecordSerialize(offset + getRecordSize(), getRecordId(), getRecordSize(), this);
+        return HEADER_SIZE + 16 + 1 + raw_pictureData.length;
+    }
+
