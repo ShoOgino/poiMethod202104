@@ -1,0 +1,27 @@
+    protected void fillFields(RecordInputStream in)
+    {
+        field_1_stream_id_offset       = in.readShort();
+        field_2_unknown                = in.readShortArray();
+        field_3_unicode_len            = in.readShort();
+        field_4_unicode_flag           = ( in.readByte() & 0x01 ) != 0;
+
+        if ( field_4_unicode_flag )
+        {
+            field_5_ole_classname      = in.readUnicodeLEString( field_3_unicode_len );
+        }
+        else
+        {
+            field_5_ole_classname      = in.readCompressedUnicode( field_3_unicode_len );
+        }
+
+        // Padded with NUL bytes.  The -2 is because field_1_stream_id_offset
+        // is relative to after the offset field, whereas in.getRecordOffset()
+        // is relative to the start of this record.
+        while (in.getRecordOffset() - 2 < field_1_stream_id_offset)
+        {
+            in.readByte(); // discard
+        }
+
+        field_6_stream_id              = in.readInt();
+    }
+
