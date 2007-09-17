@@ -12,8 +12,11 @@
         // Get a new Filesystem to write into
         POIFSFileSystem outFS = new POIFSFileSystem();
 
+        // The list of entries we've written out
+        List writtenEntries = new ArrayList(1);
+        
         // Write out the Property Streams
-        writeProperties(outFS);
+        writeProperties(outFS, writtenEntries);
 
 
         // For position dependent records, hold where they were and now are
@@ -64,6 +67,7 @@
         // Write the PPT stream into the POIFS layer
         ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
         outFS.createDocument(bais,"PowerPoint Document");
+        writtenEntries.add("PowerPoint Document");
 
 
         // Update and write out the Current User atom
@@ -74,6 +78,7 @@
         }
         currentUser.setCurrentEditOffset(newLastUserEditAtomPos.intValue());
         currentUser.writeToFS(outFS);
+        writtenEntries.add("Current User");
 
 	
         // Write any pictures, into another stream
@@ -85,6 +90,12 @@
             outFS.createDocument(
                 new ByteArrayInputStream(pict.toByteArray()), "Pictures"
             );
+            writtenEntries.add("Pictures");
+        }
+        
+        // If requested, write out any other streams we spot
+        if(preserveNodes) {
+        	copyNodes(filesystem, outFS, writtenEntries);
         }
 
         // Send the POIFSFileSystem object out to the underlying stream

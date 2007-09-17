@@ -1,0 +1,28 @@
+    public void testWithMacroStreams() throws Exception {
+    	// Check that they're apparently the same
+    	assertSlideShowWritesOutTheSame(hssC, pfsC);
+    	
+    	// Currently has a Macros stream
+    	assertNotNull( pfsC.getRoot().getEntry("Macros") );
+    	
+    	// Write out normally, will loose the macro stream
+    	ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    	hssC.write(baos);
+    	POIFSFileSystem pfsNew = new POIFSFileSystem(
+    			new ByteArrayInputStream(baos.toByteArray()) );
+    	
+    	try {
+    		pfsNew.getRoot().getEntry("Macros");
+    		fail();
+    	} catch(FileNotFoundException e) {
+    		// Good, as expected
+    	}
+    	
+    	// But if we write out with nodes preserved, will be there
+    	baos = new ByteArrayOutputStream();
+    	hssC.write(baos, true);
+    	pfsNew = new POIFSFileSystem(
+    			new ByteArrayInputStream(baos.toByteArray()) );
+    	assertNotNull( pfsNew.getRoot().getEntry("Macros") );
+    }
+
