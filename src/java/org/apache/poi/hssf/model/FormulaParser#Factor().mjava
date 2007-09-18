@@ -23,26 +23,38 @@
         } else if (look == ')' || look == ',') {
         	tokens.add(new MissingArgPtg());
         } else {
-             
-            String number = GetNum();
-            if (look=='.') {
-                Match('.');
-                String decimalPart = null;
-                if (IsDigit(look)) number = number +"."+ GetNum(); //this also takes care of someone entering "1234."
-                if ('E' == look) {
-                    String exponent = GetExponent();
-                    number += 'E' + exponent;
+            String number2 = null;
+            String exponent = null;
+            String number1 = GetNum();
+            
+            if (look == '.') {
+                GetChar();
+                number2 = GetNum();
+            }
+            
+            if (look == 'E') {
+                GetChar();
+                
+                String sign = "";
+                if (look == '+') {
+                    GetChar();
+                } else if (look == '-') {
+                    GetChar();
+                    sign = "-";
                 }
-                tokens.add(new NumberPtg(number));
+                
+                String number = GetNum();
+                if (number == null) {
+                    Expected("Integer");
+                }
+                exponent = sign + number;
             }
-            else if ('E' == look) {
-                String exponent = GetExponent();
-                number += 'E'+exponent;
-                tokens.add(new NumberPtg(number));
+            
+            if (number1 == null && number2 == null) {
+                Expected("Integer");
             }
-            else {
-                tokens.add(getNumberPtgFromString(number));  //TODO:what if the number is too big to be a short? ..add factory to return Int or Number!
-            }
+            
+            tokens.add(getNumberPtgFromString(number1, number2, exponent));
         }
     }
 
