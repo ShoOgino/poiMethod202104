@@ -1,0 +1,79 @@
+	/**
+	 * Retreives the text contents of the file
+	 */
+	public String getText() {
+		StringBuffer text = new StringBuffer();
+		
+		for(int i=0;i<wb.getNumberOfSheets();i++) {
+			HSSFSheet sheet = wb.getSheetAt(i);
+			if(sheet == null) { continue; }
+			
+			if(includeSheetNames) {
+				String name = wb.getSheetName(i);
+				if(name != null) {
+					text.append(name);
+					text.append("\n");
+				}
+			}
+			
+			int firstRow = sheet.getFirstRowNum();
+			int lastRow = sheet.getLastRowNum();
+			for(int j=firstRow;j<=lastRow;j++) {
+				HSSFRow row = sheet.getRow(j);
+				if(row == null) { continue; }
+
+				// Check each cell in turn
+				int firstCell = row.getFirstCellNum();
+				int lastCell = row.getLastCellNum();
+				for(int k=firstCell;k<lastCell;k++) {
+					HSSFCell cell = row.getCell((short)k);
+					boolean outputContents = false;
+					if(cell == null) { continue; }
+					
+					switch(cell.getCellType()) {
+						case HSSFCell.CELL_TYPE_STRING:
+							text.append(cell.getRichStringCellValue().getString());
+							outputContents = true;
+							break;
+						case HSSFCell.CELL_TYPE_NUMERIC:
+							// Note - we don't apply any formatting!
+							text.append(cell.getNumericCellValue());
+							outputContents = true;
+							break;
+						case HSSFCell.CELL_TYPE_BOOLEAN:
+							text.append(cell.getBooleanCellValue());
+							outputContents = true;
+							break;
+						case HSSFCell.CELL_TYPE_FORMULA:
+							if(formulasNotResults) {
+								text.append(cell.getCellFormula());
+							} else {
+								// Try it as a string, if not as a number
+								HSSFRichTextString str = 
+									cell.getRichStringCellValue();
+								if(str != null && str.length() > 0) {
+									text.append(str.toString());
+								} else {
+									// Try and treat it as a number
+									double val = cell.getNumericCellValue();
+									text.append(val);
+								}
+							}
+							outputContents = true;
+							break;
+					}
+					
+					// Output a tab if we're not on the last cell
+					if(outputContents && k < (lastCell-1)) {
+						text.append("\t");
+					}
+				}
+				
+				// Finish off the row
+				text.append("\n");
+			}
+		}
+		
+		return text.toString();
+	}
+
