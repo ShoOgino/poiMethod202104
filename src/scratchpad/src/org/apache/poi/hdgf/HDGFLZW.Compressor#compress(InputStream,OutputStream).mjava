@@ -1,0 +1,78 @@
+/**
+ * Does the compression
+ */
+private void compress(InputStream src, OutputStream res) throws IOException {
+	// Have we hit the end of the file yet?
+	boolean going = true;
+	
+	// This is a byte as looked up in the dictionary
+	// It needs to be signed, as it'll get passed on to
+	//  the output stream
+	byte dataB;
+	// This is an unsigned byte read from the stream
+	// It needs to be unsigned, so that bit stuff works
+	int dataI;
+	
+	while( going ) {
+		dataI = src.read();
+		posInp++;
+		if(dataI == -1) { going = false; }
+		dataB = fromInt(dataI);
+		
+		// If we've run out of data, output anything that's
+		//  pending then finish
+		if(!going && rawCodeLen > 0) {
+			outputCompressed(res);
+			break;
+		}
+	
+		// Try adding this new byte onto rawCode, and
+		//  see if all of that is still found in the
+		//  buffer dictionary or not
+		rawCode[rawCodeLen] = dataB;
+		rawCodeLen++;
+		int rawAt = findRawCodeInBuffer();
+		
+		// If we found it and are now at 16 bytes,
+		//  we need to output our pending code block
+		if(rawCodeLen == 16 && rawAt > -1) {
+			outputCompressed(res);
+			rawCodeLen = 0;
+			continue;
+		}
+		
+		// If we did find all of rawCode with our new
+		//  byte added on, we can wait to see what happens
+		//  with the next byte
+		if(rawAt > -1) {
+			continue;
+		}
+		
+		// If there was something in rawCode before, then we
+		//  need to output that
+		rawCodeLen--;
+		if(rawCodeLen > 0) {
+			// Output the old rawCode
+			outputCompressed(res);
+			
+			// Can this byte start a new rawCode, or does
+			//  it need outputting itself?
+			rawCode[0] = dataB;
+			rawCodeLen = 1;
+			if(findRawCodeInBuffer() > -1) {
+				// Fits in, wait for next byte
+				continue;
+			} else {
+				// Doesn't fit, output
+				outputUncompressed(dataB,res);
+				rawCodeLen = 0;
+			}
+		} else {
+			// Nothing in rawCode before, so this byte
+			//  isn't in the buffer dictionary
+			// Output it un-compressed
+			outputUncompressed(dataB,res);
+		}
+	}
+}
+
