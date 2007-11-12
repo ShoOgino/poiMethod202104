@@ -1,0 +1,27 @@
+    public void testRecord() throws Exception {
+    	POIFSFileSystem fs = new POIFSFileSystem(
+    			new FileInputStream(_test_file_path)
+    	);
+    	
+    	// Check we can open the file via usermodel
+    	HSSFWorkbook hssf = new HSSFWorkbook(fs);
+    	
+    	// Now process it through eventusermodel, and
+    	//  look out for the title records
+    	ChartTitleFormatRecordGrabber grabber =
+    		new ChartTitleFormatRecordGrabber();
+    	InputStream din = fs.createDocumentInputStream("Workbook");
+        HSSFRequest req = new HSSFRequest();
+        req.addListenerForAllRecords(grabber);
+        HSSFEventFactory factory = new HSSFEventFactory();
+        factory.processEvents(req, din);
+        din.close();
+        
+        // Should've found one
+        assertEquals(1, grabber.chartTitleFormatRecords.size());
+        // And it should be of something interesting
+        ChartTitleFormatRecord r =
+        	(ChartTitleFormatRecord)grabber.chartTitleFormatRecords.get(0);
+        assertEquals(3, r.getFormatCount());
+    }
+
