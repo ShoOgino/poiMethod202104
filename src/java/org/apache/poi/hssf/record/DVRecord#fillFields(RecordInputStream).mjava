@@ -1,0 +1,62 @@
+    protected void fillFields(RecordInputStream in)
+    {
+       field_rpn_token_1 = new Stack();
+       field_rpn_token_2 = new Stack();
+        
+       this.field_option_flags = in.readInt();
+       this._hash_strings = new Hashtable(4);
+       
+       StringHandler strHandler_prompt_title = new StringHandler( in );
+       this.field_title_prompt = strHandler_prompt_title.getStringData();
+       this._hash_strings.put(DVRecord.STRING_PROMPT_TITLE, strHandler_prompt_title);
+
+       StringHandler strHandler_error_title = new StringHandler( in );
+       this.field_title_error = strHandler_error_title.getStringData();
+       this._hash_strings.put(DVRecord.STRING_ERROR_TITLE, strHandler_error_title);
+
+       StringHandler strHandler_prompt_text = new StringHandler( in );
+       this.field_text_prompt = strHandler_prompt_text.getStringData();
+       this._hash_strings.put(DVRecord.STRING_PROMPT_TEXT, strHandler_prompt_text);
+
+       StringHandler strHandler_error_text = new StringHandler( in );
+       this.field_text_error = strHandler_error_text.getStringData();
+       this._hash_strings.put(DVRecord.STRING_ERROR_TEXT, strHandler_error_text);
+
+       this.field_size_first_formula = in.readShort(); 
+       this.field_not_used_1 = in.readShort();
+
+       //read first formula data condition
+       // Not sure if this was needed or not...
+//       try {
+//    	   in.skip(this.field_size_first_formula);
+//       } catch(IOException e) { throw new IllegalStateException(e); } 
+
+       int token_pos = 0;
+       while (token_pos < this.field_size_first_formula)
+       {
+           Ptg ptg = Ptg.createPtg(in);
+           token_pos += ptg.getSize();
+           field_rpn_token_1.push(ptg);
+       }
+
+       this.field_size_sec_formula = in.readShort(); 
+       this.field_not_used_2 = in.readShort();
+
+       //read sec formula data condition
+       // Not sure if this was needed or not...
+       try {
+           in.skip(this.field_size_sec_formula);
+       } catch(IOException e) { throw new IllegalStateException(e); } 
+
+       token_pos = 0;
+       while (token_pos < this.field_size_sec_formula)
+       {
+           Ptg ptg = Ptg.createPtg(in);
+           token_pos += ptg.getSize();
+           field_rpn_token_2.push(ptg);
+       }
+
+       //read cell range address list with all affected ranges
+       this.field_regions = new HSSFCellRangeAddress(in);
+    }
+

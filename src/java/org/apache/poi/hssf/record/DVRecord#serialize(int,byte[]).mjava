@@ -1,0 +1,42 @@
+    public int serialize(int offset, byte [] data)
+    {
+        int size = this.getRecordSize();
+        LittleEndian.putShort(data, 0 + offset, sid);
+        LittleEndian.putShort(data, 2 + offset, ( short ) (size-4));
+
+        int pos = 4;
+        LittleEndian.putInt(data, pos + offset, this.getOptionFlags());
+        pos += 4;
+        pos += ((StringHandler)this._hash_strings.get( DVRecord.STRING_PROMPT_TITLE )).serialize(pos+offset, data);
+        pos += ((StringHandler)this._hash_strings.get( DVRecord.STRING_ERROR_TITLE )).serialize(pos+offset, data);
+        pos += ((StringHandler)this._hash_strings.get( DVRecord.STRING_PROMPT_TEXT )).serialize(pos+offset, data);
+        pos += ((StringHandler)this._hash_strings.get( DVRecord.STRING_ERROR_TEXT )).serialize(pos+offset, data);
+        LittleEndian.putShort(data, offset+pos, this.field_size_first_formula);
+        pos += 2;
+        LittleEndian.putShort(data, offset+pos, this.field_not_used_1);
+        pos += 2;
+
+        for (int k = 0; k < this.field_rpn_token_1.size(); k++)
+        {
+            Ptg ptg = ( Ptg ) this.field_rpn_token_1.get(k);
+            ptg.writeBytes(data, pos+offset);
+            pos += ptg.getSize();
+        }
+
+        LittleEndian.putShort(data, offset+pos, this.field_size_sec_formula);
+        pos += 2;
+        LittleEndian.putShort(data, offset+pos, this.field_not_used_2);
+        pos += 2;
+        if ( this.field_size_sec_formula > 0 )
+        {
+          for (int k = 0; k < this.field_rpn_token_2.size(); k++)
+          {
+              Ptg ptg = ( Ptg ) this.field_rpn_token_2.get(k);
+              ptg.writeBytes(data, pos+offset);
+              pos += ptg.getSize();
+          }
+        }
+        this.field_regions.serialize(pos+offset, data);
+        return size;
+    }
+
