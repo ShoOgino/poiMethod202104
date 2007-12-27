@@ -1,0 +1,52 @@
+	/**
+	 * Retreives the text contents of the file
+	 */
+	public String getText() {
+		StringBuffer text = new StringBuffer();
+		
+		CTSheet[] sheetRefs =
+			workbook._getHSSFXML().getSheetReferences().getSheetArray();
+		for(int i=0; i<sheetRefs.length; i++) {
+			try {
+				CTWorksheet sheet =
+					workbook._getHSSFXML().getSheet(sheetRefs[i]);
+				CTRow[] rows =
+					sheet.getSheetData().getRowArray();
+				
+				if(i > 0) {
+					text.append("\n");
+				}
+				if(includeSheetNames) {
+					text.append(sheetRefs[i].getName() + "\n");
+				}
+				
+				for(int j=0; j<rows.length; j++) {
+					CTCell[] cells = rows[j].getCArray();
+					for(int k=0; k<cells.length; k++) {
+						CTCell cell = cells[k];
+						if(k > 0) {
+							text.append("\t");
+						}
+						
+						// Is it a formula one?
+						if(cell.getF() != null) {
+							if(formulasNotResults) {
+								text.append(cell.getF().getStringValue());
+							} else {
+								text.append(cell.getV());
+							}
+						} else {
+							// Probably just want the v value
+							text.append(cell.getV());
+						}
+					}
+					text.append("\n");
+				}
+			} catch(Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+		
+		return text.toString();
+	}
+
