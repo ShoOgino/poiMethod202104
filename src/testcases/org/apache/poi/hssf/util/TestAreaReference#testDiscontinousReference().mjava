@@ -1,0 +1,61 @@
+    public void testDiscontinousReference() throws Exception {
+        String filename = System.getProperty( "HSSF.testdata.path" );
+        filename = filename + "/44167.xls";
+        FileInputStream fin = new FileInputStream( filename );
+        HSSFWB wb = new HSSFWB( fin );
+        Workbook workbook = wb.getWorkbook();
+        fin.close();
+
+        assertEquals(1, wb.getNumberOfNames());
+        String sheetName = "Tabelle1";
+        String rawRefA = "$C$10:$C$14";
+        String rawRefB = "$C$16:$C$18";
+        String refA = sheetName + "!" + rawRefA;
+        String refB = sheetName + "!" + rawRefB;
+        String ref = refA + "," + refB;
+
+        // Check the low level record
+        NameRecord nr = workbook.getNameRecord(0);
+        assertNotNull(nr);
+        assertEquals("test", nr.getNameText());
+
+        List def =nr.getNameDefinition();
+        assertEquals(4, def.size());
+
+        MemFuncPtg ptgA = (MemFuncPtg)def.get(0);
+        Area3DPtg ptgB = (Area3DPtg)def.get(1);
+        Area3DPtg ptgC = (Area3DPtg)def.get(2);
+        UnionPtg ptgD = (UnionPtg)def.get(3);
+        assertEquals("", ptgA.toFormulaString(workbook));
+        assertEquals(refA, ptgB.toFormulaString(workbook));
+        assertEquals(refB, ptgC.toFormulaString(workbook));
+        assertEquals(",", ptgD.toFormulaString(workbook));
+
+        assertEquals(ref, nr.getAreaReference(workbook));
+
+        // Check the high level definition
+        int idx = wb.getNameIndex("test");
+        assertEquals(0, idx);
+        HSSFName aNamedCell = wb.getNameAt(idx);
+
+        // Should have 2 references
+        assertEquals(ref, aNamedCell.getReference());
+
+        // Check the parsing of the reference into cells
+        assertFalse(AreaReference.isContiguous(aNamedCell.getReference()));
+        AreaReference[] arefs = AreaReference.generateContiguous(aNamedCell.getReference());
+        assertEquals(2, arefs.length);
+        assertEquals(rawRefA, arefs[0].toString());
+        assertEquals(rawRefB, arefs[1].toString());
+
+        for(int i=0; i<arefs.length; i++) {
+            CellReference[] crefs = arefs[i].getCells();
+            for (int j=0; j<crefs.length; j++) {
+                // Check it turns into real stuff
+                HSSFSheet s = wb.getSheet(crefs[j].getSheetName());
+                HSSFRow r = s.getRow(crefs[j].getRow());
+                HSSFCell c = r.getCell(crefs[j].getCol());
+            }
+        }
+    }
+

@@ -1,0 +1,73 @@
+    public void testContiguousReferences() throws Exception {
+        String refSimple = "$C$10";
+        String ref2D = "$C$10:$D$11";
+        String refDCSimple = "$C$10,$D$12,$E$14";
+        String refDC2D = "$C$10:$C$11,$D$12,$E$14:$E$20";
+        String refDC3D = "Tabelle1!$C$10:$C$14,Tabelle1!$D$10:$D$12";
+
+        // Check that we detect as contiguous properly
+        assertTrue(AreaReference.isContiguous(refSimple));
+        assertTrue(AreaReference.isContiguous(ref2D));
+        assertFalse(AreaReference.isContiguous(refDCSimple));
+        assertFalse(AreaReference.isContiguous(refDC2D));
+        assertFalse(AreaReference.isContiguous(refDC3D));
+
+        // Check we can only create contiguous entries
+        new AreaReference(refSimple);
+        new AreaReference(ref2D);
+        try {
+            new AreaReference(refDCSimple);
+            fail();
+        } catch(IllegalArgumentException e) {}
+        try {
+            new AreaReference(refDC2D);
+            fail();
+        } catch(IllegalArgumentException e) {}
+        try {
+            new AreaReference(refDC3D);
+            fail();
+        } catch(IllegalArgumentException e) {}
+
+        // Test that we split as expected
+        AreaReference[] refs;
+
+        refs = AreaReference.generateContiguous(refSimple);
+        assertEquals(1, refs.length);
+        assertEquals(1, refs[0].getDim());
+        assertEquals("$C$10", refs[0].toString());
+
+        refs = AreaReference.generateContiguous(ref2D);
+        assertEquals(1, refs.length);
+        assertEquals(2, refs[0].getDim());
+        assertEquals("$C$10:$D$11", refs[0].toString());
+
+        refs = AreaReference.generateContiguous(refDCSimple);
+        assertEquals(3, refs.length);
+        assertEquals(1, refs[0].getDim());
+        assertEquals(1, refs[1].getDim());
+        assertEquals(1, refs[2].getDim());
+        assertEquals("$C$10", refs[0].toString());
+        assertEquals("$D$12", refs[1].toString());
+        assertEquals("$E$14", refs[2].toString());
+
+        refs = AreaReference.generateContiguous(refDC2D);
+        assertEquals(3, refs.length);
+        assertEquals(2, refs[0].getDim());
+        assertEquals(1, refs[1].getDim());
+        assertEquals(2, refs[2].getDim());
+        assertEquals("$C$10:$C$11", refs[0].toString());
+        assertEquals("$D$12", refs[1].toString());
+        assertEquals("$E$14:$E$20", refs[2].toString());
+
+        refs = AreaReference.generateContiguous(refDC3D);
+        assertEquals(2, refs.length);
+        assertEquals(2, refs[0].getDim());
+        assertEquals(2, refs[1].getDim());
+        assertEquals("$C$10:$C$14", refs[0].toString());
+        assertEquals("$D$10:$D$12", refs[1].toString());
+        assertEquals("Tabelle1", refs[0].getCells()[0].getSheetName());
+        assertEquals("Tabelle1", refs[0].getCells()[1].getSheetName());
+        assertEquals("Tabelle1", refs[1].getCells()[0].getSheetName());
+        assertEquals("Tabelle1", refs[1].getCells()[1].getSheetName());
+    }
+
