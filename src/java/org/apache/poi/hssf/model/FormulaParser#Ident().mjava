@@ -40,15 +40,27 @@
                 tokens.add(new Ref3DPtg(first,externIdx));
             }
         } else {
-            //this can be either a cell ref or a named range !!
-            boolean cellRef = true ; //we should probably do it with reg exp??
+            // This can be either a cell ref or a named range
+        	// Try to spot which it is
+        	boolean cellRef = CELL_REFERENCE_PATTERN.matcher(name).matches();
             boolean boolLit = (name.equals("TRUE") || name.equals("FALSE"));
+            
             if (boolLit) {
                 tokens.add(new BoolPtg(name));
             } else if (cellRef) {
                 tokens.add(new ReferencePtg(name));
-            }else {
-                //handle after named range is integrated!!
+            } else {
+            	boolean nameRecordExists = false;
+                for(int i = 0; i < book.getNumNames(); i++) {
+                	// Our formula will by now contain an upper-cased
+                	//  version of any named range names
+                    if(book.getNameRecord(i).getNameText().toUpperCase().equals(name)) {
+                        nameRecordExists = true;
+                    }
+                }
+                if(!nameRecordExists)
+                    Abort("Found reference to named range \"" + name + "\", but that named range wasn't defined!");
+                tokens.add(new NamePtg(name, book));
             }
         }
     }
