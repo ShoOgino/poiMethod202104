@@ -1,0 +1,38 @@
+    /**
+     * Tests that when using a slow input stream, which
+     *  won't return a full block at a time, we don't
+     *  incorrectly think that there's not enough data
+     */
+    public void testSlowInputStream() throws Exception {
+        for (int k = 1; k < 512; k++) {
+            byte[] data = new byte[ 512 ];
+            for (int j = 0; j < data.length; j++) {
+                data[j] = (byte) j;
+            }
+            
+            // Shouldn't complain, as there is enough data,
+            //  even if it dribbles through
+            RawDataBlock block = 
+            	new RawDataBlock(new SlowInputStream(data, k));
+            assertFalse(block.eof());
+        }
+        
+        // But if there wasn't enough data available, will
+        //  complain
+        for (int k = 1; k < 512; k++) {
+            byte[] data = new byte[ 511 ];
+            for (int j = 0; j < data.length; j++) {
+                data[j] = (byte) j;
+            }
+            
+            // Shouldn't complain, as there is enough data
+            try {
+	            RawDataBlock block = 
+	            	new RawDataBlock(new SlowInputStream(data, k));
+	            fail();
+            } catch(IOException e) {
+            	// as expected
+            }
+        }
+    }
+
