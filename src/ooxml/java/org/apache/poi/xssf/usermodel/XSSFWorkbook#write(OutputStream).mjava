@@ -1,0 +1,68 @@
+    /**
+     * XXX: Horribly naive implementation based on OpenXML4J's Package class,
+     * which sucks because it does not allow instantiation using an
+     * OutputStream instead of a File. So we write the Package to a temporary
+     * file, which we then proceed to read and stream out.
+     */
+    public void write(OutputStream stream) throws IOException {
+        // Create a temporary file
+        File file = File.createTempFile("poi-", ".xlsx");
+        file.delete();
+
+        try {
+            // Create a package referring the temp file.
+            Package pkg = Package.create(file);
+            // Main part
+            PackagePartName corePartName = PackagingURIHelper.createPartName("/xl/workbook.xml");
+            // Create main part relationship
+            pkg.addRelationship(corePartName, TargetMode.INTERNAL, PackageRelationshipTypes.CORE_DOCUMENT, "rId1");
+            // Create main document part
+            PackagePart corePart = pkg.createPart(corePartName,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
+            XmlOptions xmlOptions = new XmlOptions();
+             // Requests use of whitespace for easier reading
+             xmlOptions.setSavePrettyPrint();
+             xmlOptions.setSaveOuter();
+             // XXX This should not be needed, but apparently the setSaveOuter call above does not work in XMLBeans 2.2
+             xmlOptions.setSaveSyntheticDocumentElement(new QName(CTWorkbook.type.getName().getNamespaceURI(), "workbook"));
+             xmlOptions.setUseDefaultNamespace();
+             
+             OutputStream out = corePart.getOutputStream();
+             workbook.save(out, xmlOptions);
+             out.close();
+             
+             for (int i = 1 ; i <= this.getNumberOfSheets() ; ++i) {
+                 XSSFSheet sheet = (XSSFSheet) this.getSheetAt(i);
+                 PackagePartName partName = PackagingURIHelper.createPartName("/xl/worksheets/sheet" + i + ".xml");
+                 corePart.addRelationship(partName, TargetMode.INTERNAL, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet", "rSheet" + 1);
+                 PackagePart part = pkg.createPart(partName, 
+                         "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml");
+                 
+                 // XXX This should not be needed, but apparently the setSaveOuter call above does not work in XMLBeans 2.2
+                 xmlOptions.setSaveSyntheticDocumentElement(new QName(CTWorksheet.type.getName().getNamespaceURI(), "worksheet"));
+                 out = part.getOutputStream();
+                 sheet.getWorksheet().save(out, xmlOptions);
+                 
+                 // XXX DEBUG
+                 System.err.println(sheet.getWorksheet().xmlText(xmlOptions));
+                 out.close();
+             }
+             
+             pkg.close();
+             
+             byte[] buf = new byte[8192];
+             int nread = 0;
+             BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+             try {
+                 while ((nread = bis.read(buf)) > 0) {
+                     stream.write(buf, 0, nread);
+                 }
+             } finally {
+                 bis.close();
+             }
+        } catch (InvalidFormatException e) {
+            // TODO: replace with more meaningful exception
+            throw new RuntimeException(e);
+        }
+    }
+
