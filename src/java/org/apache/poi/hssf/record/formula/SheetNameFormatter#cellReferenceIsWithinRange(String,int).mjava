@@ -1,0 +1,81 @@
+	/**
+	 * Used to decide whether sheet names like 'AB123' need delimiting due to the fact that they 
+	 * look like cell references.
+	 * <p/>
+	 * This code is currently being used for translating formulas represented with <code>Ptg</code>
+	 * tokens into human readable text form.  In formula expressions, a sheet name always has a 
+	 * trailing '!' so there is little chance for ambiguity.  It doesn't matter too much what this 
+	 * method returns but it is worth noting the likely consumers of these formula text strings:
+	 * <ol>
+	 * <li>POI's own formula parser</li>
+	 * <li>Visual reading by human</li>
+	 * <li>VBA automation entry into Excel cell contents e.g.  ActiveCell.Formula = "=c64!A1"</li>
+	 * <li>Manual entry into Excel cell contents</li>
+	 * <li>Some third party formula parser</li>
+	 * </ol>
+	 * 
+	 * At the time of writing, POI's formula parser tolerates cell-like sheet names in formulas
+	 * with or without delimiters.  The same goes for Excel(2007), both manual and automated entry.  
+	 * <p/>
+	 * For better or worse this implementation attempts to replicate Excel's formula renderer.
+	 * Excel uses range checking on the apparent 'row' and 'column' components.  Note however that
+	 * the maximum sheet size varies across versions:
+	 * <p/>
+	 * <blockquote><table border="0" cellpadding="1" cellspacing="0" 
+	 *                 summary="Notable cases.">
+	 *   <tr><th>Version&nbsp;&nbsp;</th><th>File Format&nbsp;&nbsp;</th>
+	 *   	<th>Last Column&nbsp;&nbsp;</th><th>Last Row</th></tr>
+	 *   <tr><td>97-2003</td><td>BIFF8</td><td>"IV" (2^8)</td><td>65536 (2^14)</td></tr>
+	 *   <tr><td>2007</td><td>BIFF12</td><td>"XFD" (2^14)</td><td>1048576 (2^20)</td></tr>
+	 * </table></blockquote>
+	 * POI currently targets BIFF8 (Excel 97-2003), so the following behaviour can be observed for
+	 * this method:
+	 * <blockquote><table border="0" cellpadding="1" cellspacing="0" 
+	 *                 summary="Notable cases.">
+	 *   <tr><th>Input&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
+	 *   	<th>Result&nbsp;</th></tr>
+	 *   <tr><td>"A1", 1</td><td>true</td></tr>
+	 *   <tr><td>"a111", 1</td><td>true</td></tr>
+	 *   <tr><td>"A65536", 1</td><td>true</td></tr>
+	 *   <tr><td>"A65537", 1</td><td>false</td></tr>
+	 *   <tr><td>"iv1", 2</td><td>true</td></tr>
+	 *   <tr><td>"IW1", 2</td><td>false</td></tr>
+	 *   <tr><td>"AAA1", 3</td><td>false</td></tr>
+	 *   <tr><td>"a111", 1</td><td>true</td></tr>
+	 *   <tr><td>"Sheet1", 6</td><td>false</td></tr>
+	 * </table></blockquote>
+	 */
+	/* package */ static boolean cellReferenceIsWithinRange(String rawSheetName, int numberOfLetters) {
+		
+		if(numberOfLetters > BIFF8_LAST_COLUMN_TEXT_LEN) {
+			// "Sheet1" case etc
+			return false; // that was easy
+		}
+		int nDigits = rawSheetName.length() - numberOfLetters;
+		if(nDigits > BIFF8_LAST_ROW_TEXT_LEN) {
+			return false; 
+		}
+		if(numberOfLetters == BIFF8_LAST_COLUMN_TEXT_LEN) {
+			String colStr = rawSheetName.substring(0, BIFF8_LAST_COLUMN_TEXT_LEN).toUpperCase();
+			if(colStr.compareTo(BIFF8_LAST_COLUMN) > 0) {
+				return false;
+			}
+		} else {
+			// apparent column name has less chars than max
+			// no need to check range
+		}
+		
+		if(nDigits == BIFF8_LAST_ROW_TEXT_LEN) {
+			String colStr = rawSheetName.substring(numberOfLetters);
+			// ASCII comparison is valid if digit count is same
+			if(colStr.compareTo(BIFF8_LAST_ROW) > 0) {
+				return false;
+			}
+		} else {
+			// apparent row has less chars than max
+			// no need to check range
+		}
+		
+		return true;
+	}
+
