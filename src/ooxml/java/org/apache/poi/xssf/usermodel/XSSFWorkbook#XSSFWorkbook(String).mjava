@@ -3,8 +3,25 @@
         try {
             WorkbookDocument doc = WorkbookDocument.Factory.parse(getCorePart().getInputStream());
             this.workbook = doc.getWorkbook();
+            for (CTSheet ctSheet : this.workbook.getSheets().getSheetArray()) {
+                PackageRelationship rel = this.getCorePart().getRelationship(ctSheet.getId());
+                PackagePartName relName = PackagingURIHelper.createPartName(rel.getTargetURI());
+                PackagePart part = getPackage().getPart(relName);
+                if (part == null) {
+                    throw new IllegalArgumentException("No part found for relationship " + rel);
+                }
+                WorksheetDocument worksheetDoc = WorksheetDocument.Factory.parse(part.getInputStream());
+                XSSFSheet sheet = new XSSFSheet(ctSheet, worksheetDoc.getWorksheet());
+                this.sheets.add(sheet);
+            }
         } catch (XmlException e) {
             throw new IOException(e.toString());
+        } catch (InvalidFormatException e) {
+            throw new IOException(e.toString());
+/*            
+        } catch (OpenXML4JException e) {
+            throw new IOException(e.toString());
+*/
         }
     }
 
