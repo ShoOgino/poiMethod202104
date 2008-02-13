@@ -1,37 +1,43 @@
     public int serialize(int offset, byte[] data)
     {
-        LittleEndian.putShort(data, 0 + offset, sid);
-        LittleEndian.putShort(data, 2 + offset,
-                              ( short )(getRecordSize()-4));
-        LittleEndian.putShort(data, 4 + offset, field_1_unknown);
-        LittleEndian.putUShort(data, 6 + offset, field_2_row);
-        LittleEndian.putShort(data, 8 + offset, field_3_column);
-        LittleEndian.putShort(data, 10 + offset, field_4_xf_index);
-        
-        offset += 12;
-        for(int i=0; i<field_5_unknown.length; i++) {
-        	data[offset] = field_5_unknown[i];
-        	offset++;
-        }
-        
-        LittleEndian.putInt(data, offset, field_6_label_opts);
-        offset += 4;
-        LittleEndian.putInt(data, offset, field_7_url_len);
-        offset += 4;
-        LittleEndian.putInt(data, offset, field_8_label_len);
-        offset += 4;
-        StringUtil.putUnicodeLE(field_9_label, data, offset);
-        offset += field_9_label.length()*2;
+        int pos = offset;
+        LittleEndian.putShort(data, pos, sid); pos += 2;
+        LittleEndian.putShort(data, pos, ( short )(getRecordSize()-4)); pos += 2;
+        LittleEndian.putUShort(data, pos, rwFirst); pos += 2;
+        LittleEndian.putUShort(data, pos, rwLast); pos += 2;
+        LittleEndian.putShort(data, pos, colFirst); pos += 2;
+        LittleEndian.putShort(data, pos, colLast); pos += 2;
 
-        for(int i=0; i<field_10_unknown.length; i++) {
-        	data[offset] = field_10_unknown[i];
-        	offset++;
+        System.arraycopy(guid, 0, data, pos, guid.length); pos += guid.length;
+
+        LittleEndian.putInt(data, pos, label_opts); pos += 4;
+        LittleEndian.putInt(data, pos, link_opts); pos += 4;
+
+        if ((link_opts & HLINK_LABEL) != 0){
+            LittleEndian.putInt(data, pos, label.length()); pos += 4;
+            StringUtil.putUnicodeLE(label, data, pos);  pos += label.length()*2;
         }
-    	
-        LittleEndian.putInt(data, offset, field_11_url_opts);
-        offset += 4;
-        StringUtil.putUnicodeLE(field_12_url, data, offset);
-        
+        if ((link_opts & HLINK_URL) != 0){
+            System.arraycopy(moniker, 0, data, pos, moniker.length); pos += moniker.length;
+            if(Arrays.equals(URL_MONIKER, moniker)){
+                LittleEndian.putInt(data, pos, address.length()*2 + tail.length); pos += 4;
+                StringUtil.putUnicodeLE(address, data, pos);  pos += address.length()*2;
+                if(tail.length > 0){
+                    System.arraycopy(tail, 0, data, pos, tail.length); pos += tail.length;
+                }
+            } else if (Arrays.equals(FILE_MONIKER, moniker)){
+                LittleEndian.putShort(data, pos, file_opts); pos += 2;
+                LittleEndian.putInt(data, pos, address.length()); pos += 4;
+                byte[] bytes = address.getBytes();
+                System.arraycopy(bytes, 0, data, pos, bytes.length); pos += bytes.length;
+                if(tail.length > 0){
+                    System.arraycopy(tail, 0, data, pos, tail.length); pos += tail.length;
+                }
+            }
+        } else if((link_opts & HLINK_PLACE) != 0){
+            LittleEndian.putInt(data, pos, address.length()); pos += 4;
+            StringUtil.putUnicodeLE(address, data, pos);  pos += address.length()*2;
+        }
     	return getRecordSize();
     }
 
