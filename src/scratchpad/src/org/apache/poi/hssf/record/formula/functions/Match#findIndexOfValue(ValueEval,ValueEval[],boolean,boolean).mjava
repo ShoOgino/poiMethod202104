@@ -1,0 +1,57 @@
+	/**
+	 * @return zero based index
+	 */
+	private static int findIndexOfValue(ValueEval lookupValue, ValueEval[] lookupRange,
+			boolean matchExact, boolean findLargestLessThanOrEqual) throws EvalEx {
+		// TODO - wildcard matching when matchExact and lookupValue is text containing * or ?
+		if(matchExact) {
+			for (int i = 0; i < lookupRange.length; i++) {
+				ValueEval lri = lookupRange[i];
+				if(lri.getClass() != lookupValue.getClass()) {
+					continue;
+				}
+				if(compareValues(lookupValue, lri) == 0) {
+					return i;
+				}
+			}
+		} else {
+			// Note - backward iteration
+			if(findLargestLessThanOrEqual) {
+				for (int i = lookupRange.length - 1; i>=0;  i--) {
+					ValueEval lri = lookupRange[i];
+					if(lri.getClass() != lookupValue.getClass()) {
+						continue;
+					}
+					int cmp = compareValues(lookupValue, lri);
+					if(cmp == 0) {
+						return i;
+					}
+					if(cmp > 0) {
+						return i;
+					}
+				}
+			} else {
+				// find smallest greater than or equal to
+				for (int i = 0; i<lookupRange.length; i++) {
+					ValueEval lri = lookupRange[i];
+					if(lri.getClass() != lookupValue.getClass()) {
+						continue;
+					}
+					int cmp = compareValues(lookupValue, lri);
+					if(cmp == 0) {
+						return i;
+					}
+					if(cmp > 0) {
+						if(i<1) {
+							throw new EvalEx(ErrorEval.NA);
+						}
+						return i-1;
+					}
+				}
+				
+			}
+		}
+
+		throw new EvalEx(ErrorEval.NA);
+	}
+

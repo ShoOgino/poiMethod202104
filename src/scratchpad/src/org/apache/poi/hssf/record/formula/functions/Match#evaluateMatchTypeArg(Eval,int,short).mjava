@@ -1,0 +1,37 @@
+	private static double evaluateMatchTypeArg(Eval arg, int srcCellRow, short srcCellCol) 
+			throws EvalEx {
+		Eval match_type = arg;
+		if(arg instanceof AreaReference) {
+			AreaEval ae = (AreaEval) arg;
+			// an area ref can work as a scalar value if it is 1x1
+			if(ae.isColumn() &&  ae.isRow()) {
+				match_type = ae.getValues()[0];
+			} else {
+				match_type = chooseSingleElementFromArea(ae, srcCellRow, srcCellCol);
+			}
+		}
+		
+		if(match_type instanceof RefEval) {
+			RefEval re = (RefEval) match_type;
+			match_type = re.getInnerValueEval();
+		}
+		if(match_type instanceof ErrorEval) {
+			throw new EvalEx((ErrorEval)match_type);
+		}
+		if(match_type instanceof NumericValueEval) {
+			NumericValueEval ne = (NumericValueEval) match_type;
+			return ne.getNumberValue();
+		}
+		if (match_type instanceof StringEval) {
+			StringEval se = (StringEval) match_type;
+			Double d = parseDouble(se.getStringValue());
+			if(d == null) {
+				// plain string
+				throw new EvalEx(ErrorEval.VALUE_INVALID);
+			}
+			// if the string parses as a number, it is ok
+			return d.doubleValue();
+		}
+		throw new RuntimeException("Unexpected match_type type (" + match_type.getClass().getName() + ")");
+	}
+

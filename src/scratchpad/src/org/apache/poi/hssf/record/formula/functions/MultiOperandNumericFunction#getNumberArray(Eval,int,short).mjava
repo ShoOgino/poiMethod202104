@@ -6,13 +6,11 @@
      * @param srcCol
      */
     protected double[] getNumberArray(Eval operand, int srcRow, short srcCol) {
-        double[] retval;
-        int count = 0;
         
         if (operand instanceof AreaEval) {
             AreaEval ae = (AreaEval) operand;
             ValueEval[] values = ae.getValues();
-            retval = new double[values.length];
+            DoubleList retval = new DoubleList();
             for (int j=0, jSize=values.length; j<jSize; j++) {
                 /*
                  * TODO: For an AreaEval, we are constructing a RefEval
@@ -29,35 +27,30 @@
                 
                 if (ve instanceof NumericValueEval) {
                     NumericValueEval nve = (NumericValueEval) ve;
-                    retval = putInArray(retval, count++, nve.getNumberValue());
+                    retval.add(nve.getNumberValue());
                 }
-                else if (ve instanceof BlankEval) {} // ignore operand
+                else if (ve instanceof BlankEval) {
+                    // note - blanks are ignored, so returned array will be smaller.
+                } 
                 else {
-                    retval = null; // null => indicate to calling subclass that error occurred
-                    break;
+                    return null; // indicate to calling subclass that error occurred
                 }
             }
-        }
-        else { // for ValueEvals other than AreaEval
-            retval = new double[1];
-            ValueEval ve = singleOperandEvaluate(operand, srcRow, srcCol);
-            
-            if (ve instanceof NumericValueEval) {
-                NumericValueEval nve = (NumericValueEval) ve;
-                retval = putInArray(retval, count++, nve.getNumberValue());
-            }
-            else if (ve instanceof BlankEval) {} // ignore operand
-            else {
-                retval = null; // null => indicate to calling subclass that error occurred
-            }
+            return retval.toArray();
         }
         
-        if (retval != null && retval.length >= 1) {
-            double[] temp = retval;
-            retval = new double[count];
-            System.arraycopy(temp, 0, retval, 0, count);
+        // for ValueEvals other than AreaEval
+        ValueEval ve = singleOperandEvaluate(operand, srcRow, srcCol);
+        
+        if (ve instanceof NumericValueEval) {
+            NumericValueEval nve = (NumericValueEval) ve;
+            return new double[] { nve.getNumberValue(), };
         }
         
-        return retval;
+        if (ve instanceof BlankEval) {
+            // ignore blanks
+            return EMPTY_DOUBLE_ARRAY;
+        } 
+        return null;
     }
 

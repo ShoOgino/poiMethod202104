@@ -1,0 +1,30 @@
+	private static ValueEval[] evaluateLookupRange(Eval eval) throws EvalEx {
+		if (eval instanceof RefEval) {
+			RefEval re = (RefEval) eval;
+			return new ValueEval[] { re.getInnerValueEval(), };
+		}
+		if (eval instanceof AreaEval) {
+			AreaEval ae = (AreaEval) eval;
+			if(!ae.isColumn() && !ae.isRow()) {
+				throw new EvalEx(ErrorEval.NA);
+			}
+			return ae.getValues();
+		}
+		
+		// Error handling for lookup_range arg is also unusual
+		if(eval instanceof NumericValueEval) {
+			throw new EvalEx(ErrorEval.NA);
+		}
+		if (eval instanceof StringEval) {
+			StringEval se = (StringEval) eval;
+			Double d = parseDouble(se.getStringValue());
+			if(d == null) {
+				// plain string
+				throw new EvalEx(ErrorEval.VALUE_INVALID);
+			}
+			// else looks like a number
+			throw new EvalEx(ErrorEval.NA);
+		}
+		throw new RuntimeException("Unexpected eval type (" + eval.getClass().getName() + ")");
+	}
+
