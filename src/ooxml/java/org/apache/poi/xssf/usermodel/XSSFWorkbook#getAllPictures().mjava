@@ -1,5 +1,26 @@
-    public List getAllPictures() {
-        // TODO Auto-generated method stub
-        return null;
+    public List<PictureData> getAllPictures() {
+        // In OOXML pictures are referred to in sheets
+        List<PictureData> pictures = new LinkedList<PictureData>();
+        for (CTSheet ctSheet : this.workbook.getSheets().getSheetArray()) {
+            try {
+                PackagePart sheetPart = getPackagePart(ctSheet);
+                if (sheetPart == null) {
+                    continue;
+                }
+                PackageRelationshipCollection prc = sheetPart.getRelationshipsByType(DRAWING_RELATIONSHIP);
+                for (PackageRelationship rel : prc) {
+                    PackagePart drawingPart = getTargetPart(rel);
+                    PackageRelationshipCollection prc2 = drawingPart.getRelationshipsByType(IMAGE_RELATIONSHIP);
+                    for (PackageRelationship rel2 : prc2) {
+                        PackagePart imagePart = getTargetPart(rel2);
+                        XSSFPictureData pd = new XSSFPictureData(imagePart);
+                        pictures.add(pd);
+                    }
+                }
+            } catch (InvalidFormatException e) {
+                throw new RuntimeException(e.getMessage(), e);
+            }
+        }
+        return pictures;
     }
 
