@@ -1,0 +1,54 @@
+	/**
+	 * Resolves the last (optional) parameter (<b>range_lookup</b>) to the VLOOKUP and HLOOKUP functions. 
+	 * @param rangeLookupArg
+	 * @param srcCellRow
+	 * @param srcCellCol
+	 * @return
+	 * @throws EvaluationException
+	 */
+	public static boolean resolveRangeLookupArg(Eval rangeLookupArg, int srcCellRow, short srcCellCol) throws EvaluationException {
+		if(rangeLookupArg == null) {
+			// range_lookup arg not provided
+			return true; // default is TRUE
+		}
+		ValueEval valEval = OperandResolver.getSingleValue(rangeLookupArg, srcCellRow, srcCellCol);
+		if(valEval instanceof BlankEval) {
+			// Tricky:
+			// fourth arg supplied but evaluates to blank
+			// this does not get the default value
+			return false;
+		}
+		if(valEval instanceof BoolEval) {
+			// Happy day flow 
+			BoolEval boolEval = (BoolEval) valEval;
+			return boolEval.getBooleanValue();
+		}
+
+		if (valEval instanceof StringEval) {
+			String stringValue = ((StringEval) valEval).getStringValue();
+			if(stringValue.length() < 1) {
+				// More trickiness:
+				// Empty string is not the same as BlankEval.  It causes #VALUE! error 
+				throw EvaluationException.invalidValue();
+			}
+			// TODO move parseBoolean to OperandResolver
+			Boolean b = Countif.parseBoolean(stringValue);
+			if(b != null) {
+				// string converted to boolean OK
+				return b.booleanValue();
+			}
+			// Even more trickiness:
+			// Note - even if the StringEval represents a number value (for example "1"), 
+			// Excel does not resolve it to a boolean.  
+			throw EvaluationException.invalidValue();
+			// This is in contrast to the code below,, where NumberEvals values (for 
+			// example 0.01) *do* resolve to equivalent boolean values.
+		}
+		if (valEval instanceof NumericValueEval) {
+			NumericValueEval nve = (NumericValueEval) valEval;
+			// zero is FALSE, everything else is TRUE
+			return 0.0 != nve.getNumberValue();
+		}
+		throw new RuntimeException("Unexpected eval type (" + valEval.getClass().getName() + ")");
+	}
+

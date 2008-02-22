@@ -2,56 +2,48 @@
 	 * @return zero based index
 	 */
 	private static int findIndexOfValue(ValueEval lookupValue, ValueEval[] lookupRange,
-			boolean matchExact, boolean findLargestLessThanOrEqual) throws EvalEx {
-		// TODO - wildcard matching when matchExact and lookupValue is text containing * or ?
+			boolean matchExact, boolean findLargestLessThanOrEqual) throws EvaluationException {
+
+		LookupValueComparer lookupComparer = createLookupComparer(lookupValue, matchExact);
+		
 		if(matchExact) {
 			for (int i = 0; i < lookupRange.length; i++) {
-				ValueEval lri = lookupRange[i];
-				if(lri.getClass() != lookupValue.getClass()) {
-					continue;
-				}
-				if(compareValues(lookupValue, lri) == 0) {
+				if(lookupComparer.compareTo(lookupRange[i]).isEqual()) {
 					return i;
 				}
 			}
-		} else {
+			throw new EvaluationException(ErrorEval.NA);
+		}
+		
+		if(findLargestLessThanOrEqual) {
 			// Note - backward iteration
-			if(findLargestLessThanOrEqual) {
-				for (int i = lookupRange.length - 1; i>=0;  i--) {
-					ValueEval lri = lookupRange[i];
-					if(lri.getClass() != lookupValue.getClass()) {
-						continue;
-					}
-					int cmp = compareValues(lookupValue, lri);
-					if(cmp == 0) {
-						return i;
-					}
-					if(cmp > 0) {
-						return i;
-					}
+			for (int i = lookupRange.length - 1; i>=0;  i--) {
+				CompareResult cmp = lookupComparer.compareTo(lookupRange[i]);
+				if(cmp.isTypeMismatch()) {
+					continue;
 				}
-			} else {
-				// find smallest greater than or equal to
-				for (int i = 0; i<lookupRange.length; i++) {
-					ValueEval lri = lookupRange[i];
-					if(lri.getClass() != lookupValue.getClass()) {
-						continue;
-					}
-					int cmp = compareValues(lookupValue, lri);
-					if(cmp == 0) {
-						return i;
-					}
-					if(cmp > 0) {
-						if(i<1) {
-							throw new EvalEx(ErrorEval.NA);
-						}
-						return i-1;
-					}
+				if(!cmp.isLessThan()) {
+					return i;
 				}
-				
+			}
+			throw new EvaluationException(ErrorEval.NA);
+		}
+		
+		// else - find smallest greater than or equal to
+		// TODO - is binary search used for (match_type==+1) ?
+		for (int i = 0; i<lookupRange.length; i++) {
+			CompareResult cmp = lookupComparer.compareTo(lookupRange[i]);
+			if(cmp.isEqual()) {
+				return i;
+			}
+			if(cmp.isGreaterThan()) {
+				if(i<1) {
+					throw new EvaluationException(ErrorEval.NA);
+				}
+				return i-1;
 			}
 		}
 
-		throw new EvalEx(ErrorEval.NA);
+		throw new EvaluationException(ErrorEval.NA);
 	}
 
