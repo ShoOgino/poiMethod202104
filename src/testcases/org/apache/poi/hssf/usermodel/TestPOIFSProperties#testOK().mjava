@@ -1,0 +1,25 @@
+    public void testOK() throws Exception {
+        FileInputStream is = new FileInputStream(new File(cwd, "Simple.xls"));
+        POIFSFileSystem fs = new POIFSFileSystem(is);
+        is.close();
+
+        //set POIFS properties before constructing HSSFWorkbook
+        SummaryInformation summary1 = (SummaryInformation)PropertySetFactory.create(fs.createDocumentInputStream(SummaryInformation.DEFAULT_STREAM_NAME));
+        summary1.setTitle(title);
+
+        fs.getRoot().getEntry(SummaryInformation.DEFAULT_STREAM_NAME).delete();
+        fs.createDocument(summary1.toInputStream(), SummaryInformation.DEFAULT_STREAM_NAME);
+
+        HSSFWorkbook wb = new HSSFWorkbook(fs);
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        wb.write(out);
+        out.close();
+
+        //read the property
+        POIFSFileSystem fs2 = new POIFSFileSystem(new ByteArrayInputStream(out.toByteArray()));
+        SummaryInformation summary2 = (SummaryInformation)PropertySetFactory.create(fs2.createDocumentInputStream(SummaryInformation.DEFAULT_STREAM_NAME));
+        assertEquals(title, summary2.getTitle());
+
+    }
+
