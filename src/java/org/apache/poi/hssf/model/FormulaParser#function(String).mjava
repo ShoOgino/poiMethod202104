@@ -1,20 +1,28 @@
-    private void function(String name) {
-    	//average 2 args per function
-    	this.functionTokens.add(0, new ArrayList(2));
-    	
-        Match('(');
-        int numArgs = Arguments();
-        Match(')');
-                
-        AbstractFunctionPtg functionPtg = getFunction(name,(byte)numArgs);
-        
-		tokens.add(functionPtg);
- 
-        if (functionPtg.getName().equals("externalflag")) {
-            tokens.add(new NamePtg(name, this.book));
+    /**
+     * Note - Excel function names are 'case aware but not case sensitive'.  This method may end
+     * up creating a defined name record in the workbook if the specified name is not an internal
+     * Excel function, and has not been encountered before. 
+     * 
+     * @param name case preserved function name (as it was entered/appeared in the formula). 
+     */
+    private Ptg function(String name) {
+        int numArgs =0 ;
+        // Note regarding parameter - 
+        if(!AbstractFunctionPtg.isInternalFunctionName(name)) {
+            // external functions get a Name token which points to a defined name record
+            NamePtg nameToken = new NamePtg(name, this.book);
+            
+            // in the token tree, the name is more or less the first argument
+            numArgs++;  
+            tokens.add(nameToken);
         }
+        //average 2 args per function
+        List argumentPointers = new ArrayList(2);
 
- 		//remove what we just put in
-		this.functionTokens.remove(0);
+        Match('(');
+        numArgs += Arguments(argumentPointers);
+        Match(')');
+
+        return getFunction(name, numArgs, argumentPointers);
     }
 

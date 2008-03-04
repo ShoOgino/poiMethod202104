@@ -1,0 +1,30 @@
+	public LinkTable(List inputList, int startIndex, WorkbookRecordList workbookRecordList) {
+
+		_workbookRecordList = workbookRecordList;
+		RecordStream rs = new RecordStream(inputList, startIndex);
+
+		List temp = new ArrayList();
+		while(rs.peekNextClass() == SupBookRecord.class) {
+		   temp.add(new ExternalBookBlock(rs));
+		}
+		if(temp.size() < 1) {
+			throw new RuntimeException("Need at least one EXTERNALBOOK blocks");
+		}
+		_externalBookBlocks = new ExternalBookBlock[temp.size()];
+		temp.toArray(_externalBookBlocks);
+		temp.clear();
+
+		// If link table is present, there is always 1 of ExternSheetRecord
+		Record next = rs.getNext();
+		_externSheetRecord = (ExternSheetRecord)next;
+		_definedNames = new ArrayList();
+		// collect zero or more DEFINEDNAMEs id=0x18
+		while(rs.peekNextClass() == NameRecord.class) {
+			NameRecord nr = (NameRecord)rs.getNext();
+			_definedNames.add(nr);
+		}
+
+		_recordCount = rs.getCountRead();
+		_workbookRecordList.getRecords().addAll(inputList.subList(startIndex, startIndex + _recordCount));
+	}
+

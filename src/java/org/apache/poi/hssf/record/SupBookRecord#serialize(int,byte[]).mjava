@@ -7,13 +7,29 @@
      * @param data byte array containing instance data
      * @return number of bytes written
      */
-    public int serialize(int offset, byte [] data)
-    {
+    public int serialize(int offset, byte [] data) {
         LittleEndian.putShort(data, 0 + offset, sid);
-        LittleEndian.putShort(data, 2 + offset, (short) 4);
+        int dataSize = getDataSize();
+        LittleEndian.putShort(data, 2 + offset, (short) dataSize);
         LittleEndian.putShort(data, 4 + offset, field_1_number_of_sheets);
-        LittleEndian.putShort(data, 6 + offset, field_2_flag);
-
-        return getRecordSize();
+               
+        if(isExternalReferences()) {
+            
+            int currentOffset = 6 + offset;
+            UnicodeRecordStats urs = new UnicodeRecordStats();
+            field_2_encoded_url.serialize(urs, currentOffset, data);
+            currentOffset += urs.recordSize;
+            
+            for(int i=0; i<field_3_sheet_names.length; i++) {
+                urs = new UnicodeRecordStats();
+                field_3_sheet_names[i].serialize(urs, currentOffset, data);
+                currentOffset += urs.recordSize;
+            }
+        } else {
+            short field2val = _isAddInFunctions ? TAG_ADD_IN_FUNCTIONS : TAG_INTERNAL_REFERENCES;
+            
+            LittleEndian.putShort(data, 6 + offset, field2val);
+        }
+        return dataSize + 4;
     }
 

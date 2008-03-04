@@ -16,6 +16,7 @@
                     new Integer(recs.size()));
         Workbook  retval  = new Workbook();
         ArrayList records = new ArrayList(recs.size() / 3);
+        retval.records.setRecords(records);
 
         int k;
         for (k = 0; k < recs.size(); k++) {
@@ -74,21 +75,16 @@
                     retval.records.setBackuppos( k );
                     break;
                 case ExternSheetRecord.sid :
-                    if (log.check( POILogger.DEBUG ))
-                        log.log(DEBUG, "found extern sheet record at " + k);
-                    retval.externSheet = ( ExternSheetRecord ) rec;
-                    break;
+                    throw new RuntimeException("Extern sheet is part of LinkTable");
                 case NameRecord.sid :
-                    if (log.check( POILogger.DEBUG ))
-                        log.log(DEBUG, "found name record at " + k);
-                    retval.names.add(rec);
-                    //                    retval.records.namepos = k;
-                    break;
+                    throw new RuntimeException("DEFINEDNAME is part of LinkTable");
                 case SupBookRecord.sid :
                     if (log.check( POILogger.DEBUG ))
                         log.log(DEBUG, "found SupBook record at " + k);
+                    retval.linkTable = new LinkTable(recs, k, retval.records);
                     //                    retval.records.supbookpos = k;
-                    break;
+                    k+=retval.linkTable.getRecordCount() - 1;
+                    continue;
                 case FormatRecord.sid :
                     if (log.check( POILogger.DEBUG ))
                         log.log(DEBUG, "found format record at " + k);
@@ -144,8 +140,6 @@
             		break;
             }
         }
-
-        retval.records.setRecords(records);
         
         if (retval.windowOne == null) {
             retval.windowOne = (WindowOneRecord) retval.createWindowOne();

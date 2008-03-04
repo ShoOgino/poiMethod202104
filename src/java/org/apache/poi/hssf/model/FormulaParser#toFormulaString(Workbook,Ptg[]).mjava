@@ -6,68 +6,73 @@
      * @return a human readable String
      */
     public static String toFormulaString(Workbook book, Ptg[] ptgs) {
-        if (ptgs == null || ptgs.length == 0) return "#NAME";
-        java.util.Stack stack = new java.util.Stack();
-        AttrPtg ifptg = null;
+        if (ptgs == null || ptgs.length == 0) {
+            // TODO - what is the justification for returning "#NAME" (which is not "#NAME?", btw)
+            return "#NAME";
+        }
+        Stack stack = new Stack();
 
            // Excel allows to have AttrPtg at position 0 (such as Blanks) which
            // do not have any operands. Skip them.
         int i;
         if(ptgs[0] instanceof AttrPtg) {
-        	// TODO -this requirement is unclear and is not addressed by any junits
-        	stack.push(ptgs[0].toFormulaString(book));
-        	i=1;
+            AttrPtg attrPtg0 = (AttrPtg) ptgs[0];
+            if(attrPtg0.isSemiVolatile()) {
+                // no visible formula for semi-volatile
+            } else {
+                // TODO -this requirement is unclear and is not addressed by any junits
+                stack.push(ptgs[0].toFormulaString(book));
+            }
+            i=1;
         } else {
-        	i=0;
+            i=0;
         }
-                  
+
         for ( ; i < ptgs.length; i++) {
             Ptg ptg = ptgs[i];
+            // TODO - what about MemNoMemPtg?
+            if(ptg instanceof MemAreaPtg || ptg instanceof MemFuncPtg || ptg instanceof MemErrPtg) {
+                // marks the start of a list of area expressions which will be naturally combined
+                // by their trailing operators (e.g. UnionPtg)
+                // TODO - put comment and throw exception in toFormulaString() of these classes
+                continue;
+            }
             if (! (ptg instanceof OperationPtg)) {
                 stack.push(ptg.toFormulaString(book));
                 continue;
             }
-                      
+
             if (ptg instanceof AttrPtg && ((AttrPtg) ptg).isOptimizedIf()) {
-                ifptg = (AttrPtg) ptg;
                 continue;
             }
-                      
+
             final OperationPtg o = (OperationPtg) ptg;
-            final String[] operands = new String[o.getNumberOfOperands()];
+            int nOperands = o.getNumberOfOperands();
+            final String[] operands = new String[nOperands];
 
-            for (int j = operands.length; j > 0; j--) {
-                //TODO: catch stack underflow and throw parse exception.
-                operands[j - 1] = (String) stack.pop();
-                      }  
-
-            stack.push(o.toFormulaString(operands));
-            if (!(o instanceof AbstractFunctionPtg)) continue;
-
-            final AbstractFunctionPtg f = (AbstractFunctionPtg) o;
-            final String fname = f.getName();
-            if (fname == null) continue;
-
-            if ((ifptg != null) && (fname.equals("specialflag"))) {
-                             // this special case will be way different.
-                stack.push(ifptg.toFormulaString(new String[]{(String) stack.pop()}));
-                continue;
-                      }
-            if (fname.equals("externalflag")) {
-                final String top = (String) stack.pop();
-                final int paren = top.indexOf('(');
-                final int comma = top.indexOf(',');
-                if (comma == -1) {
-                    final int rparen = top.indexOf(')');
-                    stack.push(top.substring(paren + 1, rparen) + "()");
-                  }
-                else {
-                    stack.push(top.substring(paren + 1, comma) + '(' +
-                               top.substring(comma + 1));
+            for (int j = nOperands-1; j >= 0; j--) {
+                if(stack.isEmpty()) {
+                    //TODO: write junit to prove this works
+                   String msg = "Too few arguments suppled to operation token ("
+                        + o.getClass().getName() + "). Expected (" + nOperands
+                        + " but got " + (nOperands - j + 1);
+                    throw new FormulaParseException(msg);
+                }
+                operands[j] = (String) stack.pop();
             }
+            stack.push(o.toFormulaString(operands));
         }
-    }
-        // TODO: catch stack underflow and throw parse exception.
-        return (String) stack.pop();
+        if(stack.isEmpty()) {
+            // inspection of the code above reveals that every stack.pop() is followed by a 
+            // stack.push(). So this is either an internal error or impossible.
+            throw new IllegalStateException("Stack underflow");
+        }
+        String result = (String) stack.pop();
+        if(!stack.isEmpty()) {
+            // Might be caused by some tokens like AttrPtg and Mem*Ptg, which really shouldn't
+            // put anything on the stack
+            throw new IllegalStateException("too much stuff left on the stack");
+        }
+        return result;
     }
 

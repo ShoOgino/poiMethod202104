@@ -1,5 +1,5 @@
     private static ValueEval evaluateCell(HSSFWorkbook workbook, HSSFSheet sheet, 
-    		int srcRowNum, short srcColNum, String cellFormulaText) {
+            int srcRowNum, short srcColNum, String cellFormulaText) {
         FormulaParser parser = new FormulaParser(cellFormulaText, workbook.getWorkbook());
         parser.parse();
         Ptg[] ptgs = parser.getRPNPtg();
@@ -10,15 +10,24 @@
         for (int i = 0, iSize = ptgs.length; i < iSize; i++) {
 
             // since we don't know how to handle these yet :(
-            if (ptgs[i] instanceof ControlPtg) { continue; }
-            if (ptgs[i] instanceof MemErrPtg) { continue; }
-            if (ptgs[i] instanceof MissingArgPtg) { continue; }
-            if (ptgs[i] instanceof NamePtg) { continue; }
-            if (ptgs[i] instanceof NameXPtg) { continue; }
-            if (ptgs[i] instanceof UnknownPtg) { continue; }
+            Ptg ptg = ptgs[i];
+            if (ptg instanceof ControlPtg) { continue; }
+            if (ptg instanceof MemErrPtg) { continue; }
+            if (ptg instanceof MissingArgPtg) { continue; }
+            if (ptg instanceof NamePtg) { 
+            	// named ranges, macro functions
+                NamePtg namePtg = (NamePtg) ptg;
+                stack.push(new NameEval(namePtg.getIndex()));
+                continue; 
+            }
+            if (ptg instanceof NameXPtg) {
+            	// TODO - external functions
+                continue;
+            }
+            if (ptg instanceof UnknownPtg) { continue; }
 
-            if (ptgs[i] instanceof OperationPtg) {
-                OperationPtg optg = (OperationPtg) ptgs[i];
+            if (ptg instanceof OperationPtg) {
+                OperationPtg optg = (OperationPtg) ptg;
 
                 // parens can be ignored since we have RPN tokens
                 if (optg instanceof ParenthesisPtg) { continue; }
@@ -38,57 +47,50 @@
                 Eval opresult = invokeOperation(operation, ops, srcRowNum, srcColNum, workbook, sheet);
                 stack.push(opresult);
             }
-            else if (ptgs[i] instanceof ReferencePtg) {
-                ReferencePtg ptg = (ReferencePtg) ptgs[i];
-                short colnum = ptg.getColumn();
-                short rownum = ptg.getRow();
+            else if (ptg instanceof ReferencePtg) {
+                ReferencePtg refPtg = (ReferencePtg) ptg;
+                short colnum = refPtg.getColumn();
+                short rownum = refPtg.getRow();
                 HSSFRow row = sheet.getRow(rownum);
                 HSSFCell cell = (row != null) ? row.getCell(colnum) : null;
-                stack.push(createRef2DEval(ptg, cell, row, sheet, workbook));
+                stack.push(createRef2DEval(refPtg, cell, row, sheet, workbook));
             }
-            else if (ptgs[i] instanceof Ref3DPtg) {
-                Ref3DPtg ptg = (Ref3DPtg) ptgs[i];
-                short colnum = ptg.getColumn();
-                short rownum = ptg.getRow();
+            else if (ptg instanceof Ref3DPtg) {
+                Ref3DPtg refPtg = (Ref3DPtg) ptg;
+                short colnum = refPtg.getColumn();
+                short rownum = refPtg.getRow();
                 Workbook wb = workbook.getWorkbook();
-                HSSFSheet xsheet = workbook.getSheetAt(wb.getSheetIndexFromExternSheetIndex(ptg.getExternSheetIndex()));
+                HSSFSheet xsheet = workbook.getSheetAt(wb.getSheetIndexFromExternSheetIndex(refPtg.getExternSheetIndex()));
                 HSSFRow row = xsheet.getRow(rownum);
                 HSSFCell cell = (row != null) ? row.getCell(colnum) : null;
-                stack.push(createRef3DEval(ptg, cell, row, xsheet, workbook));
+                stack.push(createRef3DEval(refPtg, cell, row, xsheet, workbook));
             }
-            else if (ptgs[i] instanceof AreaPtg) {
-                AreaPtg ap = (AreaPtg) ptgs[i];
+            else if (ptg instanceof AreaPtg) {
+                AreaPtg ap = (AreaPtg) ptg;
                 AreaEval ae = evaluateAreaPtg(sheet, workbook, ap);
                 stack.push(ae);
             }
-            else if (ptgs[i] instanceof Area3DPtg) {
-                Area3DPtg a3dp = (Area3DPtg) ptgs[i];
+            else if (ptg instanceof Area3DPtg) {
+                Area3DPtg a3dp = (Area3DPtg) ptg;
                 AreaEval ae = evaluateArea3dPtg(workbook, a3dp);
                 stack.push(ae);
             }
             else {
-                Eval ptgEval = getEvalForPtg(ptgs[i]);
+                Eval ptgEval = getEvalForPtg(ptg);
                 stack.push(ptgEval);
             }
         }
 
         ValueEval value = ((ValueEval) stack.pop());
-        if (value instanceof RefEval) {
-            RefEval rv = (RefEval) value;
-            return rv.getInnerValueEval();
+        if (!stack.isEmpty()) {
+            throw new IllegalStateException("evaluation stack not empty");
         }
-        if (value instanceof AreaEval) {
-            AreaEval ae = (AreaEval) value;
-            if (ae.isRow()) {
-                if(ae.isColumn()) {
-                    return ae.getValues()[0];
-                }
-                return ae.getValueAt(ae.getFirstRow(), srcColNum);
-            }
-            if (ae.isColumn()) {
-                return ae.getValueAt(srcRowNum, ae.getFirstColumn());
-            }
-            return ErrorEval.VALUE_INVALID;
+        value = dereferenceValue(value, srcRowNum, srcColNum);
+        if (value instanceof BlankEval) {
+        	// Note Excel behaviour here. A blank final final value is converted to zero.  
+            return NumberEval.ZERO;
+            // Formulas _never_ evaluate to blank.  If a formula appears to have evaluated to 
+            // blank, the actual value is empty string. This can be verified with ISBLANK().
         }
         return value;
     }
