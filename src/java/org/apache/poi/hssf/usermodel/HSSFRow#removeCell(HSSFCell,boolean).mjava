@@ -1,21 +1,23 @@
     private void removeCell(HSSFCell cell, boolean alsoRemoveRecords) {
-    	if(alsoRemoveRecords) {
-	        CellValueRecordInterface cval = cell.getCellValueRecord();
-	        sheet.removeValueRecord(getRowNum(), cval);
-    	}
-    	
+        
         short column=cell.getCellNum();
-        if(cell!=null && column<cells.length)
-        {
-          cells[column]=null;
+        if(column < 0) {
+            throw new RuntimeException("Negative cell indexes not allowed");
         }
-
-        if (cell.getCellNum() == row.getLastCol())
-        {
-            row.setLastCol(findLastCell(row.getLastCol()));
+        if(column >= cells.length || cell != cells[column]) {
+            throw new RuntimeException("Specified cell is not from this row");
         }
-        if (cell.getCellNum() == row.getFirstCol())
-        {
+        cells[column]=null;
+        
+        if(alsoRemoveRecords) {
+            CellValueRecordInterface cval = cell.getCellValueRecord();
+            sheet.removeValueRecord(getRowNum(), cval);
+        }
+        
+        if (cell.getCellNum()+1 == row.getLastCol()) {
+            row.setLastCol((short) (findLastCell(row.getLastCol())+1));
+        }
+        if (cell.getCellNum() == row.getFirstCol()) {
             row.setFirstCol(findFirstCell(row.getFirstCol()));
         }
     }
