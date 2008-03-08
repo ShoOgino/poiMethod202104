@@ -1,0 +1,30 @@
+    public XSSFWorkbook(Package pkg) throws IOException {
+        super(pkg);
+        try {
+            WorkbookDocument doc = WorkbookDocument.Factory.parse(getCorePart().getInputStream());
+            this.workbook = doc.getWorkbook();
+            // Load shared strings
+            PackageRelationshipCollection prc = getCorePart().getRelationshipsByType(SHARED_STRINGS_RELATIONSHIP);
+            Iterator<PackageRelationship> it = prc.iterator();
+            if (it.hasNext()) { 
+                PackageRelationship rel = it.next();
+                PackagePart part = getTargetPart(rel);
+                this.sharedStringSource = new SharedStringsTable(part);
+            }
+            // Load individual sheets
+            for (CTSheet ctSheet : this.workbook.getSheets().getSheetArray()) {
+                PackagePart part = getPackagePart(ctSheet);
+                if (part == null) {
+                    continue;
+                }
+                WorksheetDocument worksheetDoc = WorksheetDocument.Factory.parse(part.getInputStream());
+                XSSFSheet sheet = new XSSFSheet(ctSheet, worksheetDoc.getWorksheet(), this);
+                this.sheets.add(sheet);
+            }
+        } catch (XmlException e) {
+            throw new IOException(e.toString());
+        } catch (InvalidFormatException e) {
+            throw new IOException(e.toString());
+        }
+    }
+

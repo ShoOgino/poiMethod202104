@@ -4,48 +4,27 @@
 	public String getText() {
 		StringBuffer text = new StringBuffer();
 		
-		CTSheet[] sheetRefs =
-			workbook._getHSSFXML().getSheetReferences().getSheetArray();
-		for(int i=0; i<sheetRefs.length; i++) {
-			try {
-				CTWorksheet sheet =
-					workbook._getHSSFXML().getSheet(sheetRefs[i]);
-				CTRow[] rows =
-					sheet.getSheetData().getRowArray();
-				
-				if(i > 0) {
-					text.append("\n");
-				}
-				if(includeSheetNames) {
-					text.append(sheetRefs[i].getName() + "\n");
-				}
-				
-				for(int j=0; j<rows.length; j++) {
-					CTCell[] cells = rows[j].getCArray();
-					for(int k=0; k<cells.length; k++) {
-						CTCell cell = cells[k];
-						if(k > 0) {
-							text.append("\t");
-						}
-						
-						boolean done = false;
-						
-						// Is it a formula one?
-						if(cell.getF() != null) {
-							if(formulasNotResults) {
-								text.append(cell.getF().getStringValue());
-								done = true;
-							}
-						}
-						if(!done) {
-							HSSFXMLCell uCell = new HSSFXMLCell(cell, workbook);
-							text.append(uCell.getStringValue());
-						}
+		for(int i=0; i<workbook.getNumberOfSheets(); i++) {
+			Sheet sheet = workbook.getSheetAt(i);
+			if(includeSheetNames) {
+				text.append(workbook.getSheetName(i) + "\n");
+			}
+			
+			for (Object rawR : sheet) {
+				Row row = (Row)rawR;
+				for (Object rawC: row) {
+					Cell cell = (Cell)rawC;
+					
+					// Is it a formula one?
+					if(cell.getCellType() == Cell.CELL_TYPE_FORMULA && formulasNotResults) {
+						text.append(cell.getCellFormula());
+					} else {
+						text.append(cell.toString());
 					}
-					text.append("\n");
+					
+					text.append(",");
 				}
-			} catch(Exception e) {
-				throw new RuntimeException(e);
+				text.append("\n");
 			}
 		}
 		
