@@ -1,17 +1,36 @@
     /**
-     * Create an area ref from a string representation.
-     * The area reference must be contiguous
+     * Create an area ref from a string representation.  Sheet names containing special characters should be
+     * delimited and escaped as per normal syntax rules for formulas.<br/> 
+     * The area reference must be contiguous (i.e. represent a single rectangle, not a union of rectangles)
      */
     public AreaReference(String reference) {
         if(! isContiguous(reference)) {
-            throw new IllegalArgumentException("References passed to the AreaReference must be contiguous, use generateContiguous(ref) if you have non-contiguous references");
+            throw new IllegalArgumentException(
+                    "References passed to the AreaReference must be contiguous, " +
+                    "use generateContiguous(ref) if you have non-contiguous references");
         }
 
-        String[] refs = seperateAreaRefs(reference);
-        dim = refs.length;
-        cells = new CellReference[dim];
-        for (int i=0;i<dim;i++) {
-            cells[i]=new CellReference(refs[i]);
+        String[] parts = separateAreaRefs(reference);
+        
+        // Special handling for whole-column references
+        if(parts.length == 2 && parts[0].length() == 1 &&
+        		parts[1].length() == 1 && 
+        		parts[0].charAt(0) >= 'A' && parts[0].charAt(0) <= 'Z' &&
+        		parts[1].charAt(0) >= 'A' && parts[1].charAt(0) <= 'Z') {
+        	// Represented internally as x$1 to x$65536
+        	//  which is the maximum range of rows
+        	parts[0] = parts[0] + "$1";
+        	parts[1] = parts[1] + "$65536";
+        }
+        
+        _firstCell = new CellReference(parts[0]);
+        
+        if(parts.length == 2) {
+            _lastCell = new CellReference(parts[1]);
+            _isSingleCell = false;
+        } else {
+            _lastCell = _firstCell;
+            _isSingleCell = true;
         }
     }
 

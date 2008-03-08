@@ -1,0 +1,31 @@
+	/**
+	 * Test for undesired behaviour observable as of svn revision 618865 (5-Feb-2008).
+	 * POIFSFileSystem was not closing the input stream.
+	 */
+	public void testAlwaysClose() {
+		
+		TestIS testIS;
+	
+		// Normal case - read until EOF and close
+		testIS = new TestIS(openSampleStream("13224.xls"), -1);
+		try {
+			new POIFSFileSystem(testIS);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		assertTrue("input stream was not closed", testIS.isClosed());
+		
+		// intended to crash after reading 10000 bytes
+		testIS = new TestIS(openSampleStream("13224.xls"), 10000);
+		try {
+			new POIFSFileSystem(testIS);
+			fail("ex should have been thrown");
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		} catch (MyEx e) {
+			// expected
+		}
+		assertTrue("input stream was not closed", testIS.isClosed()); // but still should close
+		
+	}
+

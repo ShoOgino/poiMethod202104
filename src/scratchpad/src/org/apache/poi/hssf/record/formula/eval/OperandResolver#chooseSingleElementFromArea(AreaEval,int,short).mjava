@@ -1,0 +1,59 @@
+	/**
+	 * Implements (some perhaps not well known) Excel functionality to select a single cell from an
+	 * area depending on the coordinates of the calling cell.  Here is an example demonstrating
+	 * both selection from a single row area and a single column area in the same formula.
+	 * 
+	 *    <table border="1" cellpadding="1" cellspacing="1" summary="sample spreadsheet">
+	 *      <tr><th>&nbsp;</th><th>&nbsp;A&nbsp;</th><th>&nbsp;B&nbsp;</th><th>&nbsp;C&nbsp;</th><th>&nbsp;D&nbsp;</th></tr>
+	 *      <tr><th>1</th><td>15</td><td>20</td><td>25</td><td>&nbsp;</td></tr>
+	 *      <tr><th>2</th><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>200</td></tr>
+	 *      <tr><th>3</th><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>300</td></tr>
+	 *      <tr><th>3</th><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>400</td></tr>
+	 *    </table>
+	 * 
+	 * If the formula "=1000+A1:B1+D2:D3" is put into the 9 cells from A2 to C4, the spreadsheet
+	 * will look like this:
+	 * 
+	 *    <table border="1" cellpadding="1" cellspacing="1" summary="sample spreadsheet">
+	 *      <tr><th>&nbsp;</th><th>&nbsp;A&nbsp;</th><th>&nbsp;B&nbsp;</th><th>&nbsp;C&nbsp;</th><th>&nbsp;D&nbsp;</th></tr>
+	 *      <tr><th>1</th><td>15</td><td>20</td><td>25</td><td>&nbsp;</td></tr>
+	 *      <tr><th>2</th><td>1215</td><td>1220</td><td>#VALUE!</td><td>200</td></tr>
+	 *      <tr><th>3</th><td>1315</td><td>1320</td><td>#VALUE!</td><td>300</td></tr>
+	 *      <tr><th>4</th><td>#VALUE!</td><td>#VALUE!</td><td>#VALUE!</td><td>400</td></tr>
+	 *    </table>
+	 * 
+	 * Note that the row area (A1:B1) does not include column C and the column area (D2:D3) does 
+	 * not include row 4, so the values in C1(=25) and D4(=400) are not accessible to the formula
+	 * as written, but in the 4 cells A2:B3, the row and column selection works ok.<p/>
+	 * 
+	 * The same concept is extended to references across sheets, such that even multi-row, 
+	 * multi-column areas can be useful.<p/>
+	 * 
+	 * Of course with carefully (or carelessly) chosen parameters, cyclic references can occur and
+	 * hence this method <b>can</b> throw a 'circular reference' EvaluationException.  Note that 
+	 * this method does not attempt to detect cycles.  Every cell in the specified Area <tt>ae</tt>
+	 * has already been evaluated prior to this method call.  Any cell (or cell<b>s</b>) part of 
+	 * <tt>ae</tt> that would incur a cyclic reference error if selected by this method, will 
+	 * already have the value <t>ErrorEval.CIRCULAR_REF_ERROR</tt> upon entry to this method.  It
+	 * is assumed logic exists elsewhere to produce this behaviour.
+	 * 
+	 * @return whatever the selected cell's evaluated value is.  Never <code>null</code>. Never
+	 *  <tt>ErrorEval</tt>.
+	 * @throws EvaluationException if there is a problem with indexing into the area, or if the
+	 *  evaluated cell has an error.
+	 */
+	public static ValueEval chooseSingleElementFromArea(AreaEval ae, 
+			int srcCellRow, short srcCellCol) throws EvaluationException {
+		ValueEval result = chooseSingleElementFromAreaInternal(ae, srcCellRow, srcCellCol);
+		if(result == null) {
+			// This seems to be required because AreaEval.values() array may contain nulls.
+			// perhaps that should not be allowed.
+			result = BlankEval.INSTANCE;
+		}
+		if (result instanceof ErrorEval) {
+			throw new EvaluationException((ErrorEval) result);
+			
+		}
+		return result;
+	}
+

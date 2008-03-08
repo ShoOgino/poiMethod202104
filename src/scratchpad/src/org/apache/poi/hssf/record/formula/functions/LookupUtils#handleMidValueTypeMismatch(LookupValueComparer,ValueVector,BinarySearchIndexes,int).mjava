@@ -1,0 +1,43 @@
+	/**
+	 * Excel seems to handle mismatched types initially by just stepping 'mid' ix forward to the 
+	 * first compatible value.
+	 * @param midIx 'mid' index (value which has the wrong type)
+	 * @return usually -1, signifying that the BinarySearchIndex has been narrowed to the new mid 
+	 * index.  Zero or greater signifies that an exact match for the lookup value was found
+	 */
+	private static int handleMidValueTypeMismatch(LookupValueComparer lookupComparer, ValueVector vector,
+			BinarySearchIndexes bsi, int midIx) {
+		int newMid = midIx;
+		int highIx = bsi.getHighIx();
+		
+		while(true) {
+			newMid++;
+			if(newMid == highIx) {
+				// every element from midIx to highIx was the wrong type
+				// move highIx down to the low end of the mid values
+				bsi.narrowSearch(midIx, true);
+				return -1;
+			}
+			CompareResult cr = lookupComparer.compareTo(vector.getItem(newMid));
+			if(cr.isLessThan() && newMid == highIx-1) {
+				// move highIx down to the low end of the mid values
+				bsi.narrowSearch(midIx, true);
+				return -1;
+				// but only when "newMid == highIx-1"? slightly weird.
+				// It would seem more efficient to always do this.
+			}
+			if(cr.isTypeMismatch()) {
+				// keep stepping over values until the right type is found
+				continue;
+			}
+			if(cr.isEqual()) {
+				return newMid;
+			}
+			// Note - if moving highIx down (due to lookup<vector[newMid]),
+			// this execution path only moves highIx it down as far as newMid, not midIx,
+			// which would be more efficient.
+			bsi.narrowSearch(newMid, cr.isLessThan());
+			return -1;
+		}
+	}
+

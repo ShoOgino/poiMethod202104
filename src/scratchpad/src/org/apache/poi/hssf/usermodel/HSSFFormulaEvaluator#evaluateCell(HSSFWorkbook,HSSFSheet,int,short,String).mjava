@@ -1,0 +1,97 @@
+    private static ValueEval evaluateCell(HSSFWorkbook workbook, HSSFSheet sheet, 
+            int srcRowNum, short srcColNum, String cellFormulaText) {
+        FormulaParser parser = new FormulaParser(cellFormulaText, workbook.getWorkbook());
+        parser.parse();
+        Ptg[] ptgs = parser.getRPNPtg();
+        // -- parsing over --
+        
+
+        Stack stack = new Stack();
+        for (int i = 0, iSize = ptgs.length; i < iSize; i++) {
+
+            // since we don't know how to handle these yet :(
+            Ptg ptg = ptgs[i];
+            if (ptg instanceof ControlPtg) { continue; }
+            if (ptg instanceof MemErrPtg) { continue; }
+            if (ptg instanceof MissingArgPtg) { continue; }
+            if (ptg instanceof NamePtg) { 
+            	// named ranges, macro functions
+                NamePtg namePtg = (NamePtg) ptg;
+                stack.push(new NameEval(namePtg.getIndex()));
+                continue; 
+            }
+            if (ptg instanceof NameXPtg) {
+            	// TODO - external functions
+                continue;
+            }
+            if (ptg instanceof UnknownPtg) { continue; }
+
+            if (ptg instanceof OperationPtg) {
+                OperationPtg optg = (OperationPtg) ptg;
+
+                // parens can be ignored since we have RPN tokens
+                if (optg instanceof ParenthesisPtg) { continue; }
+                if (optg instanceof AttrPtg) { continue; }
+                if (optg instanceof UnionPtg) { continue; }
+
+                OperationEval operation = (OperationEval) getOperationEvalForPtg(optg);
+
+                int numops = operation.getNumberOfOperands();
+                Eval[] ops = new Eval[numops];
+
+                // storing the ops in reverse order since they are popping
+                for (int j = numops - 1; j >= 0; j--) {
+                    Eval p = (Eval) stack.pop();
+                    ops[j] = p;
+                }
+                Eval opresult = invokeOperation(operation, ops, srcRowNum, srcColNum, workbook, sheet);
+                stack.push(opresult);
+            }
+            else if (ptg instanceof ReferencePtg) {
+                ReferencePtg refPtg = (ReferencePtg) ptg;
+                int colIx = refPtg.getColumn();
+                int rowIx = refPtg.getRow();
+                HSSFRow row = sheet.getRow(rowIx);
+                HSSFCell cell = (row != null) ? row.getCell(colIx) : null;
+                stack.push(createRef2DEval(refPtg, cell, row, sheet, workbook));
+            }
+            else if (ptg instanceof Ref3DPtg) {
+                Ref3DPtg refPtg = (Ref3DPtg) ptg;
+                int colIx = refPtg.getColumn();
+                int rowIx = refPtg.getRow();
+                Workbook wb = workbook.getWorkbook();
+                HSSFSheet xsheet = workbook.getSheetAt(wb.getSheetIndexFromExternSheetIndex(refPtg.getExternSheetIndex()));
+                HSSFRow row = xsheet.getRow(rowIx);
+                HSSFCell cell = (row != null) ? row.getCell(colIx) : null;
+                stack.push(createRef3DEval(refPtg, cell, row, xsheet, workbook));
+            }
+            else if (ptg instanceof AreaPtg) {
+                AreaPtg ap = (AreaPtg) ptg;
+                AreaEval ae = evaluateAreaPtg(sheet, workbook, ap);
+                stack.push(ae);
+            }
+            else if (ptg instanceof Area3DPtg) {
+                Area3DPtg a3dp = (Area3DPtg) ptg;
+                AreaEval ae = evaluateArea3dPtg(workbook, a3dp);
+                stack.push(ae);
+            }
+            else {
+                Eval ptgEval = getEvalForPtg(ptg);
+                stack.push(ptgEval);
+            }
+        }
+
+        ValueEval value = ((ValueEval) stack.pop());
+        if (!stack.isEmpty()) {
+            throw new IllegalStateException("evaluation stack not empty");
+        }
+        value = dereferenceValue(value, srcRowNum, srcColNum);
+        if (value instanceof BlankEval) {
+        	// Note Excel behaviour here. A blank final final value is converted to zero.  
+            return NumberEval.ZERO;
+            // Formulas _never_ evaluate to blank.  If a formula appears to have evaluated to 
+            // blank, the actual value is empty string. This can be verified with ISBLANK().
+        }
+        return value;
+    }
+

@@ -3,44 +3,21 @@
      * @param eval
      */
     private ValueEval xlateStringEval(StringEval eval) {
-        ValueEval retval = null;
+
         if ((flags & STRING_IS_PARSED) > 0) {
             String s = eval.getStringValue();
-            try { 
-                double d = Double.parseDouble(s);
-                retval = new NumberEval(d);
-            } 
-            catch (Exception e) {
-                if ((flags & STRING_TO_BOOL_IS_PARSED) > 0) {
-                    try { 
-                        boolean b = Boolean.getBoolean(s);
-                        retval = b ? BoolEval.TRUE : BoolEval.FALSE;
-                    } 
-                    catch (Exception e2) { retval = ErrorEval.VALUE_INVALID; }
-                }
-                else {
-                    retval = ErrorEval.VALUE_INVALID;
-                }
+            Double d = OperandResolver.parseDouble(s);
+            if(d == null) {
+                return ErrorEval.VALUE_INVALID;
             }
+            return new NumberEval(d.doubleValue());
         }
-        else if ((flags & STRING_TO_BOOL_IS_PARSED) > 0) {
-            String s = eval.getStringValue();
-            try { 
-                boolean b = Boolean.getBoolean(s);
-                retval = b ? BoolEval.TRUE : BoolEval.FALSE;
-            } 
-            catch (Exception e) { retval = ErrorEval.VALUE_INVALID; }
-        }
-        
         // strings are errors?
-        else if ((flags & STRING_IS_INVALID_VALUE) > 0) {
-            retval = ErrorEval.VALUE_INVALID;
+        if ((flags & STRING_IS_INVALID_VALUE) > 0) {
+            return ErrorEval.VALUE_INVALID;
         }
         
         // ignore strings
-        else {
-            retval = xlateBlankEval(BLANK_IS_PARSED);
-        }
-        return retval;
+        return xlateBlankEval(BLANK_IS_PARSED);
     }
 

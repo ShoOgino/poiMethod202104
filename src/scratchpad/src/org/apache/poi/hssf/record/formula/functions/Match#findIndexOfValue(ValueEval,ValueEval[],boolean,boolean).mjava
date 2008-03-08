@@ -1,0 +1,49 @@
+	/**
+	 * @return zero based index
+	 */
+	private static int findIndexOfValue(ValueEval lookupValue, ValueEval[] lookupRange,
+			boolean matchExact, boolean findLargestLessThanOrEqual) throws EvaluationException {
+
+		LookupValueComparer lookupComparer = createLookupComparer(lookupValue, matchExact);
+		
+		if(matchExact) {
+			for (int i = 0; i < lookupRange.length; i++) {
+				if(lookupComparer.compareTo(lookupRange[i]).isEqual()) {
+					return i;
+				}
+			}
+			throw new EvaluationException(ErrorEval.NA);
+		}
+		
+		if(findLargestLessThanOrEqual) {
+			// Note - backward iteration
+			for (int i = lookupRange.length - 1; i>=0;  i--) {
+				CompareResult cmp = lookupComparer.compareTo(lookupRange[i]);
+				if(cmp.isTypeMismatch()) {
+					continue;
+				}
+				if(!cmp.isLessThan()) {
+					return i;
+				}
+			}
+			throw new EvaluationException(ErrorEval.NA);
+		}
+		
+		// else - find smallest greater than or equal to
+		// TODO - is binary search used for (match_type==+1) ?
+		for (int i = 0; i<lookupRange.length; i++) {
+			CompareResult cmp = lookupComparer.compareTo(lookupRange[i]);
+			if(cmp.isEqual()) {
+				return i;
+			}
+			if(cmp.isGreaterThan()) {
+				if(i<1) {
+					throw new EvaluationException(ErrorEval.NA);
+				}
+				return i-1;
+			}
+		}
+
+		throw new EvaluationException(ErrorEval.NA);
+	}
+

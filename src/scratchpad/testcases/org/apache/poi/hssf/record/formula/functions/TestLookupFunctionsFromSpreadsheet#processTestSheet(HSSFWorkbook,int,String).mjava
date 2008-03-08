@@ -1,0 +1,56 @@
+    private int processTestSheet(HSSFWorkbook workbook, int sheetIndex, String sheetName) {
+		HSSFSheet sheet = workbook.getSheetAt(sheetIndex);
+		HSSFFormulaEvaluator evaluator = new HSSFFormulaEvaluator(sheet, workbook);
+		int maxRows = sheet.getLastRowNum()+1;
+        int result = Result.NO_EVALUATIONS_FOUND; // so far
+		
+		String currentGroupComment = null;
+		for(int rowIndex=SS.START_TEST_CASES_ROW_INDEX; rowIndex<maxRows; rowIndex++) {
+            HSSFRow r = sheet.getRow(rowIndex);
+			String newMarkerValue = getMarkerColumnValue(r);
+			if(r == null) {
+				continue;
+			}
+			if(SS.TEST_CASES_END_MARKER.equalsIgnoreCase(newMarkerValue)) {
+				// normal exit point
+				return result;
+			}
+			if(SS.SKIP_CURRENT_TEST_CASE_MARKER.equalsIgnoreCase(newMarkerValue)) {
+				// currently disabled test case row
+				continue;
+			}
+			if(newMarkerValue != null) {
+				currentGroupComment = newMarkerValue;
+			}
+            HSSFCell c = r.getCell(SS.COLUMN_INDEX_EVALUATION);
+			if (c == null || c.getCellType() != HSSFCell.CELL_TYPE_FORMULA) {
+				continue;
+			}
+			evaluator.setCurrentRow(r);
+			CellValue actualValue = evaluator.evaluate(c);
+			HSSFCell expectedValueCell = r.getCell(SS.COLUMN_INDEX_EXPECTED_RESULT);
+			String rowComment = getRowCommentColumnValue(r);
+			
+			String msgPrefix = formatTestCaseDetails(sheetName, r.getRowNum(), c, currentGroupComment, rowComment);
+			try {
+				confirmExpectedResult(msgPrefix, expectedValueCell, actualValue);
+				_evaluationSuccessCount ++;
+				if(result != Result.SOME_EVALUATIONS_FAILED) {
+					result = Result.ALL_EVALUATIONS_SUCCEEDED;
+				}
+			} catch (RuntimeException e) {
+				_evaluationFailureCount ++;
+				printShortStackTrace(System.err, e);
+				result = Result.SOME_EVALUATIONS_FAILED;
+			} catch (AssertionFailedError e) {
+				_evaluationFailureCount ++;
+				printShortStackTrace(System.err, e);
+				result = Result.SOME_EVALUATIONS_FAILED;
+			}
+			
+		}
+		throw new RuntimeException("Missing end marker '" + SS.TEST_CASES_END_MARKER 
+				+ "' on sheet '" + sheetName + "'");
+		
+	}
+

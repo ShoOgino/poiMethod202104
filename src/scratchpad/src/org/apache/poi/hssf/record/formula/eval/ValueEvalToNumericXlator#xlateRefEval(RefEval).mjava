@@ -3,49 +3,32 @@
      * @param eval
      */
     private ValueEval xlateRefEval(RefEval reval) {
-        ValueEval retval = null;
-        ValueEval eval = (ValueEval) reval.getInnerValueEval();
+        ValueEval eval = reval.getInnerValueEval();
         
         // most common case - least worries :)
         if (eval instanceof NumberEval) {
-            retval = (NumberEval) eval;
+            return eval;
         }
         
-        // booleval
-        else if (eval instanceof BoolEval) {
-            retval = ((flags & REF_BOOL_IS_PARSED) > 0)
+        if (eval instanceof BoolEval) {
+            return ((flags & REF_BOOL_IS_PARSED) > 0)
                     ? (ValueEval) eval
                     : BlankEval.INSTANCE;
         } 
         
-        // stringeval 
-        else if (eval instanceof StringEval) {
-            retval = xlateRefStringEval((StringEval) eval);
+        if (eval instanceof StringEval) {
+            return xlateRefStringEval((StringEval) eval);
         }
         
-        // erroreval
-        else if (eval instanceof ErrorEval) {
-            retval = eval;
+        if (eval instanceof ErrorEval) {
+            return eval;
         }
         
-        // refeval
-        else if (eval instanceof RefEval) {
-            RefEval re = (RefEval) eval;
-            retval = xlateRefEval(re);
+        if (eval instanceof BlankEval) {
+            return xlateBlankEval(REF_BLANK_IS_PARSED);
         }
         
-        else if (eval instanceof BlankEval) {
-            retval = xlateBlankEval(reval.isEvaluated() ? EVALUATED_REF_BLANK_IS_PARSED : REF_BLANK_IS_PARSED);
-        }
-        
-        // probably AreaEval ? then not acceptable.
-        else { 
-            throw new RuntimeException("Invalid ValueEval type passed for conversion: " + eval.getClass());
-        }
-
-        
-        
-
-        return retval;
+        throw new RuntimeException("Invalid ValueEval type passed for conversion: ("
+        		+ eval.getClass().getName() + ")");
     }
 

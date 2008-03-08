@@ -1,21 +1,50 @@
     /**
-     * Create a POIFSFileSystem from an InputStream
+     * Create a POIFSFileSystem from an <tt>InputStream</tt>.  Normally the stream is read until
+     * EOF.  The stream is always closed.<p/>
+     * 
+     * Some streams are usable after reaching EOF (typically those that return <code>true</code> 
+     * for <tt>markSupported()</tt>).  In the unlikely case that the caller has such a stream 
+     * <i>and</i> needs to use it after this constructor completes, a work around is to wrap the
+     * stream in order to trap the <tt>close()</tt> call.  A convenience method (
+     * <tt>createNonClosingInputStream()</tt>) has been provided for this purpose:
+     * <pre>
+     * InputStream wrappedStream = POIFSFileSystem.createNonClosingInputStream(is);
+     * HSSFWorkbook wb = new HSSFWorkbook(wrappedStream);
+     * is.reset(); 
+     * doSomethingElse(is); 
+     * </pre>
+     * Note also the special case of <tt>ByteArrayInputStream</tt> for which the <tt>close()</tt>
+     * method does nothing. 
+     * <pre>
+     * ByteArrayInputStream bais = ...
+     * HSSFWorkbook wb = new HSSFWorkbook(bais); // calls bais.close() !
+     * bais.reset(); // no problem
+     * doSomethingElse(bais);
+     * </pre>
      *
      * @param stream the InputStream from which to read the data
      *
      * @exception IOException on errors reading, or on invalid data
      */
 
-    public POIFSFileSystem(final InputStream stream)
+    public POIFSFileSystem(InputStream stream)
         throws IOException
     {
         this();
+        boolean success = false;
 
         // read the header block from the stream
-        HeaderBlockReader header_block_reader = new HeaderBlockReader(stream);
-
+        HeaderBlockReader header_block_reader;
         // read the rest of the stream into blocks
-        RawDataBlockList  data_blocks         = new RawDataBlockList(stream);
+        RawDataBlockList data_blocks;
+        try {
+            header_block_reader = new HeaderBlockReader(stream);
+            data_blocks = new RawDataBlockList(stream);
+            success = true;
+        } finally {
+            closeInputStream(stream, success);
+        }
+        
 
         // set up the block allocation table (necessary for the
         // data_blocks to be manageable

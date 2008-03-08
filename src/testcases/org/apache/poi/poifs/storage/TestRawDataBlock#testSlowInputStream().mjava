@@ -4,6 +4,13 @@
      *  incorrectly think that there's not enough data
      */
     public void testSlowInputStream() throws Exception {
+        // Get the logger to be used
+        DummyPOILogger logger = (DummyPOILogger)POILogFactory.getLogger(
+        		RawDataBlock.class
+        );
+        assertEquals(0, logger.logged.size());
+        
+        // Test for various ok data sizes
         for (int k = 1; k < 512; k++) {
             byte[] data = new byte[ 512 ];
             for (int j = 0; j < data.length; j++) {
@@ -25,14 +32,17 @@
                 data[j] = (byte) j;
             }
             
-            // Shouldn't complain, as there is enough data
-            try {
-	            RawDataBlock block = 
-	            	new RawDataBlock(new SlowInputStream(data, k));
-	            fail();
-            } catch(IOException e) {
-            	// as expected
-            }
+            logger.reset();
+            assertEquals(0, logger.logged.size());
+            
+            // Should complain, as there isn't enough data
+            RawDataBlock block = 
+            	new RawDataBlock(new SlowInputStream(data, k));
+            assertNotNull(block);
+            assertEquals(
+            		"Warning on " + k + " byte short block",
+            		1, logger.logged.size()
+            );
         }
     }
 
