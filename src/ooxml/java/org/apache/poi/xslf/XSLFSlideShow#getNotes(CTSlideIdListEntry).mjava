@@ -3,11 +3,11 @@
 	 *  slide, as found from the supplied slide reference
 	 */
 	public CTNotesSlide getNotes(CTSlideIdListEntry slide) throws IOException, XmlException {
-		PackagePart slidePart =
-			getRelatedPackagePart(slide.getId2());
-		
 		PackageRelationshipCollection notes;
 		try {
+			PackagePart slidePart =
+				getTargetPart(getCorePart().getRelationship(slide.getId2()));
+		
 			notes = slidePart.getRelationshipsByType(NOTES_RELATION_TYPE);
 		} catch(InvalidFormatException e) {
 			throw new IllegalStateException(e);
@@ -21,11 +21,15 @@
 			throw new IllegalStateException("Expecting 0 or 1 notes for a slide, but found " + notes.size());
 		}
 		
-		PackagePart notesPart =
-			getPackagePart(notes.getRelationship(0));
-		NotesDocument notesDoc =
-			NotesDocument.Factory.parse(notesPart.getInputStream());
-		
-		return notesDoc.getNotes();
+		try {
+			PackagePart notesPart =
+				getTargetPart(notes.getRelationship(0));
+			NotesDocument notesDoc =
+				NotesDocument.Factory.parse(notesPart.getInputStream());
+			
+			return notesDoc.getNotes();
+		} catch(InvalidFormatException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
