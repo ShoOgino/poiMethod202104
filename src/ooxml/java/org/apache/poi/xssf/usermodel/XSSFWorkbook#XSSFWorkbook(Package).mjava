@@ -3,14 +3,27 @@
         try {
             WorkbookDocument doc = WorkbookDocument.Factory.parse(getCorePart().getInputStream());
             this.workbook = doc.getWorkbook();
+            
+            PackageRelationshipCollection prc;
+            Iterator<PackageRelationship> it;
+            
             // Load shared strings
-            PackageRelationshipCollection prc = getCorePart().getRelationshipsByType(SHARED_STRINGS_RELATIONSHIP);
-            Iterator<PackageRelationship> it = prc.iterator();
+            prc = getCorePart().getRelationshipsByType(SHARED_STRINGS_RELATIONSHIP);
+            it = prc.iterator();
             if (it.hasNext()) { 
                 PackageRelationship rel = it.next();
                 PackagePart part = getTargetPart(rel);
                 this.sharedStringSource = new SharedStringsTable(part);
             }
+            // Load styles source
+            prc = getCorePart().getRelationshipsByType(STYLES_RELATIONSHIP);
+            it = prc.iterator();
+            if (it.hasNext()) { 
+                PackageRelationship rel = it.next();
+                PackagePart part = getTargetPart(rel);
+                this.stylesSource = new StylesTable(part);
+            }
+            
             // Load individual sheets
             for (CTSheet ctSheet : this.workbook.getSheets().getSheetArray()) {
                 PackagePart part = getPackagePart(ctSheet);
