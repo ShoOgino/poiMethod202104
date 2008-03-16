@@ -4,34 +4,22 @@
             WorkbookDocument doc = WorkbookDocument.Factory.parse(getCorePart().getInputStream());
             this.workbook = doc.getWorkbook();
             
-            PackageRelationshipCollection prc;
-            Iterator<PackageRelationship> it;
-            
-            // Load shared strings
-            prc = getCorePart().getRelationshipsByType(SHARED_STRINGS.getRelation());
-            it = prc.iterator();
-            if (it.hasNext()) { 
-                PackageRelationship rel = it.next();
-                PackagePart part = getTargetPart(rel);
-                this.sharedStringSource = new SharedStringsTable(part);
-            } else {
-            	log.log(POILogger.WARN, "No shared strings part found");
-            }
-            // Load styles source
-            prc = getCorePart().getRelationshipsByType(STYLES.getRelation());
-            it = prc.iterator();
-            if (it.hasNext()) { 
-                PackageRelationship rel = it.next();
-                PackagePart part = getTargetPart(rel);
-                this.stylesSource = new StylesTable(part);
-            } else {
-            	log.log(POILogger.WARN, "No styles part found");
+            try {
+	            // Load shared strings
+	            this.sharedStringSource = (SharedStringSource)
+	            	SHARED_STRINGS.load(getCorePart());
+	            // Load styles source
+	            this.stylesSource = (StylesSource)
+	            	STYLES.load(getCorePart());
+            } catch(Exception e) {
+            	throw new IOException(e.getMessage());
             }
             
             // Load individual sheets
             for (CTSheet ctSheet : this.workbook.getSheets().getSheetArray()) {
                 PackagePart part = getPackagePart(ctSheet);
                 if (part == null) {
+                	log.log(POILogger.WARN, "Sheet with name " + ctSheet.getName() + " was defined, but didn't exist, skipping");
                     continue;
                 }
                 WorksheetDocument worksheetDoc = WorksheetDocument.Factory.parse(part.getInputStream());

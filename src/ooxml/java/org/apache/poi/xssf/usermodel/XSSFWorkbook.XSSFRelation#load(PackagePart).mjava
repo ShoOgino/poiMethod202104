@@ -1,0 +1,26 @@
+		/**
+		 * Load, off the specified core part
+		 */
+		private XSSFModel load(PackagePart corePart) throws Exception {
+			Constructor<? extends XSSFModel> c = CLASS.getConstructor(InputStream.class);
+			XSSFModel model = null;
+			
+            PackageRelationshipCollection prc =
+            	corePart.getRelationshipsByType(REL);
+            Iterator<PackageRelationship> it = prc.iterator();
+            if(it.hasNext()) {
+                PackageRelationship rel = it.next();
+                PackagePartName relName = PackagingURIHelper.createPartName(rel.getTargetURI());
+                PackagePart part = corePart.getPackage().getPart(relName);
+                InputStream is = part.getInputStream();
+                try {
+                	model = c.newInstance(is);
+                } finally {
+                	is.close();
+                }
+            } else {
+            	log.log(POILogger.WARN, "No part " + DEFAULT_NAME + " found");
+            }
+            return model;
+		}
+
