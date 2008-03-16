@@ -1,0 +1,33 @@
+	/**
+	 * Bug 27349 - VLOOKUP with reference to another sheet.<p/> This test was
+	 * added <em>long</em> after the relevant functionality was fixed.
+	 */
+	public void test27349() {
+		// 27349-vlookupAcrossSheets.xls is bugzilla/attachment.cgi?id=10622
+		InputStream is = openSampleFileStream("27349-vlookupAcrossSheets.xls");
+		HSSFWorkbook wb;
+		try {
+			// original bug may have thrown exception here, or output warning to
+			// stderr
+			wb = new HSSFWorkbook(is);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+
+		HSSFSheet sheet = wb.getSheetAt(0);
+		HSSFRow row = sheet.getRow(1);
+		HSSFCell cell = row.getCell(0);
+
+		// this definitely would have failed due to 27349
+		assertEquals("VLOOKUP(1,'DATA TABLE'!$A$8:'DATA TABLE'!$B$10,2)", cell
+				.getCellFormula());
+
+		// We might as well evaluate the formula
+		HSSFFormulaEvaluator fe = new HSSFFormulaEvaluator(sheet, wb);
+		fe.setCurrentRow(row);
+		CellValue cv = fe.evaluate(cell);
+
+		assertEquals(HSSFCell.CELL_TYPE_NUMERIC, cv.getCellType());
+		assertEquals(3.0, cv.getNumberValue(), 0.0);
+	}
+
