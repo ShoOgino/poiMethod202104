@@ -25,8 +25,8 @@
              for (int i = 0 ; i < this.getNumberOfSheets() ; ++i) {
             	 XSSFSheet sheet = (XSSFSheet) this.getSheetAt(i);
                  PackagePartName partName = PackagingURIHelper.createPartName("/xl/worksheets/sheet" + i + ".xml");
-                 corePart.addRelationship(partName, TargetMode.INTERNAL, WORKSHEET_RELATIONSHIP, "rSheet" + 1);
-                 PackagePart part = pkg.createPart(partName, WORKSHEET_TYPE);
+                 corePart.addRelationship(partName, TargetMode.INTERNAL, WORKSHEET.getRelation(), "rSheet" + 1);
+                 PackagePart part = pkg.createPart(partName, WORKSHEET.getContentType());
                  
                  // XXX This should not be needed, but apparently the setSaveOuter call above does not work in XMLBeans 2.2
                  xmlOptions.setSaveSyntheticDocumentElement(new QName(CTWorksheet.type.getName().getNamespaceURI(), "worksheet"));
@@ -36,11 +36,28 @@
                  out.close();
              }
              
-             // TODO - shared strings source
-             // TODO - styles source
-             
+             // Write shared strings and styles
+             if(sharedStringSource != null) {
+	             SharedStringsTable sst = (SharedStringsTable)sharedStringSource;
+	             PackagePartName sstName = PackagingURIHelper.createPartName(SHARED_STRINGS.getDefaultFileName());
+	             corePart.addRelationship(sstName, TargetMode.INTERNAL, SHARED_STRINGS.getRelation());
+	             PackagePart sstPart = pkg.createPart(sstName, SHARED_STRINGS.getContentType());
+	             out = sstPart.getOutputStream();
+	             sst.writeTo(out);
+	             out.close();
+             }
+             if(stylesSource != null) {
+	             StylesTable st = (StylesTable)stylesSource;
+	             PackagePartName stName = PackagingURIHelper.createPartName(STYLES.getDefaultFileName());
+	             corePart.addRelationship(stName, TargetMode.INTERNAL, STYLES.getRelation());
+	             PackagePart stPart = pkg.createPart(stName, STYLES.getContentType());
+	             out = stPart.getOutputStream();
+	             st.writeTo(out);
+	             out.close();
+             }
+
+             //  All done
              pkg.close();
-             
         } catch (InvalidFormatException e) {
             // TODO: replace with more meaningful exception
             throw new RuntimeException(e);
