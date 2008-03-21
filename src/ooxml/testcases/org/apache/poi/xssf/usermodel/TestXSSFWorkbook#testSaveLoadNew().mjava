@@ -23,8 +23,22 @@
         workbook.write(out);
         out.close();
         
-        // Load back in again
-        workbook = new XSSFWorkbook(file.toString());
+        // Check the package contains what we'd expect it to
+        Package pkg = Package.open(file.toString());
+        PackagePart wbRelPart = 
+        	pkg.getPart(PackagingURIHelper.createPartName("/xl/_rels/workbook.xml.rels"));
+        assertNotNull(wbRelPart);
+        assertTrue(wbRelPart.isRelationshipPart());
+        assertEquals(ContentTypes.RELATIONSHIPS_PART, wbRelPart.getContentType());
+        
+        PackagePart wbPart = 
+        	pkg.getPart(PackagingURIHelper.createPartName("/xl/workbook.xml"));
+        // Links to the three sheets
+        assertTrue(wbPart.hasRelationships());
+        assertEquals(3, wbPart.getRelationships().size());
+        
+        // Load back the XSSFWorkbook
+        workbook = new XSSFWorkbook(pkg);
         assertEquals(3, workbook.getNumberOfSheets());
         assertNotNull(workbook.getSheetAt(0));
         assertNotNull(workbook.getSheetAt(1));
