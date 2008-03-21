@@ -8,46 +8,55 @@
             // Create main part relationship
             pkg.addRelationship(corePartName, TargetMode.INTERNAL, PackageRelationshipTypes.CORE_DOCUMENT, "rId1");
             // Create main document part
-            PackagePart corePart = pkg.createPart(corePartName,
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
+            PackagePart corePart = pkg.createPart(corePartName, WORKBOOK.getContentType());
+            OutputStream out;
+
             XmlOptions xmlOptions = new XmlOptions();
-             // Requests use of whitespace for easier reading
-             xmlOptions.setSavePrettyPrint();
-             xmlOptions.setSaveOuter();
-             // XXX This should not be needed, but apparently the setSaveOuter call above does not work in XMLBeans 2.2
-             xmlOptions.setSaveSyntheticDocumentElement(new QName(CTWorkbook.type.getName().getNamespaceURI(), "workbook"));
-             xmlOptions.setUseDefaultNamespace();
-             
-             OutputStream out = corePart.getOutputStream();
-             workbook.save(out, xmlOptions);
-             out.close();
-             
-             for (int i = 0 ; i < this.getNumberOfSheets() ; ++i) {
-            	 XSSFSheet sheet = (XSSFSheet) this.getSheetAt(i);
-                 PackagePartName partName = PackagingURIHelper.createPartName("/xl/worksheets/sheet" + i + ".xml");
-                 corePart.addRelationship(partName, TargetMode.INTERNAL, WORKSHEET.getRelation(), "rSheet" + 1);
-                 PackagePart part = pkg.createPart(partName, WORKSHEET.getContentType());
+            // Requests use of whitespace for easier reading
+            xmlOptions.setSavePrettyPrint();
+            xmlOptions.setSaveOuter();
+            xmlOptions.setUseDefaultNamespace();
+            
+            // Write out our sheets, updating the references
+            //  to them in the main workbook as we go
+            for (int i=0 ; i < this.getNumberOfSheets(); i++) {
+            	int sheetNumber = (i+1);
+            	XSSFSheet sheet = (XSSFSheet) this.getSheetAt(i);
+                PackagePartName partName = PackagingURIHelper.createPartName("/xl/worksheets/sheet" + sheetNumber + ".xml");
+                PackageRelationship rel =
+                	 corePart.addRelationship(partName, TargetMode.INTERNAL, WORKSHEET.getRelation(), "rSheet" + sheetNumber);
+                PackagePart part = pkg.createPart(partName, WORKSHEET.getContentType());
                  
-                 // XXX This should not be needed, but apparently the setSaveOuter call above does not work in XMLBeans 2.2
-                 xmlOptions.setSaveSyntheticDocumentElement(new QName(CTWorksheet.type.getName().getNamespaceURI(), "worksheet"));
-                 out = part.getOutputStream();
-                 sheet.getWorksheet().save(out, xmlOptions);
+                // XXX This should not be needed, but apparently the setSaveOuter call above does not work in XMLBeans 2.2
+                xmlOptions.setSaveSyntheticDocumentElement(new QName(CTWorksheet.type.getName().getNamespaceURI(), "worksheet"));
+                out = part.getOutputStream();
+                sheet.getWorksheet().save(out, xmlOptions);
+                out.close();
                  
-                 out.close();
-             }
+                // Update our internal reference for the package part
+                workbook.getSheets().getSheetArray(i).setId(rel.getId());
+            }
              
-             // Write shared strings and styles
-             if(sharedStringSource != null) {
+            // Write shared strings and styles
+            if(sharedStringSource != null) {
 	             SharedStringsTable sst = (SharedStringsTable)sharedStringSource;
 	             SHARED_STRINGS.save(sst, corePart);
-             }
-             if(stylesSource != null) {
+            }
+            if(stylesSource != null) {
 	             StylesTable st = (StylesTable)stylesSource;
 	             STYLES.save(st, corePart);
-             }
+            }
 
-             //  All done
-             pkg.close();
+            // Now we can write out the main Workbook, with
+            //  the correct references to the other parts
+            out = corePart.getOutputStream();
+            // XXX This should not be needed, but apparently the setSaveOuter call above does not work in XMLBeans 2.2
+            xmlOptions.setSaveSyntheticDocumentElement(new QName(CTWorkbook.type.getName().getNamespaceURI(), "workbook"));
+            workbook.save(out, xmlOptions);
+            out.close();
+             
+            //  All done
+            pkg.close();
         } catch (InvalidFormatException e) {
             // TODO: replace with more meaningful exception
             throw new RuntimeException(e);
