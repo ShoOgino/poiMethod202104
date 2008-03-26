@@ -1,0 +1,30 @@
+		public void endElement(String namespaceURI, String localName, String name) {
+			String expectedName = (String) _elemNameStack.peek();
+			if(expectedName != name) {
+				throw new RuntimeException("close tag mismatch");
+			}
+			if(matchesPath(0, HEADING_PATH_NAMES)) {
+				_lastHeadingText = _textNodeBuffer.toString().trim();
+				_textNodeBuffer.setLength(0);
+			}			
+			if(_isInsideTable) {
+				if(matchesTargetPath()) {
+					_fdc.endTableGroup(_lastHeadingText);
+					_isInsideTable = false;
+				} else if(matchesRelPath(TABLE_ROW_RELPATH_NAMES)) {
+					String[] cellData = new String[_rowData.size()];
+					_rowData.toArray(cellData);
+					_rowData.clear();
+					Boolean[] noteFlags = new Boolean[_rowNoteFlags.size()];
+					_rowNoteFlags.toArray(noteFlags);
+					_rowNoteFlags.clear();
+					processTableRow(cellData, noteFlags);
+				} else if(matchesRelPath(TABLE_CELL_RELPATH_NAMES)) {
+					_rowData.add(_textNodeBuffer.toString().trim());
+					_rowNoteFlags.add(Boolean.valueOf(_cellHasNote));
+					_textNodeBuffer.setLength(0);
+				}
+			}
+			_elemNameStack.pop();
+		}
+
