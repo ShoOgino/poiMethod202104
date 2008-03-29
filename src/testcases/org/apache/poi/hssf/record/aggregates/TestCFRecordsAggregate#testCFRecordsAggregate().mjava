@@ -1,0 +1,58 @@
+    public void testCFRecordsAggregate() 
+    {
+    	CFRecordsAggregate record = new CFRecordsAggregate();
+    	List recs = new ArrayList();
+    	CFHeaderRecord header = new CFHeaderRecord();
+    	CFRuleRecord rule1 = new CFRuleRecord();
+    	CFRuleRecord rule2 = new CFRuleRecord();
+    	CFRuleRecord rule3 = new CFRuleRecord();
+    	header.setNumberOfConditionalFormats(3);
+    	CellRange range1 = new CellRange(0,1,(short)0,(short)0);
+    	CellRange range2 = new CellRange(0,1,(short)2,(short)2);
+    	List cellRanges = new ArrayList();
+    	cellRanges.add(range1);
+    	cellRanges.add(range2);
+    	header.setCellRanges(cellRanges);
+    	recs.add(header);
+    	recs.add(rule1);
+    	recs.add(rule2);
+    	recs.add(rule3);
+    	record = CFRecordsAggregate.createCFAggregate(recs, 0);
+    	
+    	// Serialize
+    	byte [] serializedRecord = record.serialize();
+    	InputStream in = new ByteArrayInputStream(serializedRecord);
+    	
+    	//Parse
+    	recs = RecordFactory.createRecords(in);
+    	
+    	// Verify
+    	assertNotNull(recs);
+    	assertEquals(4, recs.size());
+    	
+    	header = (CFHeaderRecord)recs.get(0);
+    	rule1 = (CFRuleRecord)recs.get(1);
+    	rule2 = (CFRuleRecord)recs.get(2);
+    	rule3 = (CFRuleRecord)recs.get(3);
+    	cellRanges = header.getCellRanges();
+    	
+    	assertEquals(2, cellRanges.size());
+    	assertEquals(3, header.getNumberOfConditionalFormats());
+    	
+    	record = CFRecordsAggregate.createCFAggregate(recs, 0);
+    	
+    	record = record.cloneCFAggregate();
+    	
+    	assertNotNull(record.getHeader());
+    	assertEquals(3,record.getRules().size());
+    	
+    	header = record.getHeader();
+    	rule1 = (CFRuleRecord)record.getRules().get(0);
+    	rule2 = (CFRuleRecord)record.getRules().get(1);
+    	rule3 = (CFRuleRecord)record.getRules().get(2);
+    	cellRanges = header.getCellRanges();
+    	
+    	assertEquals(2, cellRanges.size());
+    	assertEquals(3, header.getNumberOfConditionalFormats());
+    }
+

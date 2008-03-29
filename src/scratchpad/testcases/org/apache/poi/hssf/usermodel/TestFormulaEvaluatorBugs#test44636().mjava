@@ -1,0 +1,53 @@
+	/**
+	 * An odd problem with evaluateFormulaCell giving the
+	 *  right values when file is opened, but changes
+	 *  to the source data in some versions of excel 
+	 *  doesn't cause them to be updated. However, other
+	 *  versions of excel, and gnumeric, work just fine
+	 * WARNING - tedious bug where you actually have to
+	 *  open up excel
+	 */
+	public void test44636() throws Exception {
+		// Open the existing file, tweak one value and
+		//  re-calculate
+		FileInputStream in = new FileInputStream(new File(dirName,"44636.xls"));
+		HSSFWorkbook wb = new HSSFWorkbook(in);
+		HSSFSheet sheet = wb.getSheetAt (0);
+		HSSFRow row = sheet.getRow (0);
+		
+		row.getCell((short)0).setCellValue(4.2);
+		row.getCell((short)2).setCellValue(25);
+		
+		HSSFFormulaEvaluator.evaluateAllFormulaCells(wb);
+		assertEquals(4.2*25, row.getCell((short)3).getNumericCellValue(), 0.0001);
+		
+		// Save
+		File existing = new File(tmpDirName,"44636-existing.xls");
+		FileOutputStream out = new FileOutputStream(existing);
+		wb.write(out);
+		out.close();
+		System.err.println("Existing file for bug #44636 written to " + existing.toString());
+		
+		
+		// Now, do a new file from scratch
+		wb = new HSSFWorkbook();
+		sheet = wb.createSheet();
+		
+		row = sheet.createRow(0);
+		row.createCell((short)0).setCellValue(1.2);
+		row.createCell((short)1).setCellValue(4.2);
+		
+		row = sheet.createRow(1);
+		row.createCell((short)0).setCellFormula("SUM(A1:B1)");
+		
+		HSSFFormulaEvaluator.evaluateAllFormulaCells(wb);
+		assertEquals(5.4, row.getCell((short)0).getNumericCellValue(), 0.0001);
+				
+		// Save
+		File scratch = new File(tmpDirName,"44636-scratch.xls");
+		out = new FileOutputStream(scratch);
+		wb.write(out);
+		out.close();
+		System.err.println("New file for bug #44636 written to " + scratch.toString());
+	}
+
