@@ -1,0 +1,24 @@
+	public void testInSpreadSheet() {
+		HSSFWorkbook wb = new HSSFWorkbook();
+		HSSFSheet sheet = wb.createSheet("Sheet1");
+		HSSFRow row = sheet.createRow(0);
+		HSSFCell cell = row.createCell((short)0);
+		cell.setCellFormula("B1%");
+		row.createCell((short)1).setCellValue(50.0);
+		
+		HSSFFormulaEvaluator fe = new HSSFFormulaEvaluator(sheet, wb);
+		fe.setCurrentRow(row);
+		CellValue cv;
+		try {
+			cv = fe.evaluate(cell);
+		} catch (RuntimeException e) {
+			if(e.getCause() instanceof NullPointerException) {
+				throw new AssertionFailedError("Identified bug 44608");
+			}
+			// else some other unexpected error
+			throw e;
+		}
+		assertEquals(HSSFCell.CELL_TYPE_NUMERIC, cv.getCellType());
+		assertEquals(0.5, cv.getNumberValue(), 0.0);
+	}
+

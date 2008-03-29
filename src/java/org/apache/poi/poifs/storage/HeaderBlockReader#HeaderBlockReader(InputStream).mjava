@@ -9,20 +9,27 @@
     public HeaderBlockReader(final InputStream stream)
         throws IOException
     {
-        _data = new byte[ POIFSConstants.BIG_BLOCK_SIZE ];
-        int byte_count = IOUtils.readFully(stream, _data);
-
-        if (byte_count != POIFSConstants.BIG_BLOCK_SIZE)
-        {
-        	if (byte_count == -1)
-        		//Cant have -1 bytes read in the error message!
-        		byte_count = 0;
-            String type = " byte" + ((byte_count == 1) ? ("")
-                                                       : ("s"));
-
-            throw new IOException("Unable to read entire header; "
-                                  + byte_count + type + " read; expected "
-                                  + POIFSConstants.BIG_BLOCK_SIZE + " bytes");
+    	// At this point, we don't know how big our
+    	//  block sizes are
+    	// So, read the first 32 bytes to check, then
+    	//  read the rest of the block
+    	byte[] blockStart = new byte[32];
+    	int bsCount = IOUtils.readFully(stream, blockStart);
+    	if(bsCount != 32) {
+    		alertShortRead(bsCount);
+    	}
+    	
+    	// Figure out our block size
+    	if(blockStart[30] == 12) {
+    		bigBlockSize = POIFSConstants.LARGER_BIG_BLOCK_SIZE;
+    	}
+        _data = new byte[ bigBlockSize ];
+        System.arraycopy(blockStart, 0, _data, 0, blockStart.length);
+    	
+    	// Now we can read the rest of our header
+        int byte_count = IOUtils.readFully(stream, _data, blockStart.length, _data.length - blockStart.length);
+        if (byte_count+bsCount != bigBlockSize) {
+    		alertShortRead(byte_count);
         }
 
         // verify signature
