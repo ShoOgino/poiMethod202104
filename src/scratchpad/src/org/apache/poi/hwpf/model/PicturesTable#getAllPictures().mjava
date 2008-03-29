@@ -1,22 +1,23 @@
   /**
+   * Not all documents have all the images concatenated in the data stream
+   * although MS claims so. The best approach is to scan all character runs.
+   *  
    * @return a list of Picture objects found in current document
    */
   public List getAllPictures() {
     ArrayList pictures = new ArrayList();
-    
-    int pos = 0;
-    boolean atEnd = false;
-    
-    while(pos<_dataStream.length && !atEnd) {
-      if (isBlockContainsImage(pos)) {
-        pictures.add(new Picture(pos, _dataStream, false));
-      }
-      
-      int skipOn = LittleEndian.getInt(_dataStream, pos);
-      if(skipOn <= 0) { atEnd = true; }
-      pos += skipOn;
-    }
-    
+	
+    Range range = _document.getRange();
+    for (int i = 0; i < range.numCharacterRuns(); i++) {
+    	CharacterRun run = range.getCharacterRun(i);
+    	String text = run.text();
+    	int j = text.charAt(0);
+    	Picture picture = extractPicture(run, false);
+    	if (picture != null) {
+    		pictures.add(picture);
+    	}
+	}
+
     return pictures;
   }
 

@@ -3,44 +3,44 @@
      *  to point to the new location of moved rows
      */
     private void updateFormulasAfterShift(int startRow, int endRow, int n) {
-    	// Need to look at every cell on the sheet
-    	// Not just those that were moved
+        // Need to look at every cell on the sheet
+        // Not just those that were moved
         Iterator ri = rowIterator();
         while(ri.hasNext()) {
-        	HSSFRow r = (HSSFRow)ri.next();
-        	Iterator ci = r.cellIterator();
-        	while(ci.hasNext()) {
-        		HSSFCell c = (HSSFCell)ci.next();
-        		if(c.getCellType() == HSSFCell.CELL_TYPE_FORMULA) {
-        			// Since it's a formula cell, process the
-        			//  formula string, and look to see if
-        			//  it contains any references
-        			FormulaParser fp = new FormulaParser(c.getCellFormula(), workbook.getWorkbook());
-        			fp.parse();
-        			
-        			// Look for references, and update if needed
-        			Ptg[] ptgs = fp.getRPNPtg();
-        			boolean changed = false;
-        			for(int i=0; i<ptgs.length; i++) {
-        				if(ptgs[i] instanceof ReferencePtg) {
-        					ReferencePtg rptg = (ReferencePtg)ptgs[i];
-        					if(startRow <= rptg.getRowAsInt() &&
-        							rptg.getRowAsInt() <= endRow) {
-        						// References a row that moved
-        						rptg.setRow(rptg.getRowAsInt() + n);
-        						changed = true;
-        					}
-        				}
-        			}
-        			// If any references were changed, then
-        			//  re-create the formula string
-        			if(changed) {
-        				c.setCellFormula(
-        						fp.toFormulaString(ptgs)
-        				);
-        			}
-        		}
-        	}
+            HSSFRow r = (HSSFRow)ri.next();
+            Iterator ci = r.cellIterator();
+            while(ci.hasNext()) {
+                HSSFCell c = (HSSFCell)ci.next();
+                if(c.getCellType() == HSSFCell.CELL_TYPE_FORMULA) {
+                    // Since it's a formula cell, process the
+                    //  formula string, and look to see if
+                    //  it contains any references
+                    FormulaParser fp = new FormulaParser(c.getCellFormula(), workbook.getWorkbook());
+                    fp.parse();
+
+                    // Look for references, and update if needed
+                    Ptg[] ptgs = fp.getRPNPtg();
+                    boolean changed = false;
+                    for(int i=0; i<ptgs.length; i++) {
+                        if(ptgs[i] instanceof ReferencePtg) {
+                            ReferencePtg rptg = (ReferencePtg)ptgs[i];
+                            if(startRow <= rptg.getRowAsInt() &&
+                                    rptg.getRowAsInt() <= endRow) {
+                                // References a row that moved
+                                rptg.setRow(rptg.getRowAsInt() + n);
+                                changed = true;
+                            }
+                        }
+                    }
+                    // If any references were changed, then
+                    //  re-create the formula string
+                    if(changed) {
+                        c.setCellFormula(
+                                fp.toFormulaString(ptgs)
+                        );
+                    }
+                }
+            }
         }
     }
 

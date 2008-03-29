@@ -8,7 +8,23 @@
      */
     private AbstractFunctionPtg getFunction(String name, int numArgs, List argumentPointers) {
 
-        AbstractFunctionPtg retval = new FuncVarPtg(name, (byte)numArgs);
+        boolean isVarArgs;
+        int funcIx;
+        FunctionMetadata fm = FunctionMetadataRegistry.getFunctionByName(name.toUpperCase());
+        if(fm == null) {
+            // must be external function
+            isVarArgs = true;
+            funcIx = FunctionMetadataRegistry.FUNCTION_INDEX_EXTERNAL;
+        } else {
+            isVarArgs = !fm.hasFixedArgsLength();
+            funcIx = fm.getIndex();
+        }
+        AbstractFunctionPtg retval;
+        if(isVarArgs) {
+            retval = new FuncVarPtg(name, (byte)numArgs);
+        } else {
+            retval = new FuncPtg(funcIx, (byte)numArgs);
+        }
         if (!name.equals(AbstractFunctionPtg.FUNCTION_NAME_IF)) {
             // early return for everything else besides IF()
             return retval;

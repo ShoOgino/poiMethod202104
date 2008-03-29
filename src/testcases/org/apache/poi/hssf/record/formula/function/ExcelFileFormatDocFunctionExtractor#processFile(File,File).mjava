@@ -1,0 +1,30 @@
+	private static void processFile(File effDocFile, File outFile) {
+		OutputStream os;
+		try {
+			os = new FileOutputStream(outFile);
+		} catch (FileNotFoundException e) {
+			throw new RuntimeException(e);
+		}
+		PrintStream ps = new PrintStream(os);
+		outputLicenseHeader(ps);
+		Class genClass = ExcelFileFormatDocFunctionExtractor.class;
+		ps.println("# Created by (" + genClass.getName() + ")");
+		// identify the source file
+		ps.print("# from source file '" + SOURCE_DOC_FILE_NAME + "'");
+		ps.println(" (size=" + effDocFile.length() + ", crc=" + getFileCRC(effDocFile) + ")");
+		ps.println("#");
+		ps.println("#Columns: (index, name, minParams, maxParams, returnClass, paramClasses, isVolatile, hasFootnote )");
+		ps.println("");
+		try {
+			ZipFile zf = new ZipFile(effDocFile);
+			InputStream is = zf.getInputStream(zf.getEntry("content.xml"));
+			extractFunctionData(new FunctionDataCollector(ps), is);
+			zf.close();
+		} catch (ZipException e) {
+			throw new RuntimeException(e);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		ps.close();
+	}
+
