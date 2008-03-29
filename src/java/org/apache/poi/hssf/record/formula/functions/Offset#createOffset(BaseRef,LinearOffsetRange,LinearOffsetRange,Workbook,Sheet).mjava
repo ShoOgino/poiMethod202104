@@ -1,0 +1,27 @@
+	private static AreaEval createOffset(BaseRef baseRef, 
+			LinearOffsetRange rowOffsetRange, LinearOffsetRange colOffsetRange, 
+			Workbook workbook, Sheet sheet) throws EvalEx {
+
+		LinearOffsetRange rows = rowOffsetRange.normaliseAndTranslate(baseRef.getFirstRowIndex());
+		LinearOffsetRange cols = colOffsetRange.normaliseAndTranslate(baseRef.getFirstColumnIndex());
+		
+		if(rows.isOutOfBounds(0, LAST_VALID_ROW_INDEX)) {
+			throw new EvalEx(ErrorEval.REF_INVALID);
+		}
+		if(cols.isOutOfBounds(0, LAST_VALID_COLUMN_INDEX)) {
+			throw new EvalEx(ErrorEval.REF_INVALID);
+		}
+		if(baseRef.isIs3d()) {
+			Area3DPtg a3dp = new Area3DPtg(rows.getFirstIndex(), rows.getLastIndex(), 
+					cols.getFirstIndex(), cols.getLastIndex(),
+					false, false, false, false,
+					baseRef.getExternalSheetIndex());
+			return HSSFFormulaEvaluator.evaluateArea3dPtg(workbook, a3dp);
+		}
+		
+		AreaPtg ap = new AreaPtg(rows.getFirstIndex(), rows.getLastIndex(), 
+				cols.getFirstIndex(), cols.getLastIndex(),
+				false, false, false, false);
+		return HSSFFormulaEvaluator.evaluateAreaPtg(sheet, workbook, ap);
+	}
+
