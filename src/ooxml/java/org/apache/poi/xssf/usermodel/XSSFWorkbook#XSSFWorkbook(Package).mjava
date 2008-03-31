@@ -27,8 +27,20 @@
                 	log.log(POILogger.WARN, "Sheet with name " + ctSheet.getName() + " and r:id " + ctSheet.getId()+ " was defined, but didn't exist in package, skipping");
                     continue;
                 }
+                
+                // Get the comments for the sheet, if there are any
+                CommentsSource comments = null;
+                PackageRelationshipCollection commentsRel =
+                	part.getRelationshipsByType(SHEET_COMMENTS.REL);
+                if(commentsRel != null && commentsRel.size() > 0) {
+                	PackagePart commentsPart = 
+                		getTargetPart(commentsRel.getRelationship(0));
+                	comments = new CommentsTable(commentsPart.getInputStream());
+                }
+                
+                // Now create the sheet
                 WorksheetDocument worksheetDoc = WorksheetDocument.Factory.parse(part.getInputStream());
-                XSSFSheet sheet = new XSSFSheet(ctSheet, worksheetDoc.getWorksheet(), this);
+                XSSFSheet sheet = new XSSFSheet(ctSheet, worksheetDoc.getWorksheet(), this, comments);
                 this.sheets.add(sheet);
             }
         } catch (XmlException e) {
