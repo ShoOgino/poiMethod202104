@@ -22,7 +22,8 @@
             for (int i=0 ; i < this.getNumberOfSheets(); i++) {
             	int sheetNumber = (i+1);
             	XSSFSheet sheet = (XSSFSheet) this.getSheetAt(i);
-                PackagePartName partName = PackagingURIHelper.createPartName("/xl/worksheets/sheet" + sheetNumber + ".xml");
+                PackagePartName partName = PackagingURIHelper.createPartName(
+                		WORKSHEET.getFileName(sheetNumber));
                 PackageRelationship rel =
                 	 corePart.addRelationship(partName, TargetMode.INTERNAL, WORKSHEET.getRelation(), "rSheet" + sheetNumber);
                 PackagePart part = pkg.createPart(partName, WORKSHEET.getContentType());
@@ -38,7 +39,17 @@
                 workbook.getSheets().getSheetArray(i).setSheetId(sheetNumber);
                 
                 // If our sheet has comments, then write out those
-                // TODO
+                if(sheet.hasComments()) {
+                	CommentsTable ct = (CommentsTable)sheet.getCommentsSourceIfExists();
+                    PackagePartName ctName = PackagingURIHelper.createPartName(
+                    		SHEET_COMMENTS.getFileName(sheetNumber));
+                    part.addRelationship(ctName, TargetMode.INTERNAL, SHEET_COMMENTS.getRelation(), "rComments");
+                    PackagePart ctPart = pkg.createPart(ctName, SHEET_COMMENTS.getContentType());
+                    
+                    out = ctPart.getOutputStream();
+                    ct.writeTo(out);
+                    out.close();
+                }
             }
              
             // Write shared strings and styles
