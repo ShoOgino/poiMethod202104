@@ -1,7 +1,7 @@
-	public void testWriteRead() throws Exception {
+	public void testReadWriteMultipleAuthors() throws Exception {
 		File xml = new File(
 				System.getProperty("HSSF.testdata.path") +
-				File.separator + "WithVariousData.xlsx"
+				File.separator + "WithMoreVariousData.xlsx"
 		);
 		assertTrue(xml.exists());
     	
@@ -12,22 +12,12 @@
 		assertTrue( ((XSSFSheet)sheet1).hasComments() );
 		assertFalse( ((XSSFSheet)sheet2).hasComments() );
 		
-		// Change on comment on sheet 1, and add another into
-		//  sheet 2
-		Row r5 = sheet1.getRow(4);
-		Comment cc5 = r5.getCell(2).getCellComment();
-		cc5.setAuthor("Apache POI");
-		cc5.setString(new XSSFRichTextString("Hello!"));
-		
-		Row r2s2 = sheet2.createRow(2);
-		Cell c1r2s2 = r2s2.createCell(1);
-		assertNull(c1r2s2.getCellComment());
-		
-		Comment cc2 = sheet2.createComment();
-		cc2.setAuthor("Also POI");
-		cc2.setString(new XSSFRichTextString("A new comment"));
-		c1r2s2.setCellComment(cc2);
-		
+		assertEquals("Nick Burch", 
+				sheet1.getRow(4).getCell(2).getCellComment().getAuthor());
+		assertEquals("Nick Burch", 
+				sheet1.getRow(6).getCell(2).getCellComment().getAuthor());
+		assertEquals("Torchbox", 
+				sheet1.getRow(12).getCell(2).getCellComment().getAuthor());
 		
 		// Save, and re-load the file
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -38,21 +28,18 @@
 		
 		// Check we still have comments where we should do
 		sheet1 = workbook.getSheetAt(0);
-		sheet2 = (XSSFSheet)workbook.getSheetAt(1);
 		assertNotNull(sheet1.getRow(4).getCell(2).getCellComment());
 		assertNotNull(sheet1.getRow(6).getCell(2).getCellComment());
-		assertNotNull(sheet2.getRow(2).getCell(1).getCellComment());
+		assertNotNull(sheet1.getRow(12).getCell(2).getCellComment());
 		
 		// And check they still have the contents they should do
-		assertEquals("Apache POI", 
+		assertEquals("Nick Burch", 
 				sheet1.getRow(4).getCell(2).getCellComment().getAuthor());
 		assertEquals("Nick Burch", 
 				sheet1.getRow(6).getCell(2).getCellComment().getAuthor());
-		assertEquals("Also POI", 
-				sheet2.getRow(2).getCell(1).getCellComment().getAuthor());
+		assertEquals("Torchbox", 
+				sheet1.getRow(12).getCell(2).getCellComment().getAuthor());
 		
-		// TODO: fix xmlbeans so it doesn't eat newlines
-		assertEquals("Nick Burch:This is a comment",
-				sheet1.getRow(4).getCell(2).getCellComment().getString().getString());
+		// Todo - check text too, once bug fixed
 	}
 

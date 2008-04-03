@@ -1,0 +1,39 @@
+	public void testDontLoostNewLines() throws Exception {
+		File xml = new File(
+				System.getProperty("HSSF.testdata.path") +
+				File.separator + "WithVariousData.xlsx"
+		);
+		assertTrue(xml.exists());
+    	
+		Package pkg = Package.open(xml.toString());
+		PackagePart cpart = pkg.getPart(
+				PackagingURIHelper.createPartName("/xl/comments1.xml")
+		);
+		
+		CommentsTable ct = new CommentsTable(cpart.getInputStream());
+		assertEquals(2, ct.getNumberOfComments());
+		assertEquals(1, ct.getNumberOfAuthors());
+
+		XSSFComment comment = ct.findCellComment("C5");
+		
+		assertEquals("Nick Burch", comment.getAuthor());
+		assertEquals("Nick Burch:\nThis is a comment", comment.getString().getString());
+		
+		// Re-serialise
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ct.writeTo(baos);
+		ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+		ct = new CommentsTable(bais);
+		
+		assertEquals(2, ct.getNumberOfComments());
+		assertEquals(1, ct.getNumberOfAuthors());
+		
+		comment = ct.findCellComment("C5");
+		
+		assertEquals("Nick Burch", comment.getAuthor());
+		
+		// TODO: Fix this!
+		// New line should still be there, but isn't!
+		//assertEquals("Nick Burch:\nThis is a comment", comment.getString().getString());
+	}
+
