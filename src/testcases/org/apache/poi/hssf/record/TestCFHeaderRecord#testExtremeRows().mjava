@@ -1,0 +1,56 @@
+	public void testExtremeRows() {
+		byte[] recordData = {
+			(byte)0x13, (byte)0x00, // nFormats
+			(byte)0x00,	(byte)0x00,
+			
+			(byte)0x00,	(byte)0x00,
+			(byte)0xFF,	(byte)0xFF,
+			(byte)0x00,	(byte)0x00,
+			(byte)0xFF,	(byte)0x00,
+			
+			(byte)0x03,	(byte)0x00, // nRegions
+			
+			(byte)0x40,	(byte)0x9C,
+			(byte)0x50,	(byte)0xC3,
+			(byte)0x02,	(byte)0x00,
+			(byte)0x02,	(byte)0x00,
+			
+			(byte)0x00,	(byte)0x00,
+			(byte)0xFF,	(byte)0xFF,
+			(byte)0x05,	(byte)0x00,
+			(byte)0x05,	(byte)0x00,
+			
+			(byte)0x07,	(byte)0x00,
+			(byte)0x07,	(byte)0x00,
+			(byte)0x00,	(byte)0x00,
+			(byte)0xFF,	(byte)0x00,
+		};
+
+		CFHeaderRecord record;
+		try {
+			record = new CFHeaderRecord(new TestcaseRecordInputStream(CFHeaderRecord.sid, (short)recordData.length, recordData));
+		} catch (IllegalArgumentException e) {
+			if(e.getMessage().equals("invalid cell range (-25536, 2, -15536, 2)")) {
+				throw new AssertionFailedError("Identified bug 44739b");
+			}
+			throw e;
+		}
+
+		assertEquals("#CFRULES", 19, record.getNumberOfConditionalFormats());
+		assertFalse(record.getNeedRecalculation());
+		confirm(record.getEnclosingCellRange(), 0, 65535, 0, 255);
+		CellRange[] ranges = record.getCellRanges();
+		assertEquals(3, ranges.length);
+		confirm(ranges[0], 40000, 50000, 2, 2);
+		confirm(ranges[1], 0, 65535, 5, 5);
+		confirm(ranges[2], 7, 7, 0, 255);
+
+		byte[] output = record.serialize();
+
+		assertEquals("Output size", recordData.length+4, output.length); //includes sid+recordlength
+
+		for (int i = 0; i < recordData.length;i++) {
+			assertEquals("CFHeaderRecord doesn't match", recordData[i], output[i+4]);
+		}
+	}
+
