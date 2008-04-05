@@ -1,55 +1,60 @@
-    /**
-     * called by the class that is responsible for writing this sucker.
-     * Subclasses should implement this so that their data is passed back in a
-     * byte array.
-     *
-     * @param offset to begin writing at
-     * @param data byte array containing instance data
-     * @return number of bytes written
-     */
+	/**
+	 * called by the class that is responsible for writing this sucker.
+	 * Subclasses should implement this so that their data is passed back in a
+	 * byte array.
+	 *
+	 * @param offset to begin writing at
+	 * @param data byte array containing instance data
+	 * @return number of bytes written
+	 */
 
-    public int serialize(int offset, byte [] data)
-    {
-    	int recordsize = getRecordSize();
-        LittleEndian.putShort(data, 0 + offset, sid);
-        LittleEndian.putShort(data, 2 + offset, (short)(recordsize-4));
-        data[4 + offset] = field_1_condition_type;
-        data[5 + offset] = field_2_comparison_operator;
-        LittleEndian.putShort(data, 6 + offset, field_3_formula1_len);
-        LittleEndian.putShort(data, 8 + offset, field_4_formula2_len);
-        LittleEndian.putInt(data,  10 + offset, field_5_options);
-        LittleEndian.putShort(data,14 + offset, field_6_not_used);
-        
-        offset += 16;
-        
-        if( containsFontFormattingBlock() )
-        {
-        	byte[] fontFormattingRawRecord  = fontFormatting.getRawRecord();
-        	System.arraycopy(fontFormattingRawRecord, 0, data, offset, fontFormattingRawRecord.length);
-        	offset += fontFormattingRawRecord.length;
-        }
-        
-        if( containsBorderFormattingBlock())
-        {
-        	offset += borderFormatting.serialize(offset, data);
-        }
-        
-        if( containsPatternFormattingBlock() )
-        {
-        	offset += patternFormatting.serialize(offset, data);
-        }
-        
-        if (getExpression1Length()>0)
-        {
-            Ptg.serializePtgStack(this.field_17_formula1, data, offset);
-            offset += getExpression1Length();
-        }
+	public int serialize(int pOffset, byte [] data)
+	{
+		
+		int offset = pOffset;
+		int recordsize = getRecordSize();
+		LittleEndian.putShort(data, 0 + offset, sid);
+		LittleEndian.putShort(data, 2 + offset, (short)(recordsize-4));
+		data[4 + offset] = field_1_condition_type;
+		data[5 + offset] = field_2_comparison_operator;
+		LittleEndian.putShort(data, 6 + offset, field_3_formula1_len);
+		LittleEndian.putShort(data, 8 + offset, field_4_formula2_len);
+		LittleEndian.putInt(data,  10 + offset, field_5_options);
+		LittleEndian.putShort(data,14 + offset, field_6_not_used);
+		
+		offset += 16;
+		
+		if( containsFontFormattingBlock() )
+		{
+			byte[] fontFormattingRawRecord  = fontFormatting.getRawRecord();
+			System.arraycopy(fontFormattingRawRecord, 0, data, offset, fontFormattingRawRecord.length);
+			offset += fontFormattingRawRecord.length;
+		}
+		
+		if( containsBorderFormattingBlock())
+		{
+			offset += borderFormatting.serialize(offset, data);
+		}
+		
+		if( containsPatternFormattingBlock() )
+		{
+			offset += patternFormatting.serialize(offset, data);
+		}
+		
+		if (getExpression1Length()>0)
+		{
+			Ptg.serializePtgStack(convertToTokenStack(field_17_formula1), data, offset);
+			offset += getExpression1Length();
+		}
 
-        if (getExpression2Length()>0)
-        {
-            Ptg.serializePtgStack(this.field_18_formula2, data, offset);
-            offset += getExpression2Length();
-        }
-        return recordsize;
-    }
+		if (getExpression2Length()>0)
+		{
+			Ptg.serializePtgStack(convertToTokenStack(field_18_formula2), data, offset);
+			offset += getExpression2Length();
+		}
+		if(offset - pOffset != recordsize) {
+			throw new IllegalStateException("write mismatch (" + (offset - pOffset) + "!=" + recordsize + ")");
+		}
+		return recordsize;
+	}
 
