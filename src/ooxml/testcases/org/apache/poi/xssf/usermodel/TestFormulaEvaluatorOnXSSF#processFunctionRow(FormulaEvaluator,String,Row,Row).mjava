@@ -16,8 +16,19 @@
 			if (c == null || c.getCellType() != Cell.CELL_TYPE_FORMULA) {
 				continue;
 			}
+			if(isIgnoredFormulaTestCase(c.getCellFormula())) {
+				continue;
+			}
 
-			FormulaEvaluator.CellValue actualValue = evaluator.evaluate(c);
+			FormulaEvaluator.CellValue actualValue;
+			try {
+				actualValue = evaluator.evaluate(c);
+			} catch (RuntimeException e) {
+				_evaluationFailureCount ++;
+				printShortStackTrace(System.err, e);
+				result = Result.SOME_EVALUATIONS_FAILED;
+				continue;
+			}
 
 			Cell expectedValueCell = getExpectedValueCell(expectedValuesRow, colnum);
 			try {
