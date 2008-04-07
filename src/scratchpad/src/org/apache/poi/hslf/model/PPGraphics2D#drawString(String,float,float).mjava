@@ -1,38 +1,77 @@
-    public void drawString(String string, float x, float y){
-         TextBox txt = new TextBox(group);
-         txt.getTextRun().supplySlideShow(group.getSheet().getSlideShow());
-         txt.getTextRun().setSheet(group.getSheet());
-         txt.setText(string);
+    /**
+     * Renders the text specified by the specified <code>String</code>,
+     * using the current text attribute state in the <code>Graphics2D</code> context.
+     * The baseline of the first character is at position
+     * (<i>x</i>,&nbsp;<i>y</i>) in the User Space.
+     * The rendering attributes applied include the <code>Clip</code>,
+     * <code>Transform</code>, <code>Paint</code>, <code>Font</code> and
+     * <code>Composite</code> attributes. For characters in script systems
+     * such as Hebrew and Arabic, the glyphs can be rendered from right to
+     * left, in which case the coordinate supplied is the location of the
+     * leftmost character on the baseline.
+     * @param s the <code>String</code> to be rendered
+     * @param x the x coordinate of the location where the
+     * <code>String</code> should be rendered
+     * @param y the y coordinate of the location where the
+     * <code>String</code> should be rendered
+     * @throws NullPointerException if <code>str</code> is
+     *         <code>null</code>
+     * @see #setPaint
+     * @see java.awt.Graphics#setColor
+     * @see java.awt.Graphics#setFont
+     * @see #setTransform
+     * @see #setComposite
+     * @see #setClip
+     */
+    public void drawString(String s, float x, float y) {
+        TextBox txt = new TextBox(group);
+        txt.getTextRun().supplySlideShow(group.getSheet().getSlideShow());
+        txt.getTextRun().setSheet(group.getSheet());
+        txt.setText(s);
 
-         RichTextRun rt = txt.getTextRun().getRichTextRuns()[0];
-         rt.setFontSize(font.getSize());
-         rt.setFontName(font.getFamily());
+        RichTextRun rt = txt.getTextRun().getRichTextRuns()[0];
+        rt.setFontSize(font.getSize());
+        rt.setFontName(font.getFamily());
 
-        if(getColor() != null) rt.setFontColor(getColor());
+        if (getColor() != null) rt.setFontColor(getColor());
         if (font.isBold()) rt.setBold(true);
         if (font.isItalic()) rt.setItalic(true);
 
-         txt.setMarginBottom(0);
-         txt.setMarginTop(0);
-         txt.setMarginLeft(0);
-         txt.setMarginRight(0);
-         txt.setWordWrap(TextBox.WrapNone);
+        txt.setMarginBottom(0);
+        txt.setMarginTop(0);
+        txt.setMarginLeft(0);
+        txt.setMarginRight(0);
+        txt.setWordWrap(TextBox.WrapNone);
+        txt.setHorizontalAlignment(TextBox.AlignLeft);
+        txt.setVerticalAlignment(TextBox.AnchorMiddle);
 
-         if (!"".equals(string)) txt.resizeToFitText();
-         int height = (int)txt.getAnchor().getHeight();
 
-         /*
-           In powerpoint anchor of a shape is its top left corner.
-           Java graphics sets string coordinates by the baseline of the first character
-           so we need to shift down by the height of the textbox
+        TextLayout layout = new TextLayout(s, font, getFontRenderContext());
+        float ascent = layout.getAscent();
+
+        float width = (float) Math.floor(layout.getAdvance());
+        /**
+         * Even if top and bottom margins are set to 0 PowerPoint
+         * always sets extra space between the text and its bounding box.
+         *
+         * Approximation height = ascent*2 works good enough in most cases
          */
-        txt.moveTo((int)x, (int)(y - height));
+        float height = ascent * 2;
 
-        if(clip != null) {
-            if (!clip.getBounds().contains(txt.getAnchor())) {
-                ;//return;
-            }
-        }
-       group.addShape(txt);
+        /*
+          In powerpoint anchor of a shape is its top left corner.
+          Java graphics sets string coordinates by the baseline of the first character
+          so we need to shift up by the height of the textbox
+        */
+        y -= height / 2 + ascent / 2;
+
+        /*
+          In powerpoint anchor of a shape is its top left corner.
+          Java graphics sets string coordinates by the baseline of the first character
+          so we need to shift down by the height of the textbox
+        */
+        txt.setAnchor(new Rectangle2D.Float(x, y, width, height));
+
+        group.addShape(txt);
     }
 

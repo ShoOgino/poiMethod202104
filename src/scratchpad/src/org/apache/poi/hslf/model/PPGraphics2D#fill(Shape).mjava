@@ -1,45 +1,39 @@
+    /**
+     * Fills the interior of a <code>Shape</code> using the settings of the
+     * <code>Graphics2D</code> context. The rendering attributes applied
+     * include the <code>Clip</code>, <code>Transform</code>,
+     * <code>Paint</code>, and <code>Composite</code>.
+     * @param shape the <code>Shape</code> to be filled
+     * @see #setPaint
+     * @see java.awt.Graphics#setColor
+     * @see #transform
+     * @see #setTransform
+     * @see #setComposite
+     * @see #clip
+     * @see #setClip
+     */
     public void fill(Shape shape){
-        if(clip != null) {
-            java.awt.Rectangle bounds = getTransform().createTransformedShape(shape).getBounds();
-            if (bounds.width == 0) bounds.width = 1;
-            if (bounds.height == 0) bounds.height = 1;
-             if (!clip.getBounds().contains(bounds)) {
-                return;
-            }
-        }
-        PathIterator it = shape.getPathIterator(transform);
+        PathIterator it = shape.getPathIterator(transform, FLATNESS);
         ArrayList pnt = new ArrayList();
         double[] coords = new double[6];
         while(!it.isDone()){
             int type = it.currentSegment(coords);
             if (type != PathIterator.SEG_CLOSE) {
-                pnt.add(new Point((int)coords[0], (int)coords[1]));
+                pnt.add(new Point2D.Double(coords[0], coords[1]));
             }
             it.next();
         }
-        int[] xPoints= new int[pnt.size()];
-        int[] yPoints= new int[pnt.size()];
-        for (int i = 0; i < pnt.size(); i++) {
-            Point p = (Point)pnt.get(i);
-            xPoints[i] = p.x;
-            yPoints[i] = p.y;
-        }
+        if(pnt.size() > 0){
+            Point2D[] points = (Point2D[])pnt.toArray(new Point2D[pnt.size()]);
+            Polygon p = new Polygon(group);
+            p.setPoints(points);
+            applyPaint(p);
 
-        AutoShape r = new AutoShape(ShapeTypes.Rectangle);
-        if (paint instanceof Color){
-            Color color = (Color)paint;
-            r.setFillColor(color);
-        }
-        if(getColor() != null) r.setLineColor(getColor());
-        if (stroke instanceof BasicStroke){
-            BasicStroke bs = (BasicStroke)stroke;
-            r.setLineWidth(bs.getLineWidth());
-            float[] dash = bs.getDashArray();
-            if (dash != null) r.setLineDashing(Line.PEN_DASH);
-        }
+            p.setLineColor(null);   //Fills must be "No Line"
 
-        java.awt.Rectangle bounds = transform.createTransformedShape(shape).getBounds();
-        r.setAnchor(bounds);
-        group.addShape(r);
+            Rectangle2D bounds = transform.createTransformedShape(shape).getBounds2D();
+            p.setAnchor(bounds);
+            group.addShape(p);
+        }
     }
 
