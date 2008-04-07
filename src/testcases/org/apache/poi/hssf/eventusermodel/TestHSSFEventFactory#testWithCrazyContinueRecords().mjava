@@ -1,33 +1,29 @@
 	public void testWithCrazyContinueRecords() throws Exception {
 		// Some files have crazy ordering of their continue records
 		// Check that we don't break on them (bug #42844)
-
-		File f = new File(dirname + "/ContinueRecordProblem.xls");
 		
 		HSSFRequest req = new HSSFRequest();
 		MockHSSFListener mockListen = new MockHSSFListener();
 		req.addListenerForAllRecords(mockListen);
 		
-		POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(f));
+		POIFSFileSystem fs = new POIFSFileSystem(openSample("ContinueRecordProblem.xls"));
 		HSSFEventFactory factory = new HSSFEventFactory();
 		factory.processWorkbookEvents(req, fs);
 
+		Record[] recs = mockListen.getRecords();
 		// Check we got the records
-		System.out.println("Processed, found " + mockListen.records.size() + " records");
-		assertTrue( mockListen.records.size() > 100 );
+		assertTrue( recs.length > 100 );
 
 		// And none of them are continue ones
-		Record[] r = (Record[])mockListen.records.toArray( 
-							new Record[mockListen.records.size()] );
-		for(int i=0; i<r.length; i++) {
-			assertFalse( r[i] instanceof ContinueRecord );
+		for(int i=0; i<recs.length; i++) {
+			assertFalse( recs[i] instanceof ContinueRecord );
 		}
 		
 		// Check that the last few records are as we expect
 		// (Makes sure we don't accidently skip the end ones)
-		int numRec = mockListen.records.size();
-		assertEquals(DVALRecord.class, mockListen.records.get(numRec-3).getClass());
-		assertEquals(DVRecord.class, mockListen.records.get(numRec-2).getClass());
-		assertEquals(EOFRecord.class,       mockListen.records.get(numRec-1).getClass());
+		int numRec = recs.length;
+		assertEquals(DVALRecord.class, recs[numRec-3].getClass());
+		assertEquals(DVRecord.class,  recs[numRec-2].getClass());
+		assertEquals(EOFRecord.class, recs[numRec-1].getClass());
 	}
 
