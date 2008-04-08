@@ -1,0 +1,59 @@
+    /**
+     * Set the polygon vertices
+     *
+     * @param xPoints
+     * @param yPoints
+     */
+    public void setPoints(float[] xPoints, float[] yPoints)
+    {
+        float right  = findBiggest(xPoints);
+        float bottom = findBiggest(yPoints);
+        float left   = findSmallest(xPoints);
+        float top    = findSmallest(yPoints);
+
+        EscherOptRecord opt = (EscherOptRecord)getEscherChild(_escherContainer, EscherOptRecord.RECORD_ID);
+        opt.addEscherProperty(new EscherSimpleProperty(EscherProperties.GEOMETRY__RIGHT, (int)((right - left)*POINT_DPI/MASTER_DPI)));
+        opt.addEscherProperty(new EscherSimpleProperty(EscherProperties.GEOMETRY__BOTTOM, (int)((bottom - top)*POINT_DPI/MASTER_DPI)));
+
+        for (int i = 0; i < xPoints.length; i++) {
+            xPoints[i] += -left;
+            yPoints[i] += -top;
+        }
+
+        int numpoints = xPoints.length;
+
+        EscherArrayProperty verticesProp = new EscherArrayProperty(EscherProperties.GEOMETRY__VERTICES, false, new byte[0] );
+        verticesProp.setNumberOfElementsInArray(numpoints+1);
+        verticesProp.setNumberOfElementsInMemory(numpoints+1);
+        verticesProp.setSizeOfElements(0xFFF0);
+        for (int i = 0; i < numpoints; i++)
+        {
+            byte[] data = new byte[4];
+            LittleEndian.putShort(data, 0, (short)(xPoints[i]*POINT_DPI/MASTER_DPI));
+            LittleEndian.putShort(data, 2, (short)(yPoints[i]*POINT_DPI/MASTER_DPI));
+            verticesProp.setElement(i, data);
+        }
+        byte[] data = new byte[4];
+        LittleEndian.putShort(data, 0, (short)(xPoints[0]*POINT_DPI/MASTER_DPI));
+        LittleEndian.putShort(data, 2, (short)(yPoints[0]*POINT_DPI/MASTER_DPI));
+        verticesProp.setElement(numpoints, data);
+        opt.addEscherProperty(verticesProp);
+
+        EscherArrayProperty segmentsProp = new EscherArrayProperty(EscherProperties.GEOMETRY__SEGMENTINFO, false, null );
+        segmentsProp.setSizeOfElements(0x0002);
+        segmentsProp.setNumberOfElementsInArray(numpoints * 2 + 4);
+        segmentsProp.setNumberOfElementsInMemory(numpoints * 2 + 4);
+        segmentsProp.setElement(0, new byte[] { (byte)0x00, (byte)0x40 } );
+        segmentsProp.setElement(1, new byte[] { (byte)0x00, (byte)0xAC } );
+        for (int i = 0; i < numpoints; i++)
+        {
+            segmentsProp.setElement(2 + i * 2, new byte[] { (byte)0x01, (byte)0x00 } );
+            segmentsProp.setElement(3 + i * 2, new byte[] { (byte)0x00, (byte)0xAC } );
+        }
+        segmentsProp.setElement(segmentsProp.getNumberOfElementsInArray() - 2, new byte[] { (byte)0x01, (byte)0x60 } );
+        segmentsProp.setElement(segmentsProp.getNumberOfElementsInArray() - 1, new byte[] { (byte)0x00, (byte)0x80 } );
+        opt.addEscherProperty(segmentsProp);
+
+        opt.sortProperties();
+    }
+
