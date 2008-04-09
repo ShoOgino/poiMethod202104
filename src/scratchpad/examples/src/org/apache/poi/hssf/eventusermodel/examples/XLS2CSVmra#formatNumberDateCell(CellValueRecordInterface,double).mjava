@@ -4,41 +4,32 @@
 	 */
 	private String formatNumberDateCell(CellValueRecordInterface cell, double value) {
         // Get the built in format, if there is one
-        ExtendedFormatRecord xfr = (ExtendedFormatRecord)
-        	xfRecords.get(cell.getXFIndex());
-        if(xfr == null) {
-        	System.err.println("Cell " + cell.getRow() + "," + cell.getColumn() + " uses XF with index " + cell.getXFIndex() + ", but we don't have that");
+		int formatIndex = formatListener.getFormatIndex(cell);
+		String formatString = formatListener.getFormatString(cell);
+		
+		if(formatString == null) {
             return Double.toString(value);
         } else {
-        	int formatIndex = xfr.getFormatIndex();
-        	String format;
-        	if(formatIndex >= HSSFDataFormat.getNumberOfBuiltinBuiltinFormats()) {
-        		FormatRecord tfr = (FormatRecord)customFormatRecords.get(new Integer(formatIndex));
-        		format = tfr.getFormatString();
-        	} else {
-            	format = HSSFDataFormat.getBuiltinFormat(xfr.getFormatIndex());
-        	}
-        	
         	// Is it a date?
-        	if(HSSFDateUtil.isADateFormat(formatIndex,format) &&
+        	if(HSSFDateUtil.isADateFormat(formatIndex,formatString) &&
         			HSSFDateUtil.isValidExcelDate(value)) {
         		// Java wants M not m for month
-        		format = format.replace('m','M');
+        		formatString = formatString.replace('m','M');
         		// Change \- into -, if it's there
-        		format = format.replaceAll("\\\\-","-");
+        		formatString = formatString.replaceAll("\\\\-","-");
         		
         		// Format as a date
         		Date d = HSSFDateUtil.getJavaDate(value, false);
-        		DateFormat df = new SimpleDateFormat(format);
+        		DateFormat df = new SimpleDateFormat(formatString);
 	            return df.format(d);
         	} else {
-        		if(format == "General") {
+        		if(formatString == "General") {
         			// Some sort of wierd default
         			return Double.toString(value);
         		}
         		
         		// Format as a number
-	            DecimalFormat df = new DecimalFormat(format);
+	            DecimalFormat df = new DecimalFormat(formatString);
 	            return df.format(value);
         	}
         }
