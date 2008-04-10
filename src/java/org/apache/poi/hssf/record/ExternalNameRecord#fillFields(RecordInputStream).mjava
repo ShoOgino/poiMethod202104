@@ -1,10 +1,20 @@
 	protected void fillFields(RecordInputStream in) {
 		field_1_option_flag = in.readShort();
-		field_2_index	   = in.readShort();
-		field_3_not_used	= in.readShort();
-		short nameLength	= in.readShort();
-		field_4_name		= in.readCompressedUnicode(nameLength);
-		short formulaLen	= in.readShort();
+		field_2_index       = in.readShort();
+		field_3_not_used    = in.readShort();
+		short nameLength    = in.readShort();
+		field_4_name = in.readCompressedUnicode(nameLength);
+		if(!hasFormula()) {
+			if(in.remaining() > 0) {
+				throw readFail("Some unread data (is formula present?)");
+			}
+			field_5_name_definition = EMPTY_PTG_ARRAY;
+			return;
+		}
+		if(in.remaining() <= 0) {
+			throw readFail("Ran out of record data trying to read formula.");
+		}
+		short formulaLen = in.readShort();
 		field_5_name_definition = toPtgArray(Ptg.createParsedExpressionTokens(formulaLen, in));
 	}
 
