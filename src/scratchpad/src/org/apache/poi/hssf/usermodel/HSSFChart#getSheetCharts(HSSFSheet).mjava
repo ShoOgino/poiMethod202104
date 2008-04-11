@@ -1,8 +1,8 @@
     /**
      * Returns all the charts for the given sheet.
      * 
-     * NOTE:  Does not yet work...  checking it in just so others
-     * can take a look.
+     * NOTE: You won't be able to do very much with
+     *  these charts yet, as this is very limited support
      */
     public static HSSFChart[] getSheetCharts(HSSFSheet sheet) {
     	List charts = new ArrayList();
@@ -12,26 +12,34 @@
     	List records = sheet.getSheet().getRecords();
     	for(Iterator it = records.iterator(); it.hasNext();) {
     		Record r = (Record)it.next();
-    		System.err.println(r);
-    		
-    		if(r instanceof DrawingRecord) {
-    			DrawingRecord dr = (DrawingRecord)r;
-    		}
     		
     		if(r instanceof ChartRecord) {
     			lastChart = new HSSFChart((ChartRecord)r);
     			charts.add(lastChart);
     		}
+    		if(r instanceof LegendRecord) {
+    			lastChart.legendRecord = (LegendRecord)r;
+    		}
     		if(r instanceof SeriesRecord) {
-    			lastChart.seriesRecord = (SeriesRecord)r;
+    			HSSFSeries series = lastChart.new HSSFSeries( (SeriesRecord)r );
+    			lastChart.series.add(series);
     		}
     		if(r instanceof ChartTitleFormatRecord) {
     			lastChart.chartTitleFormat =
     				(ChartTitleFormatRecord)r;
     		}
     		if(r instanceof SeriesTextRecord) {
-    			lastChart.chartTitleText =
-    				(SeriesTextRecord)r;
+    			// Applies to a series, unless we've seen
+    			//  a legend already
+    			SeriesTextRecord str = (SeriesTextRecord)r;
+    			if(lastChart.legendRecord == null &&
+    					lastChart.series.size() > 0) {
+    				HSSFSeries series = (HSSFSeries)
+    					lastChart.series.get(lastChart.series.size()-1);
+    				series.seriesTitleText = str;
+    			} else {
+    				lastChart.chartTitleText = str;
+    			}
     		}
     	}
     	
