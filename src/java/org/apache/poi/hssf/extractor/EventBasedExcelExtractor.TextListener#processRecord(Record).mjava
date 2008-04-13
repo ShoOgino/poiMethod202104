@@ -1,0 +1,78 @@
+		public void processRecord(Record record) {
+			String thisText = null;
+			int thisRow = -1;
+
+			switch(record.getSid()) {
+			case BoundSheetRecord.sid:
+				BoundSheetRecord sr = (BoundSheetRecord)record;
+				sheetNames.add(sr.getSheetname());
+				break;
+			case BOFRecord.sid:
+				BOFRecord bof = (BOFRecord)record;
+				if(bof.getType() == BOFRecord.TYPE_WORKSHEET) {
+					sheetNum++;
+					rowNum = -1;
+					
+					if(includeSheetNames) {
+						if(text.length() > 0) text.append("\n");
+						text.append(sheetNames.get(sheetNum));
+					}
+				}
+				break;
+			case SSTRecord.sid:
+				sstRecord = (SSTRecord)record;
+				break;
+			
+	        case FormulaRecord.sid:
+	        	FormulaRecord frec = (FormulaRecord) record;
+	        	thisRow = frec.getRow();
+	        	
+	        	if(formulasNotResults) {
+	        		thisText = FormulaParser.toFormulaString(null, frec.getParsedExpression());
+	        	} else {
+	        		if(Double.isNaN( frec.getValue() )) {
+	        			thisText = "(todo - string formulas)";
+	        		} else {
+	        			thisText = formatNumberDateCell(frec, frec.getValue());
+	        		}
+	        	}
+	            break;
+	        case LabelRecord.sid:
+	        	LabelRecord lrec = (LabelRecord) record;
+	            thisRow = lrec.getRow();
+	            thisText = lrec.getValue();
+	            break;
+	        case LabelSSTRecord.sid:
+	        	LabelSSTRecord lsrec = (LabelSSTRecord) record;
+	            thisRow = lsrec.getRow();
+	            if(sstRecord == null) {
+	            	throw new IllegalStateException("No SST record found");
+	            }
+	            thisText = sstRecord.getString(lsrec.getSSTIndex()).toString();
+	            break;
+	        case NoteRecord.sid:
+	        	NoteRecord nrec = (NoteRecord) record;
+	        	thisRow = nrec.getRow();
+	        	// TODO: Find object to match nrec.getShapeId()
+	            break;
+	        case NumberRecord.sid:
+	            NumberRecord numrec = (NumberRecord) record;
+	            thisRow = numrec.getRow();
+	            thisText = formatNumberDateCell(numrec, numrec.getValue());
+	            break;
+	        default:
+	        	break;
+			}
+			
+			if(thisText != null) {
+				if(thisRow != rowNum) {
+					rowNum = thisRow;
+					if(text.length() > 0)
+						text.append("\n");
+				} else {
+					text.append("\t");
+				}
+				text.append(thisText);
+			}
+		}
+
