@@ -27,6 +27,7 @@
             thisColumn = berec.getColumn();
             thisStr = "";
             break;
+            
         case FormulaRecord.sid:
         	FormulaRecord frec = (FormulaRecord) record;
         	
@@ -34,12 +35,31 @@
         	thisColumn = frec.getColumn();
         	
         	if(outputFormulaValues) {
-                thisStr = formatNumberDateCell(frec, frec.getValue());
+        		if(Double.isNaN( frec.getValue() )) {
+        			// Formula result is a string
+        			// This is stored in the next record
+        			outputNextStringRecord = true;
+    	        	nextRow = frec.getRow();
+    	        	nextColumn = frec.getColumn();
+        		} else {
+        			thisStr = formatNumberDateCell(frec, frec.getValue());
+        		}
         	} else {
-        		// TODO: Output the formula string
-        		thisStr = '"' + frec.toString() + '"';
+        		thisStr = '"' + 
+        			FormulaParser.toFormulaString(null, frec.getParsedExpression()) + '"';
         	}
             break;
+        case StringRecord.sid:
+        	if(outputNextStringRecord) {
+        		// String for formula
+        		StringRecord srec = (StringRecord)record;
+        		thisStr = srec.getString(); 
+        		thisRow = nextRow;
+        		thisColumn = nextColumn;
+        		outputNextStringRecord = false;
+        	}
+            break;
+            
         case LabelRecord.sid:
         	LabelRecord lrec = (LabelRecord) record;
         	
