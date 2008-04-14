@@ -1,0 +1,85 @@
+    /**
+     * Set the shape path
+     *
+     * @param path
+     */
+    public void setPath(GeneralPath path)
+    {
+        Rectangle2D bounds = path.getBounds2D();
+        PathIterator it = path.getPathIterator(new AffineTransform());
+
+        ArrayList segInfo = new ArrayList();
+        ArrayList pntInfo = new ArrayList();
+        boolean isClosed = false;
+        while (!it.isDone()) {
+            double[] vals = new double[6];
+            int type = it.currentSegment(vals);
+            switch (type) {
+                case PathIterator.SEG_MOVETO:
+                    pntInfo.add(new Point2D.Double(vals[0], vals[1]));
+                    segInfo.add(new byte[]{0x00, 0x40});
+                    break;
+                case PathIterator.SEG_LINETO:
+                    pntInfo.add(new Point2D.Double(vals[0], vals[1]));
+                    segInfo.add(new byte[]{0x00, (byte)0xAC});
+                    segInfo.add(new byte[]{0x01, 0x00 });
+                    break;
+                case PathIterator.SEG_CUBICTO:
+                    pntInfo.add(new Point2D.Double(vals[0], vals[1]));
+                    pntInfo.add(new Point2D.Double(vals[2], vals[3]));
+                    pntInfo.add(new Point2D.Double(vals[4], vals[5]));
+                    segInfo.add(new byte[]{0x00, (byte)0xAD});
+                    segInfo.add(new byte[]{0x01, 0x20 });
+                    break;
+                case PathIterator.SEG_QUADTO:
+                    System.err.println("SEG_QUADTO is not supported");
+                    break;
+                case PathIterator.SEG_CLOSE:
+                    pntInfo.add(pntInfo.get(0));
+                    segInfo.add(new byte[]{0x00, (byte)0xAC});
+                    segInfo.add(new byte[]{0x01, 0x00 });
+                    segInfo.add(new byte[]{0x00, (byte)0xAC});
+                    segInfo.add(new byte[]{0x01, (byte)0x60});
+                    isClosed = true;
+                    break;
+            }
+
+            it.next();
+        }
+        if(!isClosed) segInfo.add(new byte[]{0x00, (byte)0xAC});
+        segInfo.add(new byte[]{0x00, (byte)0x80});
+
+        EscherOptRecord opt = (EscherOptRecord)getEscherChild(_escherContainer, EscherOptRecord.RECORD_ID);
+        opt.addEscherProperty(new EscherSimpleProperty(EscherProperties.GEOMETRY__SHAPEPATH, 0x4));
+
+        EscherArrayProperty verticesProp = new EscherArrayProperty((short)(EscherProperties.GEOMETRY__VERTICES + 0x4000), false, null);
+        verticesProp.setNumberOfElementsInArray(pntInfo.size());
+        verticesProp.setNumberOfElementsInMemory(pntInfo.size());
+        verticesProp.setSizeOfElements(0xFFF0);
+        for (int i = 0; i < pntInfo.size(); i++) {
+            Point2D.Double pnt = (Point2D.Double)pntInfo.get(i);
+            byte[] data = new byte[4];
+            LittleEndian.putShort(data, 0, (short)((pnt.getX() - bounds.getX())*MASTER_DPI/POINT_DPI));
+            LittleEndian.putShort(data, 2, (short)((pnt.getY() - bounds.getY())*MASTER_DPI/POINT_DPI));
+            verticesProp.setElement(i, data);
+        }
+        opt.addEscherProperty(verticesProp);
+
+        EscherArrayProperty segmentsProp = new EscherArrayProperty((short)(EscherProperties.GEOMETRY__SEGMENTINFO + 0x4000), false, null);
+        segmentsProp.setNumberOfElementsInArray(segInfo.size());
+        segmentsProp.setNumberOfElementsInMemory(segInfo.size());
+        segmentsProp.setSizeOfElements(0x2);
+        for (int i = 0; i < segInfo.size(); i++) {
+            byte[] seg = (byte[])segInfo.get(i);
+            segmentsProp.setElement(i, seg);
+        }
+        opt.addEscherProperty(segmentsProp);
+
+        opt.addEscherProperty(new EscherSimpleProperty(EscherProperties.GEOMETRY__RIGHT, (int)(bounds.getWidth()*MASTER_DPI/POINT_DPI)));
+        opt.addEscherProperty(new EscherSimpleProperty(EscherProperties.GEOMETRY__BOTTOM, (int)(bounds.getHeight()*MASTER_DPI/POINT_DPI)));
+
+        opt.sortProperties();
+
+        setAnchor(bounds);
+    }
+
