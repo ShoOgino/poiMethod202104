@@ -1,0 +1,57 @@
+    /**
+     * Verify we can get text from TextShape in the following cases:
+     *  - placeholders
+     *  - normal TextBox object
+     *  - text in auto-shapes
+     */
+    public void testRead() throws IOException {
+        FileInputStream is = new FileInputStream(new File(cwd, "text_shapes.ppt"));
+        SlideShow ppt = new SlideShow(is);
+        is.close();
+
+        ArrayList lst1 = new ArrayList();
+        Slide slide = ppt.getSlides()[0];
+        Shape[] shape = slide.getShapes();
+        for (int i = 0; i < shape.length; i++) {
+            assertTrue("Expected TextShape but found " + shape[i].getClass().getName(), shape[i] instanceof TextShape);
+            TextShape tx = (TextShape)shape[i];
+            TextRun run = tx.getTextRun();
+            assertNotNull(run);
+            int runType = run.getRunType();
+
+            int type = shape[i].getShapeType();
+            switch (type){
+                case ShapeTypes.TextBox:
+                    assertEquals("Text in a TextBox", run.getText());
+                    break;
+                case ShapeTypes.Rectangle:
+                    if(runType == TextHeaderAtom.OTHER_TYPE)
+                        assertEquals("Rectangle", run.getText());
+                    else if(runType == TextHeaderAtom.TITLE_TYPE)
+                        assertEquals("Title Placeholder", run.getText());
+                    break;
+                case ShapeTypes.Octagon:
+                    assertEquals("Octagon", run.getText());
+                    break;
+                case ShapeTypes.Ellipse:
+                    assertEquals("Ellipse", run.getText());
+                    break;
+                case ShapeTypes.RoundRectangle:
+                    assertEquals("RoundRectangle", run.getText());
+                    break;
+                default:
+                    fail("Unexpected shape: " + shape[i].getShapeName());
+
+            }
+            lst1.add(run.getText());
+        }
+
+        ArrayList lst2 = new ArrayList();
+        TextRun[] run = slide.getTextRuns();
+        for (int i = 0; i < run.length; i++) {
+            lst2.add(run[i].getText());
+        }
+
+        assertTrue(lst1.containsAll(lst2));
+    }
+

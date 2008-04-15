@@ -1,0 +1,34 @@
+    public static Shape createSimpeShape(EscherContainerRecord spContainer, Shape parent){
+        Shape shape;
+        EscherSpRecord spRecord = spContainer.getChildById(EscherSpRecord.RECORD_ID);
+
+        int type = spRecord.getOptions() >> 4;
+        switch (type){
+            case ShapeTypes.TextBox:
+                shape = new TextBox(spContainer, parent);
+                break;
+            case ShapeTypes.PictureFrame:
+                shape = new Picture(spContainer, parent);
+                break;
+            case ShapeTypes.Line:
+                shape = new Line(spContainer, parent);
+                break;
+            case ShapeTypes.NotPrimitive:
+                EscherOptRecord opt = (EscherOptRecord)Shape.getEscherChild(spContainer, EscherOptRecord.RECORD_ID);
+                EscherProperty prop = Shape.getEscherProperty(opt, EscherProperties.GEOMETRY__VERTICES);
+                if(prop != null)
+                    shape = new Freeform(spContainer, parent);
+                else {
+
+                    logger.log(POILogger.WARN, "Creating AutoShape for a NotPrimitive shape");
+                    shape = new AutoShape(spContainer, parent);
+                }
+                break;
+            default:
+                shape = new AutoShape(spContainer, parent);
+                break;
+        }
+        return shape;
+
+    }
+

@@ -1,0 +1,45 @@
+    /**
+     * Adjust the size of the TextShape so it encompasses the text inside it.
+     *
+     * @return a <code>Rectangle2D</code> that is the bounds of this <code>TextShape</code>.
+     */
+    public Rectangle2D resizeToFitText(){
+        String txt = getText();
+        if(txt == null || txt.length() == 0) return new Rectangle2D.Float();
+
+        RichTextRun rt = getTextRun().getRichTextRuns()[0];
+        int size = rt.getFontSize();
+        int style = 0;
+        if (rt.isBold()) style |= Font.BOLD;
+        if (rt.isItalic()) style |= Font.ITALIC;
+        String fntname = rt.getFontName();
+        Font font = new Font(fntname, style, size);
+
+        float width = 0, height = 0;
+        String[] lines = txt.split("\r");
+        for (int i = 0; i < lines.length; i++) {
+            if(lines[i].length() == 0) continue;
+
+            TextLayout layout = new TextLayout(lines[i], font, _frc);
+
+            width = Math.max(width, layout.getAdvance());
+
+            /**
+             * Even if top and bottom margins are set to 0 PowerPoint
+             * always sets extra space between the text and its bounding box.
+             *
+             * The approximation height = ascent*2 works good enough in most cases
+             */
+            height = Math.max(height, 2*layout.getAscent());
+        }
+
+        width += getMarginLeft() + getMarginRight();
+        height += getMarginTop() + getMarginBottom();
+
+        Rectangle2D anchor = getAnchor2D();
+        anchor.setRect(anchor.getX(), anchor.getY(), width, height);
+        setAnchor(anchor);
+
+        return anchor;
+    }
+
