@@ -1,5 +1,6 @@
     private Record[] read(byte[] docstream, int usrOffset){
         ArrayList lst = new ArrayList();
+        HashMap offset2id = new HashMap(); 
         while (usrOffset != 0){
             UserEditAtom usr = (UserEditAtom) Record.buildRecordAtOffset(docstream, usrOffset);
             lst.add(new Integer(usrOffset));
@@ -13,6 +14,7 @@
                 Integer offset = (Integer)entries.get(id);
 
                 lst.add(offset);
+                offset2id.put(offset, id);
             }
 
             usrOffset = usr.getLastUserEditAtomOffset();
@@ -25,6 +27,11 @@
         for (int i = 0; i < a.length; i++) {
             Integer offset = (Integer)a[i];
             rec[i] = (Record)Record.buildRecordAtOffset(docstream, offset.intValue());
+            if(rec[i] instanceof PersistRecord) {
+                PersistRecord psr = (PersistRecord)rec[i];
+                Integer id = (Integer)offset2id.get(offset);
+                psr.setPersistId(id.intValue());
+            }
         }
 
         return rec;

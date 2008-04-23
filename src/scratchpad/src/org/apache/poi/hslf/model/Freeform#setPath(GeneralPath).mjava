@@ -17,36 +17,37 @@
             switch (type) {
                 case PathIterator.SEG_MOVETO:
                     pntInfo.add(new Point2D.Double(vals[0], vals[1]));
-                    segInfo.add(new byte[]{0x00, 0x40});
+                    segInfo.add(SEGMENTINFO_MOVETO);
                     break;
                 case PathIterator.SEG_LINETO:
                     pntInfo.add(new Point2D.Double(vals[0], vals[1]));
-                    segInfo.add(new byte[]{0x00, (byte)0xAC});
-                    segInfo.add(new byte[]{0x01, 0x00 });
+                    segInfo.add(SEGMENTINFO_LINETO);
+                    segInfo.add(SEGMENTINFO_ESCAPE);
                     break;
                 case PathIterator.SEG_CUBICTO:
                     pntInfo.add(new Point2D.Double(vals[0], vals[1]));
                     pntInfo.add(new Point2D.Double(vals[2], vals[3]));
                     pntInfo.add(new Point2D.Double(vals[4], vals[5]));
-                    segInfo.add(new byte[]{0x00, (byte)0xAD});
-                    segInfo.add(new byte[]{0x01, 0x20 });
+                    segInfo.add(SEGMENTINFO_CUBICTO);
+                    segInfo.add(SEGMENTINFO_ESCAPE2);
                     break;
                 case PathIterator.SEG_QUADTO:
+                    //TODO: figure out how to convert SEG_QUADTO into SEG_CUBICTO  
                     logger.log(POILogger.WARN, "SEG_QUADTO is not supported");
                     break;
                 case PathIterator.SEG_CLOSE:
                     pntInfo.add(pntInfo.get(0));
-                    segInfo.add(new byte[]{0x00, (byte)0xAC});
-                    segInfo.add(new byte[]{0x01, 0x00 });
-                    segInfo.add(new byte[]{0x00, (byte)0xAC});
-                    segInfo.add(new byte[]{0x01, (byte)0x60});
+                    segInfo.add(SEGMENTINFO_LINETO);
+                    segInfo.add(SEGMENTINFO_ESCAPE);
+                    segInfo.add(SEGMENTINFO_LINETO);
+                    segInfo.add(SEGMENTINFO_CLOSE);
                     isClosed = true;
                     break;
             }
 
             it.next();
         }
-        if(!isClosed) segInfo.add(new byte[]{0x00, (byte)0xAC});
+        if(!isClosed) segInfo.add(SEGMENTINFO_LINETO);
         segInfo.add(new byte[]{0x00, (byte)0x80});
 
         EscherOptRecord opt = (EscherOptRecord)getEscherChild(_escherContainer, EscherOptRecord.RECORD_ID);
