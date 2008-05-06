@@ -1,28 +1,8 @@
-    public int writeTokenValueBytes(byte [] array, int offset) {
-    	int pos = 0;
-    	array[pos + offset] = (byte)(token_1_columns-1);
-        pos++;
-        LittleEndian.putShort(array, pos+offset, (short)(token_2_rows-1));
-        pos += 2;
-        for (int x=0;x<getColumnCount();x++) {
-        	for (int y=0;y<getRowCount();y++) {
-        		Object o = token_3_arrayValues[x][y];
-        		if (o instanceof Double) {
-        			array[pos+offset] = 0x01;
-        			pos++;
-        			LittleEndian.putDouble(array, pos+offset, ((Double)o).doubleValue());
-        			pos+=8;
-        		} else if (o instanceof UnicodeString) {
-        			array[pos+offset] = 0x02;
-        			pos++;        			
-        			UnicodeString s = (UnicodeString)o;
-        			//JMH TBD Handle string continuation. Id do it now but its 4am.
-        	        UnicodeString.UnicodeRecordStats stats = new UnicodeString.UnicodeRecordStats();
-        	        s.serialize(stats, pos + offset, array);
-        	        pos += stats.recordSize; 
-        		} else throw new RuntimeException("Coding error");
-        	}
-        }
-        return pos;
-    }
+	public int writeTokenValueBytes(byte[] data, int offset) {
+
+		LittleEndian.putByte(data,  offset + 0, token_1_columns-1);
+		LittleEndian.putShort(data, offset + 1, (short)(token_2_rows-1));
+		ConstantValueParser.encode(data, offset + 3, token_3_arrayValues);
+		return 3 + ConstantValueParser.getEncodedSize(token_3_arrayValues);
+	}
 

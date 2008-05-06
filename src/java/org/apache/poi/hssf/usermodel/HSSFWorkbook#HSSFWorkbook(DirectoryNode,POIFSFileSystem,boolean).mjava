@@ -15,9 +15,11 @@
     public HSSFWorkbook(DirectoryNode directory, POIFSFileSystem fs, boolean preserveNodes)
             throws IOException
     {
-    	super(directory, fs);
+        super(directory, fs);
+        String workbookName = getWorkbookDirEntryName(directory);
+
         this.preserveNodes = preserveNodes;
-        
+
         // If we're not preserving nodes, don't track the
         //  POIFS any more
         if(! preserveNodes) {
@@ -27,28 +29,9 @@
 
         sheets = new ArrayList(INITIAL_CAPACITY);
         names  = new ArrayList(INITIAL_CAPACITY);
-        
-        // Normally, the Workbook will be in a POIFS Stream
-        //  called "Workbook". However, some wierd XLS generators
-        //  put theirs in one called "WORKBOOK"
-        String workbookName = "Workbook";
-        try {
-        	directory.getEntry(workbookName);
-        	// Is the default name
-        } catch(FileNotFoundException fe) {
-        	// Try the upper case form
-        	try {
-        		workbookName = "WORKBOOK";
-        		directory.getEntry(workbookName);
-        	} catch(FileNotFoundException wfe) {
-        		// Doesn't contain it in either form
-        		throw new IllegalArgumentException("The supplied POIFSFileSystem contained neither a 'Workbook' entry, nor a 'WORKBOOK' entry. Is it really an excel file?");
-        	}
-        }
 
-        
         // Grab the data from the workbook stream, however
-        //  it happens to be spelt.
+        //  it happens to be spelled.
         InputStream stream = directory.createDocumentInputStream(workbookName);
 
         EventRecordFactory factory = new EventRecordFactory();
@@ -61,7 +44,7 @@
         int sheetNum = 0;
 
         // convert all LabelRecord records to LabelSSTRecord
-        convertLabelRecords(records, recOffset);        
+        convertLabelRecords(records, recOffset);
         while (recOffset < records.size())
         {
             Sheet sheet = Sheet.createSheet(records, sheetNum++, recOffset );

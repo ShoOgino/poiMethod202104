@@ -1,0 +1,36 @@
+    /**
+     * Called by SlideShow ater a new slide is created.
+     * <p>
+     * For Slide we need to do the following:
+     *  <li> set id of the drawing group.
+     *  <li> set shapeId for the container descriptor and background
+     * </p>
+     */
+    public void onCreate(){
+        //initialize drawing group id
+        EscherDggRecord dgg = getSlideShow().getDocumentRecord().getPPDrawingGroup().getEscherDggRecord();
+        EscherContainerRecord dgContainer = (EscherContainerRecord)getSheetContainer().getPPDrawing().getEscherRecords()[0];
+        EscherDgRecord dg = (EscherDgRecord) Shape.getEscherChild(dgContainer, EscherDgRecord.RECORD_ID);
+        int dgId = dgg.getMaxDrawingGroupId() + 1;
+        dg.setOptions((short)(dgId << 4));
+        dgg.setDrawingsSaved(dgg.getDrawingsSaved() + 1);
+
+        for (Iterator it = dgContainer.getChildContainers().iterator(); it.hasNext(); ) {
+            EscherContainerRecord c = (EscherContainerRecord)it.next();
+            EscherSpRecord spr = null;
+            switch(c.getRecordId()){
+                case EscherContainerRecord.SPGR_CONTAINER:
+                    EscherContainerRecord dc = (EscherContainerRecord)c.getChildRecords().get(0);
+                    spr = dc.getChildById(EscherSpRecord.RECORD_ID);
+                    break;
+                case EscherContainerRecord.SP_CONTAINER:
+                    spr = c.getChildById(EscherSpRecord.RECORD_ID);
+                    break;
+            }
+            if(spr != null) spr.setShapeId(allocateShapeId());
+        }
+
+        //PPT doen't increment the number of saved shapes for group descriptor and background 
+        dg.setNumShapes(1);
+    }
+
