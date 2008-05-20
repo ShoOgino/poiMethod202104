@@ -56,9 +56,6 @@
     {
         _dataStream = new byte[0];
     }
-    
-    // read in the pictures stream
-    _pictures = new PicturesTable(this, _dataStream);
 
     // get the start of text in the main stream
     int fcMin = _fib.getFcMin();
@@ -78,6 +75,20 @@
       _cbt.adjustForDelete(0, 0, cpMin);
       _pbt.adjustForDelete(0, 0, cpMin);
     }
+    
+    // Read FSPA and Escher information
+    _fspa = new FSPATable(_tableStream, _fib.getFcPlcspaMom(), _fib.getLcbPlcspaMom(), getTextTable().getTextPieces());
+    
+    if (_fib.getFcDggInfo() != 0)
+    {
+        _dgg = new EscherRecordHolder(_tableStream, _fib.getFcDggInfo(), _fib.getLcbDggInfo());
+    } else
+    {
+        _dgg = new EscherRecordHolder();
+    }
+    
+    // read in the pictures stream
+    _pictures = new PicturesTable(this, _dataStream, _mainStream, _fspa, _dgg);
 
     _st = new SectionTable(_mainStream, _tableStream, _fib.getFcPlcfsed(), _fib.getLcbPlcfsed(), fcMin, getTextTable().getTextPieces());
     _ss = new StyleSheet(_tableStream, _fib.getFcStshf());

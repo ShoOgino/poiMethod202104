@@ -18,9 +18,13 @@
         HSSFCell c2 = r2.getCell((short)1);
         assertEquals(25, (int)c2.getNumericCellValue());
 
-        if (false) { // TODO (Apr-2008) This will blow up with IllegalStateException (stack underflow)
-            // excel function "CHOOSE" probably needs some special handling in FormulaParser.toFormulaString()
-            assertEquals("=CHOOSE(2,A2,A3,A4)", c2.getCellFormula());
+        try {
+            assertEquals("CHOOSE(2,A2,A3,A4)", c2.getCellFormula());
+        } catch (IllegalStateException e) {
+            if (e.getMessage().startsWith("Too few arguments")
+                    && e.getMessage().indexOf("ConcatPtg") > 0) {
+                throw new AssertionFailedError("identified bug 44306");
+            }
         }
     }
 

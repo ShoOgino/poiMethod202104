@@ -1,0 +1,40 @@
+  /**
+     * Performs a recursive search for pictures in the given list of escher records.
+     *
+     * @param escherRecords the escher records.
+     * @param pictures the list to populate with the pictures.
+     */
+    private void searchForPictures(List escherRecords, List pictures)
+    {
+        Iterator recordIter = escherRecords.iterator();
+        while (recordIter.hasNext())
+        {
+            Object obj = recordIter.next();
+            if (obj instanceof EscherRecord)
+            {
+                EscherRecord escherRecord = (EscherRecord) obj;
+
+                if (escherRecord instanceof EscherBSERecord)
+                {
+                    EscherBSERecord bse = (EscherBSERecord) escherRecord;
+                    EscherBlipRecord blip = bse.getBlipRecord();
+                    if (blip != null)
+                    {
+                        pictures.add(new Picture(blip.getPicturedata()));
+                    }
+                    else if (bse.getOffset() > 0)
+                    {
+                        // Blip stored in delay stream, which in a word doc, is the main stream
+                        EscherRecordFactory recordFactory = new DefaultEscherRecordFactory();
+                        blip = (EscherBlipRecord) recordFactory.createRecord(_mainStream, bse.getOffset());
+                        blip.fillFields(_mainStream, bse.getOffset(), recordFactory);
+                        pictures.add(new Picture(blip.getPicturedata()));
+                    }
+                }
+
+                // Recursive call.
+                searchForPictures(escherRecord.getChildRecords(), pictures);
+            }
+        }
+    }
+
