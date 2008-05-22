@@ -1,0 +1,29 @@
+    /**
+     * Check if a given shape is associated with a sound.
+     * @return 0-based reference to a sound in the sound collection
+     * or -1 if the shape is not associated with a sound
+     */
+    protected static int getSoundReference(Shape shape){
+        int soundRef = -1;
+        //dive into the shape container and search for InteractiveInfoAtom
+        EscherContainerRecord spContainer = shape.getSpContainer();
+        List spchild = spContainer.getChildRecords();
+        for (Iterator it = spchild.iterator(); it.hasNext();) {
+            EscherRecord obj = (EscherRecord) it.next();
+            if (obj.getRecordId() == EscherClientDataRecord.RECORD_ID) {
+                byte[] data = obj.serialize();
+                Record[] records = Record.findChildRecords(data, 8,
+data.length - 8);
+                for (int j = 0; j < records.length; j++) {
+                    if (records[j] instanceof InteractiveInfo) {
+                        InteractiveInfoAtom info = ((InteractiveInfo)records[j]).getInteractiveInfoAtom();
+                        if (info.getAction() == InteractiveInfoAtom.ACTION_MEDIA) {
+                            soundRef = info.getSoundRef();
+                        }
+                    }
+                }
+            }
+        }
+        return soundRef;
+    }
+
