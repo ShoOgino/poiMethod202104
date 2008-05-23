@@ -12,48 +12,47 @@
 
     public byte[] getBytes()
     {
-        if (log.check( POILogger.DEBUG ))
+        if (log.check( POILogger.DEBUG )) {
             log.log(DEBUG, "HSSFWorkbook.getBytes()");
+        }
+        
+        HSSFSheet[] sheets = getSheets();
+        int nSheets = sheets.length;
 
         // before getting the workbook size we must tell the sheets that
         // serialization is about to occur.
-        for (int k = 0; k < sheets.size(); k++)
-            ((HSSFSheet) sheets.get(k)).getSheet().preSerialize();
+        for (int i = 0; i < nSheets; i++) {
+            sheets[i].getSheet().preSerialize();
+        }
 
-        int wbsize = workbook.getSize();
+        int totalsize = workbook.getSize();
 
-        // log.debug("REMOVEME: old sizing method "+workbook.serialize().length);
-        // ArrayList sheetbytes = new ArrayList(sheets.size());
-        int totalsize = wbsize;
-
-        for (int k = 0; k < sheets.size(); k++)
-        {
+        // pre-calculate all the sheet sizes and set BOF indexes
+        int[] estimatedSheetSizes = new int[nSheets];
+        for (int k = 0; k < nSheets; k++) {
             workbook.setSheetBof(k, totalsize);
-            totalsize += ((HSSFSheet) sheets.get(k)).getSheet().getSize();
+            int sheetSize = sheets[k].getSheet().getSize();
+            estimatedSheetSizes[k] = sheetSize;
+            totalsize += sheetSize;
         }
 
 
-/*        if (totalsize < 4096)
-        {
-            totalsize = 4096;
-        }*/
         byte[] retval = new byte[totalsize];
         int pos = workbook.serialize(0, retval);
 
-        // System.arraycopy(wb, 0, retval, 0, wb.length);
-        for (int k = 0; k < sheets.size(); k++)
-        {
-
-            // byte[] sb = (byte[])sheetbytes.get(k);
-            // System.arraycopy(sb, 0, retval, pos, sb.length);
-            int len = ((HSSFSheet) sheets.get(k)).getSheet().serialize(pos,
-                                retval);
-            pos += len;   // sb.length;
+        for (int k = 0; k < nSheets; k++) {
+            int serializedSize = sheets[k].getSheet().serialize(pos, retval);
+            if (serializedSize != estimatedSheetSizes[k]) {
+                // Wrong offset values have been passed in the call to setSheetBof() above.
+                // For books with more than one sheet, this discrepancy would cause excel 
+                // to report errors and loose data while reading the workbook
+                throw new IllegalStateException("Actual serialized sheet size (" + serializedSize 
+                        + ") differs from pre-calculated size (" + estimatedSheetSizes[k] 
+                        + ") for sheet (" + k + ")");
+                // TODO - add similar sanity check to ensure that Sheet.serializeIndexRecord() does not write mis-aligned offsets either
+            }
+            pos += serializedSize;
         }
-/*        for (int k = pos; k < totalsize; k++)
-        {
-            retval[k] = 0;
-        }*/
         return retval;
     }
 

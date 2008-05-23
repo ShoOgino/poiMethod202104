@@ -1,0 +1,22 @@
+    /**
+     * If Sheet.getSize() returns a different result to Sheet.serialize(), this will cause the BOF
+     * records to be written with invalid offset indexes.  Excel does not like this, and such 
+     * errors are particularly hard to track down.  This test ensures that HSSFWorkbook throws
+     * a specific exception as soon as the situation is detected. See bugzilla 45066
+     */
+    public void testSheetSerializeSizeMismatch_bug45066() {
+        HSSFWorkbook wb = new HSSFWorkbook();
+        Sheet sheet = wb.createSheet("Sheet1").getSheet();
+        List sheetRecords = sheet.getRecords();
+        // one way (of many) to cause the discrepancy is with a badly behaved record:
+        sheetRecords.add(new BadlyBehavedRecord());
+        // There is also much logic inside Sheet that (if buggy) might also cause the discrepancy
+        try {
+            wb.getBytes();
+            throw new AssertionFailedError("Identified bug 45066 a");
+        } catch (IllegalStateException e) {
+            // Expected badly behaved sheet record to cause exception
+            assertTrue(e.getMessage().startsWith("Actual serialized sheet size"));
+        }
+    }
+
