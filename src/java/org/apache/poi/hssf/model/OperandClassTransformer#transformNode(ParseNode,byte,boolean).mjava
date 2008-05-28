@@ -1,0 +1,45 @@
+	private void transformNode(ParseNode node, byte desiredOperandClass,
+			boolean callerForceArrayFlag) {
+		Ptg token = node.getToken();
+		ParseNode[] children = node.getChildren();
+		if (token instanceof ValueOperatorPtg || token instanceof ControlPtg) {
+			// Value Operator Ptgs and Control are base tokens, so token will be unchanged
+			
+			// but any child nodes are processed according to desiredOperandClass and callerForceArrayFlag
+			for (int i = 0; i < children.length; i++) {
+				ParseNode child = children[i];
+				transformNode(child, desiredOperandClass, callerForceArrayFlag);
+			}
+			return;
+		}
+		if (token instanceof AbstractFunctionPtg) {
+			transformFunctionNode((AbstractFunctionPtg) token, children, desiredOperandClass,
+					callerForceArrayFlag);
+			return;
+		}
+		if (children.length > 0) {
+			throw new IllegalStateException("Node should not have any children");
+		}
+
+		if (token.isBaseToken()) {
+			// nothing to do
+			return;
+		}
+        if (callerForceArrayFlag) {
+        	switch (desiredOperandClass) {
+        		case Ptg.CLASS_VALUE:
+        		case Ptg.CLASS_ARRAY:
+        			token.setClass(Ptg.CLASS_ARRAY); 
+        			break;
+        		case Ptg.CLASS_REF:
+        			token.setClass(Ptg.CLASS_REF); 
+        			break;
+        		default:
+        			throw new IllegalStateException("Unexpected operand class ("
+        					+ desiredOperandClass + ")");
+        	}
+        } else {
+        	token.setClass(desiredOperandClass);
+        }
+	}
+

@@ -1,31 +1,29 @@
     /**
      * factors (without ^ or % )
      */
-    private Ptg parseSimpleFactor() {
+    private ParseNode parseSimpleFactor() {
         SkipWhite();
         switch(look) {
             case '#':
-                return parseErrorLiteral();
+                return new ParseNode(parseErrorLiteral());
             case '-':
                 Match('-');
-                powerFactor();
-                return new UnaryMinusPtg();
+                return new ParseNode(new UnaryMinusPtg(), powerFactor());
             case '+':
                 Match('+');
-                powerFactor();
-                return new UnaryPlusPtg();
+                return new ParseNode(new UnaryPlusPtg(), powerFactor());
             case '(':
                 Match('(');
-                comparisonExpression();
+                ParseNode inside = comparisonExpression();
                 Match(')');
-                return new ParenthesisPtg();
+                return new ParseNode(new ParenthesisPtg(), inside);
             case '"':
-                return parseStringLiteral();
+                return new ParseNode(parseStringLiteral());
         }
         if (IsAlpha(look) || look == '\''){
-            return parseIdent();
+            return parseFunctionOrIdentifier();
         }
         // else - assume number
-        return parseNumber();
+        return new ParseNode(parseNumber());
     }
 

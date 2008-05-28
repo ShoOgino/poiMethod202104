@@ -1,0 +1,38 @@
+	public void testFormulas() {
+		HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook("testRVA.xls");
+		HSSFSheet sheet = wb.getSheetAt(0);
+
+		int countFailures = 0;
+		int countErrors = 0;
+
+		int rowIx = 0;
+		while (rowIx < 65535) {
+			HSSFRow row = sheet.getRow(rowIx);
+			if (row == null) {
+				break;
+			}
+			HSSFCell cell = row.getCell(0);
+			if (cell == null || cell.getCellType() == HSSFCell.CELL_TYPE_BLANK) {
+				break;
+			}
+			String formula = cell.getCellFormula();
+			try {
+				confirmCell(cell, formula);
+			} catch (AssertionFailedError e) {
+				System.err.println("Problem with row[" + rowIx + "] formula '" + formula + "'");
+				System.err.println(e.getMessage());
+				countFailures++;
+			} catch (RuntimeException e) {
+				System.err.println("Problem with row[" + rowIx + "] formula '" + formula + "'");
+				countErrors++;
+				e.printStackTrace();
+			}
+			rowIx++;
+		}
+		if (countErrors + countFailures > 0) {
+			String msg = "One or more RVA tests failed: countFailures=" + countFailures
+					+ " countFailures=" + countErrors + ". See stderr for details.";
+			throw new AssertionFailedError(msg);
+		}
+	}
+

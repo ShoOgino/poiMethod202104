@@ -1,0 +1,85 @@
+	private void transformFunctionNode(AbstractFunctionPtg afp, ParseNode[] children,
+			byte desiredOperandClass, boolean callerForceArrayFlag) {
+
+		boolean localForceArrayFlag;
+		byte defaultReturnOperandClass = afp.getDefaultOperandClass();
+
+		if (callerForceArrayFlag) {
+			switch (defaultReturnOperandClass) {
+				case Ptg.CLASS_REF:
+					if (desiredOperandClass == Ptg.CLASS_REF) {
+						afp.setClass(Ptg.CLASS_REF);
+					} else {
+						afp.setClass(Ptg.CLASS_ARRAY);
+					}
+					localForceArrayFlag = false;
+					break;
+				case Ptg.CLASS_ARRAY:
+					afp.setClass(Ptg.CLASS_ARRAY);
+					localForceArrayFlag = false;
+					break;
+				case Ptg.CLASS_VALUE:
+					afp.setClass(Ptg.CLASS_ARRAY);
+					localForceArrayFlag = true;
+					break;
+				default:
+					throw new IllegalStateException("Unexpected operand class ("
+							+ defaultReturnOperandClass + ")");
+			}
+		} else {
+			if (defaultReturnOperandClass == desiredOperandClass) {
+				localForceArrayFlag = false;
+				// an alternative would have been to for non-base Ptgs to set their operand class 
+				// from their default, but this would require the call in many subclasses because
+				// the default OC is not known until the end of the constructor
+				afp.setClass(defaultReturnOperandClass); 
+			} else {
+				switch (desiredOperandClass) {
+					case Ptg.CLASS_VALUE:
+						// always OK to set functions to return 'value'
+						afp.setClass(Ptg.CLASS_VALUE); 
+						localForceArrayFlag = false;
+						break;
+					case Ptg.CLASS_ARRAY:
+						switch (defaultReturnOperandClass) {
+							case Ptg.CLASS_REF:
+								afp.setClass(Ptg.CLASS_REF);
+								break;
+							case Ptg.CLASS_VALUE:
+								afp.setClass(Ptg.CLASS_ARRAY);
+								break;
+							default:
+								throw new IllegalStateException("Unexpected operand class ("
+										+ defaultReturnOperandClass + ")");
+						}
+						localForceArrayFlag = (defaultReturnOperandClass == Ptg.CLASS_VALUE);
+						break;
+					case Ptg.CLASS_REF:
+						switch (defaultReturnOperandClass) {
+							case Ptg.CLASS_ARRAY:
+								afp.setClass(Ptg.CLASS_ARRAY);
+								break;
+							case Ptg.CLASS_VALUE:
+								afp.setClass(Ptg.CLASS_VALUE);
+								break;
+							default:
+								throw new IllegalStateException("Unexpected operand class ("
+										+ defaultReturnOperandClass + ")");
+						}
+						localForceArrayFlag = false;
+						break;
+					default:
+						throw new IllegalStateException("Unexpected operand class ("
+								+ desiredOperandClass + ")");
+				}
+
+			}
+		}
+
+		for (int i = 0; i < children.length; i++) {
+			ParseNode child = children[i];
+			byte paramOperandClass = afp.getParameterClass(i);
+			transformNode(child, paramOperandClass, localForceArrayFlag);
+		}
+	}
+

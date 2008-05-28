@@ -21,11 +21,11 @@
                 // TODO - put comment and throw exception in toFormulaString() of these classes
                 continue;
             }
-            if (! (ptg instanceof OperationPtg)) {
-                stack.push(ptg.toFormulaString(book));
+            if (ptg instanceof ParenthesisPtg) {
+                String contents = (String)stack.pop();
+                stack.push ("(" + contents + ")");
                 continue;
             }
-
             if (ptg instanceof AttrPtg) {
                 AttrPtg attrPtg = ((AttrPtg) ptg);
                 if (attrPtg.isOptimizedIf() || attrPtg.isOptimizedChoose() || attrPtg.isGoto()) {
@@ -42,24 +42,21 @@
                     // similar to tAttrSpace - RPN is violated
                     continue;
                 }
-                if (!attrPtg.isSum()) {
-                    throw new RuntimeException("Unexpected tAttr: " + attrPtg.toString());
+                if (attrPtg.isSum()) {
+                    String[] operands = getOperands(stack, attrPtg.getNumberOfOperands());
+                    stack.push(attrPtg.toFormulaString(operands));
+                    continue;
                 }
+                throw new RuntimeException("Unexpected tAttr: " + attrPtg.toString());
             }
 
-            final OperationPtg o = (OperationPtg) ptg;
-            int nOperands = o.getNumberOfOperands();
-            final String[] operands = new String[nOperands];
-
-            for (int j = nOperands-1; j >= 0; j--) { // reverse iteration because args were pushed in-order
-                if(stack.isEmpty()) {
-                   String msg = "Too few arguments suppled to operation token ("
-                        + o.getClass().getName() + "). Expected (" + nOperands
-                        + ") operands but got (" + (nOperands - j - 1) + ")";
-                    throw new IllegalStateException(msg);
-                }
-                operands[j] = (String) stack.pop();
+            if (! (ptg instanceof OperationPtg)) {
+                stack.push(ptg.toFormulaString(book));
+                continue;
             }
+
+            OperationPtg o = (OperationPtg) ptg;
+            String[] operands = getOperands(stack, o.getNumberOfOperands());
             stack.push(o.toFormulaString(operands));
         }
         if(stack.isEmpty()) {
