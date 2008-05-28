@@ -1,0 +1,48 @@
+	private void confirmCell(HSSFCell formulaCell, String formula) {
+		Ptg[] excelPtgs = FormulaExtractor.getPtgs(formulaCell);
+		Ptg[] poiPtgs = FormulaParser.parse(formula, null);
+		int nExcelTokens = excelPtgs.length;
+		int nPoiTokens = poiPtgs.length;
+		if (nExcelTokens != nPoiTokens) {
+			if (nExcelTokens == nPoiTokens + 1 && excelPtgs[0].getClass() == AttrPtg.class) {
+				// compensate for missing tAttrVolatile, which belongs in any formula 
+				// involving OFFSET() et al. POI currently does not insert where required
+				Ptg[] temp = new Ptg[nExcelTokens];
+				temp[0] = excelPtgs[0];
+				System.arraycopy(poiPtgs, 0, temp, 1, nPoiTokens);
+				poiPtgs = temp;
+			} else {
+				throw new RuntimeException("Expected " + nExcelTokens + " tokens but got "
+						+ nPoiTokens);
+			}
+		}
+		boolean hasMismatch = false;
+		StringBuffer sb = new StringBuffer();
+		for (int i = 0; i < nExcelTokens; i++) {
+			Ptg poiPtg = poiPtgs[i];
+			Ptg excelPtg = excelPtgs[i];
+			if (!areTokenClassesSame(poiPtg, excelPtg)) {
+				hasMismatch = true;
+				sb.append("  mismatch token type[" + i + "] " + getShortClassName(excelPtg) + " "
+						+ getOperandClassName(excelPtg) + " - " + getShortClassName(poiPtg) + " "
+						+ getOperandClassName(poiPtg));
+				sb.append(NEW_LINE);
+				continue;
+			}
+			if (poiPtg.isBaseToken()) {
+				continue;
+			}
+			sb.append("  token[" + i + "] " + excelPtg.toString() + " "
+					+ getOperandClassName(excelPtg));
+
+			if (excelPtg.getPtgClass() != poiPtg.getPtgClass()) {
+				hasMismatch = true;
+				sb.append(" - was " + getOperandClassName(poiPtg));
+			}
+			sb.append(NEW_LINE);
+		}
+		if (hasMismatch) {
+			throw new AssertionFailedError(sb.toString());
+		}
+	}
+
