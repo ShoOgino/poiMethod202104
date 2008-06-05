@@ -3,7 +3,15 @@
         if (cells == null)
         {
             cells = new ValueRecordsAggregate();
-            records.add(getDimsLoc() + 1, cells);
+            // In the worksheet stream, the row records always occur before the cell (value) 
+            // records. Therefore POI's aggregates (RowRecordsAggregate, ValueRecordsAggregate) 
+            // should follow suit. Some methods in this class tolerate either order, while 
+            // others have been found to fail (see bug 45145).
+            int rraIndex = getDimsLoc() + 1;
+            if (records.get(rraIndex).getClass() != RowRecordsAggregate.class) {
+                throw new IllegalStateException("Cannot create value records before row records exist");
+            }
+            records.add(rraIndex+1, cells);
         }
     }
 
