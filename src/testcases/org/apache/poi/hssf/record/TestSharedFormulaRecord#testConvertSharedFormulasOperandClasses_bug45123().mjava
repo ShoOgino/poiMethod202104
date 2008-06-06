@@ -1,0 +1,23 @@
+	/**
+	 * The method <tt>SharedFormulaRecord.convertSharedFormulas()</tt> converts formulas from
+	 * 'shared formula' to 'single cell formula' format.  It is important that token operand
+	 * classes are preserved during this transformation, because Excel may not tolerate the
+	 * incorrect encoding.  The formula here is one such example (Excel displays #VALUE!).
+	 */
+	public void testConvertSharedFormulasOperandClasses_bug45123() {
+		
+		TestcaseRecordInputStream in = new TestcaseRecordInputStream(0, SHARED_FORMULA_WITH_REF_ARRAYS_DATA);
+		short encodedLen = in.readShort();
+		Stack sharedFormula = Ptg.createParsedExpressionTokens(encodedLen, in);
+		
+		Stack convertedFormula = SharedFormulaRecord.convertSharedFormulas(sharedFormula, 100, 200);
+		
+		RefAPtg refPtg = (RefAPtg) convertedFormula.get(1);
+		assertEquals("$C101", refPtg.toFormulaString(null));
+		if (refPtg.getPtgClass() == Ptg.CLASS_REF) {
+			throw new AssertionFailedError("Identified bug 45123");
+		}
+		
+		confirmOperandClasses(toPtgArray(sharedFormula), toPtgArray(convertedFormula));
+	}
+
