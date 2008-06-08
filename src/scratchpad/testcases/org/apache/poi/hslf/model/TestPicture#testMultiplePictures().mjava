@@ -1,0 +1,37 @@
+    /**
+     * Test that the reference count of a blip is incremented every time the picture is inserted.
+     * This is important when the same image appears multiple times in a slide show.
+     *
+     */
+    public void testMultiplePictures() throws Exception {
+        String cwd = System.getProperty("HSLF.testdata.path");
+        SlideShow ppt = new SlideShow();
+
+        Slide s = ppt.createSlide();
+        Slide s2 = ppt.createSlide();
+        Slide s3 = ppt.createSlide();
+
+        int idx = ppt.addPicture(new File(cwd, "clock.jpg"), Picture.JPEG);
+        Picture pict = new Picture(idx);
+        Picture pict2 = new Picture(idx);
+        Picture pict3 = new Picture(idx);
+
+        pict.setAnchor(new Rectangle(10,10,100,100));
+        s.addShape(pict);
+        EscherBSERecord bse1 = pict.getEscherBSERecord();
+        assertEquals(1, bse1.getRef());
+
+        pict2.setAnchor(new Rectangle(10,10,100,100));
+        s2.addShape(pict2);
+        EscherBSERecord bse2 = pict.getEscherBSERecord();
+        assertSame(bse1, bse2);
+        assertEquals(2, bse1.getRef());
+
+        pict3.setAnchor(new Rectangle(10,10,100,100));
+        s3.addShape(pict3);
+        EscherBSERecord bse3 = pict.getEscherBSERecord();
+        assertSame(bse2, bse3);
+        assertEquals(3, bse1.getRef());
+
+    }
+
