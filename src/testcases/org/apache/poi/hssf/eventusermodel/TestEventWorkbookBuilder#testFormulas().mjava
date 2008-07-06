@@ -1,0 +1,62 @@
+	public void testFormulas() throws Exception {
+		FormulaRecord fr;
+		
+		// Check our formula records
+		assertEquals(6, mockListen._frecs.size());
+		
+		Workbook stubWB = listener.getStubWorkbook();
+		assertNotNull(stubWB);
+		HSSFWorkbook stubHSSF = listener.getStubHSSFWorkbook();
+		assertNotNull(stubHSSF);
+		
+		// Check these stubs have the right stuff on them
+		assertEquals("Sheet1", stubWB.getSheetName(0));
+		assertEquals("S2", stubWB.getSheetName(1));
+		assertEquals("Sh3", stubWB.getSheetName(2));
+		
+		// Check we can get the formula without breaking
+		for(int i=0; i<mockListen._frecs.size(); i++) {
+			fr = (FormulaRecord)mockListen._frecs.get(i);
+			FormulaParser.toFormulaString(stubHSSF, fr.getParsedExpression());
+		}
+		
+		// Peer into just one formula, and check that
+		//  all the ptgs give back the right things
+		List ptgs = ((FormulaRecord)mockListen._frecs.get(0)).getParsedExpression();
+		assertEquals(1, ptgs.size());
+		assertTrue(ptgs.get(0) instanceof Ref3DPtg);
+		
+		Ref3DPtg ptg = (Ref3DPtg)ptgs.get(0);
+		assertEquals("Sheet1!A1", ptg.toFormulaString(stubHSSF));
+		
+		
+		// Now check we get the right formula back for
+		//  a few sample ones
+		
+		// Sheet 1 A2 is on same sheet
+		fr = (FormulaRecord)mockListen._frecs.get(0);
+		assertEquals(1, fr.getRow());
+		assertEquals(0, fr.getColumn());
+		assertEquals("Sheet1!A1", FormulaParser.toFormulaString(stubHSSF, fr.getParsedExpression()));
+		
+		// Sheet 1 A5 is to another sheet
+		fr = (FormulaRecord)mockListen._frecs.get(3);
+		assertEquals(4, fr.getRow());
+		assertEquals(0, fr.getColumn());
+		assertEquals("'S2'!A1", FormulaParser.toFormulaString(stubHSSF, fr.getParsedExpression()));
+		
+		// Sheet 1 A7 is to another sheet, range
+		fr = (FormulaRecord)mockListen._frecs.get(5);
+		assertEquals(6, fr.getRow());
+		assertEquals(0, fr.getColumn());
+		assertEquals("SUM('Sh3'!A1:A4)", FormulaParser.toFormulaString(stubHSSF, fr.getParsedExpression()));
+		
+		
+		// Now, load via Usermodel and re-check
+		InputStream is = HSSFTestDataSamples.openSampleFileStream("3dFormulas.xls");
+		POIFSFileSystem fs = new POIFSFileSystem(is);
+		HSSFWorkbook wb = new HSSFWorkbook(fs);
+		assertEquals("Sheet1!A1", wb.getSheetAt(0).getRow(1).getCell(0).getCellFormula());
+		assertEquals("SUM('Sh3'!A1:A4)", wb.getSheetAt(0).getRow(6).getCell(0).getCellFormula());
+	}
+

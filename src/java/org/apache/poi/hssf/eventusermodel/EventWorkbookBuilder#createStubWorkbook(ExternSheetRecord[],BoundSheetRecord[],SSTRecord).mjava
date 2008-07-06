@@ -1,0 +1,38 @@
+	/**
+	 * Creates a stub Workbook from the supplied records,
+	 *  suitable for use with the {@link FormulaParser}
+	 * @param externs The ExternSheetRecords in your file
+	 * @param bounds The BoundSheetRecords in your file
+	 * @param sst The SSTRecord in your file.
+	 * @return A stub Workbook suitable for use with {@link FormulaParser}
+	 */
+	public static Workbook createStubWorkbook(ExternSheetRecord[] externs,
+			BoundSheetRecord[] bounds, SSTRecord sst) {
+		List wbRecords = new ArrayList();
+		
+		// Core Workbook records go first
+		if(bounds != null) {
+			for(int i=0; i<bounds.length; i++) {
+				wbRecords.add(bounds[i]);
+			}
+		}
+		if(sst != null) {
+			wbRecords.add(sst);
+		}
+		
+		// Now we can have the ExternSheetRecords,
+		//  preceded by a SupBookRecord
+		if(externs != null) {
+			wbRecords.add(SupBookRecord.createInternalReferences(
+					(short)externs.length));
+			for(int i=0; i<externs.length; i++) {
+				wbRecords.add(externs[i]);
+			}
+		}
+		
+		// Finally we need an EoF record
+		wbRecords.add(new EOFRecord());
+		
+		return Workbook.createWorkbook(wbRecords);
+	}
+

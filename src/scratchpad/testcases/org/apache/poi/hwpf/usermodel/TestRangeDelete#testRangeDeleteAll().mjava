@@ -1,0 +1,63 @@
+	/**
+	 * Test that we can delete text (all instances of) from our Range with Unicode text.
+	 */
+	public void testRangeDeleteAll() throws Exception {
+
+		HWPFDocument daDoc = new HWPFDocument(new FileInputStream(illustrativeDocFile));
+
+		Range range = daDoc.getRange();
+		assertEquals(1, range.numSections());
+
+		Section section = range.getSection(0);
+		assertEquals(5, section.numParagraphs());
+
+		Paragraph para = section.getParagraph(2);
+
+		String text = para.text();
+		assertEquals(originalText, text);
+
+		boolean keepLooking = true;
+		while (keepLooking) {
+
+			int offset = range.text().indexOf(searchText);
+			if (offset >= 0) {
+
+				int absOffset = range.getStartOffset() + offset;
+				if (range.usesUnicode())
+					absOffset = range.getStartOffset() + (offset * 2);
+
+				Range subRange = new Range(
+					absOffset, (absOffset + searchText.length()), range.getDocument());
+				if (subRange.usesUnicode())
+					subRange = new Range(
+						absOffset, (absOffset + (searchText.length() * 2)), range.getDocument());
+
+				assertEquals(searchText, subRange.text());
+
+				subRange.delete();
+
+			} else
+				keepLooking = false;
+		}
+
+		// we need to let the model re-calculate the Range before we use it
+		range = daDoc.getRange();
+
+		assertEquals(1, range.numSections());
+		section = range.getSection(0);
+
+		assertEquals(5, section.numParagraphs());
+
+		para = section.getParagraph(1);
+		text = para.text();
+		assertEquals(expectedText1, text);
+
+		para = section.getParagraph(2);
+		text = para.text();
+		assertEquals(expectedText2, text);
+
+		para = section.getParagraph(3);
+		text = para.text();
+		assertEquals(expectedText3, text);
+	}
+

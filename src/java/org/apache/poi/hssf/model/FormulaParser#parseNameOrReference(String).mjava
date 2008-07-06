@@ -1,4 +1,10 @@
-    private Ptg parseIdentifier(String name) {
+    private Ptg parseNameOrReference(String name) {
+        
+        AreaReference areaRef = parseArea(name);
+        if (areaRef != null) {
+            // will happen if dots are used instead of colon
+            return new AreaPtg(areaRef.formatAsString());
+        }
 
         if (look == ':' || look == '.') { // this is a AreaReference
             GetChar();
@@ -8,23 +14,28 @@
             }
 
             String first = name;
-            String second = GetName();
+            String second = parseIdentifier();
             return new AreaPtg(first+":"+second);
         }
 
         if (look == '!') {
             Match('!');
             String sheetName = name;
-            String first = GetName();
+            String first = parseIdentifier();
             short externIdx = (short)book.getExternalSheetIndex(book.getSheetIndex(sheetName));
+            areaRef = parseArea(name);
+            if (areaRef != null) {
+                // will happen if dots are used instead of colon
+                return new Area3DPtg(areaRef.formatAsString(), externIdx);
+            }
             if (look == ':') {
                 Match(':');
-                String second=GetName();
+                String second=parseIdentifier();
                 if (look == '!') {
                     //The sheet name was included in both of the areas. Only really
                     //need it once
                     Match('!');
-                    String third=GetName();
+                    String third=parseIdentifier();
 
                     if (!sheetName.equals(second))
                         throw new RuntimeException("Unhandled double sheet reference.");
@@ -41,9 +52,7 @@
 
         // This can be either a cell ref or a named range
         // Try to spot which it is
-        boolean cellRef = CELL_REFERENCE_PATTERN.matcher(name).matches();
-
-        if (cellRef) {
+        if (isValidCellReference(name)) {
             return new RefPtg(name);
         }
 
