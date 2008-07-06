@@ -7,9 +7,11 @@
 	 * @param data byte array containing instance data
 	 * @return number of bytes written
 	 */
-
 	public int serialize(int pOffset, byte [] data)
 	{
+		
+		int formula1Len=getFormulaSize(field_17_formula1);
+		int formula2Len=getFormulaSize(field_18_formula2);
 		
 		int offset = pOffset;
 		int recordsize = getRecordSize();
@@ -17,8 +19,8 @@
 		LittleEndian.putShort(data, 2 + offset, (short)(recordsize-4));
 		data[4 + offset] = field_1_condition_type;
 		data[5 + offset] = field_2_comparison_operator;
-		LittleEndian.putShort(data, 6 + offset, field_3_formula1_len);
-		LittleEndian.putShort(data, 8 + offset, field_4_formula2_len);
+		LittleEndian.putUShort(data, 6 + offset, formula1Len);
+		LittleEndian.putUShort(data, 8 + offset, formula2Len);
 		LittleEndian.putInt(data,  10 + offset, field_5_options);
 		LittleEndian.putShort(data,14 + offset, field_6_not_used);
 		
@@ -41,16 +43,12 @@
 			offset += patternFormatting.serialize(offset, data);
 		}
 		
-		if (getExpression1Length()>0)
-		{
-			Ptg.serializePtgStack(convertToTokenStack(field_17_formula1), data, offset);
-			offset += getExpression1Length();
+		if (field_17_formula1 != null) {
+			offset += Ptg.serializePtgs(field_17_formula1, data, offset);
 		}
 
-		if (getExpression2Length()>0)
-		{
-			Ptg.serializePtgStack(convertToTokenStack(field_18_formula2), data, offset);
-			offset += getExpression2Length();
+		if (field_18_formula2 != null) {
+			offset += Ptg.serializePtgs(field_18_formula2, data, offset);
 		}
 		if(offset - pOffset != recordsize) {
 			throw new IllegalStateException("write mismatch (" + (offset - pOffset) + "!=" + recordsize + ")");
