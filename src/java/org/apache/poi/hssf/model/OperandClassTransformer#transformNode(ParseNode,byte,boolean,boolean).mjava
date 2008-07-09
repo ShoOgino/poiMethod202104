@@ -1,5 +1,10 @@
+	/**
+	 * @param callerForceArrayFlag <code>true</code> if one of the current node's parents is a 
+	 * function Ptg which has been changed from default 'V' to 'A' type (due to requirements on
+	 * the function return value).
+	 */
 	private void transformNode(ParseNode node, byte desiredOperandClass,
-			boolean callerForceArrayFlag) {
+			boolean callerForceArrayFlag, boolean isDirectChildOfValueOperator) {
 		Ptg token = node.getToken();
 		ParseNode[] children = node.getChildren();
 		if (token instanceof ValueOperatorPtg || token instanceof ControlPtg) {
@@ -8,7 +13,7 @@
 			// but any child nodes are processed according to desiredOperandClass and callerForceArrayFlag
 			for (int i = 0; i < children.length; i++) {
 				ParseNode child = children[i];
-				transformNode(child, desiredOperandClass, callerForceArrayFlag);
+				transformNode(child, desiredOperandClass, callerForceArrayFlag, true);
 			}
 			return;
 		}
@@ -25,21 +30,14 @@
 			// nothing to do
 			return;
 		}
-        if (callerForceArrayFlag) {
-        	switch (desiredOperandClass) {
-        		case Ptg.CLASS_VALUE:
-        		case Ptg.CLASS_ARRAY:
-        			token.setClass(Ptg.CLASS_ARRAY); 
-        			break;
-        		case Ptg.CLASS_REF:
-        			token.setClass(Ptg.CLASS_REF); 
-        			break;
-        		default:
-        			throw new IllegalStateException("Unexpected operand class ("
-        					+ desiredOperandClass + ")");
-        	}
-        } else {
-        	token.setClass(desiredOperandClass);
-        }
+		if (isDirectChildOfValueOperator) {
+			// As per OOO documentation Sec 3.2.4 "Token Class Transformation", "Step 1"
+			// All direct operands of value operators that are initially 'R' type will 
+			// be converted to 'V' type.
+			if (token.getPtgClass() == Ptg.CLASS_REF) {
+				token.setClass(Ptg.CLASS_VALUE); 
+			}
+		}
+		token.setClass(transformClass(token.getPtgClass(), desiredOperandClass, callerForceArrayFlag));
 	}
 
