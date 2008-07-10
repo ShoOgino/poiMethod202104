@@ -1,0 +1,68 @@
+	/**
+	 * Used to decide whether a name of the form "[A-Z]*[0-9]*" that appears in a formula can be 
+	 * interpreted as a cell reference.  Names of that form can be also used for sheets and/or
+	 * named ranges, and in those circumstances, the question of whether the potential cell 
+	 * reference is valid (in range) becomes important.
+	 * <p/>
+	 * Note - that the maximum sheet size varies across Excel versions:
+	 * <p/>
+	 * <blockquote><table border="0" cellpadding="1" cellspacing="0" 
+	 *                 summary="Notable cases.">
+	 *   <tr><th>Version&nbsp;&nbsp;</th><th>File Format&nbsp;&nbsp;</th>
+	 *   	<th>Last Column&nbsp;&nbsp;</th><th>Last Row</th></tr>
+	 *   <tr><td>97-2003</td><td>BIFF8</td><td>"IV" (2^8)</td><td>65536 (2^14)</td></tr>
+	 *   <tr><td>2007</td><td>BIFF12</td><td>"XFD" (2^14)</td><td>1048576 (2^20)</td></tr>
+	 * </table></blockquote>
+	 * POI currently targets BIFF8 (Excel 97-2003), so the following behaviour can be observed for
+	 * this method:
+	 * <blockquote><table border="0" cellpadding="1" cellspacing="0" 
+	 *                 summary="Notable cases.">
+	 *   <tr><th>Input&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
+	 *   	<th>Result&nbsp;</th></tr>
+	 *   <tr><td>"A", "1"</td><td>true</td></tr>
+	 *   <tr><td>"a", "111"</td><td>true</td></tr>
+	 *   <tr><td>"A", "65536"</td><td>true</td></tr>
+	 *   <tr><td>"A", "65537"</td><td>false</td></tr>
+	 *   <tr><td>"iv", "1"</td><td>true</td></tr>
+	 *   <tr><td>"IW", "1"</td><td>false</td></tr>
+	 *   <tr><td>"AAA", "1"</td><td>false</td></tr>
+	 *   <tr><td>"a", "111"</td><td>true</td></tr>
+	 *   <tr><td>"Sheet", "1"</td><td>false</td></tr>
+	 * </table></blockquote>
+	 * 
+	 * @param colStr a string of only letter characters
+	 * @param rowStr a string of only digit characters
+	 * @return <code>true</code> if the row and col parameters are within range of a BIFF8 spreadsheet.
+	 */
+	public static boolean cellReferenceIsWithinRange(String colStr, String rowStr) {
+		int numberOfLetters = colStr.length();
+		if(numberOfLetters > BIFF8_LAST_COLUMN_TEXT_LEN) {
+			// "Sheet1" case etc
+			return false; // that was easy
+		}
+		int nDigits = rowStr.length();
+		if(nDigits > BIFF8_LAST_ROW_TEXT_LEN) {
+			return false; 
+		}
+		if(numberOfLetters == BIFF8_LAST_COLUMN_TEXT_LEN) {
+			if(colStr.toUpperCase().compareTo(BIFF8_LAST_COLUMN) > 0) {
+				return false;
+			}
+		} else {
+			// apparent column name has less chars than max
+			// no need to check range
+		}
+		
+		if(nDigits == BIFF8_LAST_ROW_TEXT_LEN) {
+			// ASCII comparison is valid if digit count is same
+			if(rowStr.compareTo(BIFF8_LAST_ROW) > 0) {
+				return false;
+			}
+		} else {
+			// apparent row has less chars than max
+			// no need to check range
+		}
+		
+		return true;
+	}
+
