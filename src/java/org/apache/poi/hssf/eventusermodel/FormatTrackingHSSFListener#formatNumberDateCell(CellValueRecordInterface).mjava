@@ -1,11 +1,25 @@
 	/**
-	 * Formats a number or date cell, be that a real number, or the 
-	 *  answer to a formula
+	 * Formats the given numeric of date Cell's contents
+	 *  as a String, in as close as we can to the way 
+	 *  that Excel would do so.
+	 * Uses the various format records to manage this.
+	 * 
+	 * TODO - move this to a central class in such a
+	 *  way that hssf.usermodel can make use of it too
 	 */
-	private String formatNumberDateCell(CellValueRecordInterface cell, double value) {
+	public String formatNumberDateCell(CellValueRecordInterface cell) {
+		double value;
+		if(cell instanceof NumberRecord) {
+			value = ((NumberRecord)cell).getValue();
+		} else if(cell instanceof FormulaRecord) {
+			value = ((FormulaRecord)cell).getValue();
+		} else {
+			throw new IllegalArgumentException("Unsupported CellValue Record passed in " + cell);
+		}
+		
         // Get the built in format, if there is one
-		int formatIndex = formatListener.getFormatIndex(cell);
-		String formatString = formatListener.getFormatString(cell);
+		int formatIndex = getFormatIndex(cell);
+		String formatString = getFormatString(cell);
 		
 		if(formatString == null) {
             return Double.toString(value);
@@ -25,6 +39,10 @@
         	} else {
         		if(formatString == "General") {
         			// Some sort of wierd default
+        			return Double.toString(value);
+        		}
+        		if(formatString == "0.00E+00") {
+        			// This seems to mean output as a normal double
         			return Double.toString(value);
         		}
         		
