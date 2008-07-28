@@ -1,0 +1,39 @@
+	private Format createNumberFormat(String formatStr, double cellValue) {
+		StringBuffer sb = new StringBuffer(formatStr);
+		for (int i = 0; i < sb.length(); i++) {
+			char c = sb.charAt(i);
+			//handle (#,##0_);
+			if (c == '(') {
+				int idx = sb.indexOf(")", i);
+				if (idx > -1 && sb.charAt(idx -1) == '_') {
+					sb.deleteCharAt(idx);
+					sb.deleteCharAt(idx - 1);
+					sb.deleteCharAt(i);
+					i--;
+				}
+			} else if (c == ')' && i > 0 && sb.charAt(i - 1) == '_') {
+				sb.deleteCharAt(i);
+				sb.deleteCharAt(i - 1);
+				i--;
+			// remove quotes and back slashes
+			} else if (c == '\\' || c == '"') {
+				sb.deleteCharAt(i);
+				i--;
+
+			// for scientific/engineering notation
+			} else if (c == '+' && i > 0 && sb.charAt(i - 1) == 'E') {
+				sb.deleteCharAt(i);
+				i--;
+			}
+		}
+
+		try {
+			return new DecimalFormat(sb.toString());
+		} catch(IllegalArgumentException iae) {
+
+			// the pattern could not be parsed correctly,
+			// so fall back to the default number format
+			return getDefaultFormat(cellValue);
+		}
+	}
+
