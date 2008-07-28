@@ -1,163 +1,36 @@
 	private Format createFormat(double cellValue, int formatIndex, String sFormat) {
 		// remove color formatting if present
 		String formatStr = sFormat.replaceAll("\\[[a-zA-Z]*\\]", "");
-		
+
 		// try to extract special characters like currency
-		Matcher m = specialPatternGroup.matcher(formatStr);		
-		try {
-			while(m.find()) {
-				String match = m.group();
-				String symbol = match.substring(match.indexOf('$') + 1, match.indexOf('-'));
-				if (symbol.indexOf('$') > -1) {
-					StringBuffer sb = new StringBuffer();
-					sb.append(symbol.substring(0, symbol.indexOf('$')));
-					sb.append('\\');
-					sb.append(symbol.substring(symbol.indexOf('$'), symbol.length()));
-					symbol = sb.toString();
-				}
-				formatStr = m.replaceAll(symbol);
+		Matcher m = specialPatternGroup.matcher(formatStr);
+		while(m.find()) {
+			String match = m.group();
+			String symbol = match.substring(match.indexOf('$') + 1, match.indexOf('-'));
+			if (symbol.indexOf('$') > -1) {
+				StringBuffer sb = new StringBuffer();
+				sb.append(symbol.substring(0, symbol.indexOf('$')));
+				sb.append('\\');
+				sb.append(symbol.substring(symbol.indexOf('$'), symbol.length()));
+				symbol = sb.toString();
 			}
-		} catch (Exception e) {
-			return getDefaultFormat(cellValue);
+			formatStr = m.replaceAll(symbol);
+			m = specialPatternGroup.matcher(formatStr);
 		}
-		
+
 		if(formatStr == null || formatStr.trim().length() == 0) {
 			return getDefaultFormat(cellValue);
 		}
 
-		Format returnVal = null;
-		StringBuffer sb = null;
 
-    	if(HSSFDateUtil.isADateFormat(formatIndex,formatStr) &&
-    			HSSFDateUtil.isValidExcelDate(cellValue)) {
-	    	formatStr = formatStr.replaceAll("\\\\-","-");
-	    	formatStr = formatStr.replaceAll("\\\\,",",");
-	    	formatStr = formatStr.replaceAll("\\\\ "," ");
-	    	formatStr = formatStr.replaceAll(";@", "");
-	    	boolean hasAmPm = false;
-	    	Matcher amPmMatcher = amPmPattern.matcher(formatStr);
-	    	while (amPmMatcher.find()) {
-	    		formatStr = amPmMatcher.replaceAll("a");
-	    		hasAmPm = true;
-	    	}
-	    	
-	    	Matcher dateMatcher = daysAsText.matcher(formatStr);
-	    	if (dateMatcher.find()) {
-				String match = dateMatcher.group(0);
-				formatStr = dateMatcher.replaceAll(match.toUpperCase().replaceAll("D", "E"));
-	    	}
-	    	
-	    	// Convert excel date format to SimpleDateFormat.
-	    	// Excel uses lower case 'm' for both minutes and months.
-	    	// From Excel help:
-	    	/* 
-			  The "m" or "mm" code must appear immediately after the "h" or"hh"
-			  code or immediately before the "ss" code; otherwise, Microsoft
-			  Excel displays the month instead of minutes."
-			*/
-	    	
-	    	sb = new StringBuffer();
-	    	char[] chars = formatStr.toCharArray();
-	    	boolean mIsMonth = true;
-	    	List ms = new ArrayList();
-	    	for(int j=0; j<chars.length; j++) {
-	    		char c = chars[j];
-	    		if (c == 'h' || c == 'H') {
-	    			mIsMonth = false;
-	    			if (hasAmPm) {
-	    				sb.append('h');
-	    			} else {
-	    				sb.append('H');
-	    			}	    			
-	    		}
-	    		else if (c == 'm') {
-	    			if(mIsMonth) {
-	    				sb.append('M');
-	    				ms.add(
-	    						new Integer(sb.length() -1)
-	    				);
-	    			} else {
-	    				sb.append('m');
-	    			}
-	    		}
-	    		else if (c == 's' || c == 'S') {
-	    			sb.append('s');
-	    			// if 'M' precedes 's' it should be minutes ('m') 
-	    			for (int i = 0; i < ms.size(); i++) {
-	    				int index = ((Integer)ms.get(i)).intValue();
-	    				if (sb.charAt(index) == 'M') {
-	    					sb.replace(index, index+1, "m");
-	    				}
-	    			}
-	    			mIsMonth = true;
-	    			ms.clear();
-	    		}
-	    		else if (Character.isLetter(c)) {
-	    			mIsMonth = true;
-	    			ms.clear();
-	    			if (c == 'y' || c == 'Y') {
-	    				sb.append('y');
-	    			}
-	    			else if (c == 'd' || c == 'D') {
-	    				sb.append('d');	    			
-	    			}
-	    			else {
-	    				sb.append(c);
-	    			}	    			
-	    		}
-	    		else {
-	    			sb.append(c);
-	    		}
-	    	}
-			formatStr = sb.toString();
-			
-			try {
-				returnVal = new SimpleDateFormat(formatStr);				
-			} catch(IllegalArgumentException iae) {
-				
-				// the pattern could not be parsed correctly,
-				// so fall back to the default number format
-				return getDefaultFormat(cellValue);
-			}	    	
-			
-		} else if (numPattern.matcher(formatStr).find()) {
-			sb = new StringBuffer(formatStr);
-			for (int i = 0; i < sb.length(); i++) {
-				char c = sb.charAt(i);
-				//handle (#,##0_);
-				if (c == '(') {
-					int idx = sb.indexOf(")", i);
-					if (idx > -1 && sb.charAt(idx -1) == '_') {
-						sb.deleteCharAt(idx);
-						sb.deleteCharAt(idx - 1);
-						sb.deleteCharAt(i);
-						i--;
-					}
-				} else if (c == ')' && i > 0 && sb.charAt(i - 1) == '_') {
-					sb.deleteCharAt(i);
-					sb.deleteCharAt(i - 1);
-					i--;
-				// remove quotes and back slashes
-				} else if (c == '\\' || c == '"') {
-					sb.deleteCharAt(i);
-					i--;
-					
-				// for scientific/engineering notation
-				} else if (c == '+' && i > 0 && sb.charAt(i - 1) == 'E') {
-					sb.deleteCharAt(i);
-					i--;
-				}							
-			}
-			formatStr = sb.toString();
-			try {
-				returnVal = new DecimalFormat(formatStr);				
-			} catch(IllegalArgumentException iae) {
-
-				// the pattern could not be parsed correctly,
-				// so fall back to the default number format
-				return getDefaultFormat(cellValue);
-			}
+		if(HSSFDateUtil.isADateFormat(formatIndex,formatStr) &&
+				HSSFDateUtil.isValidExcelDate(cellValue)) {
+			return createDateFormat(formatStr, cellValue);
 		}
-		return returnVal;
+		if (numPattern.matcher(formatStr).find()) {
+			return createNumberFormat(formatStr, cellValue);
+		}
+		// TODO - when does this occur?
+		return null;
 	}
 
