@@ -42,9 +42,27 @@
                 	comments = new CommentsTable(commentsPart.getInputStream());
                 }
                 
+                // Get the drawings for the sheet, if there are any
+                ArrayList<Drawing> drawings = new ArrayList<Drawing>();
+                for(PackageRelationship rel : part.getRelationshipsByType(VML_DRAWINGS.REL)) {
+                	PackagePart drawingPart = getTargetPart(rel);
+                	Drawing drawing = new Drawing(drawingPart.getInputStream(), rel.getId());
+                	drawing.findChildren(drawingPart);
+                	drawings.add(drawing);
+                }
+                
+                // Get the activeX controls for the sheet, if there are any
+                ArrayList<Control> controls = new ArrayList<Control>();
+                for(PackageRelationship rel : part.getRelationshipsByType(ACTIVEX_CONTROLS.REL)) {
+                	PackagePart controlPart = getTargetPart(rel);
+                	Control control = new Control(controlPart.getInputStream(), rel.getId());
+                	control.findChildren(controlPart);
+                	controls.add(control);
+                }
+                
                 // Now create the sheet
                 WorksheetDocument worksheetDoc = WorksheetDocument.Factory.parse(part.getInputStream());
-                XSSFSheet sheet = new XSSFSheet(ctSheet, worksheetDoc.getWorksheet(), this, comments);
+                XSSFSheet sheet = new XSSFSheet(ctSheet, worksheetDoc.getWorksheet(), this, comments, drawings, controls);
                 this.sheets.add(sheet);
                 
                 // Process external hyperlinks for the sheet,

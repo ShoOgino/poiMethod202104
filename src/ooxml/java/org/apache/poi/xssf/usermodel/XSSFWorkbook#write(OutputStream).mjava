@@ -53,6 +53,40 @@
                     ct.writeTo(out);
                     out.close();
                 }
+                
+                // If our sheet has drawings, then write out those
+                if(sheet.getDrawings() != null) {
+                	int drawingIndex = 1;
+                	for(Drawing drawing : sheet.getDrawings()) {
+                        PackagePartName drName = PackagingURIHelper.createPartName(
+                        		VML_DRAWINGS.getFileName(drawingIndex));
+                        part.addRelationship(drName, TargetMode.INTERNAL, VML_DRAWINGS.getRelation(), drawing.getOriginalId());
+                        PackagePart drPart = pkg.createPart(drName, VML_DRAWINGS.getContentType());
+                        
+                        drawing.writeChildren(drPart);
+                        out = drPart.getOutputStream();
+                        drawing.writeTo(out);
+                        out.close();
+                		drawingIndex++;
+                	}
+                }
+                
+                // If our sheet has controls, then write out those
+                if(sheet.getControls() != null) {
+                	int controlIndex = 1;
+                	for(Control control : sheet.getControls()) {
+                        PackagePartName crName = PackagingURIHelper.createPartName(
+                        		ACTIVEX_CONTROLS.getFileName(controlIndex));
+                        part.addRelationship(crName, TargetMode.INTERNAL, ACTIVEX_CONTROLS.getRelation(), control.getOriginalId());
+                        PackagePart crPart = pkg.createPart(crName, ACTIVEX_CONTROLS.getContentType());
+                        
+                        control.writeChildren(crPart);
+                        out = crPart.getOutputStream();
+                        control.writeTo(out);
+                        out.close();
+                		controlIndex++;
+                	}
+                }
             }
              
             // Write shared strings and styles
