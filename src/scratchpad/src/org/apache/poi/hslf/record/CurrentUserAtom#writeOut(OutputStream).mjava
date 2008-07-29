@@ -19,15 +19,22 @@
 		// Now we have the size of the details, which is 20
 		LittleEndian.putInt(_contents,8,20);
 
-		// Now the ppt magic number (4 bytes)
-		System.arraycopy(magicNumber,0,_contents,12,4);
+		// Now the ppt un-encrypted header token (4 bytes)
+		System.arraycopy(headerToken,0,_contents,12,4);
 
 		// Now the current edit offset
 		LittleEndian.putInt(_contents,16,(int)currentEditOffset);
 
-		// Now the file versions, 2+2+1+1
-		LittleEndian.putShort(_contents,20,(short)docFinalVersionA);
-		LittleEndian.putShort(_contents,22,(short)docFinalVersionB);
+		// The username gets stored twice, once as US 
+		//  ascii, and again as unicode laster on
+		byte[] asciiUN = new byte[lastEditUser.length()];
+		StringUtil.putCompressedUnicode(lastEditUser,asciiUN,0);
+		
+		// Now we're able to do the length of the last edited user
+		LittleEndian.putShort(_contents,20,(short)asciiUN.length);
+		
+		// Now the file versions, 2+1+1
+		LittleEndian.putShort(_contents,22,(short)docFinalVersion);
 		_contents[24] = docMajorNo;
 		_contents[25] = docMinorNo;
 
@@ -35,9 +42,7 @@
 		_contents[26] = 0;
 		_contents[27] = 0;
 
-		// username in bytes in us ascii
-		byte[] asciiUN = new byte[lastEditUser.length()];
-		StringUtil.putCompressedUnicode(lastEditUser,asciiUN,0);
+		// At this point we have the username as us ascii
 		System.arraycopy(asciiUN,0,_contents,28,asciiUN.length);
 
 		// 4 byte release version

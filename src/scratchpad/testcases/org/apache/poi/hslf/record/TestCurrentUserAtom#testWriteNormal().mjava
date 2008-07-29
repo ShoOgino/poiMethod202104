@@ -1,0 +1,26 @@
+	public void testWriteNormal() throws Exception {
+		// Get raw contents from a known file
+		POIFSFileSystem fs = new POIFSFileSystem(
+				new FileInputStream(normalFile)
+		);
+		DocumentEntry docProps = (DocumentEntry)fs.getRoot().getEntry("Current User");
+		byte[] contents = new byte[docProps.getSize()];
+		InputStream in = fs.getRoot().createDocumentInputStream("Current User");
+		in.read(contents);
+		
+		// Now build up a new one
+		CurrentUserAtom cu = new CurrentUserAtom();
+		cu.setLastEditUsername("Hogwarts");
+		cu.setCurrentEditOffset(0x2942);
+		
+		// Check it matches
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		cu.writeOut(baos);
+		byte[] out = baos.toByteArray();
+		
+		assertEquals(contents.length, out.length);
+		for(int i=0; i<contents.length; i++) {
+			assertEquals("Byte " + i, contents[i], out[i]);
+		}
+	}
+
