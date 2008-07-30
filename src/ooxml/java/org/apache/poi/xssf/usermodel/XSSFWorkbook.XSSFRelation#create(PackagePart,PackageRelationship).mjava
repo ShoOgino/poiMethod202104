@@ -1,0 +1,47 @@
+		/**
+		 * Does the actual Model creation
+		 */
+		private XSSFModel create(PackagePart thisPart, PackageRelationship rel) throws Exception {
+			XSSFModel model = null;
+			
+			Constructor<? extends XSSFModel> c;
+			boolean withString = false;
+			
+			// Find the right constructor 
+			try {
+				c = CLASS.getConstructor(InputStream.class, String.class);
+				withString = true;
+			} catch(NoSuchMethodException e) {
+				c = CLASS.getConstructor(InputStream.class);
+			}
+			
+			// Instantiate, if we can
+			InputStream inp = thisPart.getInputStream();
+			if(inp != null) {
+                try {
+                	if(withString) {
+                		model = c.newInstance(inp, rel.getId());
+                	} else {
+                		model = c.newInstance(inp);
+                	}
+                } finally {
+                	inp.close();
+                }
+                
+    			// Do children, if required
+    			if(model instanceof XSSFChildContainingModel) {
+    				XSSFChildContainingModel ccm = 
+    					(XSSFChildContainingModel)model;
+    				for(String relType : ccm.getChildrenRelationshipTypes()) {
+    					for(PackageRelationship cRel : thisPart.getRelationshipsByType(relType)) {
+    						PackagePart childPart = getTargetPart(thisPart.getPackage(), cRel);
+    						ccm.generateChild(childPart, cRel.getId());
+    					}
+    				}
+    			}
+            }
+			
+			
+            return model;
+		}
+
