@@ -1,0 +1,40 @@
+	/**
+	 * Creates a number based data validation constraint. The text values entered for expr1 and expr2
+	 * can be either standard Excel formulas or formatted number values. If the expression starts 
+	 * with '=' it is parsed as a formula, otherwise it is parsed as a formatted number. 
+	 * 
+	 * @param validationType one of {@link ValidationType#ANY}, {@link ValidationType#DECIMAL},
+	 * {@link ValidationType#INTEGER}, {@link ValidationType#TEXT_LENGTH}
+	 * @param comparisonOperator any constant from {@link OperatorType} enum
+	 * @param expr1 date formula (when first char is '=') or formatted number value
+	 * @param expr2 date formula (when first char is '=') or formatted number value
+	 */
+	public static DVConstraint createNumericConstraint(int validationType, int comparisonOperator, 
+			String expr1, String expr2) {
+		switch (validationType) {
+			case ValidationType.ANY:
+				if (expr1 != null || expr2 != null) {
+					throw new IllegalArgumentException("expr1 and expr2 must be null for validation type 'any'");
+				}
+				break;
+			case ValidationType.DECIMAL:
+			case ValidationType.INTEGER:
+			case ValidationType.TEXT_LENGTH:
+				if (expr1 == null) {
+					throw new IllegalArgumentException("expr1 must be supplied");
+				}
+				OperatorType.validateSecondArg(comparisonOperator, expr2);
+				break;
+			default:
+				throw new IllegalArgumentException("Validation Type ("
+						+ validationType + ") not supported with this method");
+		}
+		// formula1 and value1 are mutually exclusive
+		String formula1 = getFormulaFromTextExpression(expr1);
+		Double value1 = formula1 == null ? convertNumber(expr1) : null;
+		// formula2 and value2 are mutually exclusive
+		String formula2 = getFormulaFromTextExpression(expr2);
+		Double value2 = formula2 == null ? convertNumber(expr2) : null;
+		return new DVConstraint(validationType, comparisonOperator, formula1, formula2, value1, value2, null);
+	}
+
