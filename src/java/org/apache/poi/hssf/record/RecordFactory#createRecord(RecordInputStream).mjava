@@ -1,21 +1,21 @@
-    /**
-     * create a record, if there are MUL records than multiple records
-     * are returned digested into the non-mul form.
-     */
-    public static Record [] createRecord(RecordInputStream in) {
-        Constructor constructor = (Constructor) recordsMap.get(new Short(in.getSid()));
+	/**
+	 * create a record, if there are MUL records than multiple records
+	 * are returned digested into the non-mul form.
+	 */
+	public static Record [] createRecord(RecordInputStream in) {
+		Constructor constructor = (Constructor) recordsMap.get(new Short(in.getSid()));
 
-        if (constructor == null) {
-            return new Record[] { new UnknownRecord(in), };
-        }
-        
-        Record retval;
+		if (constructor == null) {
+			return new Record[] { new UnknownRecord(in), };
+		}
+		
+		Record retval;
 
-        try {
-            retval = ( Record ) constructor.newInstance(new Object[] { in });
-        } catch (InvocationTargetException e) {
-            throw new RecordFormatException("Unable to construct record instance" , e.getTargetException());
-        } catch (IllegalArgumentException e) {
+		try {
+			retval = ( Record ) constructor.newInstance(new Object[] { in });
+		} catch (InvocationTargetException e) {
+			throw new RecordFormatException("Unable to construct record instance" , e.getTargetException());
+		} catch (IllegalArgumentException e) {
 			throw new RuntimeException(e);
 		} catch (InstantiationException e) {
 			throw new RuntimeException(e);
@@ -23,52 +23,52 @@
 			throw new RuntimeException(e);
 		}
 		
-        if (retval instanceof RKRecord) {
-        	// RK record is a slightly smaller alternative to NumberRecord
-        	// POI likes NumberRecord better
-            RKRecord     rk  = ( RKRecord ) retval;
-            NumberRecord num = new NumberRecord();
+		if (retval instanceof RKRecord) {
+			// RK record is a slightly smaller alternative to NumberRecord
+			// POI likes NumberRecord better
+			RKRecord	 rk  = ( RKRecord ) retval;
+			NumberRecord num = new NumberRecord();
 
-            num.setColumn(rk.getColumn());
-            num.setRow(rk.getRow());
-            num.setXFIndex(rk.getXFIndex());
-            num.setValue(rk.getRKNumber());
-            return new Record[] { num, };
-        }
-        if (retval instanceof DBCellRecord) {
-        	// Not needed by POI.  Regenerated from scratch by POI when spreadsheet is written
-            return new Record[] { null, };
-        }
+			num.setColumn(rk.getColumn());
+			num.setRow(rk.getRow());
+			num.setXFIndex(rk.getXFIndex());
+			num.setValue(rk.getRKNumber());
+			return new Record[] { num, };
+		}
+		if (retval instanceof DBCellRecord) {
+			// Not needed by POI.  Regenerated from scratch by POI when spreadsheet is written
+			return new Record[] { null, };
+		}
 		// expand multiple records where necessary
-        if (retval instanceof MulRKRecord) {
-            MulRKRecord mrk = ( MulRKRecord ) retval;
+		if (retval instanceof MulRKRecord) {
+			MulRKRecord mrk = ( MulRKRecord ) retval;
 
-            Record[] mulRecs = new Record[ mrk.getNumColumns() ];
-            for (int k = 0; k < mrk.getNumColumns(); k++) {
-                NumberRecord nr = new NumberRecord();
+			Record[] mulRecs = new Record[ mrk.getNumColumns() ];
+			for (int k = 0; k < mrk.getNumColumns(); k++) {
+				NumberRecord nr = new NumberRecord();
 
-                nr.setColumn(( short ) (k + mrk.getFirstColumn()));
-                nr.setRow(mrk.getRow());
-                nr.setXFIndex(mrk.getXFAt(k));
-                nr.setValue(mrk.getRKNumberAt(k));
-                mulRecs[ k ] = nr;
-            }
-            return mulRecs;
-        }
-        if (retval instanceof MulBlankRecord) {
-            MulBlankRecord mb = ( MulBlankRecord ) retval;
+				nr.setColumn(( short ) (k + mrk.getFirstColumn()));
+				nr.setRow(mrk.getRow());
+				nr.setXFIndex(mrk.getXFAt(k));
+				nr.setValue(mrk.getRKNumberAt(k));
+				mulRecs[ k ] = nr;
+			}
+			return mulRecs;
+		}
+		if (retval instanceof MulBlankRecord) {
+			MulBlankRecord mb = ( MulBlankRecord ) retval;
 
-            Record[] mulRecs = new Record[ mb.getNumColumns() ];
-            for (int k = 0; k < mb.getNumColumns(); k++) {
-                BlankRecord br = new BlankRecord();
+			Record[] mulRecs = new Record[ mb.getNumColumns() ];
+			for (int k = 0; k < mb.getNumColumns(); k++) {
+				BlankRecord br = new BlankRecord();
 
-                br.setColumn(( short ) (k + mb.getFirstColumn()));
-                br.setRow(mb.getRow());
-                br.setXFIndex(mb.getXFAt(k));
-                mulRecs[ k ] = br;
-            }
-            return mulRecs;
-        }
-        return new Record[] { retval, };
-    }
+				br.setColumn(( short ) (k + mb.getFirstColumn()));
+				br.setRow(mb.getRow());
+				br.setXFIndex(mb.getXFAt(k));
+				mulRecs[ k ] = br;
+			}
+			return mulRecs;
+		}
+		return new Record[] { retval, };
+	}
 
