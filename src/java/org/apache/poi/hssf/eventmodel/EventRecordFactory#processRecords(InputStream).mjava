@@ -7,51 +7,39 @@
      * @exception RecordFormatException on error processing the
      *            InputStream
      */
-    public void processRecords(InputStream in)
-        throws RecordFormatException
-    {
-        Record    last_record = null;
+    public void processRecords(InputStream in) throws RecordFormatException {
+        Record last_record = null;
 
         RecordInputStream recStream = new RecordInputStream(in);
 
         while (recStream.hasNextRecord()) {
-          recStream.nextRecord();
-          Record[] recs = createRecord(recStream);   // handle MulRK records
-                    if (recs.length > 1)
-                    {
-                        for (int k = 0; k < recs.length; k++)
-                        {
-                            if ( last_record != null ) {
-                                if (throwRecordEvent(last_record) == false && abortable == true) {
-                                 last_record = null;
-                                 break;   
-                                }
-                            }
-                            last_record =
-                                recs[ k ];                // do to keep the algorythm homogenous...you can't
-                        }                                 // actually continue a number record anyhow.
-                    }
-                    else
-                    {
-                        Record record = recs[ 0 ];
-
-                        if (record != null)
-                        {
-                                if (last_record != null) {
-                                    if (throwRecordEvent(last_record) == false && abortable == true) {
-                                        last_record = null;
-                                        break;   
-                                    }
-                                }
-                                
-                                last_record = record;
-                            }
+            recStream.nextRecord();
+            Record[] recs = RecordFactory.createRecord(recStream);   // handle MulRK records
+            if (recs.length > 1) {
+                for (int k = 0; k < recs.length; k++) {
+                    if ( last_record != null ) {
+                        if (!processRecord(last_record)) {
+                            return;   
                         }
                     }
+                    last_record = recs[ k ]; // do to keep the algorithm homogeneous...you can't
+                }                            // actually continue a number record anyhow.
+            } else {
+                Record record = recs[ 0 ];
 
-            
-            if (last_record != null) {
-               throwRecordEvent(last_record);               
+                if (record != null) {
+                    if (last_record != null) {
+                        if (!processRecord(last_record)) {
+                            return;   
+                        }
+                    }
+                     last_record = record;
+                }
             }
         }
+            
+        if (last_record != null) {
+        	processRecord(last_record);               
+        }
+    }
 
