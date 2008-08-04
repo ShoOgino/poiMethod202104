@@ -1,0 +1,26 @@
+	/**
+	 * @return the new range(s) to replace the supplied ones.  <code>null</code> if no merge is possible
+	 */
+	private static CellRangeAddress[] mergeRanges(CellRangeAddress range1, CellRangeAddress range2) {
+		
+		int x = intersect(range1, range2);
+		switch(x)
+		{
+			case CellRangeUtil.NO_INTERSECTION: 
+				if(hasExactSharedBorder(range1, range2)) {
+					return new CellRangeAddress[] { createEnclosingCellRange(range1, range2), };
+				}
+				// else - No intersection and no shared border: do nothing 
+				return null;
+			case CellRangeUtil.OVERLAP:
+				return resolveRangeOverlap(range1, range2);
+			case CellRangeUtil.INSIDE:
+				// Remove range2, since it is completely inside of range1
+				return new CellRangeAddress[] { range1, };
+			case CellRangeUtil.ENCLOSES:
+				// range2 encloses range1, so replace it with the enclosing one
+				return new CellRangeAddress[] { range2, };
+		}
+		throw new RuntimeException("unexpected intersection result (" + x + ")");
+	}
+

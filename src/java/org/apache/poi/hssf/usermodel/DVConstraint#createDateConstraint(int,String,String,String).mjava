@@ -1,0 +1,30 @@
+	/**
+	 * Creates a date based data validation constraint. The text values entered for expr1 and expr2
+	 * can be either standard Excel formulas or formatted date values. If the expression starts 
+	 * with '=' it is parsed as a formula, otherwise it is parsed as a formatted date (Excel uses 
+	 * the same convention).  To parse formatted dates, a date format needs to be specified.  This
+	 * is contrary to Excel which uses the default short date format from the OS.
+	 * 
+	 * @param comparisonOperator constant from {@link OperatorType} enum
+	 * @param expr1 date formula (when first char is '=') or formatted date value
+	 * @param expr2 date formula (when first char is '=') or formatted date value
+	 * @param dateFormat ignored if both expr1 and expr2 are formulas.  Default value is "YYYY/MM/DD"
+	 * otherwise any other valid argument for <tt>SimpleDateFormat</tt> can be used
+	 * @see <a href='http://java.sun.com/j2se/1.5.0/docs/api/java/text/DateFormat.html'>SimpleDateFormat</a>
+	 */
+	public static DVConstraint createDateConstraint(int comparisonOperator, String expr1, String expr2, String dateFormat) {
+		if (expr1 == null) {
+			throw new IllegalArgumentException("expr1 must be supplied");
+		}
+		OperatorType.validateSecondArg(comparisonOperator, expr2);
+		SimpleDateFormat df = dateFormat == null ? null : new SimpleDateFormat(dateFormat);
+		
+		// formula1 and value1 are mutually exclusive
+		String formula1 = getFormulaFromTextExpression(expr1);
+		Double value1 = formula1 == null ? convertDate(expr1, df) : null;
+		// formula2 and value2 are mutually exclusive
+		String formula2 = getFormulaFromTextExpression(expr2);
+		Double value2 = formula2 == null ? convertDate(expr2, df) : null;
+		return new DVConstraint(VT.DATE, comparisonOperator, formula1, formula2, value1, value2, null);
+	}
+

@@ -8,26 +8,17 @@
      *             HSSFSheet last row or first row is incorrect.             <P>
      *
      */
-
-    public void testWriteModifySheetMerged()
-        throws IOException
-    {
-        File             file = TempFile.createTempFile("testWriteSheetMerged",
-                                                    ".xls");
-        FileOutputStream out  = new FileOutputStream(file);
-        FileInputStream  in   = null;
+    public void testWriteModifySheetMerged() {
         HSSFWorkbook     wb   = new HSSFWorkbook();
         HSSFSheet        s    = wb.createSheet();
-        HSSFRow          r    = null;
-        HSSFCell         c    = null;
 
         for (short rownum = ( short ) 0; rownum < 100; rownum++)
         {
-            r = s.createRow(rownum);
+            HSSFRow r = s.createRow(rownum);
 
             for (short cellnum = ( short ) 0; cellnum < 50; cellnum += 2)
             {
-                c = r.createCell(cellnum);
+                HSSFCell c = r.createCell(cellnum);
                 c.setCellValue(rownum * 10000 + cellnum
                                + ((( double ) rownum / 1000)
                                   + (( double ) cellnum / 10000)));
@@ -35,29 +26,16 @@
                 c.setCellValue(new HSSFRichTextString("TEST"));
             }
         }
-        s.addMergedRegion(new Region(( short ) 0, ( short ) 0, ( short ) 10,
-                                     ( short ) 10));
-        s.addMergedRegion(new Region(( short ) 30, ( short ) 5, ( short ) 40,
-                                     ( short ) 15));
-        wb.write(out);
-        out.close();
+        s.addMergedRegion(new CellRangeAddress(0, 10, 0, 10));
+        s.addMergedRegion(new CellRangeAddress(30, 40, 5, 15));
         sanityChecker.checkHSSFWorkbook(wb);
-        in = new FileInputStream(file);
-        wb = new HSSFWorkbook(new POIFSFileSystem(in));
+        wb = HSSFTestDataSamples.writeOutAndReadBack(wb);
+        
         s  = wb.getSheetAt(0);
-        Region r1 = s.getMergedRegionAt(0);
-        Region r2 = s.getMergedRegionAt(1);
+        CellRangeAddress r1 = s.getMergedRegion(0);
+        CellRangeAddress r2 = s.getMergedRegion(1);
 
-        in.close();
-
-        // System.out.println(file.length());
-        // assertEquals("FILE LENGTH == 87552",file.length(), 87552);
-        // System.out.println(s.getLastRowNum());
-        assertEquals("REGION1 = 0,0,10,10", 0,
-                     new Region(( short ) 0, ( short ) 0, ( short ) 10,
-                                ( short ) 10).compareTo(r1));
-        assertEquals("REGION2 == 30,5,40,15", 0,
-                     new Region(( short ) 30, ( short ) 5, ( short ) 40,
-                                ( short ) 15).compareTo(r2));
+        confirmRegion(new CellRangeAddress(0, 10, 0, 10), r1);
+        confirmRegion(new CellRangeAddress(30, 40,5, 15), r2);
     }
 

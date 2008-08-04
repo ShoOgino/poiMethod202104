@@ -1,0 +1,21 @@
+	private static boolean compareStreams(InputStream isA, byte[] generatedContent) {
+
+		InputStream isB = new ByteArrayInputStream(generatedContent);
+
+		// The allowable regions where the generated file can differ from the 
+		// proof should be small (i.e. much less than 1K)
+		int[] allowableDifferenceRegions = { 
+				0x0228, 16,  // a region of the file containing the OS username
+				0x506C, 8,   // See RootProperty (super fields _seconds_2 and _days_2)
+		};
+		int[] diffs = StreamUtility.diffStreams(isA, isB, allowableDifferenceRegions);
+		if (diffs == null) {
+			return true;
+		}
+		System.err.println("Diff from proof: ");
+		for (int i = 0; i < diffs.length; i++) {
+			System.err.println("diff at offset: 0x" + Integer.toHexString(diffs[i]));
+		}
+		return false;
+	}
+

@@ -1,0 +1,61 @@
+	public void testAddToExistingSheet() {
+
+		// dvEmpty.xls is a simple one sheet workbook.  With a DataValidations header record but no 
+		// DataValidations.  It's important that the example has one SHEETPROTECTION record.
+		// Such a workbook can be created in Excel (2007) by adding datavalidation for one cell
+		// and then deleting the row that contains the cell.
+		HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook("dvEmpty.xls");  
+		int dvRow = 0;
+		HSSFSheet sheet = wb.getSheetAt(0);
+		DVConstraint dc = DVConstraint.createNumericConstraint(VT.INTEGER, OP.EQUAL, "42", null);
+		HSSFDataValidation dv = new HSSFDataValidation(new CellRangeAddressList(dvRow, dvRow, 0, 0), dc);
+		
+		dv.setEmptyCellAllowed(false);
+		dv.setErrorStyle(ES.STOP);
+		dv.setShowPromptBox(true);
+		dv.createErrorBox("Xxx", "Yyy");
+		dv.setSuppressDropDownArrow(true);
+
+		sheet.addValidationData(dv);
+		
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		try {
+			wb.write(baos);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		
+		byte[] wbData = baos.toByteArray();
+		
+		if (false) { // TODO (Jul 2008) fix EventRecordFactory to process unknown records, (and DV records for that matter)
+			EventRecordFactory erf = new EventRecordFactory();
+			ERFListener erfListener = null; // new MyERFListener();
+			erf.registerListener(erfListener, null);
+			try {
+				POIFSFileSystem fs = new POIFSFileSystem(new ByteArrayInputStream(baos.toByteArray()));
+				erf.processRecords(fs.createDocumentInputStream("Workbook"));
+			} catch (RecordFormatException e) {
+				throw new RuntimeException(e);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+		}
+		// else verify record ordering by navigating the raw bytes
+		
+		byte[] dvHeaderRecStart= { (byte)0xB2, 0x01, 0x12, 0x00, };
+		int dvHeaderOffset = findIndex(wbData, dvHeaderRecStart);
+		assertTrue(dvHeaderOffset > 0);
+		int nextRecIndex = dvHeaderOffset + 22;
+		int nextSid 
+			= ((wbData[nextRecIndex + 0] << 0) & 0x00FF) 
+			+ ((wbData[nextRecIndex + 1] << 8) & 0xFF00)
+			;
+		// nextSid should be for a DVRecord.  If anything comes between the DV header record 
+		// and the DV records, Excel will not be able to open the workbook without error.
+		
+		if (nextSid == 0x0867) {
+			throw new AssertionFailedError("Identified bug 45519");
+		}
+		assertEquals(DVRecord.sid, nextSid);
+	}
+
