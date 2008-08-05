@@ -5,18 +5,32 @@
 	 */
 	public String getText(boolean slideText, boolean notesText) {
 		StringBuffer text = new StringBuffer();
-		
-		CTSlideIdListEntry[] slideRefs =
-			slideshow.getSlideReferences().getSldIdArray();
-		for (int i = 0; i < slideRefs.length; i++) {
+
+		XSLFSlide[] slides = slideshow.getSlides();
+		for(int i = 0; i < slides.length; i++) {
+			CTSlide rawSlide = slides[i]._getCTSlide();
+			CTSlideIdListEntry slideId = slides[i]._getCTSlideId();
+			
 			try {
-				CTSlide slide =
-					slideshow.getSlide(slideRefs[i]);
+				// For now, still very low level
 				CTNotesSlide notes = 
-					slideshow.getNotes(slideRefs[i]);
+					slideshow._getXSLFSlideShow().getNotes(slideId);
+				CTCommentList comments =
+					slideshow._getXSLFSlideShow().getSlideComments(slideId);
 				
 				if(slideText) {
-					extractText(slide.getCSld().getSpTree(), text);
+					extractText(rawSlide.getCSld().getSpTree(), text);
+					
+					// Comments too for the slide
+					if(comments != null) {
+						for(CTComment comment : comments.getCmArray()) {
+							// TODO - comment authors too
+							// (They're in another stream)
+							text.append(
+									comment.getText() + "\n"
+							);
+						}
+					}
 				}
 				if(notesText && notes != null) {
 					extractText(notes.getCSld().getSpTree(), text);
