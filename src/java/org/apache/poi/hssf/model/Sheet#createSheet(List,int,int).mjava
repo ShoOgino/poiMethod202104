@@ -24,13 +24,70 @@
         Sheet     retval             = new Sheet();
         ArrayList records            = new ArrayList(recs.size() / 5);
         boolean   isfirstcell        = true;
-        boolean   isfirstrow         = true;
         int       bofEofNestingLevel = 0;
 
         for (int k = offset; k < recs.size(); k++)
         {
             Record rec = ( Record ) recs.get(k);
+            if (rec.isValue() != (rec instanceof CellValueRecordInterface)) {
+            	if (rec instanceof SharedFormulaRecord) {
+            		
+            	} else {
+            	"".length();
+            	}
+            }
 
+            if ( rec.getSid() == DBCellRecord.sid ) {
+                continue;
+            }
+            if ( rec.getSid() == IndexRecord.sid ) {
+                // ignore INDEX record because it is only needed by Excel, 
+                // and POI always re-calculates its contents 
+                continue;
+            }
+            if ( rec.getSid() == StringRecord.sid ) {
+                continue;
+            }
+            
+            if ( rec.getSid() == CFHeaderRecord.sid ) {
+                RecordStream rs = new RecordStream(recs, k);
+                retval.condFormatting = new ConditionalFormattingTable(rs);
+                k += rs.getCountRead()-1;
+                records.add(retval.condFormatting);
+                continue;
+            }
+            
+            if (rec.getSid() == ColumnInfoRecord.sid) {
+                RecordStream rs = new RecordStream(recs, k);
+                retval._columnInfos = new ColumnInfoRecordsAggregate(rs);
+                k += rs.getCountRead()-1;
+                records.add(retval._columnInfos);
+                continue;
+            }
+            if ( rec.getSid() == DVALRecord.sid) {
+                RecordStream rs = new RecordStream(recs, k);
+                retval._dataValidityTable = new DataValidityTable(rs);
+                k += rs.getCountRead() - 1; // TODO - convert this method result to be zero based
+                records.add(retval._dataValidityTable);
+                continue; // TODO
+            }
+            if ( rec.getSid() == RowRecord.sid )
+            {
+                RowRecord row = (RowRecord)rec;
+                if (retval._rowsAggregate == null) {
+                    retval._rowsAggregate = new RowRecordsAggregate();
+                    records.add(retval._rowsAggregate); //only add the aggregate once
+				}
+                retval._rowsAggregate.insertRow(row);
+                continue;
+            }
+            if (rec.getSid() == MergeCellsRecord.sid) {
+                RecordStream rs = new RecordStream(recs, k);
+                retval._mergedCellsTable = new MergedCellsTable(rs);
+                records.add(retval._mergedCellsTable);
+                continue; // TODO
+            }
+            
             if (rec.getSid() == BOFRecord.sid)
             {
                 bofEofNestingLevel++;
@@ -54,52 +111,14 @@
             else if (rec.getSid() == DimensionsRecord.sid)
             {
                 // Make a columns aggregate if one hasn't ready been created.
-                if (retval.columns == null)
+                if (retval._columnInfos == null)
                 {
-                    retval.columns = new ColumnInfoRecordsAggregate();
-                    records.add(retval.columns);
+                    retval._columnInfos = new ColumnInfoRecordsAggregate();
+                    records.add(retval._columnInfos);
                 }
 
                 retval.dims    = ( DimensionsRecord ) rec;
                 retval.dimsloc = records.size();
-            }
-            else if (rec.getSid() == MergeCellsRecord.sid)
-            {
-                retval.mergedRecords.add(rec);
-                retval.merged = ( MergeCellsRecord ) rec;
-                retval.numMergedRegions += retval.merged.getNumAreas();
-            }
-            else if ( rec.getSid() == CFHeaderRecord.sid )
-            {
-                CFRecordsAggregate cfAgg = CFRecordsAggregate.createCFAggregate(recs, k);
-                retval.condFormatting.add(cfAgg);
-                rec = cfAgg;
-            }
-            else if ( rec.getSid() == CFRuleRecord.sid )
-            {
-                // Skip it since it is processed by CFRecordsAggregate
-                rec = null;
-            }
-            else if (rec.getSid() == ColumnInfoRecord.sid)
-            {
-                ColumnInfoRecord col = (ColumnInfoRecord)rec;
-                if (retval.columns != null)
-                {
-                    rec = null; //only add the aggregate once
-                }
-                else
-                {
-                    rec = retval.columns = new ColumnInfoRecordsAggregate();
-                }
-                retval.columns.insertColumn(col);
-            }
-            else if (rec.getSid() == DefaultColWidthRecord.sid)
-            {
-                retval.defaultcolwidth = ( DefaultColWidthRecord ) rec;
-            }
-            else if (rec.getSid() == DefaultRowHeightRecord.sid)
-            {
-                retval.defaultrowheight = ( DefaultRowHeightRecord ) rec;
             }
             else if ( rec.isValue() && bofEofNestingLevel == 1 )
             {
@@ -115,22 +134,13 @@
                     rec = null;
                 }
             }
-            else if ( rec.getSid() == StringRecord.sid )
+            else  if (rec.getSid() == DefaultColWidthRecord.sid)
             {
-                rec = null;
+                retval.defaultcolwidth = ( DefaultColWidthRecord ) rec;
             }
-            else if ( rec.getSid() == RowRecord.sid )
+            else if (rec.getSid() == DefaultRowHeightRecord.sid)
             {
-                RowRecord row = (RowRecord)rec;
-                if (!isfirstrow) rec = null; //only add the aggregate once
-
-                if ( isfirstrow )
-                {
-                    retval.rows = new RowRecordsAggregate();
-                    rec = retval.rows;
-                    isfirstrow = false;
-                }
-                retval.rows.insertRow(row);
+                retval.defaultrowheight = ( DefaultRowHeightRecord ) rec;
             }
             else if ( rec.getSid() == PrintGridlinesRecord.sid )
             {
@@ -176,22 +186,6 @@
             {
                 retval.windowTwo = (WindowTwoRecord) rec;
             }
-            else if ( rec.getSid() == DBCellRecord.sid )
-            {
-                rec = null;
-            }
-            else if ( rec.getSid() == IndexRecord.sid )
-            {
-                // ignore INDEX record because it is only needed by Excel, 
-                // and POI always re-calculates its contents 
-                rec = null;
-            }
-            else if ( rec.getSid() == DVALRecord.sid) {
-                RecordStream rs = new RecordStream(recs, k);
-                retval._dataValidityTable = new DataValidityTable(rs);
-                k += rs.getCountRead() - 1; // TODO - convert this method result to be zero based
-                rec = retval._dataValidityTable;
-            }
             else if ( rec.getSid() == ProtectRecord.sid )
             {
                 retval.protect = (ProtectRecord) rec;
@@ -208,19 +202,22 @@
             {
                 retval.password = (PasswordRecord) rec;
             }
-            else if (rec.getSid() == PageBreakRecord.HORIZONTAL_SID)
+            else if (rec.getSid() == HorizontalPageBreakRecord.sid)
             {
-                retval.rowBreaks = (PageBreakRecord)rec;
+                retval._rowBreaksRecord = (HorizontalPageBreakRecord)rec;
             }
-            else if (rec.getSid() == PageBreakRecord.VERTICAL_SID)
+            else if (rec.getSid() == VerticalPageBreakRecord.sid)
             {
-                retval.colBreaks = (PageBreakRecord)rec;
+                retval._columnBreaksRecord = (VerticalPageBreakRecord)rec;
             }
 
             if (rec != null)
             {
                 records.add(rec);
             }
+        }
+        if (retval.dimsloc < 0) {
+        	throw new RuntimeException("DimensionsRecord was not found");
         }
         retval.records = records;
         retval.checkRows();

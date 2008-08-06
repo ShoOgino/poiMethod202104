@@ -1,7 +1,6 @@
     public void testAddMergedRegion() {
         Sheet sheet = Sheet.createSheet();
         int regionsToAdd = 4096;
-        int startRecords = sheet.getRecords().size();
 
         //simple test that adds a load of regions
         for (int n = 0; n < regionsToAdd; n++)
@@ -14,11 +13,18 @@
         assertTrue(sheet.getNumMergedRegions() == regionsToAdd);
 
         //test that the regions were spread out over the appropriate number of records
-        int recordsAdded    = sheet.getRecords().size() - startRecords;
+        byte[] sheetData = new byte[sheet.getSize()];
+        sheet.serialize(0, sheetData);
+        MergedCellListener mcListener = new MergedCellListener();
+        EventRecordFactory erf = new EventRecordFactory(mcListener, new short[] { MergeCellsRecord.sid, });
+//        POIFSFileSystem poifs = new POIFSFileSystem(new ByteArrayInputStream(sheetData));
+        erf.processRecords(new ByteArrayInputStream(sheetData));
+        int recordsAdded    = mcListener.getCount();
         int recordsExpected = regionsToAdd/1027;
         if ((regionsToAdd % 1027) != 0)
             recordsExpected++;
-        assertTrue("The " + regionsToAdd + " merged regions should have been spread out over " + recordsExpected + " records, not " + recordsAdded, recordsAdded == recordsExpected);
+        assertTrue("The " + regionsToAdd + " merged regions should have been spread out over " 
+                + recordsExpected + " records, not " + recordsAdded, recordsAdded == recordsExpected);
         // Check we can't add one with invalid date
         try {
             sheet.addMergedRegion(10, (short)10, 9, (short)12);

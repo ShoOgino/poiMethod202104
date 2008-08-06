@@ -1,0 +1,24 @@
+	/**
+	 * Create CFRecordsAggregate from a list of CF Records
+	 * @param recs - list of {@link Record} objects
+	 * @param offset - position of {@link CFHeaderRecord} object in the list of Record objects
+	 * @return CFRecordsAggregate object
+	 */
+	public static CFRecordsAggregate createCFAggregate(RecordStream rs) {
+		Record rec = rs.getNext();
+		if (rec.getSid() != CFHeaderRecord.sid) {
+			throw new IllegalStateException("next record sid was " + rec.getSid() 
+					+ " instead of " + CFHeaderRecord.sid + " as expected");
+		}
+
+		CFHeaderRecord header = (CFHeaderRecord)rec;
+		int nRules = header.getNumberOfConditionalFormats();
+
+		CFRuleRecord[] rules = new CFRuleRecord[nRules];
+		for (int i = 0; i < rules.length; i++) {
+			rules[i] = (CFRuleRecord) rs.getNext();
+		}
+		
+		return new CFRecordsAggregate(header, rules);
+	}
+
