@@ -26,17 +26,8 @@
         boolean   isfirstcell        = true;
         int       bofEofNestingLevel = 0;
 
-        for (int k = offset; k < recs.size(); k++)
-        {
+        for (int k = offset; k < recs.size(); k++) {
             Record rec = ( Record ) recs.get(k);
-            if (rec.isValue() != (rec instanceof CellValueRecordInterface)) {
-            	if (rec instanceof SharedFormulaRecord) {
-            		
-            	} else {
-            	"".length();
-            	}
-            }
-
             if ( rec.getSid() == DBCellRecord.sid ) {
                 continue;
             }
@@ -69,18 +60,31 @@
                 retval._dataValidityTable = new DataValidityTable(rs);
                 k += rs.getCountRead() - 1; // TODO - convert this method result to be zero based
                 records.add(retval._dataValidityTable);
-                continue; // TODO
+                continue;
             }
-            if ( rec.getSid() == RowRecord.sid )
-            {
+            // TODO construct RowRecordsAggregate from RecordStream
+            if ( rec.getSid() == RowRecord.sid ) {
                 RowRecord row = (RowRecord)rec;
                 if (retval._rowsAggregate == null) {
                     retval._rowsAggregate = new RowRecordsAggregate();
                     records.add(retval._rowsAggregate); //only add the aggregate once
-				}
+                }
                 retval._rowsAggregate.insertRow(row);
                 continue;
             }
+            if ( rec.isValue() && bofEofNestingLevel == 1 ) {
+                if (isfirstcell) {
+                    isfirstcell = false;
+                    if (retval._rowsAggregate == null) {
+                        retval._rowsAggregate = new RowRecordsAggregate();
+                        records.add(retval._rowsAggregate); //only add the aggregate once
+                    }
+                    retval._rowsAggregate.constructCellValues( k, recs );
+                }
+               continue;
+            }
+                       
+            
             if (rec.getSid() == MergeCellsRecord.sid) {
                 RecordStream rs = new RecordStream(recs, k);
                 retval._mergedCellsTable = new MergedCellsTable(rs);
@@ -120,21 +124,7 @@
                 retval.dims    = ( DimensionsRecord ) rec;
                 retval.dimsloc = records.size();
             }
-            else if ( rec.isValue() && bofEofNestingLevel == 1 )
-            {
-                if ( isfirstcell )
-                {
-                    retval.cells = new ValueRecordsAggregate();
-                    rec = retval.cells;
-                    retval.cells.construct( k, recs );
-                    isfirstcell = false;
-                }
-                else
-                {
-                    rec = null;
-                }
-            }
-            else  if (rec.getSid() == DefaultColWidthRecord.sid)
+            else if (rec.getSid() == DefaultColWidthRecord.sid)
             {
                 retval.defaultcolwidth = ( DefaultColWidthRecord ) rec;
             }
@@ -211,17 +201,13 @@
                 retval._columnBreaksRecord = (VerticalPageBreakRecord)rec;
             }
 
-            if (rec != null)
-            {
-                records.add(rec);
-            }
+            records.add(rec);
         }
         if (retval.dimsloc < 0) {
-        	throw new RuntimeException("DimensionsRecord was not found");
+            throw new RuntimeException("DimensionsRecord was not found");
         }
         retval.records = records;
         retval.checkRows();
-        retval.checkCells();
         if (log.check( POILogger.DEBUG ))
             log.log(POILogger.DEBUG, "sheet createSheet (existing file) exited");
         return retval;

@@ -1,5 +1,23 @@
-    public int getRecordSize()
-    {
-        return size;
+    public int getRecordSize() {
+
+        int retval = this._rowRecords.size() * RowRecord.ENCODED_SIZE;
+        
+        for (Iterator itr = _valuesAgg.getIterator(); itr.hasNext();) {
+            RecordBase record = (RecordBase) itr.next();
+            retval += record.getRecordSize();
+        }
+
+        // Add space for the IndexRecord and DBCell records
+        final int nBlocks = getRowBlockCount();
+        int nRows = 0;
+        for (Iterator itr = getIterator(); itr.hasNext();) {
+            RowRecord row = (RowRecord)itr.next();
+            if (_valuesAgg.rowHasCells(row.getRowNumber())) {
+                nRows++;
+            }
+        }
+        retval += IndexRecord.getRecordSizeForBlockCount(nBlocks);
+        retval += DBCellRecord.calculateSizeOfRecords(nBlocks, nRows);
+        return retval;
     }
 
