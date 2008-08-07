@@ -19,7 +19,20 @@
       in.read(data, 0, currentLength);
 
       //Read the Sid of the next record
-      nextSid = LittleEndian.readShort(in);
+      if (in.available() < EOFRecord.ENCODED_SIZE) {
+          if (in.available() > 0) {
+              // some scrap left over?
+              // ex45582-22397.xls has one extra byte after the last record
+              // Excel reads that file OK
+          }
+          nextSid = INVALID_SID_VALUE;  
+      } else {
+          nextSid = LittleEndian.readShort(in);
+          if (nextSid == INVALID_SID_VALUE) {
+              throw new RecordFormatException("Found sid " + nextSid + " after record with sid 0x"
+                      + Integer.toHexString(currentSid).toUpperCase());
+          }
+      }      
     } catch (IOException ex) {
       throw new RecordFormatException("Error reading bytes", ex);
     }
