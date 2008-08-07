@@ -1,0 +1,22 @@
+	public void visitContainedRecords(RecordVisitor rv) {
+		int nRegions = _mergedRegions.size();
+		if (nRegions < 1) {
+			// no need to write a single empty MergeCellsRecord
+			return;
+		}
+
+		int nFullMergedCellsRecords = nRegions / MAX_MERGED_REGIONS;
+		int nLeftoverMergedRegions = nRegions % MAX_MERGED_REGIONS;
+		CellRangeAddress[] cras = new CellRangeAddress[nRegions];
+		_mergedRegions.toArray(cras);
+
+		for (int i = 0; i < nFullMergedCellsRecords; i++) {
+			int startIx = i * MAX_MERGED_REGIONS;
+			rv.visitRecord(new MergeCellsRecord(cras, startIx, MAX_MERGED_REGIONS));
+		}
+		if (nLeftoverMergedRegions > 0) {
+			int startIx = nFullMergedCellsRecords * MAX_MERGED_REGIONS;
+			rv.visitRecord(new MergeCellsRecord(cras, startIx, nLeftoverMergedRegions));
+		}
+	}
+
