@@ -83,13 +83,28 @@
                 }
                continue;
             }
-                       
+             
+            if (PageSettingsBlock.isComponentRecord(rec.getSid())) {
+                RecordStream rs = new RecordStream(recs, k);
+                PageSettingsBlock psb = new PageSettingsBlock(rs);
+                if (bofEofNestingLevel == 1) {
+                    if (retval._psBlock == null) {
+                        retval._psBlock = psb;
+                    } else {
+                        // more than one 'Page Settings Block' at nesting level 1 ?
+                        // apparently this happens in about 15 test sample files
+                    }
+                }
+                records.add(psb);
+                k += rs.getCountRead()-1;
+                continue;
+            }
             
             if (rec.getSid() == MergeCellsRecord.sid) {
                 RecordStream rs = new RecordStream(recs, k);
                 retval._mergedCellsTable = new MergedCellsTable(rs);
                 records.add(retval._mergedCellsTable);
-                continue; // TODO
+                continue;
             }
             
             if (rec.getSid() == BOFRecord.sid)
@@ -140,34 +155,6 @@
             {
                 retval.gridset = (GridsetRecord) rec;
             }
-            else if ( rec.getSid() == HeaderRecord.sid && bofEofNestingLevel == 1)
-            {
-                retval.header = (HeaderRecord) rec;
-            }
-            else if ( rec.getSid() == FooterRecord.sid && bofEofNestingLevel == 1)
-            {
-                retval.footer = (FooterRecord) rec;
-            }
-            else if ( rec.getSid() == PrintSetupRecord.sid && bofEofNestingLevel == 1)
-            {
-                retval.printSetup = (PrintSetupRecord) rec;
-            }
-            else if ( rec.getSid() == LeftMarginRecord.sid)
-            {
-                retval.getMargins()[LeftMargin] = (LeftMarginRecord) rec;
-            }
-            else if ( rec.getSid() == RightMarginRecord.sid)
-            {
-                retval.getMargins()[RightMargin] = (RightMarginRecord) rec;
-            }
-            else if ( rec.getSid() == TopMarginRecord.sid)
-            {
-                retval.getMargins()[TopMargin] = (TopMarginRecord) rec;
-            }
-            else if ( rec.getSid() == BottomMarginRecord.sid)
-            {
-                retval.getMargins()[BottomMargin] = (BottomMarginRecord) rec;
-            }
             else if ( rec.getSid() == SelectionRecord.sid )
             {
                 retval.selection = (SelectionRecord) rec;
@@ -191,14 +178,6 @@
             else if ( rec.getSid() == PasswordRecord.sid )
             {
                 retval.password = (PasswordRecord) rec;
-            }
-            else if (rec.getSid() == HorizontalPageBreakRecord.sid)
-            {
-                retval._rowBreaksRecord = (HorizontalPageBreakRecord)rec;
-            }
-            else if (rec.getSid() == VerticalPageBreakRecord.sid)
-            {
-                retval._columnBreaksRecord = (VerticalPageBreakRecord)rec;
             }
 
             records.add(rec);
