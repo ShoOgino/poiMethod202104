@@ -1,32 +1,21 @@
     /**
      * @return the serialized size of this sheet
      */
-    public int getSize()
-    {
+    public int getSize() {
         int retval = 0;
 
         for ( int k = 0; k < records.size(); k++) {
-        	RecordBase record = (RecordBase) records.get(k);
+            RecordBase record = (RecordBase) records.get(k);
             if (record instanceof UncalcedRecord) {
                 // skip the UncalcedRecord if present, it's only encoded if the isUncalced flag is set
                 continue;
             }
             retval += record.getRecordSize();
         }
+        // add space for IndexRecord if needed
         if (_rowsAggregate != null) {
-            // Add space for the IndexRecord and DBCell records
-            final int nBlocks = _rowsAggregate.getRowBlockCount();
-            int nRows = 0;
-            if (cells != null) {
-                for (Iterator itr = _rowsAggregate.getIterator(); itr.hasNext();) {
-                    RowRecord row = (RowRecord)itr.next();
-                    if (cells.rowHasCells(row.getRowNumber())) {
-                        nRows++;
-                    }
-                }
-            }
-            retval += IndexRecord.getRecordSizeForBlockCount(nBlocks);
-            retval += DBCellRecord.calculateSizeOfRecords(nBlocks, nRows);
+            // rowsAggregate knows how to make the index record
+            retval += IndexRecord.getRecordSizeForBlockCount(_rowsAggregate.getRowBlockCount());
         }
         // Add space for UncalcedRecord
         if (_isUncalced) {

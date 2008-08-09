@@ -2,13 +2,7 @@
      * @param indexRecordOffset also happens to be the end of the BOF record
      * @return the size of the serialized INDEX record
      */
-    private int serializeIndexRecord(final int bofRecordIndex, final int indexRecordOffset,
-            byte[] data) {
-        IndexRecord index = new IndexRecord();
-        index.setFirstRow(_rowsAggregate.getFirstRowNum());
-        index.setLastRowAdd1(_rowsAggregate.getLastRowNum() + 1);
-        // Calculate the size of the records from the end of the BOF
-        // and up to the RowRecordsAggregate...
+    private int serializeIndexRecord(int bofRecordIndex, int indexRecordOffset, byte[] data) {
 
         // 'initial sheet records' are between INDEX and first ROW record.
         int sizeOfInitialSheetRecords = 0;
@@ -26,32 +20,7 @@
         if (_isUncalced) {
             sizeOfInitialSheetRecords += UncalcedRecord.getStaticRecordSize();
         }
-
-        // Add the references to the DBCells in the IndexRecord (one for each block)
-        // Note: The offsets are relative to the Workbook BOF. Assume that this is
-        // 0 for now.....
-
-        int blockCount = _rowsAggregate.getRowBlockCount();
-        // Calculate the size of this IndexRecord
-        int indexRecSize = IndexRecord.getRecordSizeForBlockCount(blockCount);
-
-        int currentOffset = indexRecordOffset + indexRecSize + sizeOfInitialSheetRecords;
-
-        for (int block = 0; block < blockCount; block++) {
-            // each row-block has a DBCELL record.
-            // The offset of each DBCELL record needs to be updated in the INDEX record
-
-            // account for row records in this row-block
-            currentOffset += _rowsAggregate.getRowBlockSize(block);
-            // account for cell value records after those
-            currentOffset += null == cells ? 0 : cells.getRowCellBlockSize(_rowsAggregate
-                    .getStartRowNumberForBlock(block), _rowsAggregate.getEndRowNumberForBlock(block));
-
-            // currentOffset is now the location of the DBCELL record for this row-block
-            index.addDbcell(currentOffset);
-            // Add space required to write the DBCELL record (whose reference was just added).
-            currentOffset += (8 + (_rowsAggregate.getRowCountForBlock(block) * 2));
-        }
+        IndexRecord index = _rowsAggregate.createIndexRecord(indexRecordOffset, sizeOfInitialSheetRecords);
         return index.serialize(indexRecordOffset, data);
     }
 

@@ -3,32 +3,23 @@
      *
      * We need to make sure only one LabelSSTRecord is produced.
      */
-
     public void testRepeatingBug()
         throws Exception
     {
         HSSFWorkbook workbook = new HSSFWorkbook();
         HSSFSheet    sheet    = workbook.createSheet("Design Variants");
-        HSSFRow      row      = sheet.createRow(( short ) 2);
-        HSSFCell     cell     = row.createCell(( short ) 1);
+        HSSFRow      row      = sheet.createRow(2);
+        HSSFCell     cell     = row.createCell(1);
 
         cell.setCellValue(new HSSFRichTextString("Class"));
-        cell = row.createCell(( short ) 2);
+        cell = row.createCell(2);
 
-        // workbook.write(new FileOutputStream("/a2.xls"));
-        ValueRecordsAggregate valueAggregate =
-            ( ValueRecordsAggregate ) sheet.getSheet()
-                .findFirstRecordBySid(ValueRecordsAggregate.sid);
-        int                   sstRecords     = 0;
-        Iterator              iterator       = valueAggregate.getIterator();
-
-        while (iterator.hasNext())
-        {
-            if ((( Record ) iterator.next()).getSid() == LabelSSTRecord.sid)
-            {
-                sstRecords++;
-            }
-        }
-        assertEquals(1, sstRecords);
+        byte[] data = new byte[sheet.getSheet().getSize()];
+        sheet.getSheet().serialize(0, data);
+        RecordCounter rc = new RecordCounter();
+        EventRecordFactory erf = new EventRecordFactory(rc, new short[] { LabelSSTRecord.sid, });
+        erf.processRecords(new ByteArrayInputStream(data));
+        
+        assertEquals(1, rc.getCount());
     }
 

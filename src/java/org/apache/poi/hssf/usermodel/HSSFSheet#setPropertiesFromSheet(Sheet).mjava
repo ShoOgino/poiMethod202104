@@ -1,21 +1,18 @@
     /**
      * used internally to set the properties given a Sheet object
      */
+    private void setPropertiesFromSheet(Sheet sheet) {
 
-    private void setPropertiesFromSheet(Sheet sheet)
-    {
-        int sloc = sheet.getLoc();
         RowRecord row = sheet.getNextRow();
         boolean rowRecordsAlreadyPresent = row!=null;
 
-        while (row != null)
-        {
+        while (row != null) {
             createRowFromRecord(row);
 
             row = sheet.getNextRow();
         }
-        sheet.setLoc(sloc);
-        CellValueRecordInterface cval = sheet.getNextValueRecord();
+
+        CellValueRecordInterface[] cvals = sheet.getValueRecords();
         long timestart = System.currentTimeMillis();
 
         if (log.check( POILogger.DEBUG ))
@@ -23,14 +20,16 @@
                 new Long(timestart));
         HSSFRow lastrow = null;
 
-        while (cval != null)
-        {
+        // Add every cell to its row
+        for (int i = 0; i < cvals.length; i++) {
+            CellValueRecordInterface cval = cvals[i];
+
             long cellstart = System.currentTimeMillis();
             HSSFRow hrow = lastrow;
 
-            if ( ( lastrow == null ) || ( lastrow.getRowNum() != cval.getRow() ) )
-            {
+            if (hrow == null || hrow.getRowNum() != cval.getRow()) {
                 hrow = getRow( cval.getRow() );
+                lastrow = hrow;
                 if (hrow == null) {
                     // Some tools (like Perl module Spreadsheet::WriteExcel - bug 41187) skip the RowRecords 
                     // Excel, OpenOffice.org and GoogleDocs are all OK with this, so POI should be too.
@@ -44,21 +43,13 @@
                     hrow = createRowFromRecord(rowRec);
                 }
             }
-            if ( hrow != null )
-            {
-                lastrow = hrow;
-                if (log.check( POILogger.DEBUG ))
-                    log.log( DEBUG, "record id = " + Integer.toHexString( ( (Record) cval ).getSid() ) );
-                hrow.createCellFromRecord( cval );
-                cval = sheet.getNextValueRecord();
-                if (log.check( POILogger.DEBUG ))
-                    log.log( DEBUG, "record took ",
-                        new Long( System.currentTimeMillis() - cellstart ) );
-            }
-            else
-            {
-                cval = null;
-            }
+            if (log.check( POILogger.DEBUG ))
+                log.log( DEBUG, "record id = " + Integer.toHexString( ( (Record) cval ).getSid() ) );
+            hrow.createCellFromRecord( cval );
+            if (log.check( POILogger.DEBUG ))
+                log.log( DEBUG, "record took ",
+                    new Long( System.currentTimeMillis() - cellstart ) );
+            
         }
         if (log.check( POILogger.DEBUG ))
             log.log(DEBUG, "total sheet cell creation took ",
