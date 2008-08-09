@@ -1,14 +1,20 @@
   /**
-   * @param start Offset in main document stream.
+   * @param start Beginning offset in main document stream, in characters.
+   * @param end Ending offset in main document stream, in characters.
+   * @param text The raw bytes of our text
    */
-  public TextPiece(int start, int end, byte[] text, PieceDescriptor pd, int cpStart)
-    throws UnsupportedEncodingException
-  {
-     /** start - end is length on file. This is double the expected when its
-     * unicode.*/
-    super(start, end, new StringBuffer(new String(text, pd.isUnicode() ? "UTF-16LE" : "Cp1252")));
-    _usesUnicode = pd.isUnicode();
-    _pd = pd;
-    _cpStart = cpStart;
+  public TextPiece(int start, int end, byte[] text, PieceDescriptor pd, int cpStart) {
+	  super(start, end, buildInitSB(text, pd));
+	  _usesUnicode = pd.isUnicode();
+	  _pd = pd;
+	  
+	  // Validate
+	  int textLength = ((StringBuffer)_buf).length();
+	  if(end-start != textLength) {
+		  throw new IllegalStateException("Told we're for characters " + start + " -> " + end + ", but actually covers " + textLength + " characters!");
+	  }
+	  if(end < start) {
+		  throw new IllegalStateException("Told we're of negative size! start="+start + " end="+end);
+	  }
   }
 
