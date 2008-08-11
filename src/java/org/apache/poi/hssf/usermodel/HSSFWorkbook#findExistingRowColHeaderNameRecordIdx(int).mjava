@@ -1,20 +1,22 @@
-    private int findExistingRowColHeaderNameRecordIdx( int sheetIndex )
-    {
-        int index = 0;
-        NameRecord r = null;
-        while ((r = (NameRecord) workbook.findNextRecordBySid(NameRecord.sid, index)) != null)
-        {
-            int indexToSheet = r.getEqualsToIndexToSheet() -1;
-            if(indexToSheet > -1) { //ignore "GLOBAL" name records
-                int nameRecordSheetIndex = workbook.getSheetIndexFromExternSheetIndex(indexToSheet);
-                if (isRowColHeaderRecord( r ) && nameRecordSheetIndex == sheetIndex)
-                {
-                    return index;
-                }
+    private int findExistingRowColHeaderNameRecordIdx(int sheetIndex) {
+        for(int defNameIndex =0; defNameIndex<names.size(); defNameIndex++) {
+            NameRecord r = workbook.getNameRecord(defNameIndex);
+            if (r == null) {
+                throw new RuntimeException("Unable to find all defined names to iterate over");
             }
-            index++;
+            if (!isRowColHeaderRecord( r )) {
+                continue;
+            }
+            if(r.getSheetNumber() == 0) {
+                //ignore "GLOBAL" name records
+                continue;
+            }
+            int externIndex = r.getSheetNumber() -1;
+            int nameRecordSheetIndex = workbook.getSheetIndexFromExternSheetIndex(externIndex);
+            if (nameRecordSheetIndex == sheetIndex) {
+                return defNameIndex;
+            }
         }
-
         return -1;
     }
 
