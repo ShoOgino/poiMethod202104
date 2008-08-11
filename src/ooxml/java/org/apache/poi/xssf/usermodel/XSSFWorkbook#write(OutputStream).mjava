@@ -1,8 +1,8 @@
     public void write(OutputStream stream) throws IOException {
     	// What kind of workbook are we?
-    	XSSFRelation workbookRelation = WORKBOOK;
+    	XSSFRelation workbookRelation = XSSFRelation.WORKBOOK;
     	if(isMacroEnabled) {
-    		workbookRelation = MACROS_WORKBOOK;
+    		workbookRelation = XSSFRelation.MACROS_WORKBOOK;
     	}
 
         try {
@@ -28,10 +28,10 @@
             	int sheetNumber = (i+1);
             	XSSFSheet sheet = (XSSFSheet) this.getSheetAt(i);
                 PackagePartName partName = PackagingURIHelper.createPartName(
-                		WORKSHEET.getFileName(sheetNumber));
+                		XSSFRelation.WORKSHEET.getFileName(sheetNumber));
                 PackageRelationship rel =
-                	 corePart.addRelationship(partName, TargetMode.INTERNAL, WORKSHEET.getRelation(), "rSheet" + sheetNumber);
-                PackagePart part = pkg.createPart(partName, WORKSHEET.getContentType());
+                	 corePart.addRelationship(partName, TargetMode.INTERNAL, XSSFRelation.WORKSHEET.getRelation(), "rSheet" + sheetNumber);
+                PackagePart part = pkg.createPart(partName, XSSFRelation.WORKSHEET.getContentType());
                  
                 // XXX This should not be needed, but apparently the setSaveOuter call above does not work in XMLBeans 2.2
                 xmlOptions.setSaveSyntheticDocumentElement(new QName(CTWorksheet.type.getName().getNamespaceURI(), "worksheet"));
@@ -44,14 +44,14 @@
                 // If our sheet has comments, then write out those
                 if(sheet.hasComments()) {
                 	CommentsTable ct = (CommentsTable)sheet.getCommentsSourceIfExists();
-                	SHEET_COMMENTS.save(ct, part, sheetNumber);
+                	XSSFRelation.SHEET_COMMENTS.save(ct, part, sheetNumber);
                 }
                 
                 // If our sheet has drawings, then write out those
                 if(sheet.getDrawings() != null) {
                 	int drawingIndex = 1;
                 	for(Drawing drawing : sheet.getDrawings()) {
-                		VML_DRAWINGS.save(
+                		XSSFRelation.VML_DRAWINGS.save(
                 				drawing,
                 				part,
                 				drawingIndex
@@ -64,7 +64,7 @@
                 if(sheet.getControls() != null) {
                 	int controlIndex = 1;
                 	for(Control control : sheet.getControls()) {
-                		ACTIVEX_CONTROLS.save(
+                		XSSFRelation.ACTIVEX_CONTROLS.save(
                 				control,
                 				part,
                 				controlIndex
@@ -77,11 +77,11 @@
             // Write shared strings and styles
             if(sharedStringSource != null) {
 	             SharedStringsTable sst = (SharedStringsTable)sharedStringSource;
-	             SHARED_STRINGS.save(sst, corePart);
+	             XSSFRelation.SHARED_STRINGS.save(sst, corePart);
             }
             if(stylesSource != null) {
 	             StylesTable st = (StylesTable)stylesSource;
-	             STYLES.save(st, corePart);
+	             XSSFRelation.STYLES.save(st, corePart);
             }
             
             // Named ranges
@@ -102,10 +102,10 @@
             // Macro related bits
             if(isMacroEnabled) {
 	            // Copy VBA Macros if present
-	            if(VBA_MACROS.exists( getCorePart() )) {
+	            if(XSSFRelation.VBA_MACROS.exists( getCorePart() )) {
 	            	try {
-		            	XSSFModel vba = VBA_MACROS.load(getCorePart());
-		            	VBA_MACROS.save(vba, corePart);
+		            	XSSFModel vba = XSSFRelation.VBA_MACROS.load(getCorePart());
+		            	XSSFRelation.VBA_MACROS.save(vba, corePart);
 	            	} catch(Exception e) {
 	            		throw new RuntimeException("Unable to copy vba macros over", e);
 	            	}
