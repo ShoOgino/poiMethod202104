@@ -1,6 +1,13 @@
   public void insert(int listIndex, int cpStart, SprmBuffer buf)
   {
-    PAPX forInsert = new PAPX(cpStart, cpStart, buf, _dataStream);
+    boolean needsToBeUnicode = tpt.isUnicodeAt(cpStart);
+    
+    PAPX forInsert = new PAPX(0, 0, buf, _dataStream, needsToBeUnicode);
+    
+    // Ensure character offsets are really characters
+    forInsert.setStart(cpStart);
+    forInsert.setEnd(cpStart);
+    
     if (listIndex == _paragraphs.size())
     {
        _paragraphs.add(forInsert);
@@ -19,10 +26,21 @@
         {
           exc.printStackTrace();
         }
+        
+    	// Copy the properties of the one before to afterwards
+    	// Will go:
+    	//  Original, until insert at point
+    	//  New one
+    	//  Clone of original, on to the old end
+        PAPX clone = new PAPX(0, 0, clonedBuf, _dataStream, needsToBeUnicode);
+        // Again ensure contains character based offsets no matter what
+        clone.setStart(cpStart);
+        clone.setEnd(currentPap.getEnd());
+        
         currentPap.setEnd(cpStart);
-        PAPX splitPap = new PAPX(cpStart, currentPap.getEnd(), clonedBuf, _dataStream);
-        _paragraphs.add(++listIndex, forInsert);
-        _paragraphs.add(++listIndex, splitPap);
+
+        _paragraphs.add(listIndex + 1, forInsert);
+        _paragraphs.add(listIndex + 2, clone);
       }
       else
       {

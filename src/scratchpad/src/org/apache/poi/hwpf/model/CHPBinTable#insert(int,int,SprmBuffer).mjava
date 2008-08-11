@@ -1,6 +1,13 @@
   public void insert(int listIndex, int cpStart, SprmBuffer buf)
   {
-    CHPX insertChpx = new CHPX(cpStart, cpStart, buf);
+	boolean needsToBeUnicode = tpt.isUnicodeAt(cpStart);
+	  
+    CHPX insertChpx = new CHPX(0, 0, buf, needsToBeUnicode);
+    
+    // Ensure character offsets are really characters
+    insertChpx.setStart(cpStart);
+    insertChpx.setEnd(cpStart);
+    
     if (listIndex == _textRuns.size())
     {
       _textRuns.add(insertChpx);
@@ -10,7 +17,16 @@
       CHPX chpx = (CHPX)_textRuns.get(listIndex);
       if (chpx.getStart() < cpStart)
       {
-        CHPX clone = new CHPX(cpStart, chpx.getEnd(), chpx.getSprmBuf());
+    	// Copy the properties of the one before to afterwards
+    	// Will go:
+    	//  Original, until insert at point
+    	//  New one
+    	//  Clone of original, on to the old end
+        CHPX clone = new CHPX(0, 0, chpx.getSprmBuf(), needsToBeUnicode);
+        // Again ensure contains character based offsets no matter what
+        clone.setStart(cpStart);
+        clone.setEnd(chpx.getEnd());
+        
         chpx.setEnd(cpStart);
 
         _textRuns.add(listIndex + 1, insertChpx);
