@@ -8,19 +8,20 @@
      * @return number of bytes written
      */
     public int serialize(int offset, byte [] data) {
-        LittleEndian.putShort(data, 0 + offset, sid);
-        LittleEndian.putShort(data, 2 + offset,(short)(2 + (getNumOfREFRecords() *6)));
+        int dataSize = getDataSize();
         
-        LittleEndian.putShort(data, 4 + offset, getNumOfREFStructures());
+        int nItems = _list.size();
+
+        LittleEndian.putShort(data, 0 + offset, sid);
+		LittleEndian.putUShort(data, 2 + offset, dataSize);
+        LittleEndian.putUShort(data, 4 + offset, nItems);
         
         int pos = 6 ;
         
-        for (int k = 0; k < getNumOfREFRecords(); k++) {
-            ExternSheetSubRecord record = getREFRecordAt(k);
-            System.arraycopy(record.serialize(), 0, data, pos + offset, 6);
-            
+        for (int i = 0; i < nItems; i++) {
+            getRef(i).serialize(offset + pos, data);
             pos +=6;
         }
-        return getRecordSize();
+        return dataSize + 4;
     }
 
