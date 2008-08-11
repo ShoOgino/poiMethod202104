@@ -1,0 +1,39 @@
+    /**
+     * Generates the variable function ptg for the formula.
+     * <p>
+     * For IF Formulas, additional PTGs are added to the tokens
+     * @param name a {@link NamePtg} or {@link NameXPtg} or <code>null</code>
+     * @param numArgs
+     * @return Ptg a null is returned if we're in an IF formula, it needs extreme manipulation and is handled in this function
+     */
+    private ParseNode getFunction(String name, Ptg namePtg, ParseNode[] args) {
+
+        FunctionMetadata fm = FunctionMetadataRegistry.getFunctionByName(name.toUpperCase());
+        int numArgs = args.length;
+        if(fm == null) {
+            if (namePtg == null) {
+                throw new IllegalStateException("NamePtg must be supplied for external functions");
+            }
+            // must be external function
+            ParseNode[] allArgs = new ParseNode[numArgs+1];
+            allArgs[0] = new ParseNode(namePtg);
+            System.arraycopy(args, 0, allArgs, 1, numArgs);
+            return new ParseNode(new FuncVarPtg(name, (byte)(numArgs+1)), allArgs);
+        }
+
+        if (namePtg != null) {
+            throw new IllegalStateException("NamePtg no applicable to internal functions");
+        }
+        boolean isVarArgs = !fm.hasFixedArgsLength();
+        int funcIx = fm.getIndex();
+        validateNumArgs(args.length, fm);
+
+        AbstractFunctionPtg retval;
+        if(isVarArgs) {
+            retval = new FuncVarPtg(name, (byte)numArgs);
+        } else {
+            retval = new FuncPtg(funcIx);
+        }
+        return new ParseNode(retval, args);
+    }
+
