@@ -1,0 +1,72 @@
+	public void dumpCONTENTSraw(DirectoryNode dir) throws IOException {
+		byte[] data = getData(dir, "CONTENTS");
+		
+		System.out.println("");
+		System.out.println("CONTENTS - " + data.length + " bytes long:");
+		
+		// Between the start and 0x200 we have
+		//  CHNKINK(space) + 24 bytes
+		//  0x1800
+		//  TEXT + 6 bytes
+		//  TEXT + 8 bytes
+		//  0x1800
+		//  STSH + 6 bytes
+		//  STSH + 8 bytes
+		//  0x1800
+		//  STSH + 6 bytes
+		//  STSH + 8 bytes
+		// but towards 0x200 the pattern may
+		//  break down a little bit
+		
+		// After the second of a given type,
+		//  it seems to be 4 bytes giving the start,
+		//  then 4 bytes giving the length, then
+		//  18 00
+		System.out.println(
+				new String(data, 0, 8) +
+				dumpBytes(data, 8, 0x20-8)
+		);
+		
+		int pos = 0x20;
+		boolean sixNotEight = true;
+		while(pos < 0x200) {
+			if(sixNotEight) {
+				System.out.println(
+						dumpBytes(data, pos, 2)
+				);
+				pos += 2;
+			}
+			String text = new String(data, pos, 4);
+			int blen = 8;
+			if(sixNotEight)
+				blen = 6;
+			System.out.println(
+					text + " " + dumpBytes(data, pos+4, blen)
+			);
+			
+			pos += 4 + blen;
+			sixNotEight = ! sixNotEight;
+		}
+		
+		// Text from 0x200 onwards until we get
+		//  to \r(00)\n(00)(00)(00)
+		int textStop = -1;
+		for(int i=0x200; i<data.length-2 && textStop == -1; i++) {
+			if(data[i] == 0 && data[i+1] == 0 && data[i+2] == 0) {
+				textStop = i;
+			}
+		}
+		if(textStop > 0) {
+			int len = (textStop - 0x200) / 2;
+			System.out.println("");
+			System.out.println(
+					StringUtil.getFromUnicodeLE(data, 0x200, len)
+			);
+		}
+		
+		// The font list comes slightly later
+		
+		// The hyperlinks may come before the fonts,
+		//  or slightly in front
+	}
+
