@@ -1,4 +1,4 @@
-    private static ValueEval evaluateCell(HSSFWorkbook workbook, HSSFSheet sheet, 
+    private static ValueEval evaluateCell(HSSFWorkbook workbook, HSSFSheet sheet,
             int srcRowNum, short srcColNum, String cellFormulaText) {
 
     	Ptg[] ptgs = FormulaParser.parse(cellFormulaText, workbook);
@@ -8,20 +8,21 @@
 
             // since we don't know how to handle these yet :(
             Ptg ptg = ptgs[i];
-            if (ptg instanceof ControlPtg) { 
+            if (ptg instanceof ControlPtg) {
                 // skip Parentheses, Attr, etc
-                continue; 
+                continue;
             }
             if (ptg instanceof MemErrPtg) { continue; }
             if (ptg instanceof MissingArgPtg) { continue; }
-            if (ptg instanceof NamePtg) { 
+            if (ptg instanceof NamePtg) {
                 // named ranges, macro functions
                 NamePtg namePtg = (NamePtg) ptg;
                 stack.push(new NameEval(namePtg.getIndex()));
-                continue; 
+                continue;
             }
             if (ptg instanceof NameXPtg) {
-                // TODO - external functions
+                NameXPtg nameXPtg = (NameXPtg) ptg;
+                stack.push(new NameXEval(nameXPtg.getSheetRefIndex(), nameXPtg.getNameIndex()));
                 continue;
             }
             if (ptg instanceof UnknownPtg) { continue; }
@@ -84,9 +85,9 @@
         }
         value = dereferenceValue(value, srcRowNum, srcColNum);
         if (value instanceof BlankEval) {
-        	// Note Excel behaviour here. A blank final final value is converted to zero.  
+        	// Note Excel behaviour here. A blank final final value is converted to zero.
             return NumberEval.ZERO;
-            // Formulas _never_ evaluate to blank.  If a formula appears to have evaluated to 
+            // Formulas _never_ evaluate to blank.  If a formula appears to have evaluated to
             // blank, the actual value is empty string. This can be verified with ISBLANK().
         }
         return value;

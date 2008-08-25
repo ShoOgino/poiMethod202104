@@ -5,23 +5,23 @@
 			throw new RuntimeException("function name argument missing");
 		}
 		
-		if (!(args[0] instanceof NameEval)) {
-			throw new RuntimeException("First argument should be a NameEval, but got ("
-					+ args[0].getClass().getName() + ")");
-		}
-		NameEval functionNameEval = (NameEval) args[0];
-		
-		int nOutGoingArgs = nIncomingArgs -1;
-		Eval[] outGoingArgs = new Eval[nOutGoingArgs];
-		System.arraycopy(args, 1, outGoingArgs, 0, nOutGoingArgs);
-		
+		Eval nameArg = args[0];
 		FreeRefFunction targetFunc;
 		try {
-			targetFunc = findTargetFunction(workbook, functionNameEval);
+			if (nameArg instanceof NameEval) {
+				targetFunc = findInternalUserDefinedFunction(workbook, (NameEval) nameArg);
+			} else if (nameArg instanceof NameXEval) {
+				targetFunc = findExternalUserDefinedFunction(workbook, (NameXEval) nameArg);
+			} else {
+				throw new RuntimeException("First argument should be a NameEval, but got ("
+						+ nameArg.getClass().getName() + ")");
+			}
 		} catch (EvaluationException e) {
 			return e.getErrorEval();
 		}
-		
+		int nOutGoingArgs = nIncomingArgs -1;
+		Eval[] outGoingArgs = new Eval[nOutGoingArgs];
+		System.arraycopy(args, 1, outGoingArgs, 0, nOutGoingArgs);
 		return targetFunc.evaluate(outGoingArgs, srcCellRow, srcCellCol, workbook, sheet);
 	}
 
