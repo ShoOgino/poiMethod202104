@@ -1,0 +1,24 @@
+	/**
+	 * Make sure that the CF Header record is properly updated with the number of rules
+	 */
+	public void testNRules() {
+		HSSFWorkbook workbook = new HSSFWorkbook();
+		CellRangeAddress[] cellRanges = {
+				new CellRangeAddress(0,1,0,0),
+				new CellRangeAddress(0,1,2,2),
+		};
+		CFRuleRecord[] rules = {
+			CFRuleRecord.create(workbook, "7"),
+			CFRuleRecord.create(workbook, ComparisonOperator.BETWEEN, "2", "5"),
+		};
+		CFRecordsAggregate agg = new CFRecordsAggregate(cellRanges, rules);
+		byte[] serializedRecord = new byte[agg.getRecordSize()];
+		agg.serialize(0, serializedRecord);
+		
+		int nRules = LittleEndian.getUShort(serializedRecord, 4);
+		if (nRules == 0) {
+			throw new AssertionFailedError("Identified bug 45682 b");
+		}
+		assertEquals(rules.length, nRules);
+	}
+
