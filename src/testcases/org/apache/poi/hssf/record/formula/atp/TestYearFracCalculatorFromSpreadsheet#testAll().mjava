@@ -1,0 +1,37 @@
+	public void testAll() {
+		
+		HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook("yearfracExamples.xls");
+		HSSFSheet sheet = wb.getSheetAt(0);
+		HSSFFormulaEvaluator formulaEvaluator = new HSSFFormulaEvaluator(sheet, wb);
+		int nSuccess = 0;
+		int nFailures = 0;
+		int nUnexpectedErrors = 0;
+		Iterator rowIterator = sheet.rowIterator();
+		while(rowIterator.hasNext()) {
+			HSSFRow row = (HSSFRow) rowIterator.next();
+			
+			HSSFCell cell = row.getCell(SS.YEARFRAC_FORMULA_COLUMN);
+			if (cell == null || cell.getCellType() != HSSFCell.CELL_TYPE_FORMULA) {
+				continue;
+			}
+			try {
+				processRow(row, cell, formulaEvaluator);
+				nSuccess++;
+			} catch (RuntimeException e) {
+				nUnexpectedErrors ++;
+				printShortStackTrace(System.err, e);
+			} catch (AssertionFailedError e) {
+				nFailures ++;
+				printShortStackTrace(System.err, e);
+			}
+		}
+		if (nUnexpectedErrors + nFailures > 0) {
+			String msg = nFailures + " failures(s) and " + nUnexpectedErrors 
+				+ " unexpected errors(s) occurred. See stderr for details";
+			throw new AssertionFailedError(msg);
+		}
+		if (nSuccess < 1) {
+			throw new RuntimeException("No test sample cases found");
+		}
+	}
+
