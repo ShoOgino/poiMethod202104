@@ -1,0 +1,20 @@
+    /**
+     * Also collects any rogue MergeCellRecords
+     * @return the index one after the last row/cell record
+     */
+    private static int findEndOfRowBlock(List recs, int startIx, MergedCellsTable mergedCellsTable) {
+        for(int i=startIx; i<recs.size(); i++) {
+            Record rec = (Record) recs.get(i);
+            if (RecordOrderer.isEndOfRowBlock(rec.getSid())) {
+                return i;
+            }
+            if (rec.getSid() == MergeCellsRecord.sid) {
+                    // Some apps scatter these records between the rows/cells but they are supposed to
+                    // be well after the row/cell records.  We collect them here 
+                    // see bug 45699
+                    mergedCellsTable.add((MergeCellsRecord) rec);
+            }
+        }
+        throw new RuntimeException("Failed to find end of row/cell records");
+    }
+

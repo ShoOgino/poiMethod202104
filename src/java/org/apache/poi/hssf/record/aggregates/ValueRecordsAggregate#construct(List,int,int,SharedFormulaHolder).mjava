@@ -1,0 +1,75 @@
+    /**
+     * Processes a sequential group of cell value records.  Stops at endIx or the first 
+     * non-value record encountered.
+     * @param sfh used to resolve any shared formulas for the current sheet
+     * @return the number of records consumed
+     */
+    public int construct(List records, int offset, int endIx, SharedFormulaHolder sfh) {
+        int k = 0;
+
+        FormulaRecordAggregate lastFormulaAggregate = null;
+        
+        // Now do the main processing sweep
+        for (k = offset; k < endIx; k++) {
+            Record rec = ( Record ) records.get(k);
+
+            if (rec instanceof StringRecord) {
+                if (lastFormulaAggregate == null) {
+                    throw new RuntimeException("StringRecord found without preceding FormulaRecord");
+                }
+                if (lastFormulaAggregate.getStringRecord() != null) {
+                    throw new RuntimeException("Multiple StringRecords found after FormulaRecord");
+                }
+                lastFormulaAggregate.setStringRecord((StringRecord)rec);
+                lastFormulaAggregate = null;
+                continue;
+            }
+            
+            if (rec instanceof TableRecord) {
+                // TODO - don't loose this record
+                // DATATABLE probably belongs in formula record aggregate
+                if (lastFormulaAggregate == null) {
+                    throw new RuntimeException("No preceding formula record found");
+                }
+                lastFormulaAggregate = null;
+                continue; 
+            }
+            
+            if (rec instanceof SharedFormulaRecord) {
+                // Already handled, not to worry
+                continue;
+            }
+
+            if (rec instanceof UnknownRecord) {
+                break;
+            }
+            if (rec instanceof RowRecord) {
+                break; 
+            }
+            if (rec instanceof DBCellRecord) {
+                // end of 'Row Block'.  This record is ignored by POI
+                break;
+            }
+            if (rec instanceof MergeCellsRecord) {
+                // doesn't really belong here
+                // can safely be ignored, because it has been processed in a higher method
+                continue;
+            }
+            if (!rec.isValue()) {
+                throw new RuntimeException("bad record type");
+            }
+            if (rec instanceof FormulaRecord) {
+                FormulaRecord formula = (FormulaRecord)rec;
+                if (formula.isSharedFormula()) {
+                    sfh.convertSharedFormulaRecord(formula);
+                }
+                
+                lastFormulaAggregate = new FormulaRecordAggregate((FormulaRecord)rec, null);
+                insertCell( lastFormulaAggregate );
+                continue;
+            }
+            insertCell(( CellValueRecordInterface ) rec);
+        }
+        return k - offset - 1;
+    }
+
