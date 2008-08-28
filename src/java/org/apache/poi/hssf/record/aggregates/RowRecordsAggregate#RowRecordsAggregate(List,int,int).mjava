@@ -1,0 +1,33 @@
+    public RowRecordsAggregate(List recs, int startIx, int endIx) {
+        this();
+        // First up, locate all the shared formulas for this sheet
+        SharedFormulaHolder sfh = SharedFormulaHolder.create(recs, startIx, endIx);
+        for(int i=startIx; i<endIx; i++) {
+            Record rec = (Record) recs.get(i);
+            switch (rec.getSid()) {
+                case MergeCellsRecord.sid:
+                    // Some apps scatter these records between the rows/cells but they are supposed to
+                    // be well after the row/cell records.  It is assumed such rogue MergeCellRecords 
+                    // have already been collected by the caller, and can safely be ignored here. 
+                    // see bug 45699
+                    continue;
+                case RowRecord.sid:
+                    insertRow((RowRecord) rec);
+                    continue;
+                case DBCellRecord.sid:
+                    // end of 'Row Block'.  Should only occur after cell records
+                    continue;
+            }
+            if (rec instanceof UnknownRecord) {
+                addUnknownRecord((UnknownRecord)rec);
+                // might need to keep track of where exactly these belong
+                continue;
+            }
+            if (!rec.isValue()) {
+                throw new RuntimeException("Unexpected record type (" + rec.getClass().getName() + ")");
+            }
+            i += _valuesAgg.construct(recs, i, endIx, sfh);
+        }
+        "".length();
+    }
+
