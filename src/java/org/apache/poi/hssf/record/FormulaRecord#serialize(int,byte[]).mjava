@@ -1,40 +1,28 @@
-    /**
-     * called by the class that is responsible for writing this sucker.
-     * Subclasses should implement this so that their data is passed back in a
-     * byte array.
-     *
-     * @return byte array containing instance data
-     */
+    public int serialize(int offset, byte [] data) {
 
-    public int serialize(int offset, byte [] data)
-    {
-        if (this.field_8_parsed_expr != null) {
-        int ptgSize = getTotalPtgSize();
+        int dataSize = getDataSize();
 
         LittleEndian.putShort(data, 0 + offset, sid);
-        LittleEndian.putShort(data, 2 + offset, ( short ) (22 + ptgSize));
-        //LittleEndian.putShort(data, 4 + offset, getRow());
-        LittleEndian.putShort(data, 4 + offset, ( short ) getRow());
+        LittleEndian.putUShort(data, 2 + offset, dataSize);
+        LittleEndian.putUShort(data, 4 + offset, getRow());
         LittleEndian.putShort(data, 6 + offset, getColumn());
         LittleEndian.putShort(data, 8 + offset, getXFIndex());
-        
+
         //only reserialize if the value is still NaN and we have old nan data
-        if (Double.isNaN(this.getValue()) && value_data != null) {        	
-			System.arraycopy(value_data,0,data,10 + offset,value_data.length);
+        if (Double.isNaN(getValue()) && value_data != null) {
+            System.arraycopy(value_data,0,data,10 + offset,value_data.length);
         } else {
-			LittleEndian.putDouble(data, 10 + offset, field_4_value);
+            LittleEndian.putDouble(data, 10 + offset, field_4_value);
         }
-        	
+
         LittleEndian.putShort(data, 18 + offset, getOptions());
-        
+
         //when writing the chn field (offset 20), it's supposed to be 0 but ignored on read
         //Microsoft Excel Developer's Kit Page 318
         LittleEndian.putInt(data, 20 + offset, 0);
-        LittleEndian.putShort(data, 24 + offset, getExpressionLength());
-        Ptg.serializePtgStack(field_8_parsed_expr, data, 26+offset);
-        } else {
-            System.arraycopy(all_data,0,data,offset,all_data.length);
-        }
-        return getRecordSize();
+        int formulaTokensSize = Ptg.getEncodedSizeWithoutArrayData(field_8_parsed_expr);
+        LittleEndian.putUShort(data, 24 + offset, formulaTokensSize);
+        Ptg.serializePtgs(field_8_parsed_expr, data, 26+offset);
+        return 4 + dataSize;
     }
 

@@ -1,0 +1,24 @@
+    public static void dump(DirectoryEntry root, File parent) throws IOException {
+        for(Iterator it = root.getEntries(); it.hasNext();){
+            Entry entry = (Entry)it.next();
+            if(entry instanceof DocumentNode){
+                DocumentNode node = (DocumentNode)entry;
+                DocumentInputStream is = new DocumentInputStream(node);
+                byte[] bytes = new byte[node.getSize()];
+                is.read(bytes);
+                is.close();
+
+                FileOutputStream out = new FileOutputStream(new File(parent, node.getName().trim()));
+                out.write(bytes);
+                out.close();
+            } else if (entry instanceof DirectoryEntry){
+                DirectoryEntry dir = (DirectoryEntry)entry;
+                File file = new File(parent, entry.getName());
+                file.mkdir();
+                dump(dir, file);
+            } else {
+                System.err.println("Skipping unsupported POIFS entry: " + entry);
+            }
+        }
+    }
+

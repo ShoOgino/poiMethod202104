@@ -1,49 +1,16 @@
-    public Eval evaluate(Eval[] operands, int srcRow, short srcCol) {
-        ValueEval retval = null;
-        boolean b = true;
-        ValueEval tempVe = null;
-        
-        switch (operands.length) {
-        default:
-            retval = ErrorEval.VALUE_INVALID;
-            break;
-        case 1:
-            if (operands[0] instanceof AreaEval) {
-                AreaEval ae = (AreaEval) operands[0];
-                if (ae.isRow() && ae.containsColumn(srcCol)) {
-                    ValueEval ve = ae.getValueAt(ae.getFirstRow(), srcCol);
-                    tempVe = singleOperandEvaluate(ve);
-                } else if (ae.isColumn() && ae.containsRow(srcRow)) {
-                    ValueEval ve = ae.getValueAt(srcRow, ae.getFirstColumn());
-                    tempVe = singleOperandEvaluate(ve);
-                } else {
-                    retval = ErrorEval.VALUE_INVALID;
-                }            
-            }
-            else {
-                tempVe = singleOperandEvaluate(operands[0]);
-                if (tempVe instanceof StringEval) {
-                    retval = ErrorEval.VALUE_INVALID;
-                }
-                else if (tempVe instanceof ErrorEval) {
-                    retval = tempVe;
-                }
-            }
-        }
-        
-        if (retval == null) { // if no error
-            if (tempVe instanceof BoolEval) {
-                b = b && ((BoolEval) tempVe).getBooleanValue();
-            }
-            else if (tempVe instanceof StringEval) {
-                retval = ErrorEval.VALUE_INVALID;
-            }
-            else if (tempVe instanceof ErrorEval) {
-                retval = tempVe;
-            }
-            retval = b ? BoolEval.FALSE : BoolEval.TRUE;
-        }
-        
-        return retval;
-    }
+	public Eval evaluate(Eval[] args, int srcCellRow, short srcCellCol) {
+		if (args.length != 1) {
+			return ErrorEval.VALUE_INVALID;
+		}
+		boolean boolArgVal;
+		try {
+			ValueEval ve = OperandResolver.getSingleValue(args[0], srcCellRow, srcCellCol);
+			Boolean b = OperandResolver.coerceValueToBoolean(ve, false);
+			boolArgVal = b == null ? false : b.booleanValue();
+		} catch (EvaluationException e) {
+			return e.getErrorEval();
+		}
+		
+		return BoolEval.valueOf(!boolArgVal);
+	}
 

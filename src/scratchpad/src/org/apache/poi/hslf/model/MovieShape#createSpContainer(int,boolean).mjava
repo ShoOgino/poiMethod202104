@@ -1,0 +1,39 @@
+    /**
+     * Create a new Placeholder and initialize internal structures
+     *
+     * @return the created <code>EscherContainerRecord</code> which holds shape data
+     */
+    protected EscherContainerRecord createSpContainer(int idx, boolean isChild) {
+        _escherContainer = super.createSpContainer(idx, isChild);
+
+        setEscherProperty(EscherProperties.PROTECTION__LOCKAGAINSTGROUPING, 0x1000100);
+        setEscherProperty(EscherProperties.FILL__NOFILLHITTEST, 0x10001);
+
+        EscherClientDataRecord cldata = new EscherClientDataRecord();
+        cldata.setOptions((short)0xF);
+        _escherContainer.getChildRecords().add(cldata);
+
+        OEShapeAtom oe = new OEShapeAtom();
+        InteractiveInfo info = new InteractiveInfo();
+        InteractiveInfoAtom infoAtom = info.getInteractiveInfoAtom();
+        infoAtom.setAction(InteractiveInfoAtom.ACTION_MEDIA);
+        infoAtom.setHyperlinkType(InteractiveInfoAtom.LINK_NULL);
+
+        AnimationInfo an = new AnimationInfo();
+        AnimationInfoAtom anAtom = an.getAnimationInfoAtom();
+        anAtom.setFlag(AnimationInfoAtom.Automatic, true);
+
+        //convert hslf into ddf
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            oe.writeOut(out);
+            an.writeOut(out);
+            info.writeOut(out);
+        } catch(Exception e){
+            throw new HSLFException(e);
+        }
+        cldata.setRemainingData(out.toByteArray());
+
+        return _escherContainer;
+    }
+
