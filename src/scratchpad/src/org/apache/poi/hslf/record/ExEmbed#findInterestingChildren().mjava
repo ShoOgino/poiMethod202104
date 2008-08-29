@@ -5,7 +5,11 @@
     private void findInterestingChildren() {
 
         // First child should be the ExHyperlinkAtom
-        embedAtom = getEmbedAtom(_children);
+        if(_children[0] instanceof ExEmbedAtom) {
+            embedAtom = (ExEmbedAtom)_children[0];
+        } else {
+            logger.log(POILogger.ERROR, "First child record wasn't a ExEmbedAtom, was of type " + _children[0].getRecordType());
+        }
 
         // Second child should be the ExOleObjAtom
         if (_children[1] instanceof ExOleObjAtom) {
@@ -16,11 +20,13 @@
 
         for (int i = 2; i < _children.length; i++) {
             if (_children[i] instanceof CString){
-                if (menuName == null) menuName = (CString)_children[i];
-                else if (progId == null) progId = (CString)_children[i];
-                else if (clipboardName == null) clipboardName = (CString)_children[i];
-            } else {
-                logger.log(POILogger.ERROR, "Record after atoms wasn't a CString, was of type " + _children[i].getRecordType());
+                CString cs = (CString)_children[i];
+                int opts = cs.getOptions() >> 4;
+                switch(opts){
+                    case 0x1: menuName = cs; break;
+                    case 0x2: progId = cs; break;
+                    case 0x3: clipboardName = cs; break;
+                }
             }
         }
     }

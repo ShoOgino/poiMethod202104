@@ -1,0 +1,36 @@
+    /**
+     * Create a new Placeholder and initialize internal structures
+     *
+     * @return the created <code>EscherContainerRecord</code> which holds shape data
+     */
+    protected EscherContainerRecord createSpContainer(int idx, boolean isChild) {
+        _escherContainer = super.createSpContainer(idx, isChild);
+
+        EscherSpRecord spRecord = _escherContainer.getChildById(EscherSpRecord.RECORD_ID);
+        spRecord.setFlags(EscherSpRecord.FLAG_HAVEANCHOR | EscherSpRecord.FLAG_HASSHAPETYPE | EscherSpRecord.FLAG_OLESHAPE);
+
+        setShapeType(ShapeTypes.HostControl);
+        setEscherProperty(EscherProperties.BLIP__PICTUREID, idx);
+        setEscherProperty(EscherProperties.LINESTYLE__COLOR, 0x8000001);
+        setEscherProperty(EscherProperties.LINESTYLE__NOLINEDRAWDASH, 0x80008);
+        setEscherProperty(EscherProperties.SHADOWSTYLE__COLOR, 0x8000002);
+        setEscherProperty(EscherProperties.PROTECTION__LOCKAGAINSTGROUPING, -1);
+
+        EscherClientDataRecord cldata = new EscherClientDataRecord();
+        cldata.setOptions((short)0xF);
+        _escherContainer.getChildRecords().add(cldata);
+
+        OEShapeAtom oe = new OEShapeAtom();
+
+        //convert hslf into ddf
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            oe.writeOut(out);
+        } catch(Exception e){
+            throw new HSLFException(e);
+        }
+        cldata.setRemainingData(out.toByteArray());
+
+        return _escherContainer;
+    }
+

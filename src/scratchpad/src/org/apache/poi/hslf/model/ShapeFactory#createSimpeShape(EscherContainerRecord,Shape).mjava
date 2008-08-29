@@ -1,5 +1,5 @@
     public static Shape createSimpeShape(EscherContainerRecord spContainer, Shape parent){
-        Shape shape;
+        Shape shape = null;
         EscherSpRecord spRecord = spContainer.getChildById(EscherSpRecord.RECORD_ID);
 
         int type = spRecord.getOptions() >> 4;
@@ -7,14 +7,26 @@
             case ShapeTypes.TextBox:
                 shape = new TextBox(spContainer, parent);
                 break;
-            case ShapeTypes.HostControl: 
+            case ShapeTypes.HostControl:
             case ShapeTypes.PictureFrame: {
-                EscherOptRecord opt = (EscherOptRecord)Shape.getEscherChild(spContainer, EscherOptRecord.RECORD_ID);
-                EscherProperty prop = Shape.getEscherProperty(opt, EscherProperties.BLIP__PICTUREID);
-                if(prop != null)
-                    shape = new OLEShape(spContainer, parent); //presence of BLIP__PICTUREID indicates it is an embedded object 
-                else
-                    shape = new Picture(spContainer, parent);
+                InteractiveInfo info = (InteractiveInfo)getClientDataRecord(spContainer, RecordTypes.InteractiveInfo.typeID);
+                OEShapeAtom oes = (OEShapeAtom)getClientDataRecord(spContainer, RecordTypes.OEShapeAtom.typeID);
+                if(info != null && info.getInteractiveInfoAtom() != null){
+                    switch(info.getInteractiveInfoAtom().getAction()){
+                        case InteractiveInfoAtom.ACTION_OLE:
+                            shape = new OLEShape(spContainer, parent);
+                            break;
+                        case InteractiveInfoAtom.ACTION_MEDIA:
+                            shape = new MovieShape(spContainer, parent);
+                            break;
+                        default:
+                            break;
+                    }
+                } else if (oes != null){
+                    shape = new OLEShape(spContainer, parent);
+                }
+                
+                if(shape == null) shape = new Picture(spContainer, parent);
                 break;
             }
             case ShapeTypes.Line:
