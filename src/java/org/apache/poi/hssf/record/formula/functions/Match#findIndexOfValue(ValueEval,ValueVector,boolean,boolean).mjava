@@ -1,24 +1,25 @@
 	/**
 	 * @return zero based index
 	 */
-	private static int findIndexOfValue(ValueEval lookupValue, ValueEval[] lookupRange,
+	private static int findIndexOfValue(ValueEval lookupValue, ValueVector lookupRange,
 			boolean matchExact, boolean findLargestLessThanOrEqual) throws EvaluationException {
 
 		LookupValueComparer lookupComparer = createLookupComparer(lookupValue, matchExact);
-		
+
+		int size = lookupRange.getSize();
 		if(matchExact) {
-			for (int i = 0; i < lookupRange.length; i++) {
-				if(lookupComparer.compareTo(lookupRange[i]).isEqual()) {
+			for (int i = 0; i < size; i++) {
+				if(lookupComparer.compareTo(lookupRange.getItem(i)).isEqual()) {
 					return i;
 				}
 			}
 			throw new EvaluationException(ErrorEval.NA);
 		}
-		
+
 		if(findLargestLessThanOrEqual) {
 			// Note - backward iteration
-			for (int i = lookupRange.length - 1; i>=0;  i--) {
-				CompareResult cmp = lookupComparer.compareTo(lookupRange[i]);
+			for (int i = size - 1; i>=0;  i--) {
+				CompareResult cmp = lookupComparer.compareTo(lookupRange.getItem(i));
 				if(cmp.isTypeMismatch()) {
 					continue;
 				}
@@ -28,11 +29,11 @@
 			}
 			throw new EvaluationException(ErrorEval.NA);
 		}
-		
+
 		// else - find smallest greater than or equal to
 		// TODO - is binary search used for (match_type==+1) ?
-		for (int i = 0; i<lookupRange.length; i++) {
-			CompareResult cmp = lookupComparer.compareTo(lookupRange[i]);
+		for (int i = 0; i<size; i++) {
+			CompareResult cmp = lookupComparer.compareTo(lookupRange.getItem(i));
 			if(cmp.isEqual()) {
 				return i;
 			}
