@@ -1,0 +1,34 @@
+	/**
+	 * Prior to Aug 2008, POI would re-serialize spreadsheets with {@link ArrayRecord}s or
+	 * {@link TableRecord}s with those records out of order.  Similar to 
+	 * {@link SharedFormulaRecord}s, these records should appear immediately after the first
+	 * {@link FormulaRecord}s that they apply to (and only once).<br/>
+	 */
+	public void testArraysAndTables() {
+		HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook("testArraysAndTables.xls");
+		Record[] sheetRecs = RecordInspector.getRecords(wb.getSheetAt(0), 0);
+		
+		int countArrayFormulas = verifySharedValues(sheetRecs, ArrayRecord.class);
+		assertEquals(5, countArrayFormulas);
+		int countTableFormulas = verifySharedValues(sheetRecs, TableRecord.class);
+		assertEquals(3, countTableFormulas);
+
+		// Note - SharedFormulaRecords are currently not re-serialized by POI (each is extracted
+		// into many non-shared formulas), but if they ever were, the same rules would apply. 
+		int countSharedFormulas = verifySharedValues(sheetRecs, SharedFormulaRecord.class);
+		assertEquals(0, countSharedFormulas);
+		
+
+		if (false) { // set true to observe re-serialized file
+			File f = new File(System.getProperty("java.io.tmpdir") + "/testArraysAndTables-out.xls");
+			try {
+				OutputStream os = new FileOutputStream(f);
+				wb.write(os);
+				os.close();
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+			System.out.println("Output file to " + f.getAbsolutePath());
+		}
+	}
+

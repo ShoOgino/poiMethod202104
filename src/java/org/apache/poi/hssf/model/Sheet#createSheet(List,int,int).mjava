@@ -28,18 +28,12 @@
 
         for (int k = offset; k < inRecs.size(); k++) {
             Record rec = ( Record ) inRecs.get(k);
-            if ( rec.getSid() == DBCellRecord.sid ) {
-                continue;
-            }
             if ( rec.getSid() == IndexRecord.sid ) {
                 // ignore INDEX record because it is only needed by Excel, 
                 // and POI always re-calculates its contents 
                 continue;
             }
-            if ( rec.getSid() == StringRecord.sid ) {
-                continue;
-            }
-            
+
             if ( rec.getSid() == CFHeaderRecord.sid ) {
                 RecordStream rs = new RecordStream(inRecs, k);
                 retval.condFormatting = new ConditionalFormattingTable(rs);
@@ -68,10 +62,11 @@
                 if (retval._rowsAggregate != null) {
                     throw new RuntimeException("row/cell records found in the wrong place");
                 }
-                int lastRowCellRec = findEndOfRowBlock(inRecs, k, retval._mergedCellsTable);
-                retval._rowsAggregate = new RowRecordsAggregate(inRecs, k, lastRowCellRec);
+                RowBlocksReader rbr = new RowBlocksReader(inRecs, k);
+                retval._mergedCellsTable.addRecords(rbr.getLooseMergedCells());
+                retval._rowsAggregate = new RowRecordsAggregate(rbr.getPlainRecordStream(), rbr.getSharedFormulaManager());
                 records.add(retval._rowsAggregate); //only add the aggregate once
-                k = lastRowCellRec -1;
+                k += rbr.getTotalNumberOfRecords() - 1;
                 continue;
             }
              
