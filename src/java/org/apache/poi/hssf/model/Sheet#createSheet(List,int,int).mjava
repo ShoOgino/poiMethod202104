@@ -28,18 +28,12 @@
 
         for (int k = offset; k < inRecs.size(); k++) {
             Record rec = ( Record ) inRecs.get(k);
-            if ( rec.getSid() == DBCellRecord.sid ) {
-                continue;
-            }
             if ( rec.getSid() == IndexRecord.sid ) {
                 // ignore INDEX record because it is only needed by Excel, 
                 // and POI always re-calculates its contents 
                 continue;
             }
-            if ( rec.getSid() == StringRecord.sid ) {
-                continue;
-            }
-            
+
             if ( rec.getSid() == CFHeaderRecord.sid ) {
                 RecordStream rs = new RecordStream(inRecs, k);
                 retval.condFormatting = new ConditionalFormattingTable(rs);
@@ -68,10 +62,11 @@
                 if (retval._rowsAggregate != null) {
                     throw new RuntimeException("row/cell records found in the wrong place");
                 }
-                int lastRowCellRec = findEndOfRowBlock(inRecs, k, retval._mergedCellsTable);
-                retval._rowsAggregate = new RowRecordsAggregate(inRecs, k, lastRowCellRec);
+                RowBlocksReader rbr = new RowBlocksReader(inRecs, k);
+                retval._mergedCellsTable.addRecords(rbr.getLooseMergedCells());
+                retval._rowsAggregate = new RowRecordsAggregate(rbr.getPlainRecordStream(), rbr.getSharedFormulaManager());
                 records.add(retval._rowsAggregate); //only add the aggregate once
-                k = lastRowCellRec -1;
+                k += rbr.getTotalNumberOfRecords() - 1;
                 continue;
             }
              
@@ -92,13 +87,18 @@
             }
             
             if (rec.getSid() == MergeCellsRecord.sid) {
-            	// when the MergedCellsTable is found in the right place, we expect those records to be contiguous
+                // when the MergedCellsTable is found in the right place, we expect those records to be contiguous
                 RecordStream rs = new RecordStream(inRecs, k);
                 retval._mergedCellsTable.read(rs);
                 k += rs.getCountRead()-1;
                 continue;
             }
-            
+            if (rec.getSid() == UncalcedRecord.sid) {
+                // don't add UncalcedRecord to the list
+                retval._isUncalced = true; // this flag is enough
+                continue;
+            }
+
             if (rec.getSid() == BOFRecord.sid)
             {
                 bofEofNestingLevel++;
@@ -115,9 +115,6 @@
                     retval.eofLoc = k;
                     break;
                 }
-            }
-            else if (rec.getSid() == UncalcedRecord.sid) {
-                retval._isUncalced = true;
             }
             else if (rec.getSid() == DimensionsRecord.sid)
             {

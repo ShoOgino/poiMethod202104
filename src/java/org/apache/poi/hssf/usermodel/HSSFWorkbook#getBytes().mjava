@@ -9,13 +9,11 @@
      * @see org.apache.poi.hssf.model.Workbook
      * @see org.apache.poi.hssf.model.Sheet
      */
-
-    public byte[] getBytes()
-    {
+    public byte[] getBytes() {
         if (log.check( POILogger.DEBUG )) {
             log.log(DEBUG, "HSSFWorkbook.getBytes()");
         }
-        
+
         HSSFSheet[] sheets = getSheets();
         int nSheets = sheets.length;
 
@@ -28,26 +26,27 @@
         int totalsize = workbook.getSize();
 
         // pre-calculate all the sheet sizes and set BOF indexes
-        int[] estimatedSheetSizes = new int[nSheets];
+        SheetRecordCollector[] srCollectors = new SheetRecordCollector[nSheets];
         for (int k = 0; k < nSheets; k++) {
             workbook.setSheetBof(k, totalsize);
-            int sheetSize = sheets[k].getSheet().getSize();
-            estimatedSheetSizes[k] = sheetSize;
-            totalsize += sheetSize;
+            SheetRecordCollector src = new SheetRecordCollector();
+            sheets[k].getSheet().visitContainedRecords(src, totalsize);
+            totalsize += src.getTotalSize();
+            srCollectors[k] = src;
         }
-
 
         byte[] retval = new byte[totalsize];
         int pos = workbook.serialize(0, retval);
 
         for (int k = 0; k < nSheets; k++) {
-            int serializedSize = sheets[k].getSheet().serialize(pos, retval);
-            if (serializedSize != estimatedSheetSizes[k]) {
+            SheetRecordCollector src = srCollectors[k];
+            int serializedSize = src.serialize(pos, retval);
+            if (serializedSize != src.getTotalSize()) {
                 // Wrong offset values have been passed in the call to setSheetBof() above.
-                // For books with more than one sheet, this discrepancy would cause excel 
+                // For books with more than one sheet, this discrepancy would cause excel
                 // to report errors and loose data while reading the workbook
-                throw new IllegalStateException("Actual serialized sheet size (" + serializedSize 
-                        + ") differs from pre-calculated size (" + estimatedSheetSizes[k] 
+                throw new IllegalStateException("Actual serialized sheet size (" + serializedSize
+                        + ") differs from pre-calculated size (" + src.getTotalSize()
                         + ") for sheet (" + k + ")");
                 // TODO - add similar sanity check to ensure that Sheet.serializeIndexRecord() does not write mis-aligned offsets either
             }

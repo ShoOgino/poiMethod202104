@@ -1,0 +1,49 @@
+	/**
+	 * Also collects any loose MergeCellRecords and puts them in the supplied
+	 * mergedCellsTable
+	 */
+	public RowBlocksReader(List recs, int startIx) {
+		List plainRecords = new ArrayList();
+		List shFrmRecords = new ArrayList();
+		List arrayRecords = new ArrayList();
+		List tableRecords = new ArrayList();
+		List mergeCellRecords = new ArrayList();
+
+		int endIx = -1;
+		for (int i = startIx; i < recs.size(); i++) {
+			Record rec = (Record) recs.get(i);
+			if (RecordOrderer.isEndOfRowBlock(rec.getSid())) {
+				// End of row/cell records for the current sheet
+				// Note - It is important that this code does not inadvertently any sheet 
+				// records from a subsequent sheet.  For example, if SharedFormulaRecords 
+				// are taken from the wrong sheet, this could cause bug 44449. 
+				endIx = i;
+				break;
+			}
+			List dest;
+			switch (rec.getSid()) {
+				case MergeCellsRecord.sid:    dest = mergeCellRecords; break;
+				case SharedFormulaRecord.sid: dest = shFrmRecords;     break;
+				case ArrayRecord.sid:         dest = arrayRecords;     break;
+				case TableRecord.sid:         dest = tableRecords;     break;
+				default:                      dest = plainRecords;
+			}
+			dest.add(rec);
+		}
+		if (endIx < 0) {
+			throw new RuntimeException("Failed to find end of row/cell records");
+		}
+		SharedFormulaRecord[] sharedFormulaRecs = new SharedFormulaRecord[shFrmRecords.size()];
+		ArrayRecord[] arrayRecs = new ArrayRecord[arrayRecords.size()];
+		TableRecord[] tableRecs = new TableRecord[tableRecords.size()];
+		shFrmRecords.toArray(sharedFormulaRecs);
+		arrayRecords.toArray(arrayRecs);
+		tableRecords.toArray(tableRecs);
+		
+		_plainRecords = plainRecords;
+		_sfm = SharedValueManager.create(sharedFormulaRecs, arrayRecs, tableRecs);
+		_mergedCellsRecords = new MergeCellsRecord[mergeCellRecords.size()];
+		mergeCellRecords.toArray(_mergedCellsRecords);
+		_totalNumberOfRecords = endIx - startIx;
+	}
+

@@ -11,12 +11,12 @@
         records.add(createWindow2Record());
         records.add(EOFRecord.instance);
         Sheet sheet = Sheet.createSheet(records, 0, 0);
-
-        int estimatedSize = sheet.getSize();
-        int serializedSize = sheet.serialize(0, new byte[estimatedSize]);
-        if (serializedSize != estimatedSize) {
-            throw new AssertionFailedError("Identified bug 45066 b");
-        }
-        assertEquals(90, serializedSize);
+        
+        // The original bug was due to different logic for collecting records for sizing and 
+        // serialization. The code has since been refactored into a single method for visiting
+        // all contained records.  Now this test is much less interesting
+        SizeCheckingRecordVisitor scrv = new SizeCheckingRecordVisitor();
+        sheet.visitContainedRecords(scrv, 0);
+        assertEquals(90, scrv.getTotalSize());
     }
 

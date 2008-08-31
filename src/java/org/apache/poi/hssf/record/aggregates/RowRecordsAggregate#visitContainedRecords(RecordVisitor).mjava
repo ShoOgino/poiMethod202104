@@ -1,6 +1,6 @@
     public void visitContainedRecords(RecordVisitor rv) {
-        ValueRecordsAggregate cells = _valuesAgg;
-       
+
+        PositionTrackingVisitor stv = new PositionTrackingVisitor(rv, 0);
         //DBCells are serialized before row records.
         final int blockCount = getRowBlockCount();
         for (int blockIndex = 0; blockIndex < blockCount; blockIndex++) {
@@ -17,8 +17,10 @@
             // Note: Cell references start from the second row...
             int cellRefOffset = (rowBlockSize - RowRecord.ENCODED_SIZE);
             for (int row = startRowNumber; row <= endRowNumber; row++) {
-                if (cells.rowHasCells(row)) {
-                    final int rowCellSize = cells.visitCellsForRow(row, rv);
+                if (_valuesAgg.rowHasCells(row)) {
+                    stv.setPosition(0);
+                    _valuesAgg.visitCellsForRow(row, stv);
+                    int rowCellSize = stv.getPosition();
                     pos += rowCellSize;
                     // Add the offset to the first cell for the row into the
                     // DBCellRecord.
