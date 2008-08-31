@@ -6,15 +6,23 @@
 			return ErrorEval.VALUE_INVALID;
 		}
 		Eval firstArg = args[0];
-		if(firstArg instanceof AreaEval) {
-			AreaEval reference = (AreaEval) firstArg;
+		if(!(firstArg instanceof AreaEval)) {
 			
-			int rowIx = 0;
-			int columnIx = 0;
-			int areaIx = 0;
+			// else the other variation of this function takes an array as the first argument
+			// it seems like interface 'ArrayEval' does not even exist yet
+			
+			throw new RuntimeException("Incomplete code - cannot handle first arg of type ("
+					+ firstArg.getClass().getName() + ")");
+		}
+		AreaEval reference = (AreaEval) firstArg;
+		
+		int rowIx = 0;
+		int columnIx = 0;
+		int areaIx = 0;
+		try {	
 			switch(nArgs) {
 				case 4:
-					areaIx = convertIndexArgToZeroBase(args[3]);
+					areaIx = convertIndexArgToZeroBase(args[3], srcCellRow, srcCellCol);
 					throw new RuntimeException("Incomplete code" +
 							" - don't know how to support the 'area_num' parameter yet)");
 					// Excel expression might look like this "INDEX( (A1:B4, C3:D6, D2:E5 ), 1, 2, 3)
@@ -23,25 +31,17 @@
 					// The formula parser doesn't seem to support this yet. Not sure if the evaluator does either
 					
 				case 3:
-					columnIx = convertIndexArgToZeroBase(args[2]);
+					columnIx = convertIndexArgToZeroBase(args[2], srcCellRow, srcCellCol);
 				case 2:
-					rowIx = convertIndexArgToZeroBase(args[1]);
+					rowIx = convertIndexArgToZeroBase(args[1], srcCellRow, srcCellCol);
 					break;
 				default:
 					// too many arguments
 					return ErrorEval.VALUE_INVALID;
 			}
-			
-	        int nColumns = reference.getLastColumn()-reference.getFirstColumn()+1;
-			int index = rowIx * nColumns + columnIx;
-			
-			return reference.getValues()[index];
+			return getValueFromArea(reference, rowIx, columnIx);
+		} catch (EvaluationException e) {
+			return e.getErrorEval();
 		}
-		
-		// else the other variation of this function takes an array as the first argument
-		// it seems like interface 'ArrayEval' does not even exist yet
-		
-		throw new RuntimeException("Incomplete code - cannot handle first arg of type ("
-				+ firstArg.getClass().getName() + ")");
 	}
 
