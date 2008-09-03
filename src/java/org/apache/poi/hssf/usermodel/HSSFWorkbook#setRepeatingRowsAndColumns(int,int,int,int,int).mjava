@@ -46,7 +46,7 @@
         boolean removingRange =
                 startColumn == -1 && endColumn == -1 && startRow == -1 && endRow == -1;
 
-        int rowColHeaderNameIndex = findExistingRowColHeaderNameRecordIdx(sheetIndex);
+        int rowColHeaderNameIndex = findExistingBuiltinNameRecordIdx(sheetIndex, NameRecord.BUILTIN_PRINT_TITLE);
         if (removingRange) {
             if (rowColHeaderNameIndex >= 0) {
                 workbook.removeName(rowColHeaderNameIndex);
@@ -64,29 +64,27 @@
             isNewRecord = false;
         }
 
-        short definitionTextLength = settingRowAndColumn ? (short)0x001a : (short)0x000b;
-        nameRecord.setDefinitionTextLength(definitionTextLength); // TODO - remove
-
-        Stack ptgs = new Stack();
+        List temp = new ArrayList();
 
         if (settingRowAndColumn) {
             final int exprsSize = 2 * 11 + 1; // 2 * Area3DPtg.SIZE + UnionPtg.SIZE
-            ptgs.add(new MemFuncPtg(exprsSize));
+            temp.add(new MemFuncPtg(exprsSize));
         }
         if (startColumn >= 0) {
             Area3DPtg colArea = new Area3DPtg(0, MAX_ROW, startColumn, endColumn, 
                     false, false, false, false, externSheetIndex);
-            ptgs.add(colArea);
+            temp.add(colArea);
         }
         if (startRow >= 0) {
             Area3DPtg rowArea = new Area3DPtg(startRow, endRow, 0, MAX_COLUMN, 
                     false, false, false, false, externSheetIndex);
-            ptgs.add(rowArea);
+            temp.add(rowArea);
         }
-        if (settingRowAndColumn)
-        {
-            ptgs.add(UnionPtg.instance);
+        if (settingRowAndColumn) {
+            temp.add(UnionPtg.instance);
         }
+        Ptg[] ptgs = new Ptg[temp.size()];
+        temp.toArray(ptgs);
         nameRecord.setNameDefinition(ptgs);
 
         if (isNewRecord)

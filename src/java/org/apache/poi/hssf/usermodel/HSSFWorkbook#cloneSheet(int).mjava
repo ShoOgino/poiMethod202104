@@ -4,32 +4,49 @@
      * @return HSSFSheet representing the cloned sheet.
      */
 
-    public HSSFSheet cloneSheet(int sheetNum) {
-        validateSheetIndex(sheetNum);
-        HSSFSheet srcSheet = (HSSFSheet) _sheets.get(sheetNum);
-        String srcName = workbook.getSheetName(sheetNum);
+    public HSSFSheet cloneSheet(int sheetIndex) {
+        validateSheetIndex(sheetIndex);
+        HSSFSheet srcSheet = (HSSFSheet) _sheets.get(sheetIndex);
+        String srcName = workbook.getSheetName(sheetIndex);
         HSSFSheet clonedSheet = srcSheet.cloneSheet(this);
         clonedSheet.setSelected(false);
         clonedSheet.setActive(false);
 
+        String name = getUniqueSheetName(srcName);
+        int newSheetIndex = _sheets.size(); 
         _sheets.add(clonedSheet);
-        int i = 1;
-        while (true) {
-            // Try and find the next sheet name that is unique
-            String name = srcName;
-            String index = Integer.toString(i++);
-            if (name.length() + index.length() + 2 < 31) {
-                name = name + "(" + index + ")";
-            } else {
-                name = name.substring(0, 31 - index.length() - 2) + "(" + index + ")";
+        workbook.setSheetName(newSheetIndex, name);
+        
+        // Check this sheet has an autofilter, (which has a built-in NameRecord at workbook level)
+        int filterDbNameIndex = findExistingBuiltinNameRecordIdx(sheetIndex, NameRecord.BUILTIN_FILTER_DB);
+        if (filterDbNameIndex >=0) {
+            NameRecord origNameRecord = workbook.getNameRecord(filterDbNameIndex);
+            // copy original formula but adjust 3D refs to the new external sheet index
+            int newExtSheetIx = getExternalSheetIndex(newSheetIndex);
+            Ptg[] ptgs = origNameRecord.getNameDefinition();
+            for (int i=0; i< ptgs.length; i++) {
+                Ptg ptg = ptgs[i];
+                ptg = ptg.copy();
+                
+                if (ptg instanceof Area3DPtg) {
+                    Area3DPtg a3p = (Area3DPtg) ptg;
+                    a3p.setExternSheetIndex(newExtSheetIx);
+                } else if (ptg instanceof Ref3DPtg) {
+                    Ref3DPtg r3p = (Ref3DPtg) ptg;
+                    r3p.setExternSheetIndex(newExtSheetIx);
+                }
+                ptgs[i] = ptg;
             }
-
-            //If the sheet name is unique, then set it otherwise move on to the next number.
-            if (workbook.getSheetIndex(name) == -1) {
-              workbook.setSheetName(_sheets.size()-1, name);
-              break;
-            }
+            NameRecord newNameRecord = workbook.createBuiltInName(NameRecord.BUILTIN_FILTER_DB, newSheetIndex+1);
+            newNameRecord.setNameDefinition(ptgs);
+            newNameRecord.setHidden(true);
+            HSSFName newName = new HSSFName(this, newNameRecord);
+            names.add(newName);
+            // TODO - when an Autofilter is present, there are some DrawingRecords which also need adjusting
+            // In particular, some IDs of some EscherSpRecords need changing. See bug 45720
         }
+        // TODO - maybe same logic required for other/all built-in name records
+        
         return clonedSheet;
     }
 
