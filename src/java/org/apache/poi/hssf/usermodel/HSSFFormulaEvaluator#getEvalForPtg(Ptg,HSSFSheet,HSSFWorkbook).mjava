@@ -5,6 +5,29 @@
      * passed here!
      */
     private static Eval getEvalForPtg(Ptg ptg, HSSFSheet sheet, HSSFWorkbook workbook) {
+        if (ptg instanceof NamePtg) {
+            // named ranges, macro functions
+            NamePtg namePtg = (NamePtg) ptg;
+            int numberOfNames = workbook.getNumberOfNames();
+            int nameIndex = namePtg.getIndex();
+            if(nameIndex < 0 || nameIndex >= numberOfNames) {
+                throw new RuntimeException("Bad name index (" + nameIndex 
+                        + "). Allowed range is (0.." + (numberOfNames-1) + ")");
+            }
+            NameRecord nameRecord = workbook.getWorkbook().getNameRecord(nameIndex);
+            if (nameRecord.isFunctionName()) {
+                return new NameEval(nameRecord.getNameText());
+            }
+            if (nameRecord.hasFormula()) {
+                return evaluateNameFormula(nameRecord.getNameDefinition(), sheet, workbook);
+            }
+            
+            throw new RuntimeException("Don't now how to evalate name '" + nameRecord.getNameText() + "'");
+        }
+        if (ptg instanceof NameXPtg) {
+            NameXPtg nameXPtg = (NameXPtg) ptg;
+            return new NameXEval(nameXPtg.getSheetRefIndex(), nameXPtg.getNameIndex());
+        }
         if (ptg instanceof RefPtg) {
             return new LazyRefEval(((RefPtg) ptg), sheet, workbook);
         }
@@ -38,6 +61,10 @@
         }
         if (ptg instanceof ErrPtg) {
             return ErrorEval.valueOf(((ErrPtg) ptg).getErrorCode());
+        }
+        if (ptg instanceof UnknownPtg) { 
+            // TODO - remove UnknownPtg
+            throw new RuntimeException("UnknownPtg not allowed");
         }
         throw new RuntimeException("Unexpected ptg class (" + ptg.getClass().getName() + ")");
     }

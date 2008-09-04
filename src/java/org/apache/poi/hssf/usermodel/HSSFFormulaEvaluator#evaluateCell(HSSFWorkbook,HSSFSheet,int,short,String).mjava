@@ -13,19 +13,10 @@
                 continue;
             }
             if (ptg instanceof MemErrPtg) { continue; }
-            if (ptg instanceof MissingArgPtg) { continue; }
-            if (ptg instanceof NamePtg) {
-                // named ranges, macro functions
-                NamePtg namePtg = (NamePtg) ptg;
-                stack.push(new NameEval(namePtg.getIndex()));
+            if (ptg instanceof MissingArgPtg) {
+                // TODO - might need to push BlankEval or MissingArgEval
                 continue;
             }
-            if (ptg instanceof NameXPtg) {
-                NameXPtg nameXPtg = (NameXPtg) ptg;
-                stack.push(new NameXEval(nameXPtg.getSheetRefIndex(), nameXPtg.getNameIndex()));
-                continue;
-            }
-            if (ptg instanceof UnknownPtg) { continue; }
             Eval opResult;
             if (ptg instanceof OperationPtg) {
                 OperationPtg optg = (OperationPtg) ptg;
@@ -42,9 +33,12 @@
                     Eval p = (Eval) stack.pop();
                     ops[j] = p;
                 }
-                opResult = invokeOperation(operation, ops, srcRowNum, srcColNum, workbook, sheet);
+                 opResult = invokeOperation(operation, ops, srcRowNum, srcColNum, workbook, sheet);
             } else {
                 opResult = getEvalForPtg(ptg, sheet, workbook);
+            }
+            if (opResult == null) {
+                throw new RuntimeException("Evaluation result must not be null");
             }
             stack.push(opResult);
         }
