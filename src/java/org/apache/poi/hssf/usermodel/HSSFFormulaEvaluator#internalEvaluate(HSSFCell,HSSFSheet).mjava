@@ -1,0 +1,37 @@
+    /**
+     * Dev. Note: Internal evaluate must be passed only a formula cell
+     * else a runtime exception will be thrown somewhere inside the method.
+     * (Hence this is a private method.)
+     */
+    private ValueEval internalEvaluate(HSSFCell srcCell, HSSFSheet sheet) {
+        int srcRowNum = srcCell.getRowIndex();
+        int srcColNum = srcCell.getCellNum();
+
+        ValueEval result;
+
+        int sheetIndex = _workbook.getSheetIndex(sheet);
+        result = _cache.getValue(sheetIndex, srcRowNum, srcColNum);
+        if (result != null) {
+            return result;
+        }
+        _evaluationCounter.value++;
+
+        EvaluationCycleDetector tracker = EvaluationCycleDetectorManager.getTracker();
+
+        if(!tracker.startEvaluate(_workbook, sheet, srcRowNum, srcColNum)) {
+            return ErrorEval.CIRCULAR_REF_ERROR;
+        }
+        try {
+            result = evaluateCell(srcRowNum, (short)srcColNum, srcCell.getCellFormula());
+        } finally {
+            tracker.endEvaluate(_workbook, sheet, srcRowNum, srcColNum);
+            _cache.setValue(sheetIndex, srcRowNum, srcColNum, result);
+        }
+        if (isDebugLogEnabled()) {
+            String sheetName = _workbook.getSheetName(sheetIndex);
+            CellReference cr = new CellReference(srcRowNum, srcColNum);
+            logDebug("Evaluated " + sheetName + "!" + cr.formatAsString() + " to " + result.toString());
+        }
+        return result;
+    }
+

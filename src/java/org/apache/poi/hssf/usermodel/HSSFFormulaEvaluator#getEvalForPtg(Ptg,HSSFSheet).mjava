@@ -4,24 +4,24 @@
      * StringPtg, BoolPtg <br/>special Note: OperationPtg subtypes cannot be
      * passed here!
      */
-    private static Eval getEvalForPtg(Ptg ptg, HSSFSheet sheet, HSSFWorkbook workbook) {
+    private Eval getEvalForPtg(Ptg ptg, HSSFSheet sheet) {
         if (ptg instanceof NamePtg) {
             // named ranges, macro functions
             NamePtg namePtg = (NamePtg) ptg;
-            int numberOfNames = workbook.getNumberOfNames();
+            int numberOfNames = _workbook.getNumberOfNames();
             int nameIndex = namePtg.getIndex();
             if(nameIndex < 0 || nameIndex >= numberOfNames) {
-                throw new RuntimeException("Bad name index (" + nameIndex 
+                throw new RuntimeException("Bad name index (" + nameIndex
                         + "). Allowed range is (0.." + (numberOfNames-1) + ")");
             }
-            NameRecord nameRecord = workbook.getWorkbook().getNameRecord(nameIndex);
+            NameRecord nameRecord = _workbook.getWorkbook().getNameRecord(nameIndex);
             if (nameRecord.isFunctionName()) {
                 return new NameEval(nameRecord.getNameText());
             }
             if (nameRecord.hasFormula()) {
-                return evaluateNameFormula(nameRecord.getNameDefinition(), sheet, workbook);
+                return evaluateNameFormula(nameRecord.getNameDefinition(), sheet);
             }
-            
+
             throw new RuntimeException("Don't now how to evalate name '" + nameRecord.getNameText() + "'");
         }
         if (ptg instanceof NameXPtg) {
@@ -29,22 +29,20 @@
             return new NameXEval(nameXPtg.getSheetRefIndex(), nameXPtg.getNameIndex());
         }
         if (ptg instanceof RefPtg) {
-            return new LazyRefEval(((RefPtg) ptg), sheet, workbook);
+            return new LazyRefEval(((RefPtg) ptg), sheet, this);
         }
         if (ptg instanceof Ref3DPtg) {
             Ref3DPtg refPtg = (Ref3DPtg) ptg;
-            Workbook wb = workbook.getWorkbook();
-            HSSFSheet xsheet = workbook.getSheetAt(wb.getSheetIndexFromExternSheetIndex(refPtg.getExternSheetIndex()));
-            return new LazyRefEval(refPtg, xsheet, workbook);
+            HSSFSheet xsheet = getOtherSheet(refPtg.getExternSheetIndex());
+            return new LazyRefEval(refPtg, xsheet, createEvaluatorForAnotherSheet(xsheet));
         }
         if (ptg instanceof AreaPtg) {
-            return new LazyAreaEval(((AreaPtg) ptg), sheet, workbook);
+            return new LazyAreaEval(((AreaPtg) ptg), sheet, this);
         }
         if (ptg instanceof Area3DPtg) {
             Area3DPtg a3dp = (Area3DPtg) ptg;
-            Workbook wb = workbook.getWorkbook();
-            HSSFSheet xsheet = workbook.getSheetAt(wb.getSheetIndexFromExternSheetIndex(a3dp.getExternSheetIndex()));
-            return new LazyAreaEval(a3dp, xsheet, workbook);
+            HSSFSheet xsheet = getOtherSheet(a3dp.getExternSheetIndex());
+            return new LazyAreaEval(a3dp, xsheet, createEvaluatorForAnotherSheet(xsheet));
         }
 
         if (ptg instanceof IntPtg) {
@@ -62,7 +60,7 @@
         if (ptg instanceof ErrPtg) {
             return ErrorEval.valueOf(((ErrPtg) ptg).getErrorCode());
         }
-        if (ptg instanceof UnknownPtg) { 
+        if (ptg instanceof UnknownPtg) {
             // TODO - remove UnknownPtg
             throw new RuntimeException("UnknownPtg not allowed");
         }
