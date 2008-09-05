@@ -1,20 +1,17 @@
-    public Eval evaluate(Eval[] args, int srcRow, short srcCol) {
-    	if(args.length != 1) {
-    		return ErrorEval.VALUE_INVALID;
-    	}
-        double d = 0;
-        
-        ValueEval ve = singleOperandEvaluate(args[0], srcRow, srcCol);
-        if (ve instanceof NumericValueEval) {
-            d = ((NumericValueEval) ve).getNumberValue();
-        }
-        else if (ve instanceof BlankEval) {
-            // do nothing
-        }
-        else if (ve instanceof ErrorEval) {
-            return ve;
-        }
-        
-        return new NumberEval(-d);
-    }
+	public Eval evaluate(Eval[] args, int srcRow, short srcCol) {
+		if (args.length != 1) {
+			return ErrorEval.VALUE_INVALID;
+		}
+    	double d;
+		try {
+			ValueEval ve = OperandResolver.getSingleValue(args[0], srcRow, srcCol);
+			if (ve instanceof BlankEval) {
+				return NumberEval.ZERO;
+			}
+			d = OperandResolver.coerceValueToDouble(ve);
+		} catch (EvaluationException e) {
+			return e.getErrorEval();
+		}
+		return new NumberEval(-d);
+	}
 
