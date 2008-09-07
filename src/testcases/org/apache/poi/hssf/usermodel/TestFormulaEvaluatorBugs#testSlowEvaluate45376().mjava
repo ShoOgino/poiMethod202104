@@ -1,0 +1,37 @@
+	/**
+	 * The HSSFFormula evaluator performance benefits greatly from caching of intermediate cell values
+	 */
+	public void testSlowEvaluate45376() {
+		
+		// Firstly set up a sequence of formula cells where each depends on the  previous multiple
+		// times.  Without caching, each subsequent cell take about 4 times longer to evaluate.
+		HSSFWorkbook wb = new HSSFWorkbook();
+		HSSFSheet sheet = wb.createSheet("Sheet1");
+		HSSFRow row = sheet.createRow(0);
+		for(int i=1; i<10; i++) {
+			HSSFCell cell = row.createCell(i);
+			char prevCol = (char) ('A' + i-1);
+			String prevCell = prevCol + "1";
+			// this formula is inspired by the offending formula of the attachment for bug 45376
+			String formula = "IF(DATE(YEAR(" + prevCell + "),MONTH(" + prevCell + ")+1,1)<=$D$3," +
+					"DATE(YEAR(" + prevCell + "),MONTH(" + prevCell + ")+1,1),NA())";
+			cell.setCellFormula(formula);
+			
+		}
+		Calendar cal = new GregorianCalendar(2000, 0, 1, 0, 0, 0);
+		row.createCell(0).setCellValue(cal);
+		
+		// Choose cell A9, so that the failing test case doesn't take too long to execute.
+		HSSFCell cell = row.getCell(8);
+		HSSFFormulaEvaluator evaluator = new HSSFFormulaEvaluator(sheet, wb);
+		evaluator.evaluate(cell);
+		int evalCount = evaluator.getEvaluationCount();
+		// With caching, the evaluationCount is 8 which is a big improvement
+		if (evalCount > 10) {
+			// Without caching, evaluating cell 'A9' takes 21845 evaluations which consumes
+			// much time (~3 sec on Core 2 Duo 2.2GHz)
+			System.err.println("Cell A9 took " + evalCount + " intermediate evaluations");
+			throw new AssertionFailedError("Identifed bug 45376 - Formula evaluator should cache values");
+		}
+	}
+

@@ -1,0 +1,60 @@
+    private ValueEval evaluateCell(int srcRowNum, short srcColNum, String cellFormulaText) {
+
+        Ptg[] ptgs = FormulaParser.parse(cellFormulaText, _workbook);
+
+        Stack stack = new Stack();
+        for (int i = 0, iSize = ptgs.length; i < iSize; i++) {
+
+            // since we don't know how to handle these yet :(
+            Ptg ptg = ptgs[i];
+            if (ptg instanceof ControlPtg) {
+                // skip Parentheses, Attr, etc
+                continue;
+            }
+            if (ptg instanceof MemErrPtg) { continue; }
+            if (ptg instanceof MissingArgPtg) {
+               // TODO - might need to push BlankEval or MissingArgEval
+               continue;
+            }
+            Eval opResult;
+            if (ptg instanceof OperationPtg) {
+                OperationPtg optg = (OperationPtg) ptg;
+
+                if (optg instanceof UnionPtg) { continue; }
+
+                OperationEval operation = OperationEvaluatorFactory.create(optg);
+
+                int numops = operation.getNumberOfOperands();
+                Eval[] ops = new Eval[numops];
+
+                // storing the ops in reverse order since they are popping
+                for (int j = numops - 1; j >= 0; j--) {
+                    Eval p = (Eval) stack.pop();
+                    ops[j] = p;
+                }
+                logDebug("invoke " + operation + " (nAgs=" + numops + ")");
+                opResult = invokeOperation(operation, ops, srcRowNum, srcColNum, _workbook, _sheet);
+            } else {
+                opResult = getEvalForPtg(ptg, _sheet);
+            }
+            if (opResult == null) {
+                throw new RuntimeException("Evaluation result must not be null");
+            }
+            logDebug("push " + opResult);
+            stack.push(opResult);
+        }
+
+        ValueEval value = ((ValueEval) stack.pop());
+        if (!stack.isEmpty()) {
+            throw new IllegalStateException("evaluation stack not empty");
+        }
+        value = dereferenceValue(value, srcRowNum, srcColNum);
+        if (value instanceof BlankEval) {
+            // Note Excel behaviour here. A blank final final value is converted to zero.
+            return NumberEval.ZERO;
+            // Formulas _never_ evaluate to blank.  If a formula appears to have evaluated to
+            // blank, the actual value is empty string. This can be verified with ISBLANK().
+        }
+        return value;
+    }
+

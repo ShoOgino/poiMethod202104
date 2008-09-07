@@ -1,0 +1,50 @@
+    /**
+     * Check if the cloned sheet has drawings. If yes, then allocate a new drawing group ID and
+     * re-generate shape IDs
+     *
+     * @param sheet the cloned sheet
+     */
+    public void cloneDrawings(Sheet sheet){
+
+        findDrawingGroup();
+
+        if(drawingManager == null) {
+            //this workbook does not have drawings
+            return;
+        }
+
+        //check if the cloned sheet has drawings
+        int aggLoc = sheet.aggregateDrawingRecords(drawingManager, false);
+        if(aggLoc != -1) {
+            EscherAggregate agg = (EscherAggregate) sheet.findFirstRecordBySid(EscherAggregate.sid);
+
+            EscherDggRecord dgg = drawingManager.getDgg();
+
+            //register a new drawing group for the cloned sheet
+            int dgId = drawingManager.findNewDrawingGroupId();
+            dgg.addCluster( dgId, 0 );
+            dgg.setDrawingsSaved(dgg.getDrawingsSaved() + 1);
+
+            EscherDgRecord dg = null;
+            for(Iterator it = agg.getEscherContainer().getChildRecords().iterator(); it.hasNext();) {
+                Object er = it.next();
+                if(er instanceof EscherDgRecord) {
+                    dg = (EscherDgRecord)er;
+                    //update id of the drawing in the cloned sheet
+                    dg.setOptions( (short) ( dgId << 4 ) );
+                } else if (er instanceof EscherContainerRecord){
+                    //recursively find shape records and re-generate shapeId
+                    ArrayList spRecords = new ArrayList();
+                    EscherContainerRecord cp = (EscherContainerRecord)er;
+                    cp.getRecordsById(EscherSpRecord.RECORD_ID,  spRecords);
+                    for(Iterator spIt = spRecords.iterator(); spIt.hasNext();) {
+                        EscherSpRecord sp = (EscherSpRecord)spIt.next();
+                        int shapeId = drawingManager.allocateShapeId((short)dgId, dg);
+                        sp.setShapeId(shapeId);
+                    }
+                }
+            }
+
+        }
+    }
+
