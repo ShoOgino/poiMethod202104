@@ -11,15 +11,18 @@
 		}
 
 		// Then the mask field
-		int mask = 0;
+		int mask = maskSpecial;
 		for(int i=0; i<textPropList.size(); i++) {
 			TextProp textProp = (TextProp)textPropList.get(i);
             //sometimes header indicates that the bitmask is present but its value is 0
-            if (textProp instanceof BitMaskTextProp)
-                mask |= (textProp.getWriteMask() == 0 ? 1 : textProp.getWriteMask());
-            else
+
+            if (textProp instanceof BitMaskTextProp) {
+                if(mask == 0) mask |=  textProp.getWriteMask();
+            }
+            else {
                 mask |= textProp.getWriteMask();
-		}
+            }
+        }
 		StyleTextPropAtom.writeLittleEndian(mask,o);
 
 		// Then the contents of all the properties
@@ -28,7 +31,7 @@
 			int val = textProp.getValue();
 			if(textProp.getSize() == 2) {
 				StyleTextPropAtom.writeLittleEndian((short)val,o);
-			} else {
+			} else if(textProp.getSize() == 4){
 				StyleTextPropAtom.writeLittleEndian(val,o);
 			}
 		}

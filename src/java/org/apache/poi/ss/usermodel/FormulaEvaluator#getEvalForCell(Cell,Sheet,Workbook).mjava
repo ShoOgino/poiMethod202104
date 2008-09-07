@@ -1,0 +1,31 @@
+    /**
+     * Given a cell, find its type and from that create an appropriate ValueEval
+     * impl instance and return that. Since the cell could be an external
+     * reference, we need the sheet that this belongs to.
+     * Non existent cells are treated as empty.
+     * @param cell
+     * @param sheet
+     * @param workbook
+     */
+    public static ValueEval getEvalForCell(Cell cell, Sheet sheet, Workbook workbook) {
+
+        if (cell == null) {
+            return BlankEval.INSTANCE;
+        }
+        switch (cell.getCellType()) {
+            case Cell.CELL_TYPE_NUMERIC:
+                return new NumberEval(cell.getNumericCellValue());
+            case Cell.CELL_TYPE_STRING:
+                return new StringEval(cell.getRichStringCellValue().getString());
+            case Cell.CELL_TYPE_FORMULA:
+                return internalEvaluate(cell, sheet, workbook);
+            case Cell.CELL_TYPE_BOOLEAN:
+                return BoolEval.valueOf(cell.getBooleanCellValue());
+            case Cell.CELL_TYPE_BLANK:
+                return BlankEval.INSTANCE;
+            case Cell.CELL_TYPE_ERROR:
+                return ErrorEval.valueOf(cell.getErrorCellValue());
+        }
+        throw new RuntimeException("Unexpected cell type (" + cell.getCellType() + ")");
+    }
+

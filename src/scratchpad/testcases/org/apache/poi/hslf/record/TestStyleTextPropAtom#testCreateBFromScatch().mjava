@@ -1,174 +1,174 @@
-	/**
-	 * Try to recreate an existing StyleTextPropAtom (b) from the empty
-	 *  constructor, and setting the required properties
-	 */
-	public void testCreateBFromScatch() throws Exception {
-		// Start with an empty one
-		StyleTextPropAtom stpa = new StyleTextPropAtom(data_b_text_len);
-		
-		
-		// Need 4 paragraph styles
-		LinkedList ps = stpa.getParagraphStyles();
-		
-		// First is 30 long, left aligned, normal spacing
-		TextPropCollection tppa = (TextPropCollection)ps.get(0);
-		tppa.updateTextSize(30);
-		
-		TextProp tp = tppa.addWithName("alignment");
-		tp.setValue(0);
-		tp = tppa.addWithName("linespacing");
-		tp.setValue(80);
+    /**
+     * Try to recreate an existing StyleTextPropAtom (b) from the empty
+     *  constructor, and setting the required properties
+     */
+    public void testCreateBFromScatch() throws Exception {
+        // Start with an empty one
+        StyleTextPropAtom stpa = new StyleTextPropAtom(data_b_text_len);
 
-		// Second is 28 long, centre aligned and normal spacing
-		TextPropCollection tppb = stpa.addParagraphTextPropCollection(28);
-		
-		tp = tppb.addWithName("linespacing");
-		tp.setValue(80);
-		
-		// Third is 25 long, right aligned and normal spacing
-		TextPropCollection tppc = stpa.addParagraphTextPropCollection(25);
-		
-		tp = tppc.addWithName("alignment");
-		tp.setValue(2);
-		tp = tppc.addWithName("linespacing");
-		tp.setValue(80);
-		
-		// Forth is left aligned + normal line spacing (despite differing font)
-		TextPropCollection tppd = stpa.addParagraphTextPropCollection(97);
-		
-		tp = tppd.addWithName("alignment");
-		tp.setValue(0);
-		tp = tppd.addWithName("linespacing");
-		tp.setValue(80);
-		
-		
-		// Now do 4 character styles
-		LinkedList cs = stpa.getCharacterStyles();
-		
-		// First is 30 long, bold and font size
-		TextPropCollection tpca = (TextPropCollection)cs.get(0);
-		tpca.updateTextSize(30);
-		
-		tp = tpca.addWithName("font.size");
-		tp.setValue(20);
-		CharFlagsTextProp cftp = (CharFlagsTextProp)
-			tpca.addWithName("char_flags");
-		assertEquals(0, cftp.getValue());
-		cftp.setSubValue(true, CharFlagsTextProp.BOLD_IDX);
-		assertEquals(1, cftp.getValue());
-		
-		// Second is 28 long, blue and italic
-		TextPropCollection tpcb = stpa.addCharacterTextPropCollection(28);
-		
-		tp = tpcb.addWithName("font.size");
-		tp.setValue(20);
-		tp = tpcb.addWithName("font.color");
-		tp.setValue(0x05000000);
-		cftp = (CharFlagsTextProp)tpcb.addWithName("char_flags");
-		cftp.setSubValue(true, CharFlagsTextProp.ITALIC_IDX);
-		assertEquals(2, cftp.getValue());
-		
-		// Third is 25 long and red
-		TextPropCollection tpcc = stpa.addCharacterTextPropCollection(25);
-		
-		tp = tpcc.addWithName("font.size");
-		tp.setValue(20);
-		tp = tpcc.addWithName("font.color");
-		tp.setValue(0xfe0033ff);
-		
-		// Fourth is 96 long, underlined and different+bigger font 
-		TextPropCollection tpcd = stpa.addCharacterTextPropCollection(96);
-		
-		tp = tpcd.addWithName("font.size");
-		tp.setValue(24);
-		tp = tpcd.addWithName("font.index");
-		tp.setValue(1);
-		cftp = (CharFlagsTextProp)tpcd.addWithName("char_flags");
-		cftp.setSubValue(true, CharFlagsTextProp.UNDERLINE_IDX);
-		assertEquals(4, cftp.getValue());
-		
-		// Fifth is 1 long, underlined and different+bigger font + red
-		TextPropCollection tpce = stpa.addCharacterTextPropCollection(1);
-		
-		tp = tpce.addWithName("font.size");
-		tp.setValue(24);
-		tp = tpce.addWithName("font.index");
-		tp.setValue(1);
-		tp = tpce.addWithName("font.color");
-		tp.setValue(0xfe0033ff);
-		cftp = (CharFlagsTextProp)tpce.addWithName("char_flags");
-		cftp.setSubValue(true, CharFlagsTextProp.UNDERLINE_IDX);
-		assertEquals(4, cftp.getValue());
-		
-		
-		// Check it's as expected
-		assertEquals(4, stpa.getParagraphStyles().size());
-		assertEquals(5, stpa.getCharacterStyles().size());
-		
-		// Compare in detail to b
-		StyleTextPropAtom stpb = new StyleTextPropAtom(data_b,0,data_b.length);
-		stpb.setParentTextSize(data_b_text_len);
-		LinkedList psb = stpb.getParagraphStyles();
-		LinkedList csb = stpb.getCharacterStyles();
-		
-		assertEquals(psb.size(), ps.size());
-		assertEquals(csb.size(), cs.size());
-		
-		// Ensure Paragraph Character styles match
-		for(int z=0; z<2; z++) {
-			LinkedList lla = cs; 
-			LinkedList llb = csb;
-			int upto = 5;
-			if(z == 1) {
-				lla = ps;
-				llb = psb;
-				upto = 4;
-			}
-			
-			for(int i=0; i<upto; i++) {
-				TextPropCollection ca = (TextPropCollection)lla.get(i);
-				TextPropCollection cb = (TextPropCollection)llb.get(i);
-				
-				assertEquals(ca.getCharactersCovered(), cb.getCharactersCovered());
-				assertEquals(ca.getTextPropList().size(), cb.getTextPropList().size());
-				
-				for(int j=0; j<ca.getTextPropList().size(); j++) {
-					TextProp tpa = (TextProp)ca.getTextPropList().get(j);
-					TextProp tpb = (TextProp)cb.getTextPropList().get(j);
-					//System.out.println("TP " + i + " " + j + " " + tpa.getName() + "\t" + tpa.getValue() );
-					assertEquals(tpa.getName(), tpb.getName());
-					assertEquals(tpa.getMask(), tpb.getMask());
-					assertEquals(tpa.getWriteMask(), tpb.getWriteMask());
-					assertEquals(tpa.getValue(), tpb.getValue());
-				}
-				
-				ByteArrayOutputStream ba = new ByteArrayOutputStream();
-				ByteArrayOutputStream bb = new ByteArrayOutputStream();
-				
-				ca.writeOut(ba);
-				cb.writeOut(bb);
-				byte[] cab = ba.toByteArray(); 
-				byte[] cbb = bb.toByteArray();
-				
-				assertEquals(cbb.length, cab.length);
-				for(int j=0; j<cab.length; j++) {
-					//System.out.println("On tp " + z + " " + i + " " + j + "\t" + cab[j] + "\t" + cbb[j]);
-					assertEquals(cbb[j], cab[j]);
-				}
-			}
-		}
-		
 
-		
-		// Check byte level with b
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		stpa.writeOut(baos);
-		byte[] b = baos.toByteArray();
+        // Need 4 paragraph styles
+        LinkedList ps = stpa.getParagraphStyles();
 
-		assertEquals(data_b.length, b.length);
-		for(int i=0; i<data_b.length; i++) {
-			System.out.println(i + "\t" + b[i] + "\t" + data_b[i] + "\t" + Integer.toHexString(b[i]) );
-			assertEquals(data_b[i],b[i]);
-		}
-	}
+        // First is 30 long, left aligned, normal spacing
+        TextPropCollection tppa = (TextPropCollection)ps.get(0);
+        tppa.updateTextSize(30);
+
+        TextProp tp = tppa.addWithName("alignment");
+        tp.setValue(0);
+        tp = tppa.addWithName("linespacing");
+        tp.setValue(80);
+
+        // Second is 28 long, centre aligned and normal spacing
+        TextPropCollection tppb = stpa.addParagraphTextPropCollection(28);
+
+        tp = tppb.addWithName("linespacing");
+        tp.setValue(80);
+
+        // Third is 25 long, right aligned and normal spacing
+        TextPropCollection tppc = stpa.addParagraphTextPropCollection(25);
+
+        tp = tppc.addWithName("alignment");
+        tp.setValue(2);
+        tp = tppc.addWithName("linespacing");
+        tp.setValue(80);
+
+        // Forth is left aligned + normal line spacing (despite differing font)
+        TextPropCollection tppd = stpa.addParagraphTextPropCollection(97);
+
+        tp = tppd.addWithName("alignment");
+        tp.setValue(0);
+        tp = tppd.addWithName("linespacing");
+        tp.setValue(80);
+
+
+        // Now do 4 character styles
+        LinkedList cs = stpa.getCharacterStyles();
+
+        // First is 30 long, bold and font size
+        TextPropCollection tpca = (TextPropCollection)cs.get(0);
+        tpca.updateTextSize(30);
+
+        tp = tpca.addWithName("font.size");
+        tp.setValue(20);
+        CharFlagsTextProp cftp = (CharFlagsTextProp)
+            tpca.addWithName("char_flags");
+        assertEquals(0, cftp.getValue());
+        cftp.setSubValue(true, CharFlagsTextProp.BOLD_IDX);
+        assertEquals(1, cftp.getValue());
+
+        // Second is 28 long, blue and italic
+        TextPropCollection tpcb = stpa.addCharacterTextPropCollection(28);
+
+        tp = tpcb.addWithName("font.size");
+        tp.setValue(20);
+        tp = tpcb.addWithName("font.color");
+        tp.setValue(0x05000000);
+        cftp = (CharFlagsTextProp)tpcb.addWithName("char_flags");
+        cftp.setSubValue(true, CharFlagsTextProp.ITALIC_IDX);
+        assertEquals(2, cftp.getValue());
+
+        // Third is 25 long and red
+        TextPropCollection tpcc = stpa.addCharacterTextPropCollection(25);
+
+        tp = tpcc.addWithName("font.size");
+        tp.setValue(20);
+        tp = tpcc.addWithName("font.color");
+        tp.setValue(0xfe0033ff);
+
+        // Fourth is 96 long, underlined and different+bigger font
+        TextPropCollection tpcd = stpa.addCharacterTextPropCollection(96);
+
+        tp = tpcd.addWithName("font.size");
+        tp.setValue(24);
+        tp = tpcd.addWithName("font.index");
+        tp.setValue(1);
+        cftp = (CharFlagsTextProp)tpcd.addWithName("char_flags");
+        cftp.setSubValue(true, CharFlagsTextProp.UNDERLINE_IDX);
+        assertEquals(4, cftp.getValue());
+
+        // Fifth is 1 long, underlined and different+bigger font + red
+        TextPropCollection tpce = stpa.addCharacterTextPropCollection(1);
+
+        tp = tpce.addWithName("font.size");
+        tp.setValue(24);
+        tp = tpce.addWithName("font.index");
+        tp.setValue(1);
+        tp = tpce.addWithName("font.color");
+        tp.setValue(0xfe0033ff);
+        cftp = (CharFlagsTextProp)tpce.addWithName("char_flags");
+        cftp.setSubValue(true, CharFlagsTextProp.UNDERLINE_IDX);
+        assertEquals(4, cftp.getValue());
+
+
+        // Check it's as expected
+        assertEquals(4, stpa.getParagraphStyles().size());
+        assertEquals(5, stpa.getCharacterStyles().size());
+
+        // Compare in detail to b
+        StyleTextPropAtom stpb = new StyleTextPropAtom(data_b,0,data_b.length);
+        stpb.setParentTextSize(data_b_text_len);
+        LinkedList psb = stpb.getParagraphStyles();
+        LinkedList csb = stpb.getCharacterStyles();
+
+        assertEquals(psb.size(), ps.size());
+        assertEquals(csb.size(), cs.size());
+
+        // Ensure Paragraph Character styles match
+        for(int z=0; z<2; z++) {
+            LinkedList lla = cs;
+            LinkedList llb = csb;
+            int upto = 5;
+            if(z == 1) {
+                lla = ps;
+                llb = psb;
+                upto = 4;
+            }
+
+            for(int i=0; i<upto; i++) {
+                TextPropCollection ca = (TextPropCollection)lla.get(i);
+                TextPropCollection cb = (TextPropCollection)llb.get(i);
+
+                assertEquals(ca.getCharactersCovered(), cb.getCharactersCovered());
+                assertEquals(ca.getTextPropList().size(), cb.getTextPropList().size());
+
+                for(int j=0; j<ca.getTextPropList().size(); j++) {
+                    TextProp tpa = (TextProp)ca.getTextPropList().get(j);
+                    TextProp tpb = (TextProp)cb.getTextPropList().get(j);
+                    //System.out.println("TP " + i + " " + j + " " + tpa.getName() + "\t" + tpa.getValue() );
+                    assertEquals(tpa.getName(), tpb.getName());
+                    assertEquals(tpa.getMask(), tpb.getMask());
+                    assertEquals(tpa.getWriteMask(), tpb.getWriteMask());
+                    assertEquals(tpa.getValue(), tpb.getValue());
+                }
+
+                ByteArrayOutputStream ba = new ByteArrayOutputStream();
+                ByteArrayOutputStream bb = new ByteArrayOutputStream();
+
+                ca.writeOut(ba);
+                cb.writeOut(bb);
+                byte[] cab = ba.toByteArray();
+                byte[] cbb = bb.toByteArray();
+
+                assertEquals(cbb.length, cab.length);
+                for(int j=0; j<cab.length; j++) {
+                    //System.out.println("On tp " + z + " " + i + " " + j + "\t" + cab[j] + "\t" + cbb[j]);
+                    assertEquals(cbb[j], cab[j]);
+                }
+            }
+        }
+
+
+
+        // Check byte level with b
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        stpa.writeOut(baos);
+        byte[] b = baos.toByteArray();
+
+        assertEquals(data_b.length, b.length);
+        for(int i=0; i<data_b.length; i++) {
+            //System.out.println(i + "\t" + b[i] + "\t" + data_b[i] + "\t" + Integer.toHexString(b[i]) );
+            assertEquals(data_b[i],b[i]);
+        }
+    }
 

@@ -1,0 +1,29 @@
+	public Eval evaluate(Eval[] args, int srcCellRow, short srcCellCol) {
+		if(args.length < 3 || args.length > 5) {
+			return ErrorEval.VALUE_INVALID;
+		}
+		
+		try {
+			BaseRef baseRef = evaluateBaseRef(args[0]);
+			int rowOffset = evaluateIntArg(args[1], srcCellRow, srcCellCol);
+			int columnOffset = evaluateIntArg(args[2], srcCellRow, srcCellCol);
+			int height = baseRef.getHeight();
+			int width = baseRef.getWidth();
+			switch(args.length) {
+				case 5:
+					width = evaluateIntArg(args[4], srcCellRow, srcCellCol);
+				case 4:
+					height = evaluateIntArg(args[3], srcCellRow, srcCellCol);
+			}
+			// Zero height or width raises #REF! error
+			if(height == 0 || width == 0) {
+				return ErrorEval.REF_INVALID;
+			}
+			LinearOffsetRange rowOffsetRange = new LinearOffsetRange(rowOffset, height);
+			LinearOffsetRange colOffsetRange = new LinearOffsetRange(columnOffset, width);
+			return createOffset(baseRef, rowOffsetRange, colOffsetRange);
+		} catch (EvaluationException e) {
+			return e.getErrorEval();
+		}
+	}
+

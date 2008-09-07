@@ -1,5 +1,6 @@
-    private static ValueEval evaluateCell(Workbook workbook, Sheet sheet, 
+    private static ValueEval evaluateCell(Workbook workbook, Sheet sheet,
             int srcRowNum, short srcColNum, String cellFormulaText) {
+
         Ptg[] ptgs = FormulaParser.parse(cellFormulaText, workbook);
 
         Stack stack = new Stack();
@@ -8,16 +9,16 @@
             // since we don't know how to handle these yet :(
             Ptg ptg = ptgs[i];
             if (ptg instanceof ControlPtg) {
-               // skip Parentheses, Attr, etc
-               continue;
-			}
+                // skip Parentheses, Attr, etc
+                continue;
+            }
             if (ptg instanceof MemErrPtg) { continue; }
             if (ptg instanceof MissingArgPtg) { continue; }
-            if (ptg instanceof NamePtg) { 
+            if (ptg instanceof NamePtg) {
                 // named ranges, macro functions
                 NamePtg namePtg = (NamePtg) ptg;
                 stack.push(new NameEval(namePtg.getIndex()));
-                continue; 
+                continue;
             }
             if (ptg instanceof NameXPtg) {
                 NameXPtg nameXPtg = (NameXPtg) ptg;
@@ -25,7 +26,7 @@
                 continue;
             }
             if (ptg instanceof UnknownPtg) { continue; }
-
+            Eval opResult;
             if (ptg instanceof OperationPtg) {
                 OperationPtg optg = (OperationPtg) ptg;
 
@@ -41,42 +42,11 @@
                     Eval p = (Eval) stack.pop();
                     ops[j] = p;
                 }
-                Eval opresult = invokeOperation(operation, ops, srcRowNum, srcColNum, workbook, sheet);
-                stack.push(opresult);
+                opResult = invokeOperation(operation, ops, srcRowNum, srcColNum, workbook, sheet);
+            } else {
+                opResult = getEvalForPtg(ptg, sheet, workbook);
             }
-            else if (ptg instanceof RefPtg) {
-                RefPtg refPtg = (RefPtg) ptg;
-                int colIx = refPtg.getColumn();
-                int rowIx = refPtg.getRow();
-                Row row = sheet.getRow(rowIx);
-                Cell cell = (row != null) ? row.getCell(colIx) : null;
-                stack.push(createRef2DEval(refPtg, cell, sheet, workbook));
-            }
-            else if (ptg instanceof Ref3DPtg) {
-                Ref3DPtg refPtg = (Ref3DPtg) ptg;
-                int colIx = refPtg.getColumn();
-                int rowIx = refPtg.getRow();
-                Sheet xsheet = workbook.getSheetAt(
-                		workbook.getSheetIndexFromExternSheetIndex(refPtg.getExternSheetIndex())
-                );
-                Row row = xsheet.getRow(rowIx);
-                Cell cell = (row != null) ? row.getCell(colIx) : null;
-                stack.push(createRef3DEval(refPtg, cell, xsheet, workbook));
-            }
-            else if (ptg instanceof AreaPtg) {
-                AreaPtg ap = (AreaPtg) ptg;
-                AreaEval ae = evaluateAreaPtg(sheet, workbook, ap);
-                stack.push(ae);
-            }
-            else if (ptg instanceof Area3DPtg) {
-                Area3DPtg a3dp = (Area3DPtg) ptg;
-                AreaEval ae = evaluateArea3dPtg(workbook, a3dp);
-                stack.push(ae);
-            }
-            else {
-                Eval ptgEval = getEvalForPtg(ptg);
-                stack.push(ptgEval);
-            }
+            stack.push(opResult);
         }
 
         ValueEval value = ((ValueEval) stack.pop());
@@ -85,9 +55,9 @@
         }
         value = dereferenceValue(value, srcRowNum, srcColNum);
         if (value instanceof BlankEval) {
-        	// Note Excel behaviour here. A blank final final value is converted to zero.  
+            // Note Excel behaviour here. A blank final final value is converted to zero.
             return NumberEval.ZERO;
-            // Formulas _never_ evaluate to blank.  If a formula appears to have evaluated to 
+            // Formulas _never_ evaluate to blank.  If a formula appears to have evaluated to
             // blank, the actual value is empty string. This can be verified with ISBLANK().
         }
         return value;
