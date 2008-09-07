@@ -1,0 +1,35 @@
+    /**
+     * If we clone a sheet containing drawings,
+     * we must allocate a new ID of the drawing group and re-create shape IDs
+     *
+     * See bug #45720.
+     */
+    public void testCloneSheetWithDrawings() {
+        HSSFWorkbook wb1 = HSSFTestDataSamples.openSampleWorkbook("45720.xls");
+
+        HSSFSheet sheet1 = wb1.getSheetAt(0);
+
+        wb1.getWorkbook().findDrawingGroup();
+        DrawingManager2 dm1 = wb1.getWorkbook().getDrawingManager();
+
+        wb1.cloneSheet(0);
+
+        HSSFWorkbook wb2 = HSSFTestDataSamples.writeOutAndReadBack(wb1);
+        wb2.getWorkbook().findDrawingGroup();
+        DrawingManager2 dm2 = wb2.getWorkbook().getDrawingManager();
+
+        //check EscherDggRecord - a workbook-level registry of drawing objects
+        assertEquals(dm1.getDgg().getMaxDrawingGroupId() + 1, dm2.getDgg().getMaxDrawingGroupId());
+
+        HSSFSheet sheet2 = wb2.getSheetAt(1);
+
+        //check that id of the drawing group was updated
+        EscherDgRecord dg1 = (EscherDgRecord)sheet1.getDrawingEscherAggregate().findFirstWithId(EscherDgRecord.RECORD_ID);
+        EscherDgRecord dg2 = (EscherDgRecord)sheet2.getDrawingEscherAggregate().findFirstWithId(EscherDgRecord.RECORD_ID);
+        int dg_id_1 = dg1.getOptions() >> 4;
+        int dg_id_2 = dg2.getOptions() >> 4;
+        assertEquals(dg_id_1 + 1, dg_id_2);
+
+        //TODO: check shapeId in the cloned sheet
+    }
+
