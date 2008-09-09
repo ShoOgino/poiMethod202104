@@ -4,22 +4,35 @@
 	 * the function return value).
 	 */
 	private void transformNode(ParseNode node, byte desiredOperandClass,
-			boolean callerForceArrayFlag, boolean isDirectChildOfValueOperator) {
+			boolean callerForceArrayFlag) {
 		Ptg token = node.getToken();
 		ParseNode[] children = node.getChildren();
+		boolean isSimpleValueFunc = isSimpleValueFunction(token);
+		
+		if (isSimpleValueFunc) {
+			boolean localForceArray = desiredOperandClass == Ptg.CLASS_ARRAY;
+			for (int i = 0; i < children.length; i++) {
+				transformNode(children[i], desiredOperandClass, localForceArray);
+			}
+			setSimpleValueFuncClass((AbstractFunctionPtg) token, desiredOperandClass, callerForceArrayFlag);
+			return;
+		}
+		
 		if (token instanceof ValueOperatorPtg || token instanceof ControlPtg) {
 			// Value Operator Ptgs and Control are base tokens, so token will be unchanged
-			
 			// but any child nodes are processed according to desiredOperandClass and callerForceArrayFlag
+			
+			// As per OOO documentation Sec 3.2.4 "Token Class Transformation", "Step 1"
+			// All direct operands of value operators that are initially 'R' type will 
+			// be converted to 'V' type.
+			byte localDesiredOperandClass = desiredOperandClass == Ptg.CLASS_REF ? Ptg.CLASS_VALUE : desiredOperandClass;
 			for (int i = 0; i < children.length; i++) {
-				ParseNode child = children[i];
-				transformNode(child, desiredOperandClass, callerForceArrayFlag, true);
+				transformNode(children[i], localDesiredOperandClass, callerForceArrayFlag);
 			}
 			return;
 		}
 		if (token instanceof AbstractFunctionPtg) {
-			transformFunctionNode((AbstractFunctionPtg) token, children, desiredOperandClass,
-					callerForceArrayFlag);
+			transformFunctionNode((AbstractFunctionPtg) token, children, desiredOperandClass, callerForceArrayFlag);
 			return;
 		}
 		if (children.length > 0) {
@@ -29,14 +42,6 @@
 		if (token.isBaseToken()) {
 			// nothing to do
 			return;
-		}
-		if (isDirectChildOfValueOperator) {
-			// As per OOO documentation Sec 3.2.4 "Token Class Transformation", "Step 1"
-			// All direct operands of value operators that are initially 'R' type will 
-			// be converted to 'V' type.
-			if (token.getPtgClass() == Ptg.CLASS_REF) {
-				token.setClass(Ptg.CLASS_VALUE); 
-			}
 		}
 		token.setClass(transformClass(token.getPtgClass(), desiredOperandClass, callerForceArrayFlag));
 	}
