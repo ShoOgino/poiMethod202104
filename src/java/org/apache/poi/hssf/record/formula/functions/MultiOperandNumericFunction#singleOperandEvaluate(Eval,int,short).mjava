@@ -1,0 +1,30 @@
+    protected final ValueEval singleOperandEvaluate(Eval eval, int srcRow, short srcCol) {
+
+        if (eval instanceof AreaEval) {
+            AreaEval ae = (AreaEval) eval;
+            if (ae.contains(srcRow, srcCol)) { // circular ref!
+                return ErrorEval.CIRCULAR_REF_ERROR;
+            }
+            if (ae.isRow()) {
+                if (ae.isColumn()) {
+                	return ae.getRelativeValue(0, 0);
+                }
+                if (ae.containsColumn(srcCol)) {
+                    ValueEval ve = ae.getValueAt(ae.getFirstRow(), srcCol);
+                    ve = getXlator().attemptXlateToNumeric(ve);
+                    return getXlator().attemptXlateToNumeric(ve);
+                }
+                return ErrorEval.VALUE_INVALID;
+            }
+            if (ae.isColumn()) {
+                if (ae.containsRow(srcRow)) {
+                    ValueEval ve = ae.getValueAt(srcRow, ae.getFirstColumn());
+                    return getXlator().attemptXlateToNumeric(ve);
+                }
+                return ErrorEval.VALUE_INVALID;
+            }
+            return ErrorEval.VALUE_INVALID;
+        }
+        return getXlator().attemptXlateToNumeric((ValueEval) eval);
+    }
+
