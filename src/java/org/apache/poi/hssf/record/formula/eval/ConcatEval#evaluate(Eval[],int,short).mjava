@@ -3,20 +3,23 @@
     		return ErrorEval.VALUE_INVALID;
     	}
         StringBuffer sb = new StringBuffer();
-        for (int i = 0; i < 2; i++) { 
-            
-            ValueEval ve = singleOperandEvaluate(args[i], srcRow, srcCol);
-            if (ve instanceof StringValueEval) {
-                StringValueEval sve = (StringValueEval) ve;
-                sb.append(sve.getStringValue());
-            }
-            else if (ve instanceof BlankEval) {
-                // do nothing
-            }
-            else { // must be an error eval
-                return ve;
-            }
-        }
+        try {
+			for (int i = 0; i < 2; i++) { 
+			    
+			    ValueEval ve = OperandResolver.getSingleValue(args[i], srcRow, srcCol);
+			    if (ve instanceof StringValueEval) {
+			        StringValueEval sve = (StringValueEval) ve;
+			        sb.append(sve.getStringValue());
+			    } else if (ve instanceof BlankEval) {
+			        // do nothing
+			    } else { // must be an error eval
+			        throw new RuntimeException("Unexpected value type (" 
+			        		+ ve.getClass().getName() + ")");
+			    }
+			}
+		} catch (EvaluationException e) {
+			return e.getErrorEval();
+		}
         
         return new StringEval(sb.toString());
     }
