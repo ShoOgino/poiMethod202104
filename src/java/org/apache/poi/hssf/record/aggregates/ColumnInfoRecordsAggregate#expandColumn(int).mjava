@@ -1,0 +1,36 @@
+	public void expandColumn(int columnIndex) {
+		int idx = findColInfoIdx(columnIndex, 0);
+		if (idx == -1) {
+			return;
+		}
+
+		// If it is already expanded do nothing.
+		if (!isColumnGroupCollapsed(idx)) {
+			return;
+		}
+
+		// Find the start/end of the group.
+		int startIdx = findStartOfColumnOutlineGroup(idx);
+		int endIdx = findEndOfColumnOutlineGroup(idx);
+
+		// expand:
+		// colapsed bit must be unset
+		// hidden bit gets unset _if_ surrounding groups are expanded you can determine
+		//   this by looking at the hidden bit of the enclosing group.  You will have
+		//   to look at the start and the end of the current group to determine which
+		//   is the enclosing group
+		// hidden bit only is altered for this outline level.  ie.  don't uncollapse contained groups
+		ColumnInfoRecord columnInfo = getColInfo(endIdx);
+		if (!isColumnGroupHiddenByParent(idx)) {
+			int outlineLevel = columnInfo.getOutlineLevel();
+			for (int i = startIdx; i <= endIdx; i++) {
+				ColumnInfoRecord ci = getColInfo(i);
+				if (outlineLevel == ci.getOutlineLevel())
+					ci.setHidden(false);
+			}
+		}
+
+		// Write collapse flag (stored in a single col info record after this outline group)
+		setColumn(columnInfo.getLastColumn() + 1, null, null, null, null, Boolean.FALSE);
+	}
+
