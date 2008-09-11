@@ -9,51 +9,17 @@
 			int height = ae.getHeight();
 			for (int rrIx=0; rrIx<height; rrIx++) {
 				for (int rcIx=0; rcIx<width; rcIx++) {
-					ValueEval ve1 = ae.getRelativeValue(rrIx, rcIx);
-					 /*
-					 * TODO: For an AreaEval, we are constructing a RefEval
-					 * per element.
-					 * For now this is a tempfix solution since this may
-					 * require a more generic fix at the level of
-					 * HSSFFormulaEvaluator where we store an array
-					 * of RefEvals as the "values" array.
-					 */
-					RefEval re = new Ref2DEval(null, ve1);
-					ValueEval ve = attemptXlateToNumeric(re);
-					if (ve instanceof ErrorEval) {
-						throw new EvaluationException((ErrorEval)ve);
-					}
-					if (ve instanceof BlankEval) {
-						// note - blanks are ignored, so returned array will be smaller.
-						continue;
-					}
-					if (ve instanceof NumericValueEval) {
-						NumericValueEval nve = (NumericValueEval) ve;
-						temp.add(nve.getNumberValue());
-					} else {
-						throw new RuntimeException("Unexpected value class (" + ve.getClass().getName() + ")");
-					}
+					ValueEval ve = ae.getRelativeValue(rrIx, rcIx);
+					collectValue(ve, true, temp);
 				}
 			}
 			return;
 		}
-
-		// for ValueEvals other than AreaEval
-		ValueEval ve = attemptXlateToNumeric((ValueEval) operand);
-
-		if (ve instanceof NumericValueEval) {
-			NumericValueEval nve = (NumericValueEval) ve;
-			temp.add(nve.getNumberValue());
+		if (operand instanceof RefEval) {
+			RefEval re = (RefEval) operand;
+			collectValue(re.getInnerValueEval(), true, temp);
 			return;
 		}
-
-		if (ve instanceof BlankEval) {
-			// ignore blanks
-			return;
-		}
-		if (ve instanceof ErrorEval) {
-			throw new EvaluationException((ErrorEval)ve);
-		}
-		throw new RuntimeException("Unexpected value class (" + ve.getClass().getName() + ")");
+		collectValue((ValueEval)operand, false, temp);
 	}
 
