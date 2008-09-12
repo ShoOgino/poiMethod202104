@@ -4,7 +4,7 @@
      * StringPtg, BoolPtg <br/>special Note: OperationPtg subtypes cannot be
      * passed here!
      */
-    private Eval getEvalForPtg(Ptg ptg, HSSFSheet sheet) {
+    private Eval getEvalForPtg(Ptg ptg, int sheetIndex) {
         if (ptg instanceof NamePtg) {
             // named ranges, macro functions
             NamePtg namePtg = (NamePtg) ptg;
@@ -19,7 +19,7 @@
                 return new NameEval(nameRecord.getNameText());
             }
             if (nameRecord.hasFormula()) {
-                return evaluateNameFormula(nameRecord.getNameDefinition(), sheet);
+                return evaluateNameFormula(nameRecord.getNameDefinition(), sheetIndex);
             }
 
             throw new RuntimeException("Don't now how to evalate name '" + nameRecord.getNameText() + "'");
@@ -27,22 +27,6 @@
         if (ptg instanceof NameXPtg) {
             NameXPtg nameXPtg = (NameXPtg) ptg;
             return new NameXEval(nameXPtg.getSheetRefIndex(), nameXPtg.getNameIndex());
-        }
-        if (ptg instanceof RefPtg) {
-            return new LazyRefEval(((RefPtg) ptg), sheet, this);
-        }
-        if (ptg instanceof Ref3DPtg) {
-            Ref3DPtg refPtg = (Ref3DPtg) ptg;
-            HSSFSheet xsheet = getOtherSheet(refPtg.getExternSheetIndex());
-            return new LazyRefEval(refPtg, xsheet, createEvaluatorForAnotherSheet(xsheet));
-        }
-        if (ptg instanceof AreaPtg) {
-            return new LazyAreaEval(((AreaPtg) ptg), sheet, this);
-        }
-        if (ptg instanceof Area3DPtg) {
-            Area3DPtg a3dp = (Area3DPtg) ptg;
-            HSSFSheet xsheet = getOtherSheet(a3dp.getExternSheetIndex());
-            return new LazyAreaEval(a3dp, xsheet, createEvaluatorForAnotherSheet(xsheet));
         }
 
         if (ptg instanceof IntPtg) {
@@ -60,10 +44,31 @@
         if (ptg instanceof ErrPtg) {
             return ErrorEval.valueOf(((ErrPtg) ptg).getErrorCode());
         }
+        HSSFSheet sheet = _workbook.getSheetAt(sheetIndex);
+        if (ptg instanceof RefPtg) {
+            return new LazyRefEval(((RefPtg) ptg), sheet, this);
+        }
+        if (ptg instanceof AreaPtg) {
+            return new LazyAreaEval(((AreaPtg) ptg), sheet, this);
+        }
+        if (ptg instanceof Ref3DPtg) {
+            Ref3DPtg refPtg = (Ref3DPtg) ptg;
+            HSSFSheet xsheet = getOtherSheet(refPtg.getExternSheetIndex());
+            return new LazyRefEval(refPtg, xsheet, this);
+        }
+        if (ptg instanceof Area3DPtg) {
+            Area3DPtg a3dp = (Area3DPtg) ptg;
+            HSSFSheet xsheet = getOtherSheet(a3dp.getExternSheetIndex());
+            return new LazyAreaEval(a3dp, xsheet, this);
+        }
+
         if (ptg instanceof UnknownPtg) {
-            // TODO - remove UnknownPtg
+            // POI uses UnknownPtg when the encoded Ptg array seems to be corrupted.
+            // This seems to occur in very rare cases (e.g. unused name formulas in bug 44774, attachment 21790)
+            // In any case, formulas are re-parsed before execution, so UnknownPtg should not get here 
             throw new RuntimeException("UnknownPtg not allowed");
         }
+        
         throw new RuntimeException("Unexpected ptg class (" + ptg.getClass().getName() + ")");
     }
 

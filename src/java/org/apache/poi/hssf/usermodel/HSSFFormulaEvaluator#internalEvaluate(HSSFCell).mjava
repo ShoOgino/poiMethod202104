@@ -2,30 +2,33 @@
      * Dev. Note: Internal evaluate must be passed only a formula cell
      * else a runtime exception will be thrown somewhere inside the method.
      * (Hence this is a private method.)
+     * @return never <code>null</code>, never {@link BlankEval}
      */
-    private ValueEval internalEvaluate(HSSFCell srcCell, HSSFSheet sheet) {
+    private ValueEval internalEvaluate(HSSFCell srcCell) {
         int srcRowNum = srcCell.getRowIndex();
         int srcColNum = srcCell.getCellNum();
 
         ValueEval result;
 
-        int sheetIndex = _workbook.getSheetIndex(sheet);
+        int sheetIndex = _workbook.findSheetIndex(srcCell.getSheet());
         result = _cache.getValue(sheetIndex, srcRowNum, srcColNum);
         if (result != null) {
             return result;
         }
         _evaluationCounter.value++;
+        _evaluationCounter.depth++;
 
         EvaluationCycleDetector tracker = EvaluationCycleDetectorManager.getTracker();
 
-        if(!tracker.startEvaluate(_workbook, sheet, srcRowNum, srcColNum)) {
+        if(!tracker.startEvaluate(_workbook, sheetIndex, srcRowNum, srcColNum)) {
             return ErrorEval.CIRCULAR_REF_ERROR;
         }
         try {
-            result = evaluateCell(srcRowNum, (short)srcColNum, srcCell.getCellFormula());
+            result = evaluateCell(sheetIndex, srcRowNum, (short)srcColNum, srcCell.getCellFormula());
         } finally {
-            tracker.endEvaluate(_workbook, sheet, srcRowNum, srcColNum);
+            tracker.endEvaluate(_workbook, sheetIndex, srcRowNum, srcColNum);
             _cache.setValue(sheetIndex, srcRowNum, srcColNum, result);
+            _evaluationCounter.depth--;
         }
         if (isDebugLogEnabled()) {
             String sheetName = _workbook.getSheetName(sheetIndex);
