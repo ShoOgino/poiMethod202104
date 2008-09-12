@@ -1,28 +1,27 @@
-    public int serialize(int offset, byte [] data) {
+	public int serialize(int offset, byte [] data) {
 
-        int dataSize = getDataSize();
+		int dataSize = getDataSize();
 
-        LittleEndian.putShort(data, 0 + offset, sid);
-        LittleEndian.putUShort(data, 2 + offset, dataSize);
-        LittleEndian.putUShort(data, 4 + offset, getRow());
-        LittleEndian.putShort(data, 6 + offset, getColumn());
-        LittleEndian.putShort(data, 8 + offset, getXFIndex());
+		LittleEndian.putShort(data, 0 + offset, sid);
+		LittleEndian.putUShort(data, 2 + offset, dataSize);
+		LittleEndian.putUShort(data, 4 + offset, getRow());
+		LittleEndian.putShort(data, 6 + offset, getColumn());
+		LittleEndian.putShort(data, 8 + offset, getXFIndex());
 
-        //only reserialize if the value is still NaN and we have old nan data
-        if (Double.isNaN(getValue()) && value_data != null) {
-            System.arraycopy(value_data,0,data,10 + offset,value_data.length);
-        } else {
-            LittleEndian.putDouble(data, 10 + offset, field_4_value);
-        }
+		if (specialCachedValue == null) {
+			LittleEndian.putDouble(data, 10 + offset, field_4_value);
+		} else {
+			specialCachedValue.serialize(data, 10+offset);
+		}
 
-        LittleEndian.putShort(data, 18 + offset, getOptions());
+		LittleEndian.putShort(data, 18 + offset, getOptions());
 
-        //when writing the chn field (offset 20), it's supposed to be 0 but ignored on read
-        //Microsoft Excel Developer's Kit Page 318
-        LittleEndian.putInt(data, 20 + offset, 0);
-        int formulaTokensSize = Ptg.getEncodedSizeWithoutArrayData(field_8_parsed_expr);
-        LittleEndian.putUShort(data, 24 + offset, formulaTokensSize);
-        Ptg.serializePtgs(field_8_parsed_expr, data, 26+offset);
-        return 4 + dataSize;
-    }
+		//when writing the chn field (offset 20), it's supposed to be 0 but ignored on read
+		//Microsoft Excel Developer's Kit Page 318
+		LittleEndian.putInt(data, 20 + offset, 0);
+		int formulaTokensSize = Ptg.getEncodedSizeWithoutArrayData(field_8_parsed_expr);
+		LittleEndian.putUShort(data, 24 + offset, formulaTokensSize);
+		Ptg.serializePtgs(field_8_parsed_expr, data, 26+offset);
+		return 4 + dataSize;
+	}
 

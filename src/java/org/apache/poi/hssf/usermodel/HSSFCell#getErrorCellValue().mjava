@@ -2,18 +2,17 @@
      * get the value of the cell as an error code.  For strings, numbers, and booleans, we throw an exception.
      * For blank cells we return a 0.
      */
-
-    public byte getErrorCellValue()
-    {
-        if (cellType == CELL_TYPE_ERROR)
-        {
-            return (( BoolErrRecord ) record).getErrorValue();
+    public byte getErrorCellValue() {
+        switch(cellType) {
+            case CELL_TYPE_ERROR:
+                return (( BoolErrRecord ) record).getErrorValue();
+            default:
+                throw typeMismatch(CELL_TYPE_ERROR, cellType, false);
+            case CELL_TYPE_FORMULA:
+                break;
         }
-        if (cellType == CELL_TYPE_BLANK)
-        {
-            return ( byte ) 0;
-        }
-        throw new NumberFormatException(
-            "You cannot get an error value from a non-error cell");
+        FormulaRecord fr = ((FormulaRecordAggregate)record).getFormulaRecord();
+        checkFormulaCachedValueType(CELL_TYPE_ERROR, fr);
+        return (byte) fr.getCachedErrorValue();
     }
 

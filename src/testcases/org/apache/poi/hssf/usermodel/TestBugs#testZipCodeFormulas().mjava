@@ -14,63 +14,59 @@
         c1.setCellFormula("70164");
         c2.setCellFormula("\"70164\"");
         c3.setCellFormula("\"90210\"");
-        
+
         // Check the formulas
         assertEquals("70164.0", c1.getCellFormula());
         assertEquals("\"70164\"", c2.getCellFormula());
-        
+
         // And check the values - blank
-        assertEquals(0.0, c1.getNumericCellValue(), 0.00001);
-        assertEquals("", c1.getRichStringCellValue().getString());
-        assertEquals(0.0, c2.getNumericCellValue(), 0.00001);
-        assertEquals("", c2.getRichStringCellValue().getString());
-        assertEquals(0.0, c3.getNumericCellValue(), 0.00001);
-        assertEquals("", c3.getRichStringCellValue().getString());
-        
+        confirmCachedValue(0.0, c1);
+        confirmCachedValue(0.0, c2);
+        confirmCachedValue(0.0, c3);
+
         // Try changing the cached value on one of the string
         //  formula cells, so we can see it updates properly
         c3.setCellValue(new HSSFRichTextString("test"));
-        assertEquals(0.0, c3.getNumericCellValue(), 0.00001);
-        assertEquals("test", c3.getRichStringCellValue().getString());
-        
-        
+        confirmCachedValue("test", c3);
+        try {
+            c3.getNumericCellValue();
+            throw new AssertionFailedError("exception should have been thrown");
+        } catch (IllegalStateException e) {
+            assertEquals("Cannot get a numeric value from a text formula cell", e.getMessage());
+        }
+
+
         // Now evaluate, they should all be changed
         HSSFFormulaEvaluator eval = new HSSFFormulaEvaluator(s, wb);
         eval.evaluateFormulaCell(c1);
         eval.evaluateFormulaCell(c2);
         eval.evaluateFormulaCell(c3);
-        
+
         // Check that the cells now contain
         //  the correct values
-        assertEquals(70164.0, c1.getNumericCellValue(), 0.00001);
-        assertEquals("", c1.getRichStringCellValue().getString());
-        assertEquals(0.0, c2.getNumericCellValue(), 0.00001);
-        assertEquals("70164", c2.getRichStringCellValue().getString());
-        assertEquals(0.0, c3.getNumericCellValue(), 0.00001);
-        assertEquals("90210", c3.getRichStringCellValue().getString());
-  
-        
+        confirmCachedValue(70164.0, c1);
+        confirmCachedValue("70164", c2);
+        confirmCachedValue("90210", c3);
+
+
         // Write and read
         HSSFWorkbook nwb = writeOutAndReadBack(wb);
         HSSFSheet ns = nwb.getSheetAt(0);
         HSSFCell nc1 = ns.getRow(0).getCell(0);
         HSSFCell nc2 = ns.getRow(0).getCell(1);
         HSSFCell nc3 = ns.getRow(0).getCell(2);
-        
+
         // Re-check
-        assertEquals(70164.0, nc1.getNumericCellValue(), 0.00001);
-        assertEquals("", nc1.getRichStringCellValue().getString());
-        assertEquals(0.0, nc2.getNumericCellValue(), 0.00001);
-        assertEquals("70164", nc2.getRichStringCellValue().getString());
-        assertEquals(0.0, nc3.getNumericCellValue(), 0.00001);
-        assertEquals("90210", nc3.getRichStringCellValue().getString());
-        
+        confirmCachedValue(70164.0, nc1);
+        confirmCachedValue("70164", nc2);
+        confirmCachedValue("90210", nc3);
+
         CellValueRecordInterface[] cvrs = ns.getSheet().getValueRecords();
         for (int i = 0; i < cvrs.length; i++) {
             CellValueRecordInterface cvr = cvrs[i];
             if(cvr instanceof FormulaRecordAggregate) {
                 FormulaRecordAggregate fr = (FormulaRecordAggregate)cvr;
-                
+
                 if(i == 0) {
                     assertEquals(70164.0, fr.getFormulaRecord().getValue(), 0.0001);
                     assertNull(fr.getStringRecord());

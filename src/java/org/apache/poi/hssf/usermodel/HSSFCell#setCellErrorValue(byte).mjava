@@ -1,20 +1,24 @@
     /**
      * set a error value for the cell
      *
-     * @param value the error value to set this cell to.  For formulas we'll set the
-     *        precalculated value ??? IS THIS RIGHT??? , for errors we'll set
+     * @param errorCode the error value to set this cell to.  For formulas we'll set the
+     *        precalculated value , for errors we'll set
      *        its value. For other types we will change the cell to an error
      *        cell and set its value.
      */
-
-    public void setCellErrorValue(byte value)
-    {
+    public void setCellErrorValue(byte errorCode) {
         int row=record.getRow();
         short col=record.getColumn();
         short styleIndex=record.getXFIndex();
-        if (cellType != CELL_TYPE_ERROR) {
-            setCellType(CELL_TYPE_ERROR, false, row, col, styleIndex);
+        switch (cellType) {
+            default:
+                setCellType(CELL_TYPE_ERROR, false, row, col, styleIndex);
+            case CELL_TYPE_ERROR:
+                (( BoolErrRecord ) record).setValue(errorCode);
+                break;
+            case CELL_TYPE_FORMULA:
+                ((FormulaRecordAggregate)record).getFormulaRecord().setCachedResultErrorCode(errorCode);
+                break;
         }
-        (( BoolErrRecord ) record).setValue(value);
     }
 
