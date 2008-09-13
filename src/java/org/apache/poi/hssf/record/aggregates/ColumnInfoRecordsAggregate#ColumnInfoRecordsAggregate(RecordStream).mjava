@@ -1,11 +1,21 @@
-    public ColumnInfoRecordsAggregate(RecordStream rs) {
-        this();
-        
-        while(rs.peekNextClass() == ColumnInfoRecord.class) {
-        	records.add(rs.getNext());
-        }
-        if (records.size() < 1) {
-        	throw new RuntimeException("No column info records found");
-        }
-   }
+	public ColumnInfoRecordsAggregate(RecordStream rs) {
+		this();
+
+		boolean isInOrder = true;
+		ColumnInfoRecord cirPrev = null;
+		while(rs.peekNextClass() == ColumnInfoRecord.class) {
+			ColumnInfoRecord cir = (ColumnInfoRecord) rs.getNext();
+			records.add(cir);
+			if (cirPrev != null && CIRComparator.compareColInfos(cirPrev, cir) > 0) {
+				isInOrder = false;
+			}
+			cirPrev = cir;
+		}
+		if (records.size() < 1) {
+			throw new RuntimeException("No column info records found");
+		}
+		if (!isInOrder) {
+			Collections.sort(records, CIRComparator.instance);
+		}
+	}
 

@@ -5,39 +5,40 @@
      *  all comments after performing this action!
      */
     public void removeCellComment() {
-    	HSSFComment comment = findCellComment(sheet, record.getRow(), record.getColumn());
-		this.comment = null;
-    	
-    	if(comment == null) {
-    		// Nothing to do
-    		return;
-    	}
-    	
-    	// Zap the underlying NoteRecord
-    	sheet.getRecords().remove(comment.getNoteRecord());
-    	
-    	// If we have a TextObjectRecord, is should
-    	//  be proceeed by:
-    	// MSODRAWING with container
-    	// OBJ
-    	// MSODRAWING with EscherTextboxRecord
-    	if(comment.getTextObjectRecord() != null) {
-    		TextObjectRecord txo = comment.getTextObjectRecord();
-    		int txoAt = sheet.getRecords().indexOf(txo);
-    		
-    		if(sheet.getRecords().get(txoAt-3) instanceof DrawingRecord &&
-    			sheet.getRecords().get(txoAt-2) instanceof ObjRecord &&
-    			sheet.getRecords().get(txoAt-1) instanceof DrawingRecord) {
-    			// Zap these, in reverse order
-    			sheet.getRecords().remove(txoAt-1);
-    			sheet.getRecords().remove(txoAt-2);
-    			sheet.getRecords().remove(txoAt-3);
-    		} else {
-    			throw new IllegalStateException("Found the wrong records before the TextObjectRecord, can't remove comment");
-    		}
-    		
-    		// Now remove the text record
-    		sheet.getRecords().remove(txo);
-    	}
+        HSSFComment comment = findCellComment(sheet.getSheet(), record.getRow(), record.getColumn());
+        this.comment = null;
+
+        if(comment == null) {
+            // Nothing to do
+            return;
+        }
+
+        // Zap the underlying NoteRecord
+        List sheetRecords = sheet.getSheet().getRecords();
+        sheetRecords.remove(comment.getNoteRecord());
+
+        // If we have a TextObjectRecord, is should
+        //  be proceeed by:
+        // MSODRAWING with container
+        // OBJ
+        // MSODRAWING with EscherTextboxRecord
+        if(comment.getTextObjectRecord() != null) {
+            TextObjectRecord txo = comment.getTextObjectRecord();
+            int txoAt = sheetRecords.indexOf(txo);
+
+            if(sheetRecords.get(txoAt-3) instanceof DrawingRecord &&
+                sheetRecords.get(txoAt-2) instanceof ObjRecord &&
+                sheetRecords.get(txoAt-1) instanceof DrawingRecord) {
+                // Zap these, in reverse order
+                sheetRecords.remove(txoAt-1);
+                sheetRecords.remove(txoAt-2);
+                sheetRecords.remove(txoAt-3);
+            } else {
+                throw new IllegalStateException("Found the wrong records before the TextObjectRecord, can't remove comment");
+            }
+
+            // Now remove the text record
+            sheetRecords.remove(txo);
+        }
     }
 

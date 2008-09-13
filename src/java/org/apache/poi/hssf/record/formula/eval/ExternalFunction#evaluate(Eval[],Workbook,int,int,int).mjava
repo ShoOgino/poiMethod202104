@@ -1,0 +1,28 @@
+	public ValueEval evaluate(Eval[] args, Workbook workbook, 
+			int srcCellSheet, int srcCellRow,int srcCellCol) {
+		
+		int nIncomingArgs = args.length;
+		if(nIncomingArgs < 1) {
+			throw new RuntimeException("function name argument missing");
+		}
+		
+		Eval nameArg = args[0];
+		FreeRefFunction targetFunc;
+		try {
+			if (nameArg instanceof NameEval) {
+				targetFunc = findInternalUserDefinedFunction((NameEval) nameArg);
+			} else if (nameArg instanceof NameXEval) {
+				targetFunc = findExternalUserDefinedFunction(workbook, (NameXEval) nameArg);
+			} else {
+				throw new RuntimeException("First argument should be a NameEval, but got ("
+						+ nameArg.getClass().getName() + ")");
+			}
+		} catch (EvaluationException e) {
+			return e.getErrorEval();
+		}
+		int nOutGoingArgs = nIncomingArgs -1;
+		Eval[] outGoingArgs = new Eval[nOutGoingArgs];
+		System.arraycopy(args, 1, outGoingArgs, 0, nOutGoingArgs);
+		return targetFunc.evaluate(outGoingArgs, workbook, srcCellSheet, srcCellRow, srcCellCol);
+	}
+

@@ -1,0 +1,38 @@
+	private void processTestSheet(HSSFWorkbook workbook, String sheetName) {
+		HSSFSheet sheet = workbook.getSheetAt(0);
+		HSSFFormulaEvaluator evaluator = new HSSFFormulaEvaluator(workbook);
+		int maxRows = sheet.getLastRowNum()+1;
+		int result = Result.NO_EVALUATIONS_FOUND; // so far
+
+		for(int rowIndex=0; rowIndex<maxRows; rowIndex++) {
+			HSSFRow r = sheet.getRow(rowIndex);
+			if(r == null) {
+				continue;
+			}
+			HSSFCell c = r.getCell(SS.COLUMN_INDEX_EVALUATION);
+			if (c == null || c.getCellType() != HSSFCell.CELL_TYPE_FORMULA) {
+				continue;
+			}
+			CellValue actualValue = evaluator.evaluate(c);
+			HSSFCell expectedValueCell = r.getCell(SS.COLUMN_INDEX_EXPECTED_RESULT);
+
+			String msgPrefix = formatTestCaseDetails(sheetName, r.getRowNum(), c);
+			try {
+				confirmExpectedResult(msgPrefix, expectedValueCell, actualValue);
+				_evaluationSuccessCount ++;
+				if(result != Result.SOME_EVALUATIONS_FAILED) {
+					result = Result.ALL_EVALUATIONS_SUCCEEDED;
+				}
+			} catch (RuntimeException e) {
+				_evaluationFailureCount ++;
+				printShortStackTrace(System.err, e);
+				result = Result.SOME_EVALUATIONS_FAILED;
+			} catch (AssertionFailedError e) {
+				_evaluationFailureCount ++;
+				printShortStackTrace(System.err, e);
+				result = Result.SOME_EVALUATIONS_FAILED;
+			}
+
+		}
+	}
+

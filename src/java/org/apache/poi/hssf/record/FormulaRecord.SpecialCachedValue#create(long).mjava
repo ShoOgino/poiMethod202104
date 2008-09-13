@@ -1,0 +1,27 @@
+		/**
+		 * @return <code>null</code> if the double value encoded by <tt>valueLongBits</tt> 
+		 * is a normal (non NaN) double value.
+		 */
+		public static SpecialCachedValue create(long valueLongBits) {
+			if ((BIT_MARKER & valueLongBits) != BIT_MARKER) {
+				return null;
+			}
+
+			byte[] result = new byte[VARIABLE_DATA_LENGTH];
+			long x = valueLongBits;
+			for (int i=0; i<VARIABLE_DATA_LENGTH; i++) {
+				result[i] = (byte) x;
+				x >>= 8;
+			}
+			switch (result[0]) {
+				case STRING:
+				case BOOLEAN:
+				case ERROR_CODE:
+				case EMPTY:
+					break;
+				default:
+					throw new RecordFormatException("Bad special value code (" + result[0] + ")");
+			}
+			return new SpecialCachedValue(result);
+		}
+
