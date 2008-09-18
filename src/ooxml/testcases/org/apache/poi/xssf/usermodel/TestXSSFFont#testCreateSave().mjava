@@ -1,0 +1,62 @@
+	/**
+	 * Tests that we can define fonts to a new
+	 *  file, save, load, and still see them
+	 * @throws Exception
+	 */
+	public void testCreateSave() throws Exception {
+		XSSFWorkbook wb = new XSSFWorkbook();
+		XSSFSheet s1 = (XSSFSheet)wb.createSheet();
+		Row r1 = s1.createRow(0);
+		Cell r1c1 = r1.createCell(0);
+		r1c1.setCellValue(2.2);
+
+		assertEquals(1, wb.getNumberOfFonts());
+
+		XSSFFont font=wb.createFont();
+		font.setBold(true);
+		font.setStrikeout(true);
+		font.setColor(IndexedColors.YELLOW.getIndex());
+		font.setFontName("Courier");
+        wb.createCellStyle().setFont(font);
+        assertEquals(2, wb.getNumberOfFonts());
+
+		CellStyle cellStyleTitle=wb.createCellStyle();
+		cellStyleTitle.setFont(font);
+		r1c1.setCellStyle(cellStyleTitle);
+
+		// Save and re-load
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		wb.write(baos);
+		ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+
+		wb = new XSSFWorkbook(Package.open(bais));
+		s1 = (XSSFSheet)wb.getSheetAt(0);
+
+		assertEquals(2, wb.getNumberOfFonts());
+		assertNotNull(s1.getRow(0).getCell(0).getCellStyle().getFont(wb));
+		assertEquals(IndexedColors.YELLOW.getIndex(), s1.getRow(0).getCell(0).getCellStyle().getFont(wb).getColor());
+		assertEquals("Courier", s1.getRow(0).getCell(0).getCellStyle().getFont(wb).getFontName());
+
+		// Now add an orphaned one
+		XSSFFont font2 = wb.createFont();
+		font2.setItalic(true);
+		font2.setFontHeightInPoints((short)15);
+		wb.createCellStyle().setFont(font2);
+        assertEquals(3, wb.getNumberOfFonts());
+
+		// Save and re-load
+		baos = new ByteArrayOutputStream();
+		wb.write(baos);
+		bais = new ByteArrayInputStream(baos.toByteArray());
+
+		wb = new XSSFWorkbook(Package.open(bais));
+		s1 = (XSSFSheet)wb.getSheetAt(0);
+
+		assertEquals(3, wb.getNumberOfFonts());
+		assertNotNull(wb.getFontAt((short)1));
+		assertNotNull(wb.getFontAt((short)2));
+
+		assertEquals(15, wb.getFontAt((short)2).getFontHeightInPoints());
+		assertEquals(true, wb.getFontAt((short)2).getItalic());
+	}
+
