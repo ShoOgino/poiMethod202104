@@ -1,0 +1,35 @@
+	/**
+	 * Dev. Note: Internal evaluate must be passed only a formula cell
+	 * else a runtime exception will be thrown somewhere inside the method.
+	 * (Hence this is a private method.)
+	 * @return never <code>null</code>, never {@link BlankEval}
+	 */
+	/* package */ ValueEval internalEvaluate(Cell srcCell, EvaluationTracker tracker) {
+		int srcRowNum = srcCell.getRowIndex();
+		int srcColNum = srcCell.getCellNum();
+
+		ValueEval result;
+
+		int sheetIndex = getSheetIndex(srcCell.getSheet());
+		result = tracker.startEvaluate(sheetIndex, srcRowNum, srcColNum);
+		if (result != null) {
+			return result;
+		}
+		_evaluationCounter.value++;
+		_evaluationCounter.depth++;
+
+		try {
+			Ptg[] ptgs = _workbook.getFormulaTokens(srcCell);
+			result = evaluateCell(sheetIndex, srcRowNum, (short)srcColNum, ptgs, tracker);
+		} finally {
+			tracker.endEvaluate(sheetIndex, srcRowNum, srcColNum, result);
+			_evaluationCounter.depth--;
+		}
+		if (isDebugLogEnabled()) {
+			String sheetName = getSheetName(sheetIndex);
+			CellReference cr = new CellReference(srcRowNum, srcColNum);
+			logDebug("Evaluated " + sheetName + "!" + cr.formatAsString() + " to " + result.toString());
+		}
+		return result;
+	}
+
