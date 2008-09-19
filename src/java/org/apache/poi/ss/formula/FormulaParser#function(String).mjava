@@ -1,0 +1,40 @@
+    /**
+     * Note - Excel function names are 'case aware but not case sensitive'.  This method may end
+     * up creating a defined name record in the workbook if the specified name is not an internal
+     * Excel function, and has not been encountered before.
+     *
+     * @param name case preserved function name (as it was entered/appeared in the formula).
+     */
+    private ParseNode function(String name) {
+        Ptg nameToken = null;
+        if(!AbstractFunctionPtg.isBuiltInFunctionName(name)) {
+            // user defined function
+            // in the token tree, the name is more or less the first argument
+
+            EvaluationName hName = book.getName(name);
+            if (hName == null) {
+
+                nameToken = book.getNameXPtg(name);
+                if (nameToken == null) {
+                    throw new FormulaParseException("Name '" + name
+                            + "' is completely unknown in the current workbook");
+                }
+            } else {
+                if (!hName.isFunctionName()) {
+                    throw new FormulaParseException("Attempt to use name '" + name
+                            + "' as a function, but defined name in workbook does not refer to a function");
+                }
+
+                // calls to user-defined functions within the workbook
+                // get a Name token which points to a defined name record
+                nameToken = hName.createPtg();
+            }
+        }
+
+        Match('(');
+        ParseNode[] args = Arguments();
+        Match(')');
+
+        return getFunction(name, nameToken, args);
+    }
+
