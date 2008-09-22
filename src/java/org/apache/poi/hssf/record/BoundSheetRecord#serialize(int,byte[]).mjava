@@ -1,39 +1,19 @@
-    public int serialize( int offset, byte[] data )
-    {
-        LittleEndian.putShort( data, 0 + offset, sid );
-        LittleEndian.putShort( data, 2 + offset, (short) ( 8 + getRawSheetnameLength() ) );
-        LittleEndian.putInt( data, 4 + offset, getPositionOfBof() );
-        LittleEndian.putShort( data, 8 + offset, getOptionFlags() );
-        data[10 + offset] = (byte) ( getSheetnameLength() );
-        data[11 + offset] = getCompressedUnicodeFlag();
+	public int serialize(int offset, byte[] data) {
+		int dataSize = getDataSize();
+		LittleEndian.putUShort(data, 0 + offset, sid);
+		LittleEndian.putUShort(data, 2 + offset, dataSize);
+		LittleEndian.putInt(data, 4 + offset, getPositionOfBof());
+		LittleEndian.putUShort(data, 8 + offset, field_2_option_flags);
 
-        if ( ( field_4_compressed_unicode_flag & 0x01 ) == 1 )
-            StringUtil.putUnicodeLE( getSheetname(), data, 12 + offset );
-        else
-            StringUtil.putCompressedUnicode( getSheetname(), data, 12 + offset );
+		String name = field_5_sheetname;
+		LittleEndian.putByte(data, 10 + offset, name.length());
+		LittleEndian.putByte(data, 11 + offset, field_4_isMultibyteUnicode);
 
-
-        return getRecordSize();
-
-        /*
-		byte[] fake = new byte[] {	(byte)0x85, 0x00, 			// sid
-		    							0x1a, 0x00, 			// length
-		    							0x3C, 0x09, 0x00, 0x00, // bof
-		    							0x00, 0x00, 			// flags
-		    							0x09, 					// len( str )
-		    							0x01, 					// unicode
-		    							// <str>
-		    							0x21, 0x04, 0x42, 0x04, 0x40, 0x04, 0x30, 0x04, 0x3D,
-		    							0x04, 0x38, 0x04, 0x47, 0x04, 0x3A, 0x04, 0x30, 0x04
-		    							// </str>
-		    						};
-
-		    						sid + len + bof + flags + len(str) + unicode +   str
-		    						 2  +  2  +  4  +   2   +    1     +    1    + len(str)
-
-		System.arraycopy( fake, 0, data, offset, fake.length );
-
-		return fake.length;
-		*/
-    }
+		if (isMultibyte()) {
+			StringUtil.putUnicodeLE(name, data, 12 + offset);
+		} else {
+			StringUtil.putCompressedUnicode(name, data, 12 + offset);
+		}
+		return 4 + dataSize;
+	}
 
