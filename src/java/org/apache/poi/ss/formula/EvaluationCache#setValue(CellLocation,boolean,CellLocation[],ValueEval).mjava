@@ -1,0 +1,53 @@
+	/**
+	 * @param cellLoc
+	 * @param usedCells never <code>null</code>, (possibly zero length) array of all cells actually 
+	 * directly used when evaluating the formula
+	 * @param isPlainValue pass <code>true</code> if cellLoc refers to a plain value (non-formula) 
+	 * cell, <code>false</code> for a formula cell.
+	 * @param value the value of a non-formula cell or the result of evaluating the cell formula
+	 * Pass <code>null</code> to signify clearing the cached result of a formula cell) 
+	 */
+	public void setValue(CellLocation cellLoc, boolean isPlainValue, 
+			CellLocation[] usedCells, ValueEval value) {
+
+		CellCacheEntry existingEntry = (CellCacheEntry) _entriesByLocation.get(cellLoc);
+		if (existingEntry != null && existingEntry.getValue() != null) {
+			if (isPlainValue) {
+				// can set a plain cell cached value any time
+			} else if (value == null) {
+				// or clear the cached value of a formula cell at any time
+			} else {
+				// but a formula cached value would only be getting updated if the cache didn't have a value to start with
+				throw new IllegalStateException("Already have cached value for this cell: "
+						+ cellLoc.formatAsString());
+			}
+		}
+		if (_evaluationListener == null) {
+			// optimisation - don't bother sorting if there is no listener.
+		} else {
+			// for testing
+			// make order of callbacks to listener more deterministic
+			Arrays.sort(usedCells, CellLocationComparator);
+		}
+		CellCacheEntry entry = getEntry(cellLoc);
+		CellLocation[] consumingFormulaCells = entry.getConsumingCells();
+		CellLocation[] prevUsedCells = entry.getUsedCells();
+		if (isPlainValue) {
+			
+			if(!entry.updatePlainValue(value)) {
+				return;
+			}
+		} else {
+			entry.setFormulaResult(value, usedCells);
+			for (int i = 0; i < usedCells.length; i++) {
+				getEntry(usedCells[i]).addConsumingCell(cellLoc);
+			}
+		}
+		// need to tell all cells that were previously used, but no longer are, 
+		// that they are not consumed by this cell any more
+		unlinkConsumingCells(prevUsedCells, usedCells, cellLoc);
+		
+		// clear all cells that directly or indirectly depend on this one
+		recurseClearCachedFormulaResults(consumingFormulaCells, 0);
+	}
+

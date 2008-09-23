@@ -1,0 +1,57 @@
+	/**
+	 * Changing any input to a formula may cause the formula to 'use' a different set of cells.
+	 * Functions like INDEX and OFFSET make this effect obvious, with functions like MATCH
+	 * and VLOOKUP the effect can be subtle.  The presence of error values can also produce this
+	 * effect in almost every function and operator.
+	 */
+	public void testSimpleWithDependencyChange() {
+
+		MySheet ms = new MySheet();
+
+		ms.setCellFormula("A1", "INDEX(C1:E1,1,B1)");
+		ms.setCellValue("B1", 1);
+		ms.setCellValue("C1", 17);
+		ms.setCellValue("D1", 18);
+		ms.setCellValue("E1", 19);
+		ms.clearAllCachedResultValues();
+		ms.getAndClearLog();
+
+		confirmEvaluate(ms, "A1", 17);
+		confirmLog(ms, new String[] {
+			"start A1 INDEX(C1:E1,1,B1)",
+			"value B1 1",
+			"value C1 17",
+			"end A1 17",
+		});
+		ms.setCellValue("B1", 2);
+		ms.getAndClearLog();
+
+		confirmEvaluate(ms, "A1", 18);
+		confirmLog(ms, new String[] {
+			"start A1 INDEX(C1:E1,1,B1)",
+			"hit B1 2",
+			"value D1 18",
+			"end A1 18",
+		});
+
+		// change C1. Note - last time A1 evaluated C1 was not used
+		ms.setCellValue("C1", 15);
+		ms.getAndClearLog();
+		confirmEvaluate(ms, "A1", 18);
+		confirmLog(ms, new String[] {
+			"hit A1 18",
+		});
+
+		// but A1 still uses D1, so if it changes...
+		ms.setCellValue("D1", 25);
+		ms.getAndClearLog();
+		confirmEvaluate(ms, "A1", 25);
+		confirmLog(ms, new String[] {
+			"start A1 INDEX(C1:E1,1,B1)",
+			"hit B1 2",
+			"hit D1 25",
+			"end A1 25",
+		});
+
+	}
+

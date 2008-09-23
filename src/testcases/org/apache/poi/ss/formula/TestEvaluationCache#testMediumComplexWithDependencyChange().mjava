@@ -1,0 +1,52 @@
+	public void testMediumComplexWithDependencyChange() {
+
+		// Changing an intermediate formula
+		MySheet ms = createMediumComplex();
+		confirmEvaluate(ms, "A1", 46);
+		ms.getAndClearLog();
+		ms.setCellFormula("B2", "B3*C2-C3"); // used to be "B3*C1-C2"
+		confirmLog(ms, new String[] {
+			"clear1 A1 46",
+		});
+
+		confirmEvaluate(ms, "A1", 91);
+		confirmLog(ms, new String[] {
+			"start A1 MAX(B1:B2)",
+				"hit B1 8",
+				"start B2 B3*C2-C3",
+					"hit B3 2",
+					"hit C2 62",
+					"start C3 SUM(D3:E4)",
+						"hit D3 16", "hit E3 17", "value D4 #BLANK#", "value E4 #BLANK#",
+					"end C3 33",
+				"end B2 91",
+			"end A1 91",
+		});
+
+		//----------------
+		// Note - From now on the demonstrated POI behaviour is not optimal
+		//----------------
+
+		// Now change a value that should no longer affect B2
+		ms.setCellValue("D1", 11);
+		confirmLog(ms, new String[] {
+			"clear1 C1 54",
+			// note there is no "clear2 B2 91" here because B2 doesn't depend on C1 anymore
+			"clear2 B1 8",
+			"clear3 A1 91",
+		});
+
+		confirmEvaluate(ms, "B2", 91);
+		confirmLog(ms, new String[] {
+			"hit B2 91",  // further confirmation that B2 was not cleared due to changing D1 above
+		});
+
+		// things should be back to normal now
+		ms.setCellValue("D1", 11);
+		confirmLog(ms, new String[] {  });
+		confirmEvaluate(ms, "B2", 91);
+		confirmLog(ms, new String[] {
+			"hit B2 91",
+		});
+	}
+

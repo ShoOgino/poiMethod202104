@@ -1,0 +1,30 @@
+	/**
+	 * Notifies this evaluation tracker that evaluation of the specified cell is
+	 * about to start.<br/>
+	 * 
+	 * In the case of a <code>true</code> return code, the caller should
+	 * continue evaluation of the specified cell, and also be sure to call
+	 * <tt>endEvaluate()</tt> when complete.<br/>
+	 * 
+	 * In the case of a <code>false</code> return code, the caller should
+	 * return an evaluation result of
+	 * <tt>ErrorEval.CIRCULAR_REF_ERROR<tt>, and not call <tt>endEvaluate()</tt>.  
+	 * <br/>
+	 * @return <code>true</code> if the specified cell has not been visited yet in the current 
+	 * evaluation. <code>false</code> if the specified cell is already being evaluated.
+	 */
+	public ValueEval startEvaluate(CellLocation cellLoc) {
+		if (cellLoc == null) {
+			throw new IllegalArgumentException("cellLoc must not be null");
+		}
+		if (_currentlyEvaluatingCells.contains(cellLoc)) {
+			return ErrorEval.CIRCULAR_REF_ERROR;
+		}
+		ValueEval result = _cache.getValue(cellLoc);
+		if (result == null) {
+			_currentlyEvaluatingCells.add(cellLoc);
+			_evaluationFrames.add(new CellEvaluationFrame(cellLoc));
+		}
+		return result;
+	}
+
