@@ -37,23 +37,24 @@
 		if (ptg instanceof ErrPtg) {
 			return ErrorEval.valueOf(((ErrPtg) ptg).getErrorCode());
 		}
-		CellEvaluator ce = new CellEvaluator(this, tracker);
-		HSSFSheet sheet = _workbook.getSheet(sheetIndex);
-		if (ptg instanceof RefPtg) {
-			return new LazyRefEval(((RefPtg) ptg), sheet, ce);
-		}
-		if (ptg instanceof AreaPtg) {
-			return new LazyAreaEval(((AreaPtg) ptg), sheet, ce);
-		}
 		if (ptg instanceof Ref3DPtg) {
 			Ref3DPtg refPtg = (Ref3DPtg) ptg;
-			HSSFSheet xsheet = getOtherSheet(refPtg.getExternSheetIndex());
-			return new LazyRefEval(refPtg, xsheet, ce);
+			int otherSheetIndex = _workbook.convertFromExternSheetIndex(refPtg.getExternSheetIndex());
+			SheetRefEvaluator sre = new SheetRefEvaluator(this, tracker, _workbook, otherSheetIndex);
+			return new LazyRefEval(refPtg, sre);
 		}
 		if (ptg instanceof Area3DPtg) {
-			Area3DPtg a3dp = (Area3DPtg) ptg;
-			HSSFSheet xsheet = getOtherSheet(a3dp.getExternSheetIndex());
-			return new LazyAreaEval(a3dp, xsheet, ce);
+			Area3DPtg aptg = (Area3DPtg) ptg;
+			int otherSheetIndex = _workbook.convertFromExternSheetIndex(aptg.getExternSheetIndex());
+			SheetRefEvaluator sre = new SheetRefEvaluator(this, tracker, _workbook, otherSheetIndex);
+			return new LazyAreaEval(aptg, sre);
+		}
+		SheetRefEvaluator sre = new SheetRefEvaluator(this, tracker, _workbook, sheetIndex);
+		if (ptg instanceof RefPtg) {
+			return new LazyRefEval(((RefPtg) ptg), sre);
+		}
+		if (ptg instanceof AreaPtg) {
+			return new LazyAreaEval(((AreaPtg) ptg), sre);
 		}
 
 		if (ptg instanceof UnknownPtg) {

@@ -1,0 +1,40 @@
+	/**
+	 * verifies that when updating a plain cell, depending (formula) cell cached values are cleared
+	 * only when the palin cell's value actually changes
+	 */
+	public void testRedundantUpdate() {
+		MySheet ms = new MySheet();
+
+		ms.setCellValue("B1", 12);
+		ms.setCellValue("C1", 13);
+		ms.setCellFormula("A1", "B1+C1");
+
+		// evaluate twice to confirm caching looks OK
+		ms.evaluateCell("A1");
+		ms.getAndClearLog();
+		confirmEvaluate(ms, "A1", 25);
+		confirmLog(ms, new String[] {
+			"hit A1 25",
+		});
+
+		// Make redundant update, and check re-evaluation
+		ms.setCellValue("B1", 12); // value didn't change
+		confirmLog(ms, new String[] {});
+		confirmEvaluate(ms, "A1", 25);
+		confirmLog(ms, new String[] {
+			"hit A1 25",
+		});
+
+		ms.setCellValue("B1", 11); // value changing
+		confirmLog(ms, new String[] {
+			"clear1 A1 25",	// expect consuming formula cached result to get cleared
+		});
+		confirmEvaluate(ms, "A1", 24);
+		confirmLog(ms, new String[] {
+			"start A1 B1+C1",
+			"hit B1 11",
+			"hit C1 13",
+			"end A1 24",
+		});
+	}
+

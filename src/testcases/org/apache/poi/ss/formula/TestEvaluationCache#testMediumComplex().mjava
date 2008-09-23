@@ -1,0 +1,76 @@
+	public void testMediumComplex() {
+
+		MySheet ms = createMediumComplex();
+		// completely fresh evaluation
+		confirmEvaluate(ms, "A1", 46);
+		confirmLog(ms, new String[] {
+			"start A1 MAX(B1:B2)",
+				"start B1 C2-C1",
+					"start C2 SUM(D2:E3)",
+						"value D2 14", "value E2 15", "value D3 16", "value E3 17",
+					"end C2 62",
+					"start C1 SUM(D1:E2)",
+						"value D1 12", "value E1 13", "hit D2 14", "hit E2 15",
+					"end C1 54",
+				"end B1 8",
+				"start B2 B3*C1-C2",
+					"value B3 2",
+					"hit C1 54",
+					"hit C2 62",
+				"end B2 46",
+			"end A1 46",
+		});
+
+
+		// simple cache hit - immediate re-evaluation with no changes
+		confirmEvaluate(ms, "A1", 46);
+		confirmLog(ms, new String[] { "hit A1 46", });
+
+		// change a low level cell
+		ms.setCellValue("D1", 10);
+		confirmLog(ms, new String[] {
+				"clear1 C1 54",
+				"clear2 B1 8",
+				"clear3 A1 46",
+				"clear2 B2 46",
+		});
+		confirmEvaluate(ms, "A1", 42);
+		confirmLog(ms, new String[] {
+			"start A1 MAX(B1:B2)",
+				"start B1 C2-C1",
+					"hit C2 62",
+					"start C1 SUM(D1:E2)",
+						"hit D1 10", "hit E1 13", "hit D2 14", "hit E2 15",
+					"end C1 52",
+				"end B1 10",
+				"start B2 B3*C1-C2",
+					"hit B3 2",
+					"hit C1 52",
+					"hit C2 62",
+				"end B2 42",
+			"end A1 42",
+		});
+
+		// Reset and try changing an intermediate value
+		ms = createMediumComplex();
+		confirmEvaluate(ms, "A1", 46);
+		ms.getAndClearLog();
+
+		ms.setCellValue("B3", 3); // B3 is in the middle of the dependency tree
+		confirmLog(ms, new String[] {
+				"clear1 B2 46",
+				"clear2 A1 46",
+		});
+		confirmEvaluate(ms, "A1", 100);
+		confirmLog(ms, new String[] {
+			"start A1 MAX(B1:B2)",
+				"hit B1 8",
+				"start B2 B3*C1-C2",
+					"hit B3 3",
+					"hit C1 54",
+					"hit C2 62",
+				"end B2 100",
+			"end A1 100",
+		});
+	}
+
