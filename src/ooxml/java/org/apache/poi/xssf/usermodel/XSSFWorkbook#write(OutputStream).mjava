@@ -11,7 +11,9 @@
             // Main part
             PackagePartName corePartName = PackagingURIHelper.createPartName(workbookRelation.getDefaultFileName());
             // Create main part relationship
-            pkg.addRelationship(corePartName, TargetMode.INTERNAL, PackageRelationshipTypes.CORE_DOCUMENT, "rId1");
+            int rId = 1;
+            pkg.addRelationship(corePartName, TargetMode.INTERNAL, PackageRelationshipTypes.CORE_DOCUMENT, "rId" + (rId++));
+
             // Create main document part
             PackagePart corePart = pkg.createPart(corePartName, workbookRelation.getContentType());
             OutputStream out;
@@ -24,13 +26,14 @@
 
             // Write out our sheets, updating the references
             //  to them in the main workbook as we go
+            int drawingIndex = 1;
             for (int i=0 ; i < this.getNumberOfSheets(); i++) {
             	int sheetNumber = (i+1);
-            	XSSFSheet sheet = (XSSFSheet) this.getSheetAt(i);
+            	XSSFSheet sheet = this.getSheetAt(i);
                 PackagePartName partName = PackagingURIHelper.createPartName(
                 		XSSFRelation.WORKSHEET.getFileName(sheetNumber));
                 PackageRelationship rel =
-                	 corePart.addRelationship(partName, TargetMode.INTERNAL, XSSFRelation.WORKSHEET.getRelation(), "rSheet" + sheetNumber);
+                	 corePart.addRelationship(partName, TargetMode.INTERNAL, XSSFRelation.WORKSHEET.getRelation(), "rId" + sheetNumber);
                 PackagePart part = pkg.createPart(partName, XSSFRelation.WORKSHEET.getContentType());
 
                 // XXX This should not be needed, but apparently the setSaveOuter call above does not work in XMLBeans 2.2
@@ -41,15 +44,8 @@
                 workbook.getSheets().getSheetArray(i).setId(rel.getId());
                 workbook.getSheets().getSheetArray(i).setSheetId(sheetNumber);
 
-                // If our sheet has comments, then write out those
-                if(sheet.hasComments()) {
-                	CommentsTable ct = (CommentsTable)sheet.getCommentsSourceIfExists();
-                	XSSFRelation.SHEET_COMMENTS.save(ct, part, sheetNumber);
-                }
-
                 // If our sheet has drawings, then write out those
                 if(sheet.getDrawings() != null) {
-                	int drawingIndex = 1;
                 	for(Drawing drawing : sheet.getDrawings()) {
                 		XSSFRelation.VML_DRAWINGS.save(
                 				drawing,
@@ -58,6 +54,12 @@
                 		);
                 		drawingIndex++;
                 	}
+                }
+
+                // If our sheet has comments, then write out those
+                if(sheet.hasComments()) {
+                	CommentsTable ct = (CommentsTable)sheet.getCommentsSourceIfExists();
+                	XSSFRelation.SHEET_COMMENTS.save(ct, part, sheetNumber);
                 }
 
                 // If our sheet has controls, then write out those
@@ -82,6 +84,11 @@
             if(stylesSource != null) {
 	             StylesTable st = (StylesTable)stylesSource;
 	             XSSFRelation.STYLES.save(st, corePart);
+            }
+            if(themes.size() > 0) {
+                for(int i=0; i< themes.size(); i++) {
+                    XSSFRelation.THEME.save(themes.get(i), corePart, i+1);
+                }
             }
 
             // Named ranges
