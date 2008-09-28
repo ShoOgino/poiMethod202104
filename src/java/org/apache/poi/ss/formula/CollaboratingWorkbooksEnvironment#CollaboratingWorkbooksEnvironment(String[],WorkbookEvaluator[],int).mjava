@@ -1,0 +1,24 @@
+	private CollaboratingWorkbooksEnvironment(String[] workbookNames, WorkbookEvaluator[] evaluators, int nItems) {
+		Map m = new HashMap(nItems * 3 / 2);
+		IdentityHashMap uniqueEvals = new IdentityHashMap(nItems * 3 / 2);
+		for(int i=0; i<nItems; i++) {
+			String wbName = workbookNames[i];
+			WorkbookEvaluator wbEval = evaluators[i];
+			if (m.containsKey(wbName)) {
+				throw new IllegalArgumentException("Duplicate workbook name '" + wbName + "'");
+			}
+			if (uniqueEvals.containsKey(wbEval)) {
+				String msg = "Attempted to register same workbook under names '"
+					+ uniqueEvals.get(wbEval) + "' and '" + wbName + "'";
+				throw new IllegalArgumentException(msg);
+			}
+			uniqueEvals.put(wbEval, wbName);
+			m.put(wbName, wbEval);
+		}
+		unhookOldEnvironments(evaluators);
+		hookNewEnvironment(evaluators, this);
+		_unhooked = false;
+		_evaluators = evaluators;
+		_evaluatorsByName = m;
+	}
+
