@@ -1,0 +1,163 @@
+    private Sheet(RecordStream rs) {
+        _mergedCellsTable = new MergedCellsTable();
+        RowRecordsAggregate rra = null;
+
+        records            = new ArrayList(128);
+        // TODO - take chart streams off into separate java objects
+        int       bofEofNestingLevel = 0;  // nesting level can only get to 2 (when charts are present)
+        int dimsloc = -1;
+
+        while (rs.hasNext()) {
+            int recSid = rs.peekNextSid();
+
+            if ( recSid == CFHeaderRecord.sid ) {
+                condFormatting = new ConditionalFormattingTable(rs);
+                records.add(condFormatting);
+                continue;
+            }
+
+            if (recSid == ColumnInfoRecord.sid) {
+                _columnInfos = new ColumnInfoRecordsAggregate(rs);
+                records.add(_columnInfos);
+                continue;
+            }
+            if ( recSid == DVALRecord.sid) {
+                _dataValidityTable = new DataValidityTable(rs);
+                records.add(_dataValidityTable);
+                continue;
+            }
+
+            if (RecordOrderer.isRowBlockRecord(recSid) && bofEofNestingLevel == 1 ) {
+                //only add the aggregate once
+                if (rra != null) {
+                    throw new RuntimeException("row/cell records found in the wrong place");
+                }
+                RowBlocksReader rbr = new RowBlocksReader(rs);
+                _mergedCellsTable.addRecords(rbr.getLooseMergedCells());
+                rra = new RowRecordsAggregate(rbr.getPlainRecordStream(), rbr.getSharedFormulaManager());
+                records.add(rra); //only add the aggregate once
+                continue;
+            }
+
+            if (PageSettingsBlock.isComponentRecord(recSid)) {
+                PageSettingsBlock psb = new PageSettingsBlock(rs);
+                if (bofEofNestingLevel == 1) {
+                    if (_psBlock == null) {
+                        _psBlock = psb;
+                    } else {
+                        // more than one 'Page Settings Block' at nesting level 1 ?
+                        // apparently this happens in about 15 test sample files
+                    }
+                }
+                records.add(psb);
+                continue;
+            }
+
+            if (recSid == MergeCellsRecord.sid) {
+                // when the MergedCellsTable is found in the right place, we expect those records to be contiguous
+                _mergedCellsTable.read(rs);
+                continue;
+            }
+
+            Record rec = rs.getNext();
+            if ( recSid == IndexRecord.sid ) {
+                // ignore INDEX record because it is only needed by Excel,
+                // and POI always re-calculates its contents
+                continue;
+            }
+
+
+            if (recSid == UncalcedRecord.sid) {
+                // don't add UncalcedRecord to the list
+                _isUncalced = true; // this flag is enough
+                continue;
+            }
+
+            if (recSid == BOFRecord.sid)
+            {
+                bofEofNestingLevel++;
+                if (log.check( POILogger.DEBUG ))
+                    log.log(POILogger.DEBUG, "Hit BOF record. Nesting increased to " + bofEofNestingLevel);
+            }
+            else if (recSid == EOFRecord.sid)
+            {
+                --bofEofNestingLevel;
+                if (log.check( POILogger.DEBUG ))
+                    log.log(POILogger.DEBUG, "Hit EOF record. Nesting decreased to " + bofEofNestingLevel);
+                if (bofEofNestingLevel == 0) {
+                    records.add(rec);
+                    break;
+                }
+            }
+            else if (recSid == DimensionsRecord.sid)
+            {
+                // Make a columns aggregate if one hasn't ready been created.
+                if (_columnInfos == null)
+                {
+                    _columnInfos = new ColumnInfoRecordsAggregate();
+                    records.add(_columnInfos);
+                }
+
+                _dimensions    = ( DimensionsRecord ) rec;
+                dimsloc = records.size();
+            }
+            else if (recSid == DefaultColWidthRecord.sid)
+            {
+                defaultcolwidth = ( DefaultColWidthRecord ) rec;
+            }
+            else if (recSid == DefaultRowHeightRecord.sid)
+            {
+                defaultrowheight = ( DefaultRowHeightRecord ) rec;
+            }
+            else if ( recSid == PrintGridlinesRecord.sid )
+            {
+                printGridlines = (PrintGridlinesRecord) rec;
+            }
+            else if ( recSid == GridsetRecord.sid )
+            {
+                gridset = (GridsetRecord) rec;
+            }
+            else if ( recSid == SelectionRecord.sid )
+            {
+                selection = (SelectionRecord) rec;
+            }
+            else if ( recSid == WindowTwoRecord.sid )
+            {
+                windowTwo = (WindowTwoRecord) rec;
+            }
+            else if ( recSid == ProtectRecord.sid )
+            {
+                protect = (ProtectRecord) rec;
+            }
+            else if ( recSid == ObjectProtectRecord.sid )
+            {
+                objprotect = (ObjectProtectRecord) rec;
+            }
+            else if ( recSid == ScenarioProtectRecord.sid )
+            {
+                scenprotect = (ScenarioProtectRecord) rec;
+            }
+            else if ( recSid == PasswordRecord.sid )
+            {
+                password = (PasswordRecord) rec;
+            }
+
+            records.add(rec);
+        }
+        if (_dimensions == null) {
+            throw new RuntimeException("DimensionsRecord was not found");
+        }
+        if (windowTwo == null) {
+            throw new RuntimeException("WINDOW2 was not found");
+        }
+        if (rra == null) {
+            rra = new RowRecordsAggregate();
+            records.add(dimsloc + 1, rra);
+        }
+        _rowsAggregate = rra;
+        // put merged cells table in the right place (regardless of where the first MergedCellsRecord was found */
+        RecordOrderer.addNewSheetRecord(records, _mergedCellsTable);
+        if (log.check( POILogger.DEBUG ))
+            log.log(POILogger.DEBUG, "sheet createSheet (existing file) exited");
+    }
+

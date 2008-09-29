@@ -1,8 +1,54 @@
-    /**
-     * Creates new Sheet with no initialization --useless at this point
-     * @see #createSheet(List,int,int)
-     */
-    public Sheet() {
+    private Sheet() {
         _mergedCellsTable = new MergedCellsTable();
+        records = new ArrayList(32);
+
+        if (log.check( POILogger.DEBUG ))
+            log.log(POILogger.DEBUG, "Sheet createsheet from scratch called");
+
+        records.add(createBOF());
+
+        records.add(createCalcMode());
+        records.add(createCalcCount() );
+        records.add(createRefMode() );
+        records.add(createIteration() );
+        records.add(createDelta() );
+        records.add(createSaveRecalc() );
+        records.add(createPrintHeaders() );
+        printGridlines = createPrintGridlines();
+        records.add( printGridlines );
+        gridset = createGridset();
+        records.add( gridset );
+        _gutsRecord = createGuts();
+        records.add( _gutsRecord );
+        defaultrowheight = createDefaultRowHeight();
+        records.add( defaultrowheight );
+        records.add( createWSBool() );
+
+        // 'Page Settings Block'
+        _psBlock = new PageSettingsBlock();
+        records.add(_psBlock);
+
+        // 'Worksheet Protection Block' (after 'Page Settings Block' and before DEFCOLWIDTH)
+        // PROTECT record normally goes here, don't add yet since the flag is initially false
+
+        defaultcolwidth = createDefaultColWidth();
+        records.add( defaultcolwidth);
+        ColumnInfoRecordsAggregate columns = new ColumnInfoRecordsAggregate();
+        records.add( columns );
+        _columnInfos = columns;
+        _dimensions = createDimensions();
+        records.add(_dimensions);
+        _rowsAggregate = new RowRecordsAggregate();
+        records.add(_rowsAggregate);
+        // 'Sheet View Settings'
+        records.add(windowTwo = createWindowTwo());
+        selection = createSelection();
+        records.add(selection);
+
+        records.add(_mergedCellsTable); // MCT comes after 'Sheet View Settings'
+        records.add(EOFRecord.instance);
+
+        if (log.check( POILogger.DEBUG ))
+            log.log(POILogger.DEBUG, "Sheet createsheet from scratch exit");
     }
 

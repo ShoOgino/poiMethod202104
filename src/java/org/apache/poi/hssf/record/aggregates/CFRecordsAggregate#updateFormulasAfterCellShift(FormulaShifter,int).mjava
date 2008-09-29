@@ -1,0 +1,45 @@
+	/**
+	 * @return <code>false</code> if this whole {@link CFHeaderRecord} / {@link CFRuleRecord}s should be deleted
+	 */
+	public boolean updateFormulasAfterCellShift(FormulaShifter shifter, int currentExternSheetIx) {
+		CellRangeAddress[] cellRanges = header.getCellRanges();
+		boolean changed = false;
+		List temp = new ArrayList();
+		for (int i = 0; i < cellRanges.length; i++) {
+			CellRangeAddress craOld = cellRanges[i];
+			CellRangeAddress craNew = shiftRange(shifter, craOld, currentExternSheetIx);
+			if (craNew == null) {
+				changed = true;
+				continue;
+			}
+			temp.add(craNew);
+			if (craNew != craOld) {
+				changed = true;
+			}
+		}
+
+		if (changed) {
+			int nRanges = temp.size();
+			if (nRanges == 0) {
+				return false;
+			}
+			CellRangeAddress[] newRanges = new CellRangeAddress[nRanges];
+			temp.toArray(newRanges);
+			header.setCellRanges(newRanges);
+		}
+		
+		for(int i=0; i<rules.size(); i++) {
+			CFRuleRecord rule = (CFRuleRecord)rules.get(i);
+			Ptg[] ptgs;
+			ptgs = rule.getParsedExpression1();
+			if (ptgs != null && shifter.adjustFormula(ptgs, currentExternSheetIx)) {
+				rule.setParsedExpression1(ptgs);
+			}
+			ptgs = rule.getParsedExpression2();
+			if (ptgs != null && shifter.adjustFormula(ptgs, currentExternSheetIx)) {
+				rule.setParsedExpression2(ptgs);
+			}
+		}
+		return true;
+	}
+
