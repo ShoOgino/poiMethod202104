@@ -1,0 +1,22 @@
+	public void testParseExternalWorkbookReference() {
+		HSSFWorkbook wbA = HSSFTestDataSamples.openSampleWorkbook("multibookFormulaA.xls");
+		HSSFCell cell = wbA.getSheetAt(0).getRow(0).getCell(0);
+
+		// make sure formula in sample is as expected
+		assertEquals("[multibookFormulaB.xls]BSheet1!B1", cell.getCellFormula());
+		Ptg[] expectedPtgs = FormulaExtractor.getPtgs(cell);
+		confirmSingle3DRef(expectedPtgs, 1);
+		
+		// now try (re-)parsing the formula
+		Ptg[] actualPtgs = HSSFFormulaParser.parse("[multibookFormulaB.xls]BSheet1!B1", wbA);
+		confirmSingle3DRef(actualPtgs, 1); // externalSheetIndex 1 -> BSheet1
+		
+		// try parsing a formula pointing to a different external sheet
+		Ptg[] otherPtgs = HSSFFormulaParser.parse("[multibookFormulaB.xls]AnotherSheet!B1", wbA);
+		confirmSingle3DRef(otherPtgs, 0); // externalSheetIndex 0 -> AnotherSheet
+		
+		// try setting the same formula in a cell
+		cell.setCellFormula("[multibookFormulaB.xls]AnotherSheet!B1");
+		assertEquals("[multibookFormulaB.xls]AnotherSheet!B1", cell.getCellFormula());
+	}
+

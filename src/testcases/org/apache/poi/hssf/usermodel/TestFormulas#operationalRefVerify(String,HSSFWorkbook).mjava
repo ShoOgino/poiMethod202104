@@ -1,0 +1,66 @@
+    /**
+     * Opens the sheet we wrote out by binomialOperator and makes sure the formulas
+     * all match what we expect (x operator y)
+     */
+    private static void operationalRefVerify(String operator, HSSFWorkbook wb) {
+
+        HSSFSheet        s      = wb.getSheetAt(0);
+        HSSFRow          r      = null;
+        HSSFCell         c      = null;
+
+        //get our minimum values
+        r = s.getRow(0);
+        c = r.getCell(1);
+        //get our minimum values
+        assertTrue("minval Formula is as expected A2"+operator+"A3 != "+c.getCellFormula(),
+        ( ("A2"+operator+"A3").equals(c.getCellFormula())
+        ));
+
+
+        for (int x = 1; x < Short.MAX_VALUE && x > 0; x=(short)(x*2)) {
+            r = s.getRow(x);
+
+            for (int y = 1; y < 256 && y > 0; y++) {
+
+                int refx1;
+                int refy1;
+                int refx2;
+                int refy2;
+                if (x +50 < Short.MAX_VALUE) {
+                    refx1=x+50;
+                    refx2=x+46;
+                } else {
+                    refx1=x-4;
+                    refx2=x-3;
+                }
+
+                if (y+50 < 255) {
+                    refy1=y+50;
+                    refy2=y+49;
+                } else {
+                    refy1=y-4;
+                    refy2=y-3;
+                }
+
+                c = r.getCell(y);
+                CellReference cr= new CellReference(refx1, refy1, false, false);
+                String ref=cr.formatAsString();
+                ref=cr.formatAsString();
+                cr=new CellReference(refx2,refy2, false, false);
+                String ref2=cr.formatAsString();
+
+
+                assertTrue("loop Formula is as expected "+ref+operator+ref2+"!="+c.getCellFormula(),(
+                (""+ref+operator+ref2).equals(c.getCellFormula())
+                                                         )
+                );
+            }
+        }
+
+        //test our maximum values
+        r = s.getRow(0);
+        c = r.getCell(0);
+
+        assertEquals("B1"+operator+"IV255", c.getCellFormula());
+    }
+

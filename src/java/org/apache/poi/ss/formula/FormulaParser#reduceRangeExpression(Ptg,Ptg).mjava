@@ -1,0 +1,31 @@
+    /**
+     * 
+     * "A1", "B3" -> "A1:B3"   
+     * "sheet1!A1", "B3" -> "sheet1!A1:B3"
+     * 
+     * @return <code>null</code> if the range expression cannot / shouldn't be reduced.
+     */
+    private static Ptg reduceRangeExpression(Ptg ptgA, Ptg ptgB) {
+        if (!(ptgB instanceof RefPtg)) {
+            // only when second ref is simple 2-D ref can the range 
+            // expression be converted to an area ref
+            return null;
+        }
+        RefPtg refB = (RefPtg) ptgB;
+
+        if (ptgA instanceof RefPtg) {
+            RefPtg refA = (RefPtg) ptgA;
+            return new AreaPtg(refA.getRow(), refB.getRow(), refA.getColumn(), refB.getColumn(),
+                    refA.isRowRelative(), refB.isRowRelative(), refA.isColRelative(), refB.isColRelative());
+        }
+        if (ptgA instanceof Ref3DPtg) {
+            Ref3DPtg refA = (Ref3DPtg) ptgA;
+            return new Area3DPtg(refA.getRow(), refB.getRow(), refA.getColumn(), refB.getColumn(),
+                    refA.isRowRelative(), refB.isRowRelative(), refA.isColRelative(), refB.isColRelative(),
+                    refA.getExternSheetIndex());
+        }
+        // Note - other operand types (like AreaPtg) which probably can't evaluate 
+        // do not cause validation errors at parse time
+        return null;
+    }
+

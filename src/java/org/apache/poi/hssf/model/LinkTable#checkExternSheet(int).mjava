@@ -1,11 +1,22 @@
-	public short checkExternSheet(int sheetIndex) {
+	public int checkExternSheet(int sheetIndex) {
+		int thisWbIndex = -1; // this is probably always zero
+		for (int i=0; i<_externalBookBlocks.length; i++) {
+			SupBookRecord ebr = _externalBookBlocks[i].getExternalBookRecord();
+			if (ebr.isInternalReferences()) {
+				thisWbIndex = i;
+				break;
+			}
+		}
+		if (thisWbIndex < 0) {
+			throw new RuntimeException("Could not find 'internal references' EXTERNALBOOK");
+		}
 
 		//Trying to find reference to this sheet
-		int i = _externSheetRecord.getRefIxForSheet(sheetIndex);
+		int i = _externSheetRecord.getRefIxForSheet(thisWbIndex, sheetIndex);
 		if (i>=0) {
-			return (short)i;
+			return i;
 		}
-		//We Haven't found reference to this sheet
-		return (short)addSheetIndexToExternSheet((short) sheetIndex);
+		//We haven't found reference to this sheet
+		return _externSheetRecord.addRef(thisWbIndex, sheetIndex, sheetIndex);
 	}
 

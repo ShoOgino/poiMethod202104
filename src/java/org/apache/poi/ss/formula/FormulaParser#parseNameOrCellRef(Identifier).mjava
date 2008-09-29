@@ -1,0 +1,57 @@
+    private Ptg parseNameOrCellRef(Identifier iden) {
+        
+        if (look == '!') {
+            GetChar();
+            // 3-D ref
+            // this code assumes iden is a sheetName
+            // TODO - handle <book name> ! <named range name>
+            int externIdx = getExternalSheetIndex(iden.getName());
+            String secondIden = parseUnquotedIdentifier();
+            AreaReference areaRef = parseArea(secondIden);
+            if (areaRef == null) {
+                return new Ref3DPtg(secondIden, externIdx);
+            }
+            // will happen if dots are used instead of colon
+            return new Area3DPtg(areaRef.formatAsString(), externIdx);
+        }
+
+        String name = iden.getName();
+        AreaReference areaRef = parseArea(name);
+        if (areaRef != null) {
+            // will happen if dots are used instead of colon
+            return new AreaPtg(areaRef.formatAsString());
+        }
+        // This can be either a cell ref or a named range
+
+
+        int nameType = CellReference.classifyCellReference(name);
+        if (nameType == NameType.CELL) {
+            return new RefPtg(name);
+        }
+        if (look == ':') {
+            if (nameType == NameType.COLUMN) {
+                GetChar();
+                String secondIden = parseUnquotedIdentifier();
+                if (CellReference.classifyCellReference(secondIden) != NameType.COLUMN) {
+                    throw new FormulaParseException("Expected full column after '" + name 
+                            + ":' but got '" + secondIden + "'");
+                }
+                return new AreaPtg(name + ":" + secondIden);
+            }
+        }
+        if (nameType != NameType.NAMED_RANGE) {
+            new FormulaParseException("Name '" + name
+                + "' does not look like a cell reference or named range");
+        }
+        EvaluationName evalName = book.getName(name);
+        if (evalName == null) {
+            throw new FormulaParseException("Specified named range '"
+                    + name + "' does not exist in the current workbook.");
+        }
+        if (evalName.isRange()) {
+            return evalName.createPtg();
+        }
+        throw new FormulaParseException("Specified name '"
+                    + name + "' is not a range as expected");
+    }
+
