@@ -1,137 +1,14 @@
-	public void write(OutputStream stream) throws IOException {
-		// What kind of workbook are we?
-		XSSFRelation workbookRelation = XSSFRelation.WORKBOOK;
-		if(isMacroEnabled) {
-			workbookRelation = XSSFRelation.MACROS_WORKBOOK;
-		}
+    /**
+     * Method write - write out this workbook to an Outputstream.
+     *
+     * @param stream - the java OutputStream you wish to write the XLS to
+     *
+     * @exception IOException if anything can't be written.
+     */
+    public void write(OutputStream stream) throws IOException {
+        //force all children to commit their changes into the underlying OOXML Package
+        save();
 
-		try {
-			// Create a package referring the temp file.
-			Package pkg = Package.create(stream);
-			// Main part
-			PackagePartName corePartName = PackagingURIHelper.createPartName(workbookRelation.getDefaultFileName());
-			// Create main part relationship
-			int rId = 1;
-			pkg.addRelationship(corePartName, TargetMode.INTERNAL, PackageRelationshipTypes.CORE_DOCUMENT, "rId" + (rId++));
-
-			// Create main document part
-			PackagePart corePart = pkg.createPart(corePartName, workbookRelation.getContentType());
-			OutputStream out;
-
-			XmlOptions xmlOptions = new XmlOptions();
-			// Requests use of whitespace for easier reading
-			xmlOptions.setSavePrettyPrint();
-			xmlOptions.setSaveOuter();
-			xmlOptions.setUseDefaultNamespace();
-
-			// Write out our sheets, updating the references
-			//  to them in the main workbook as we go
-			int drawingIndex = 1;
-			for (int i=0 ; i < this.getNumberOfSheets(); i++) {
-				int sheetNumber = (i+1);
-				XSSFSheet sheet = this.getSheetAt(i);
-				PackagePartName partName = PackagingURIHelper.createPartName(
-						XSSFRelation.WORKSHEET.getFileName(sheetNumber));
-				PackageRelationship rel =
-					 corePart.addRelationship(partName, TargetMode.INTERNAL, XSSFRelation.WORKSHEET.getRelation(), "rId" + sheetNumber);
-				PackagePart part = pkg.createPart(partName, XSSFRelation.WORKSHEET.getContentType());
-
-				// XXX This should not be needed, but apparently the setSaveOuter call above does not work in XMLBeans 2.2
-				xmlOptions.setSaveSyntheticDocumentElement(new QName(CTWorksheet.type.getName().getNamespaceURI(), "worksheet"));
-				sheet.save(part, xmlOptions);
-
-				// Update our internal reference for the package part
-				workbook.getSheets().getSheetArray(i).setId(rel.getId());
-				workbook.getSheets().getSheetArray(i).setSheetId(sheetNumber);
-
-				// If our sheet has drawings, then write out those
-				if(sheet.getDrawings() != null) {
-					for(Drawing drawing : sheet.getDrawings()) {
-						XSSFRelation.VML_DRAWINGS.save(
-								drawing,
-								part,
-								drawingIndex
-						);
-						drawingIndex++;
-					}
-				}
-
-				// If our sheet has comments, then write out those
-				if(sheet.hasComments()) {
-					CommentsTable ct = (CommentsTable)sheet.getCommentsSourceIfExists();
-					XSSFRelation.SHEET_COMMENTS.save(ct, part, sheetNumber);
-				}
-
-				// If our sheet has controls, then write out those
-				if(sheet.getControls() != null) {
-					int controlIndex = 1;
-					for(Control control : sheet.getControls()) {
-						XSSFRelation.ACTIVEX_CONTROLS.save(
-								control,
-								part,
-								controlIndex
-						);
-						controlIndex++;
-					}
-				}
-			}
-
-			// Write shared strings and styles
-			if(sharedStringSource != null) {
-				 SharedStringsTable sst = (SharedStringsTable)sharedStringSource;
-				 XSSFRelation.SHARED_STRINGS.save(sst, corePart);
-			}
-			if(stylesSource != null) {
-				 StylesTable st = (StylesTable)stylesSource;
-				 XSSFRelation.STYLES.save(st, corePart);
-			}
-			if(themes.size() > 0) {
-				for(int i=0; i< themes.size(); i++) {
-					XSSFRelation.THEME.save(themes.get(i), corePart, i+1);
-				}
-			}
-
-			// Named ranges
-			if(namedRanges.size() > 0) {
-				CTDefinedNames names = CTDefinedNames.Factory.newInstance();
-				CTDefinedName[] nr = new CTDefinedName[namedRanges.size()];
-				for(int i=0; i<namedRanges.size(); i++) {
-					nr[i] = namedRanges.get(i).getCTName();
-				}
-				names.setDefinedNameArray(nr);
-				workbook.setDefinedNames(names);
-			} else {
-				if(workbook.isSetDefinedNames()) {
-					workbook.setDefinedNames(null);
-				}
-			}
-
-			// Macro related bits
-			if(isMacroEnabled) {
-				// Copy VBA Macros if present
-				if(XSSFRelation.VBA_MACROS.exists( getCorePart() )) {
-					try {
-						BinaryPart vba = XSSFRelation.VBA_MACROS.load(getCorePart());
-						XSSFRelation.VBA_MACROS.save(vba, corePart);
-					} catch(Exception e) {
-						throw new RuntimeException("Unable to copy vba macros over", e);
-					}
-				}
-			}
-
-			// Now we can write out the main Workbook, with
-			//  the correct references to the other parts
-			out = corePart.getOutputStream();
-			// XXX This should not be needed, but apparently the setSaveOuter call above does not work in XMLBeans 2.2
-			xmlOptions.setSaveSyntheticDocumentElement(new QName(CTWorkbook.type.getName().getNamespaceURI(), "workbook"));
-			workbook.save(out, xmlOptions);
-			out.close();
-
-			//  All done
-			pkg.close();
-		} catch (InvalidFormatException e) {
-			// TODO: replace with more meaningful exception
-			throw new RuntimeException(e);
-		}
+        getPackage().save(stream);
 	}
 

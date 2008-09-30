@@ -1,6 +1,24 @@
+    /**
+     * create an XSSFSheet for this workbook, adds it to the sheets and returns
+     * the high level representation.  Use this to create new sheets.
+     *
+     * @param sheetname  sheetname to set for the sheet, can't be duplicate, greater than 31 chars or contain /\?*[]
+     * @return XSSFSheet representing the new sheet.
+     */
 	public XSSFSheet createSheet(String sheetname) {
 		if (doesContainsSheetName( sheetname, sheets.size() ))
 	   		throw new IllegalArgumentException( "The workbook already contains a sheet of this name" );
-		return createSheet(sheetname, XSSFSheet.newInstance());
+
+        int sheetNumber = getNumberOfSheets() + 1;
+        XSSFSheet wrapper = (XSSFSheet)createRelationship(XSSFRelation.WORKSHEET, XSSFSheet.class, sheetNumber);
+        wrapper.setParent(this);
+
+		CTSheet sheet = addSheet(sheetname);
+        wrapper.sheet = sheet;
+        sheet.setId(wrapper.getPackageRelationship().getId());
+        sheet.setSheetId(sheetNumber);
+
+		this.sheets.add(wrapper);
+		return wrapper;
 	}
 

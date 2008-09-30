@@ -1,0 +1,34 @@
+    @Override
+    protected void commit() throws IOException {
+
+        if(worksheet.getColsArray().length == 1) {
+            CTCols col = worksheet.getColsArray(0);
+            if(col.getColArray().length == 0) {
+                worksheet.setColsArray(null);
+            }
+        }
+        // Now re-generate our CTHyperlinks, if needed
+        if(hyperlinks.size() > 0) {
+            if(worksheet.getHyperlinks() == null) {
+                worksheet.addNewHyperlinks();
+            }
+            CTHyperlink[] ctHls = new CTHyperlink[hyperlinks.size()];
+            for(int i=0; i<ctHls.length; i++) {
+                // If our sheet has hyperlinks, have them add
+                //  any relationships that they might need
+                XSSFHyperlink hyperlink = hyperlinks.get(i);
+                hyperlink.generateRelationIfNeeded(getPackagePart());
+                // Now grab their underling object
+                ctHls[i] = hyperlink.getCTHyperlink();
+            }
+            worksheet.getHyperlinks().setHyperlinkArray(ctHls);
+        }
+
+        XmlOptions xmlOptions = new XmlOptions(DEFAULT_XML_OPTIONS);
+        xmlOptions.setSaveSyntheticDocumentElement(new QName(CTWorksheet.type.getName().getNamespaceURI(), "worksheet"));
+        PackagePart part = getPackagePart();
+        OutputStream out = part.getOutputStream();
+        worksheet.save(out, xmlOptions);
+        out.close();
+    }
+

@@ -1,26 +1,31 @@
+    /**
+     * Gets all pictures from the Workbook.
+     *
+     * @return the list of pictures (a list of {@link XSSFPictureData} objects.)
+     */
 	public List<PictureData> getAllPictures() {
 		// In OOXML pictures are referred to in sheets
 		List<PictureData> pictures = new LinkedList<PictureData>();
-		for (CTSheet ctSheet : this.workbook.getSheets().getSheetArray()) {
-			try {
-				PackagePart sheetPart = getPackagePart(ctSheet);
-				if (sheetPart == null) {
-					continue;
-				}
-				PackageRelationshipCollection prc = sheetPart.getRelationshipsByType(XSSFRelation.DRAWINGS.getRelation());
-				for (PackageRelationship rel : prc) {
-					PackagePart drawingPart = getTargetPart(rel);
-					PackageRelationshipCollection prc2 = drawingPart.getRelationshipsByType(XSSFRelation.IMAGES.getRelation());
-					for (PackageRelationship rel2 : prc2) {
-						PackagePart imagePart = getTargetPart(rel2);
-						XSSFPictureData pd = new XSSFPictureData(imagePart);
-						pictures.add(pd);
-					}
-				}
-			} catch (InvalidFormatException e) {
-				throw new RuntimeException(e.getMessage(), e);
-			}
-		}
+        for(POIXMLDocumentPart p : getRelations()){
+            if (p instanceof XSSFSheet) {
+                PackagePart sheetPart = p.getPackagePart();
+                try {
+                    PackageRelationshipCollection prc = sheetPart.getRelationshipsByType(XSSFRelation.DRAWINGS.getRelation());
+                    for (PackageRelationship rel : prc) {
+                        PackagePart drawingPart = getTargetPart(rel);
+                        PackageRelationshipCollection prc2 = drawingPart.getRelationshipsByType(XSSFRelation.IMAGES.getRelation());
+                        for (PackageRelationship rel2 : prc2) {
+                            PackagePart imagePart = getTargetPart(rel2);
+                            XSSFPictureData pd = new XSSFPictureData(imagePart);
+                            pictures.add(pd);
+                        }
+                    }
+                } catch (InvalidFormatException e) {
+                    throw new POIXMLException(e.getMessage(), e);
+                }
+
+            }
+        }
 		return pictures;
 	}
 
