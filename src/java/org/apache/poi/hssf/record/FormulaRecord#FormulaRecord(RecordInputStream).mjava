@@ -1,13 +1,21 @@
-	/**
-	 * Constructs a Formula record and sets its fields appropriately.
-	 * Note - id must be 0x06 (NOT 0x406 see MSKB #Q184647 for an
-	 * "explanation of this bug in the documentation) or an exception
-	 *  will be throw upon validation
-	 *
-	 * @param in the RecordInputstream to read the record from
-	 */
-
 	public FormulaRecord(RecordInputStream in) {
-		super(in);
+		field_1_row	 = in.readUShort();
+		field_2_column  = in.readShort();
+		field_3_xf	  = in.readShort();
+		long valueLongBits  = in.readLong();
+		field_5_options = in.readShort();
+		specialCachedValue = SpecialCachedValue.create(valueLongBits);
+		if (specialCachedValue == null) {
+			field_4_value = Double.longBitsToDouble(valueLongBits);
+		}
+
+		field_6_zero		   = in.readInt();
+		int field_7_expression_len = in.readShort(); // this length does not include any extra array data
+		field_8_parsed_expr = Ptg.readTokens(field_7_expression_len, in);
+		if (in.remaining() == 10) {
+			// TODO - this seems to occur when IntersectionPtg is present
+			// 10 extra bytes are just 0x01 and 0x00
+			// This causes POI stderr: "WARN. Unread 10 bytes of record 0x6"
+		}
 	}
 
