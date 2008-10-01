@@ -5,14 +5,14 @@
     protected void initialize(Package pkg) throws IOException {
         super.initialize(pkg);
 
-		try {
+        try {
             //build the POIXMLDocumentPart tree, this workbook is the root
             read(new XSSFFactory());
 
             PackagePart corePart = getCorePart();
 
             WorkbookDocument doc = WorkbookDocument.Factory.parse(corePart.getInputStream());
-			this.workbook = doc.getWorkbook();
+            this.workbook = doc.getWorkbook();
 
             HashMap<String, XSSFSheet> shIdMap = new HashMap<String, XSSFSheet>();
             for(POIXMLDocumentPart p : getRelations()){
@@ -20,50 +20,50 @@
                 else if(p instanceof StylesSource) stylesSource = (StylesSource)p;
                 else if (p instanceof XSSFSheet) {
                     shIdMap.put(p.getPackageRelationship().getId(), (XSSFSheet)p);
-			    }
-			}
-			// Load individual sheets
+                }
+            }
+            // Load individual sheets
             sheets = new LinkedList<XSSFSheet>();
-			for (CTSheet ctSheet : this.workbook.getSheets().getSheetArray()) {
+            for (CTSheet ctSheet : this.workbook.getSheets().getSheetArray()) {
                 String id = ctSheet.getId();
                 XSSFSheet sh = shIdMap.get(id);
                 sh.sheet = ctSheet;
                 if(sh == null) {
-					log.log(POILogger.WARN, "Sheet with name " + ctSheet.getName() + " and r:id " + ctSheet.getId()+ " was defined, but didn't exist in package, skipping");
-					continue;
-				}
+                    log.log(POILogger.WARN, "Sheet with name " + ctSheet.getName() + " and r:id " + ctSheet.getId()+ " was defined, but didn't exist in package, skipping");
+                    continue;
+                }
                 //initialize internal arrays of rows and columns
                 sh.initialize();
 
                 PackagePart sheetPart = sh.getPackagePart();
-				// Process external hyperlinks for the sheet,
-				//  if there are any
-				PackageRelationshipCollection hyperlinkRels =
-                	sheetPart.getRelationshipsByType(XSSFRelation.SHEET_HYPERLINKS.getRelation());
+                // Process external hyperlinks for the sheet,
+                //  if there are any
+                PackageRelationshipCollection hyperlinkRels =
+                    sheetPart.getRelationshipsByType(XSSFRelation.SHEET_HYPERLINKS.getRelation());
                 sh.initHyperlinks(hyperlinkRels);
 
-				// Get the embeddings for the workbook
+                // Get the embeddings for the workbook
                 for(PackageRelationship rel : sheetPart.getRelationshipsByType(XSSFRelation.OLEEMBEDDINGS.getRelation()))
-					embedds.add(getTargetPart(rel)); // TODO: Add this reference to each sheet as well
+                    embedds.add(getTargetPart(rel)); // TODO: Add this reference to each sheet as well
 
                 for(PackageRelationship rel : sheetPart.getRelationshipsByType(XSSFRelation.PACKEMBEDDINGS.getRelation()))
-					embedds.add(getTargetPart(rel));
+                    embedds.add(getTargetPart(rel));
 
                 sheets.add(sh);
-			}
+            }
 
             if(sharedStringSource == null) {
                 //Create SST if it is missing
                 sharedStringSource = (SharedStringsTable)createRelationship(XSSFRelation.SHARED_STRINGS, SharedStringsTable.class);
-		    }
+            }
 
-		    // Process the named ranges
+            // Process the named ranges
             namedRanges = new LinkedList<XSSFName>();
             if(workbook.getDefinedNames() != null) {
                 for(CTDefinedName ctName : workbook.getDefinedNames().getDefinedNameArray()) {
                     namedRanges.add(new XSSFName(ctName, this));
                 }
-		    }
+            }
 
         } catch (Exception e) {
             throw new POIXMLException(e);
