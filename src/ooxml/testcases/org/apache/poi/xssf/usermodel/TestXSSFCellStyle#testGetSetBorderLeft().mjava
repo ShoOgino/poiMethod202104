@@ -1,9 +1,34 @@
 	public void testGetSetBorderLeft() {
-		ctBorderA.addNewLeft().setStyle(STBorderStyle.DASHED);
-		assertEquals((short)3, cellStyle.getBorderLeft());
-		cellStyle.setBorderLeft((short) 2);
-		assertEquals(STBorderStyle.THIN, ctBorderA.getLeft().getStyle());
-		cellStyle.setBorderLeftEnum(STBorderStyle.THICK);
-		assertEquals(6, ctBorderA.getLeft().getStyle().intValue());
+        //default values
+        assertEquals(CellStyle.BORDER_NONE, cellStyle.getBorderLeft());
+
+        int num = stylesTable.getBorders().size();
+        cellStyle.setBorderLeft(CellStyle.BORDER_MEDIUM);
+        assertEquals(CellStyle.BORDER_MEDIUM, cellStyle.getBorderLeft());
+        //a new border has been added
+        assertEquals(num + 1, stylesTable.getBorders().size());
+        //id of the created border
+        int borderId = (int)cellStyle.getCoreXf().getBorderId();
+        assertTrue(borderId > 0);
+        //check changes in the underlying xml bean
+        CTBorder ctBorder = stylesTable.getBorderAt(borderId).getCTBorder();
+        assertEquals(STBorderStyle.MEDIUM, ctBorder.getLeft().getStyle());
+
+        num = stylesTable.getBorders().size();
+        //setting the same border multiple times should not change borderId
+        for (int i = 0; i < 3; i++) {
+            cellStyle.setBorderLeft(CellStyle.BORDER_MEDIUM);
+            assertEquals(CellStyle.BORDER_MEDIUM, cellStyle.getBorderLeft());
+        }
+        assertEquals(borderId, cellStyle.getCoreXf().getBorderId());
+        assertEquals(num, stylesTable.getBorders().size());
+        assertSame(ctBorder, stylesTable.getBorderAt(borderId).getCTBorder());
+
+        //setting border to none removes the <left> element
+        cellStyle.setBorderLeft(CellStyle.BORDER_NONE);
+        assertEquals(num, stylesTable.getBorders().size());
+        borderId = (int)cellStyle.getCoreXf().getBorderId();
+        ctBorder = stylesTable.getBorderAt(borderId).getCTBorder();
+        assertFalse(ctBorder.isSetLeft());
 	}
 

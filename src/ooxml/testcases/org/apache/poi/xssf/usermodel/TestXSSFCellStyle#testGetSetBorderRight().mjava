@@ -1,9 +1,34 @@
-	public void testGetSetBorderRight() {
-		ctBorderA.addNewRight().setStyle(STBorderStyle.MEDIUM);
-		assertEquals((short)2, cellStyle.getBorderRight());
-		cellStyle.setBorderRight((short) 2);
-		assertEquals(STBorderStyle.THIN, ctBorderA.getRight().getStyle());
-		cellStyle.setBorderRightEnum(STBorderStyle.THICK);
-		assertEquals(6, ctBorderA.getRight().getStyle().intValue());
-	}
+    public void testGetSetBorderRight() {
+        //default values
+        assertEquals(CellStyle.BORDER_NONE, cellStyle.getBorderRight());
+
+        int num = stylesTable.getBorders().size();
+        cellStyle.setBorderRight(CellStyle.BORDER_MEDIUM);
+        assertEquals(CellStyle.BORDER_MEDIUM, cellStyle.getBorderRight());
+        //a new border has been added
+        assertEquals(num + 1, stylesTable.getBorders().size());
+        //id of the created border
+        int borderId = (int)cellStyle.getCoreXf().getBorderId();
+        assertTrue(borderId > 0);
+        //check changes in the underlying xml bean
+        CTBorder ctBorder = stylesTable.getBorderAt(borderId).getCTBorder();
+        assertEquals(STBorderStyle.MEDIUM, ctBorder.getRight().getStyle());
+
+        num = stylesTable.getBorders().size();
+        //setting the same border multiple times should not change borderId
+        for (int i = 0; i < 3; i++) {
+            cellStyle.setBorderRight(CellStyle.BORDER_MEDIUM);
+            assertEquals(CellStyle.BORDER_MEDIUM, cellStyle.getBorderRight());
+        }
+        assertEquals(borderId, cellStyle.getCoreXf().getBorderId());
+        assertEquals(num, stylesTable.getBorders().size());
+        assertSame(ctBorder, stylesTable.getBorderAt(borderId).getCTBorder());
+
+        //setting border to none removes the <right> element
+        cellStyle.setBorderRight(CellStyle.BORDER_NONE);
+        assertEquals(num, stylesTable.getBorders().size());
+        borderId = (int)cellStyle.getCoreXf().getBorderId();
+        ctBorder = stylesTable.getBorderAt(borderId).getCTBorder();
+        assertFalse(ctBorder.isSetRight());
+    }
 

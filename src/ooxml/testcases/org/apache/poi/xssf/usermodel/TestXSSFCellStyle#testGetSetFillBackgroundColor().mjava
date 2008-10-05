@@ -1,0 +1,41 @@
+	public void testGetSetFillBackgroundColor() {
+
+        assertEquals(IndexedColors.AUTOMATIC.getIndex(), cellStyle.getFillBackgroundColor());
+        assertNull(cellStyle.getFillBackgroundRgbColor());
+
+        XSSFColor clr;
+
+        int num = stylesTable.getFills().size();
+
+        //setting indexed color
+        cellStyle.setFillBackgroundColor(IndexedColors.RED.getIndex());
+        assertEquals(IndexedColors.RED.getIndex(), cellStyle.getFillBackgroundColor());
+        clr = cellStyle.getFillBackgroundRgbColor();
+        assertTrue(clr.getCTColor().isSetIndexed());
+        assertEquals(IndexedColors.RED.getIndex(), clr.getIndexed());
+        //a new fill was added to the styles table
+        assertEquals(num + 1, stylesTable.getFills().size());
+
+        //id of the created border
+        int fillId = (int)cellStyle.getCoreXf().getFillId();
+        assertTrue(fillId > 0);
+        //check changes in the underlying xml bean
+        CTFill ctFill = stylesTable.getFillAt(fillId).getCTFill();
+        assertEquals(IndexedColors.RED.getIndex(), ctFill.getPatternFill().getBgColor().getIndexed());
+
+        //setting XSSFColor
+        num = stylesTable.getFills().size();
+        clr = new XSSFColor(java.awt.Color.CYAN);
+        cellStyle.setFillBackgroundColor(clr);
+        assertEquals(clr.getCTColor().toString(), cellStyle.getFillBackgroundRgbColor().getCTColor().toString());
+        byte[] rgb = cellStyle.getFillBackgroundRgbColor().getRgb();
+        assertEquals(java.awt.Color.CYAN, new java.awt.Color(rgb[0] & 0xFF, rgb[1] & 0xFF, rgb[2] & 0xFF));
+        //another border was added to the styles table
+        assertEquals(num + 1, stylesTable.getFills().size());
+
+        //passing null unsets the color
+        cellStyle.setFillBackgroundColor(null);
+        assertNull(cellStyle.getFillBackgroundRgbColor());
+        assertEquals(IndexedColors.AUTOMATIC.getIndex(), cellStyle.getFillBackgroundColor());
+	}
+

@@ -1,14 +1,40 @@
 	public void testGetSetBottomBorderColor() {
-		CTColor ctColor = ctBorderA.addNewBottom().addNewColor();
-		ctColor.setIndexed(2);
-		assertEquals((short)2, cellStyle.getBottomBorderColor());
-		CTColor anotherCtColor = CTColor.Factory.newInstance();
-		anotherCtColor.setIndexed(4);
-		anotherCtColor.setTheme(3);
-		anotherCtColor.setRgb("1234".getBytes());
-		XSSFColor anotherColor = new XSSFColor(anotherCtColor);
-		cellStyle.setBorderColor(BorderSide.BOTTOM, anotherColor);
-		assertEquals((short)4, cellStyle.getBottomBorderColor());
-		assertEquals("1234", new String(cellStyle.getBorderColor(BorderSide.BOTTOM).getRgb()));
-	}
+        //defaults
+        assertEquals(IndexedColors.BLACK.getIndex(), cellStyle.getBottomBorderColor());
+        assertNull(cellStyle.getBottomBorderRgbColor());
+
+        int num = stylesTable.getBorders().size();
+
+        XSSFColor clr;
+
+        //setting indexed color
+        cellStyle.setBottomBorderColor(IndexedColors.BLUE_GREY.getIndex());
+        assertEquals(IndexedColors.BLUE_GREY.getIndex(), cellStyle.getBottomBorderColor());
+        clr = cellStyle.getBottomBorderRgbColor();
+        assertTrue(clr.getCTColor().isSetIndexed());
+        assertEquals(IndexedColors.BLUE_GREY.getIndex(), clr.getIndexed());
+        //a new border was added to the styles table
+        assertEquals(num + 1, stylesTable.getBorders().size());
+
+        //id of the created border
+        int borderId = (int)cellStyle.getCoreXf().getBorderId();
+        assertTrue(borderId > 0);
+        //check changes in the underlying xml bean
+        CTBorder ctBorder = stylesTable.getBorderAt(borderId).getCTBorder();
+        assertEquals(IndexedColors.BLUE_GREY.getIndex(), ctBorder.getBottom().getColor().getIndexed());
+
+        //setting XSSFColor
+        num = stylesTable.getBorders().size();
+        clr = new XSSFColor(java.awt.Color.CYAN);
+        cellStyle.setBottomBorderColor(clr);
+        assertEquals(clr.getCTColor().toString(), cellStyle.getBottomBorderRgbColor().getCTColor().toString());
+        byte[] rgb = cellStyle.getBottomBorderRgbColor().getRgb();
+        assertEquals(java.awt.Color.CYAN, new java.awt.Color(rgb[0] & 0xFF, rgb[1] & 0xFF, rgb[2] & 0xFF));
+        //another border was added to the styles table
+        assertEquals(num + 1, stylesTable.getBorders().size());
+
+        //passing null unsets the color
+        cellStyle.setBottomBorderColor(null);
+        assertNull(cellStyle.getBottomBorderRgbColor());
+    }
 
