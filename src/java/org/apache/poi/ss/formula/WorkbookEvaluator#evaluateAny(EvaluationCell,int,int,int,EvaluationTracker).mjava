@@ -1,0 +1,50 @@
+	/**
+	 * @return never <code>null</code>, never {@link BlankEval}
+	 */
+	private ValueEval evaluateAny(EvaluationCell srcCell, int sheetIndex,
+				int rowIndex, int columnIndex, EvaluationTracker tracker) {
+
+		if (srcCell == null || srcCell.getCellType() != Cell.CELL_TYPE_FORMULA) {
+			ValueEval result = getValueFromNonFormulaCell(srcCell);
+			tracker.acceptPlainValueDependency(_workbookIx, sheetIndex, rowIndex, columnIndex, result);
+			return result;
+		}
+
+		FormulaCellCacheEntry cce = _cache.getOrCreateFormulaCellEntry(srcCell);
+		tracker.acceptFormulaDependency(cce);
+		IEvaluationListener evalListener = _evaluationListener;
+		if (cce.getValue() == null) {
+			if (!tracker.startEvaluate(cce)) {
+				return ErrorEval.CIRCULAR_REF_ERROR;
+			}
+
+			try {
+				ValueEval result;
+
+				Ptg[] ptgs = _workbook.getFormulaTokens(srcCell);
+				if (evalListener == null) {
+					result = evaluateFormula(sheetIndex, rowIndex, columnIndex, ptgs, tracker);
+				} else {
+					evalListener.onStartEvaluate(srcCell, cce, ptgs);
+					result = evaluateFormula(sheetIndex, rowIndex, columnIndex, ptgs, tracker);
+					evalListener.onEndEvaluate(cce, result);
+				}
+
+				tracker.updateCacheResult(result);
+			} finally {
+				tracker.endEvaluate(cce);
+			}
+		} else {
+			if(evalListener != null) {
+				evalListener.onCacheHit(sheetIndex, rowIndex, columnIndex, cce.getValue());
+			}
+			return cce.getValue();
+		}
+		if (isDebugLogEnabled()) {
+			String sheetName = getSheetName(sheetIndex);
+			CellReference cr = new CellReference(rowIndex, columnIndex);
+			logDebug("Evaluated " + sheetName + "!" + cr.formatAsString() + " to " + cce.getValue().toString());
+		}
+		return cce.getValue();
+	}
+
