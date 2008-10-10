@@ -3,27 +3,21 @@
      *
      * @return the list of pictures (a list of {@link XSSFPictureData} objects.)
      */
-    public List<PictureData> getAllPictures() {
-        // In OOXML pictures are referred to in sheets
-        List<PictureData> pictures = new LinkedList<PictureData>();
-        for(POIXMLDocumentPart p : getRelations()){
-            if (p instanceof XSSFSheet) {
-                PackagePart sheetPart = p.getPackagePart();
-                try {
-                    PackageRelationshipCollection prc = sheetPart.getRelationshipsByType(XSSFRelation.DRAWINGS.getRelation());
-                    for (PackageRelationship rel : prc) {
-                        PackagePart drawingPart = getTargetPart(rel);
-                        PackageRelationshipCollection prc2 = drawingPart.getRelationshipsByType(XSSFRelation.IMAGES.getRelation());
-                        for (PackageRelationship rel2 : prc2) {
-                            PackagePart imagePart = getTargetPart(rel2);
-                            XSSFPictureData pd = new XSSFPictureData(imagePart);
-                            pictures.add(pd);
+    public List<XSSFPictureData> getAllPictures() {
+        if(pictures == null) {
+            //In OOXML pictures are referred to in sheets,
+            //dive into sheet's relations, select drawings and their images
+            pictures = new ArrayList();
+            for(XSSFSheet sh : sheets){
+                for(POIXMLDocumentPart dr : sh.getRelations()){
+                    if(dr instanceof XSSFDrawing){
+                        for(POIXMLDocumentPart img : dr.getRelations()){
+                            if(img instanceof XSSFPictureData){
+                                pictures.add((XSSFPictureData)img);
+                            }
                         }
                     }
-                } catch (InvalidFormatException e) {
-                    throw new POIXMLException(e.getMessage(), e);
                 }
-
             }
         }
         return pictures;

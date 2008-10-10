@@ -1,0 +1,47 @@
+    /**
+     * Return the dimension of this image
+     *
+     * @param part the package part holding raw picture data
+     * @param type type of the picture: {@link Workbook#PICTURE_TYPE_JPEG, Workbook#PICTURE_TYPE_PNG or Workbook#PICTURE_TYPE_DIB)
+     *
+     * @return image dimension in pixels
+     */
+    protected static Dimension getImageDimension(PackagePart part, int type){
+        Dimension size = new Dimension();
+
+        switch (type){
+            //we can calculate the preferred size only for JPEG and PNG
+            //other formats like WMF, EMF and PICT are not supported in Java
+            case Workbook.PICTURE_TYPE_JPEG:
+            case Workbook.PICTURE_TYPE_PNG:
+            case Workbook.PICTURE_TYPE_DIB:
+                try {
+                    //read the image using javax.imageio.*
+                    ImageInputStream iis = ImageIO.createImageInputStream( part.getInputStream() );
+                    Iterator i = ImageIO.getImageReaders( iis );
+                    ImageReader r = (ImageReader) i.next();
+                    r.setInput( iis );
+                    BufferedImage img = r.read(0);
+
+                    int[] dpi = getResolution(r);
+
+                    //if DPI is zero then assume standard 96 DPI
+                    //since cannot divide by zero
+                    if (dpi[0] == 0) dpi[0] = 96;
+                    if (dpi[1] == 0) dpi[1] = 96;
+
+                    size.width = img.getWidth()*96/dpi[0];
+                    size.height = img.getHeight()*96/dpi[1];
+
+                } catch (IOException e){
+                    //silently return if ImageIO failed to read the image
+                    logger.log(POILogger.WARN, e);
+                }
+
+                break;
+            default:
+                logger.log(POILogger.WARN, "Only JPEG, PNG and DIB pictures can be automatically sized");
+        }
+        return size;
+    }
+

@@ -1,0 +1,48 @@
+    public void testNew(){
+        XSSFWorkbook wb = new XSSFWorkbook();
+        XSSFSheet sheet = wb.createSheet();
+        XSSFDrawing drawing = sheet.createDrawingPatriarch();
+
+        byte[] jpegData = "test jpeg data".getBytes();
+        byte[] wmfData =  "test wmf data".getBytes();
+        byte[] pngData =  "test png data".getBytes();
+
+        List<XSSFPictureData> pictures = wb.getAllPictures();
+        assertEquals(0, pictures.size());
+
+        int jpegIdx = wb.addPicture(jpegData, XSSFWorkbook.PICTURE_TYPE_JPEG);
+        assertEquals(1, pictures.size());
+        assertEquals("jpeg", pictures.get(jpegIdx).suggestFileExtension());
+        assertTrue(Arrays.equals(jpegData, pictures.get(jpegIdx).getData()));
+
+        int wmfIdx = wb.addPicture(wmfData, XSSFWorkbook.PICTURE_TYPE_WMF);
+        assertEquals(2, pictures.size());
+        assertEquals("wmf", pictures.get(wmfIdx).suggestFileExtension());
+        assertTrue(Arrays.equals(wmfData, pictures.get(wmfIdx).getData()));
+
+        int pngIdx = wb.addPicture(pngData, XSSFWorkbook.PICTURE_TYPE_PNG);
+        assertEquals(3, pictures.size());
+        assertEquals("png", pictures.get(pngIdx).suggestFileExtension());
+        assertTrue(Arrays.equals(pngData, pictures.get(pngIdx).getData()));
+
+        //TODO finish usermodel API for XSSFPicture
+        XSSFPicture p1 = drawing.createPicture(new XSSFClientAnchor(), jpegIdx);
+        XSSFPicture p2 = drawing.createPicture(new XSSFClientAnchor(), wmfIdx);
+        XSSFPicture p3 = drawing.createPicture(new XSSFClientAnchor(), pngIdx);
+
+        //check that the added pictures are accessible after write
+        wb = XSSFTestDataSamples.writeOutAndReadBack(wb);
+        List<XSSFPictureData> pictures2 = wb.getAllPictures();
+        assertEquals(3, pictures2.size());
+
+        assertEquals("jpeg", pictures2.get(jpegIdx).suggestFileExtension());
+        assertTrue(Arrays.equals(jpegData, pictures2.get(jpegIdx).getData()));
+
+        assertEquals("wmf", pictures2.get(wmfIdx).suggestFileExtension());
+        assertTrue(Arrays.equals(wmfData, pictures2.get(wmfIdx).getData()));
+
+        assertEquals("png", pictures2.get(pngIdx).suggestFileExtension());
+        assertTrue(Arrays.equals(pngData, pictures2.get(pngIdx).getData()));
+
+    }
+
