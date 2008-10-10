@@ -1,59 +1,62 @@
-    /**
-     * Method main with 1 argument just run straight biffview against given
-     * file<P>
-     *
-     * with 2 arguments where the second argument is "on" - run biffviewer<P>
-     *
-     * with hex dumps of records <P>
-     *
-     * with 2 arguments where the second argument is "bfd" just run a big fat
-     * hex dump of the file...don't worry about biffviewing it at all
-     * <p>
-     * Define the system property <code>poi.deserialize.escher</code> to turn on
-     * deserialization of escher records.
-     *
-     */
-    public static void main(String[] args) {
+	/**
+	 * Method main with 1 argument just run straight biffview against given
+	 * file<P>
+	 *
+	 * with 2 arguments where the second argument is "on" - run biffviewer<P>
+	 *
+	 * with hex dumps of records <P>
+	 *
+	 * with 2 arguments where the second argument is "bfd" just run a big fat
+	 * hex dump of the file...don't worry about biffviewing it at all
+	 * <p>
+	 * Define the system property <code>poi.deserialize.escher</code> to turn on
+	 * deserialization of escher records.
+	 *
+	 */
+	public static void main(String[] args) {
 
-        System.setProperty("poi.deserialize.escher", "true");
+		System.setProperty("poi.deserialize.escher", "true");
 
-        if (args.length == 0) {
-            System.out.println( "Biff viewer needs a filename" );
-            return;
-        }
+		if (args.length == 0) {
+			System.out.println( "Biff viewer needs a filename" );
+			return;
+		}
 
-        try {
-            String inFileName = args[0];
-            File inputFile = new File(inFileName);
-            if(!inputFile.exists()) {
-                throw new RuntimeException("specified inputFile '" + inFileName + "' does not exist");
-            }
-            PrintStream ps;
-            if (false) { // set to true to output to file
-                OutputStream os = new FileOutputStream(inFileName + ".out");
-                ps = new PrintStream(os);
-            } else {
-                ps = System.out;
-            }
-            BiffViewer viewer = new BiffViewer(inputFile, ps);
+		try {
+			String inFileName = args[0];
+			File inputFile = new File(inFileName);
+			if(!inputFile.exists()) {
+				throw new RuntimeException("specified inputFile '" + inFileName + "' does not exist");
+			}
+			PrintStream ps;
+			if (false) { // set to true to output to file
+				OutputStream os = new FileOutputStream(inFileName + ".out");
+				ps = new PrintStream(os);
+			} else {
+				ps = System.out;
+			}
+ 
+			if (args.length > 1 && args[1].equals("bfd")) {
+				POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(inputFile));
+				InputStream stream = fs.createDocumentInputStream("Workbook");
+				int size = stream.available();
+				byte[] data = new byte[size];
 
-            if (args.length > 1 && args[1].equals("on")) {
-                viewer.setDump(true);
-            }
-            if (args.length > 1 && args[1].equals("bfd")) {
-                POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(inputFile));
-                InputStream stream = fs.createDocumentInputStream("Workbook");
-                int size = stream.available();
-                byte[] data = new byte[size];
+				stream.read(data);
+				HexDump.dump(data, 0, System.out, 0);
+			} else {
+				boolean dumpInterpretedRecords = true;
+				boolean dumpHex = args.length > 1 && args[1].equals("on");
 
-                stream.read(data);
-                HexDump.dump(data, 0, System.out, 0);
-            } else {
-                viewer.run();
-            }
-            ps.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+				POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(inputFile));
+				InputStream is = fs.createDocumentInputStream("Workbook");
+				BiffRecordListener recListener = new BiffRecordListener(dumpHex ? new OutputStreamWriter(ps) : null);
+				is = new BiffDumpingStream(is, recListener);
+				createRecords(is, ps, recListener, dumpInterpretedRecords);
+			}
+			ps.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
 

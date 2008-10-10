@@ -1,0 +1,41 @@
+	/**
+	 * Hex-dumps a portion of a byte array in typical format, also preserving dump-line alignment  
+	 * @param globalOffset (somewhat arbitrary) used to calculate the addresses printed at the 
+	 * start of each line 
+	 */
+	static void hexDumpAligned(Writer w, byte[] data, int baseDataOffset, int dumpLen, int globalOffset) {
+		// perhaps this code should be moved to HexDump
+		int globalStart = globalOffset + baseDataOffset;
+		int globalEnd = globalOffset + baseDataOffset + dumpLen;
+		int startDelta = globalStart % DUMP_LINE_LEN;
+		int endDelta = globalEnd % DUMP_LINE_LEN;
+		int startLineAddr = globalStart - startDelta;
+		int endLineAddr = globalEnd - endDelta;
+		
+		int lineDataOffset = baseDataOffset - startDelta;
+		int lineAddr = startLineAddr;
+		
+		// output (possibly incomplete) first line
+		if (startLineAddr == endLineAddr) {
+			hexDumpLine(w, data, lineAddr, lineDataOffset, startDelta, endDelta);
+			return;
+		}
+		hexDumpLine(w, data, lineAddr, lineDataOffset, startDelta, DUMP_LINE_LEN);
+		
+		// output all full lines in the middle
+		while (true) {
+			lineAddr += DUMP_LINE_LEN;
+			lineDataOffset += DUMP_LINE_LEN;
+			if (lineAddr >= endLineAddr) {
+				break;
+			}
+			hexDumpLine(w, data, lineAddr, lineDataOffset, 0, DUMP_LINE_LEN);
+		}
+		
+		
+		// output (possibly incomplete) last line
+		if (endDelta != 0) {
+			hexDumpLine(w, data, lineAddr, lineDataOffset, 0, endDelta);
+		}
+	}
+
