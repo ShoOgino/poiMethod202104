@@ -1,0 +1,26 @@
+	private int serializeTrailingRecords(int offset, byte[] data) {
+		byte[] textBytes;
+		try {
+			textBytes = _text.getString().getBytes("UTF-16LE");
+		} catch (UnsupportedEncodingException e) {
+			throw new RuntimeException(e.getMessage(), e);
+		}
+		int remainingLength = textBytes.length;
+
+		int countTextBytesWritten = 0;
+		int pos = offset;
+		// (regardless what was read, we always serialize double-byte
+		// unicode characters (UTF-16LE).
+		Byte unicodeFlag = new Byte((byte)1);
+		while (remainingLength > 0) {
+			int chunkSize = Math.min(RecordInputStream.MAX_RECORD_DATA_SIZE - 2, remainingLength);
+			remainingLength -= chunkSize;
+			pos += ContinueRecord.write(data, pos, unicodeFlag, textBytes, countTextBytesWritten, chunkSize);
+			countTextBytesWritten += chunkSize;
+		}
+
+		byte[] formatData = createFormatData(_text);
+		pos += ContinueRecord.write(data, pos, null, formatData);
+		return pos - offset;
+	}
+

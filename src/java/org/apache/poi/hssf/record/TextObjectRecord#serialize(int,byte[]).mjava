@@ -1,63 +1,15 @@
-    public int serialize( int offset, byte[] data )
-    {
-        // Temporarily blank out str so that record size is calculated without the continue records.
-        HSSFRichTextString temp = str;
-        str = new HSSFRichTextString("");
-        int bytesWritten1 = super.serialize( offset, data );
-        str = temp;
+	public int serialize(int offset, byte[] data) {
 
-        int pos = offset + bytesWritten1;
-        if ( str.getString().equals( "" ) == false )
-        {
-            ContinueRecord c2 = createContinue2();
-            int bytesWritten2 = 0;
-
-            try
-            {
-                byte[] c1Data = str.getString().getBytes( "UTF-16LE" );
-                int length = c1Data.length;
-
-                int charsWritten = 0;
-                int spos = pos;
-                while(length > 0){
-                    int chunkSize = Math.min(RecordInputStream.MAX_RECORD_DATA_SIZE-2 , length);
-                    length -= chunkSize;
-
-                    //continue header
-                    LittleEndian.putShort(data, spos, ContinueRecord.sid);
-                    spos += LittleEndian.SHORT_SIZE;
-                    LittleEndian.putShort(data, spos, (short)(chunkSize+1));
-                    spos += LittleEndian.SHORT_SIZE;
-
-                    //The first byte specifies if the text is compressed unicode or unicode.
-                    //(regardless what was read, we always serialize double-byte unicode characters (UTF-16LE).
-                    data[spos] = 1;
-                    spos += LittleEndian.BYTE_SIZE;
-
-                    //copy characters data
-                    System.arraycopy(c1Data, charsWritten, data, spos, chunkSize);
-                    spos += chunkSize;
-                    charsWritten += chunkSize;
-                }
-
-                bytesWritten2 = (spos-pos);
-            }
-            catch ( UnsupportedEncodingException e )
-            {
-                throw new RuntimeException( e.getMessage(), e );
-            }
-
-            pos += bytesWritten2;
-            int bytesWritten3 = c2.serialize( pos, data );
-            pos += bytesWritten3;
-
-            int size = bytesWritten1 + bytesWritten2 + bytesWritten3;
-            if ( size != getRecordSize() )
-                throw new RecordFormatException(size + " bytes written but getRecordSize() reports " + getRecordSize());
-            return size;
-        }
-        if ( bytesWritten1 != getRecordSize() )
-            throw new RecordFormatException(bytesWritten1 + " bytes written but getRecordSize() reports " + getRecordSize());
-        return bytesWritten1;
-    }
+		int expectedTotalSize = getRecordSize();
+		int totalSize = serializeTXORecord(offset, data);
+		
+		if (_text.getString().length() > 0) {
+			totalSize += serializeTrailingRecords(offset+totalSize, data);
+		} 
+		
+		if (totalSize != expectedTotalSize)
+			throw new RecordFormatException(totalSize
+					+ " bytes written but getRecordSize() reports " + expectedTotalSize);
+		return totalSize;
+	}
 
