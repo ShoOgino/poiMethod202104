@@ -1,0 +1,51 @@
+	private String readStringCommon(int requestedLength, boolean pIsCompressedEncoding) {
+		// Sanity check to detect garbage string lengths
+		if (requestedLength < 0 || requestedLength > 0x100000) { // 16 million chars?
+			throw new IllegalArgumentException("Bad requested string length (" + requestedLength + ")");
+		}
+		char[] buf = new char[requestedLength];
+		boolean isCompressedEncoding = pIsCompressedEncoding;
+		int curLen = 0;
+		while(true) {
+			int availableChars =isCompressedEncoding ?  remaining() : remaining() / LittleEndian.SHORT_SIZE;
+			if (requestedLength - curLen <= availableChars) {
+				// enough space in current record, so just read it out
+				while(curLen < requestedLength) {
+					char ch;
+					if (isCompressedEncoding) {
+						ch = (char)readUByte();
+					} else {
+						ch = (char)readShort();
+					}
+					buf[curLen] = ch;
+					curLen++;
+				}
+				return new String(buf);
+			}
+			// else string has been spilled into next continue record
+			// so read what's left of the current record
+			while(availableChars > 0) {
+				char ch;
+				if (isCompressedEncoding) {
+					ch = (char)readUByte();
+				} else {
+					ch = (char)readShort();
+				}
+				buf[curLen] = ch;
+				curLen++;
+				availableChars--;
+			}
+			if (!isContinueNext()) {
+				throw new RecordFormatException("Expected to find a ContinueRecord in order to read remaining " 
+						+ (requestedLength-curLen) + " of " + requestedLength + " chars");
+			}
+			if(remaining() != 0) {
+				throw new RecordFormatException("Odd number of bytes(" + remaining() + ") left behind");
+			}
+			nextRecord();
+			// note - the compressed flag may change on the fly
+			byte compressFlag = readByte();
+			isCompressedEncoding = (compressFlag == 0); 
+		}
+	}
+
