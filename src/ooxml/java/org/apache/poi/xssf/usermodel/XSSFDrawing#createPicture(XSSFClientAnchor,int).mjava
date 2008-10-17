@@ -9,12 +9,16 @@
      */
     public XSSFPicture createPicture(XSSFClientAnchor anchor, int pictureIndex)
     {
-        XSSFWorkbook wb = (XSSFWorkbook)getParent().getParent();
-        XSSFPictureData data = wb.getAllPictures().get(pictureIndex);
-        PackagePartName ppName = data.getPackagePart().getPartName();
-        PackageRelationship rel = packagePart.addRelationship(ppName, TargetMode.INTERNAL, XSSFRelation.IMAGES.getRelation());
-        addRelation(new XSSFPictureData(data.getPackagePart(), rel));
+        PackageRelationship rel = addPictureReference(pictureIndex);
+
         CTTwoCellAnchor ctAnchor = createTwoCellAnchor(anchor);
-        return new XSSFPicture(this, rel, ctAnchor);
+        ctAnchor.setEditAs(STEditAs.ONE_CELL);
+        CTPicture ctShape = ctAnchor.addNewPic();
+        ctShape.set(XSSFPicture.prototype());
+
+        XSSFPicture shape = new XSSFPicture(this, ctShape);
+        shape.anchor = anchor;
+        shape.setPictureReference(rel);
+        return shape;
     }
 
