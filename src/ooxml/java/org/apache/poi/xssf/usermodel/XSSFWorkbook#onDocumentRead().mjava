@@ -2,16 +2,12 @@
      * Initialize this workbook from the specified Package
      */
     @Override
-    protected void initialize(Package pkg) throws IOException {
-        super.initialize(pkg);
-
+    protected void onDocumentRead() {
         try {
             //build the POIXMLDocumentPart tree, this workbook is the root
             read(XSSFFactory.getInstance());
 
-            PackagePart corePart = getCorePart();
-
-            WorkbookDocument doc = WorkbookDocument.Factory.parse(corePart.getInputStream());
+            WorkbookDocument doc = WorkbookDocument.Factory.parse(getPackagePart().getInputStream());
             this.workbook = doc.getWorkbook();
 
             HashMap<String, XSSFSheet> shIdMap = new HashMap<String, XSSFSheet>();
@@ -22,8 +18,10 @@
                     shIdMap.put(p.getPackageRelationship().getId(), (XSSFSheet)p);
                 }
             }
+
             // Load individual sheets
             sheets = new LinkedList<XSSFSheet>();
+            embedds = new LinkedList<PackagePart>();
             for (CTSheet ctSheet : this.workbook.getSheets().getSheetArray()) {
                 String id = ctSheet.getId();
                 XSSFSheet sh = shIdMap.get(id);
