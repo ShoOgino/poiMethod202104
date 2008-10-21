@@ -1,0 +1,37 @@
+	/**
+	 * Make sure that when blank cells are changed to value/formula cells, any dependent formulas
+	 * have their cached results cleared.
+	 */
+	public void testBlankCellChangedToValueCell_bug46053() {
+		HSSFWorkbook wb = new HSSFWorkbook();
+		HSSFSheet sheet = wb.createSheet("Sheet1");
+		HSSFRow row = sheet.createRow(0);
+		HSSFCell cellA1 = row.createCell(0);
+		HSSFCell cellB1 = row.createCell(1);
+		HSSFFormulaEvaluator fe = new HSSFFormulaEvaluator(wb);
+
+		cellA1.setCellFormula("B1+2.2");
+		cellB1.setCellValue(1.5);
+
+		fe.notifyUpdateCell(cellA1);
+		fe.notifyUpdateCell(cellB1);
+
+		CellValue cv;
+		cv = fe.evaluate(cellA1);
+		assertEquals(3.7, cv.getNumberValue(), 0.0);
+
+		cellB1.setCellType(HSSFCell.CELL_TYPE_BLANK);
+		fe.notifyUpdateCell(cellB1);
+		cv = fe.evaluate(cellA1); // B1 was used to evaluate A1
+		assertEquals(2.2, cv.getNumberValue(), 0.0);
+
+		cellB1.setCellValue(0.4);  // changing B1, so A1 cached result should be cleared 
+		fe.notifyUpdateCell(cellB1);
+		cv = fe.evaluate(cellA1);
+		if (cv.getNumberValue() == 2.2) {
+			// looks like left-over cached result from before change to B1
+			throw new AssertionFailedError("Identified bug 46053");
+		}
+		assertEquals(2.6, cv.getNumberValue(), 0.0);
+	}
+
