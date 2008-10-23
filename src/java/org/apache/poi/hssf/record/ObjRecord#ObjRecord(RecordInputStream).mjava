@@ -1,41 +1,42 @@
-    public ObjRecord(RecordInputStream in)
-    {
-    	// TODO - problems with OBJ sub-records stream
-    	// MS spec says first sub-records is always CommonObjectDataSubRecord, and last is 
-    	// always EndSubRecord.  OOO spec does not mention ObjRecord(0x005D).
-    	// Existing POI test data seems to violate that rule.  Some test data seems to contain
-    	// garbage, and a crash is only averted by stopping at what looks like the 'EndSubRecord'
-    	
-        subrecords = new ArrayList();
-        //Check if this can be continued, if so then the
-        //following wont work properly
-        int subSize = 0;
-        byte[] subRecordData = in.readRemainder();
-        
-        RecordInputStream subRecStream = new RecordInputStream(new ByteArrayInputStream(subRecordData));
-        while(subRecStream.hasNextRecord()) {
-          subRecStream.nextRecord();
-          Record subRecord = SubRecord.createSubRecord(subRecStream);
-          subSize += subRecord.getRecordSize();
-          subrecords.add(subRecord);
-          if (subRecord instanceof EndSubRecord) {
-        	  break;
-          }
-        }
+	public ObjRecord(RecordInputStream in) {
+		// TODO - problems with OBJ sub-records stream
+		// MS spec says first sub-records is always CommonObjectDataSubRecord,
+		// and last is
+		// always EndSubRecord. OOO spec does not mention ObjRecord(0x005D).
+		// Existing POI test data seems to violate that rule. Some test data
+		// seems to contain
+		// garbage, and a crash is only averted by stopping at what looks like
+		// the 'EndSubRecord'
 
-        /**
-         * Add the EndSubRecord explicitly.
-         * 
-         * TODO - the reason the EndSubRecord is always skipped is because its 'sid' is zero and
-         * that causes subRecStream.hasNextRecord() to return false.
-         * There may be more than the size of EndSubRecord left-over, if there is any padding 
-         * after that record.  The content of the EndSubRecord and the padding is all zeros.
-         * So there's not much to look at past the last substantial record.
-         * 
-         * See Bugs 41242/45133 for details.
-         */
-        if (subRecordData.length - subSize >= 4) {
-            subrecords.add(new EndSubRecord());
-        }
-    }
+		// Check if this can be continued, if so then the
+		// following wont work properly
+		byte[] subRecordData = in.readRemainder();
+		if (LittleEndian.getUShort(subRecordData, 0) != CommonObjectDataSubRecord.sid) {
+			// seems to occur in just one junit on "OddStyleRecord.xls" (file created by CrystalReports)
+			// Excel tolerates the funny ObjRecord, and replaces it with a corrected version
+			// The exact logic/reasoning is not yet understood
+			_uninterpretedData = subRecordData;
+			return;
+		}
+
+//		System.out.println(HexDump.toHex(subRecordData));
+
+		subrecords = new ArrayList();
+		ByteArrayInputStream bais = new ByteArrayInputStream(subRecordData);
+		LittleEndianInputStream subRecStream = new LittleEndianInputStream(bais);
+		while (true) {
+			SubRecord subRecord = SubRecord.createSubRecord(subRecStream);
+			subrecords.add(subRecord);
+			if (subRecord instanceof EndSubRecord) {
+				break;
+			}
+		}
+		if (bais.available() > 0) {
+			// earlier versions of the code had allowances for padding
+			// At present (Oct-2008), no unit test samples exhibit such padding
+			String msg = "Leftover " + bais.available() 
+				+ " bytes in subrecord data " + HexDump.toHex(subRecordData);
+			throw new RecordFormatException(msg);
+		}
+	}
 

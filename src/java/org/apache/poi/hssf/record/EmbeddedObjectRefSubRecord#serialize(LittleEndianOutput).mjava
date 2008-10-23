@@ -1,0 +1,63 @@
+	public void serialize(LittleEndianOutput out) {
+
+		int formulaSize = field_2_refPtg == null ? field_2_unknownFormulaData.length : field_2_refPtg.getSize();
+		int idOffset = getStreamIDOffset(formulaSize);
+		int dataSize = getDataSize(idOffset);
+		
+
+		out.writeShort(sid);
+		out.writeShort(dataSize);
+
+		out.writeShort(idOffset);
+		out.writeShort(formulaSize);
+		out.writeInt(field_1_unknown_int);
+
+		int pos = 12;
+
+		if (field_2_refPtg == null) {
+			out.write(field_2_unknownFormulaData);
+		} else {
+			field_2_refPtg.write(out);
+		}
+	   	pos += formulaSize;
+
+		int stringLen;
+		if (field_4_ole_classname == null) {
+			// don't write 0x03, stringLen, flag, text
+			stringLen = 0;
+		} else {
+			out.writeByte(0x03);
+			pos+=1;
+			stringLen = field_4_ole_classname.length();
+			out.writeShort(stringLen);
+			pos+=2;
+			out.writeByte(field_3_unicode_flag ? 0x01 : 0x00);
+			pos+=1;
+
+			if (field_3_unicode_flag) {
+				StringUtil.putUnicodeLE(field_4_ole_classname, out);
+				pos += stringLen * 2;
+			} else {
+				StringUtil.putCompressedUnicode(field_4_ole_classname, out);
+				pos += stringLen;
+			}
+		}
+
+		// pad to next 2-byte boundary (requires 0 or 1 bytes)
+		switch(idOffset - (pos - 6)) { // 6 for 3 shorts: sid, dataSize, idOffset
+			case 1:
+				out.writeByte(field_4_unknownByte == null ? 0x00 : field_4_unknownByte.intValue());
+				pos ++;
+			case 0:
+				break;
+			default:
+				throw new IllegalStateException("Bad padding calculation (" + idOffset + ", " + pos + ")");	
+		}
+
+		if (field_5_stream_id != null) {
+			out.writeInt(field_5_stream_id.intValue());
+    		pos += 4;
+		}
+		out.write(field_6_unknown);
+	}
+
