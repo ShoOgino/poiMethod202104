@@ -1,27 +1,24 @@
+    /**
+     * Get the value of the cell as a number.
+     * <p>
+     * For strings we throw an exception. For blank cells we return a 0.
+     * For formulas or error cells we return the precalculated value;
+     * </p>
+     * @return the value of the cell as a number
+     * @throws IllegalStateException if the cell type returned by {@link #getCellType()} is CELL_TYPE_STRING
+     * @exception NumberFormatException if the cell value isn't a parsable <code>double</code>.
+     */
     public double getNumericCellValue() {
-        if (STCellType.N != cell.getT() && STCellType.STR != cell.getT()) {
-            throw new NumberFormatException("You cannot get a numeric value from a non-numeric cell");
+        int cellType = getCellType();
+        switch(cellType) {
+            case CELL_TYPE_BLANK:
+                return 0.0;
+            case CELL_TYPE_ERROR:
+            case CELL_TYPE_FORMULA:
+            case CELL_TYPE_NUMERIC:
+                return cell.isSetV() ? Double.parseDouble(cell.getV()) : 0.0;
+            default:
+                throw typeMismatch(CELL_TYPE_NUMERIC, cellType, false);
         }
-        if (this.cell.isSetV()) {
-            return Double.parseDouble(this.cell.getV());
-        }
-        // else - cell is blank.
-
-        // TODO - behaviour in the case of blank cells.
-        // Revise spec, choose best alternative below, and comment why.
-        if (true) {
-            // returning NaN from a blank cell seems wrong
-            // there are a few junits which assert this behaviour, though.
-            return Double.NaN;
-        }
-        if (true) {
-            // zero is probably a more reasonable value.
-            return 0.0;
-        } else {
-            // or perhaps disallow reading value from blank cell.
-            throw new RuntimeException("You cannot get a numeric value from a blank cell");
-        }
-        // Note - it would be nice if the behaviour is consistent with getRichStringCellValue
-        // (i.e. whether to return empty string or throw exception).
     }
 

@@ -4,10 +4,49 @@
     public void testSetGetNumeric() throws Exception {
         XSSFRow row = createParentObjects();
         XSSFCell cell = row.createCell(0);
-        cell.setCellValue(10d);
+        assertEquals(0.0, cell.getNumericCellValue());
+
+        cell.setCellValue(10.0);
         assertEquals(Cell.CELL_TYPE_NUMERIC, cell.getCellType());
-        assertEquals(10d, cell.getNumericCellValue());
+        assertEquals(10.0, cell.getNumericCellValue());
         cell.setCellValue(-23.76);
         assertEquals(-23.76, cell.getNumericCellValue());        
-    }
+
+        cell.setCellValue("string");
+        try {
+            cell.getNumericCellValue();
+            fail("Exception expected");
+        } catch (IllegalStateException e) {
+            // success
+            assertEquals("Cannot get a numeric value from a text cell", e.getMessage());
+        }
+
+        cell.setCellValue(true);
+        try {
+            cell.getNumericCellValue();
+            fail("Exception expected");
+        } catch (IllegalStateException e) {
+            // success
+            assertEquals("Cannot get a numeric value from a boolean cell", e.getMessage());
+        }
+
+        //reverted to a blank cell
+        cell.setCellType(Cell.CELL_TYPE_BLANK);
+        assertEquals(0.0, cell.getNumericCellValue());
+
+        //setting numeric value for a formula cell does not change the cell type
+        XSSFCell fcell = row.createCell(1);
+        fcell.setCellFormula("SUM(C4:E4)");
+        assertEquals(Cell.CELL_TYPE_FORMULA, fcell.getCellType());
+        fcell.setCellValue(36.6);
+        assertEquals(Cell.CELL_TYPE_FORMULA, fcell.getCellType());
+        assertEquals(36.6, fcell.getNumericCellValue());
+
+        //the said above is true for error cells
+        fcell.setCellType(Cell.CELL_TYPE_ERROR);
+        assertEquals(36.6, fcell.getNumericCellValue());
+        fcell.setCellValue(16.6);
+        assertEquals(Cell.CELL_TYPE_FORMULA, fcell.getCellType());
+        assertEquals(16.6, fcell.getNumericCellValue());
+     }
 
