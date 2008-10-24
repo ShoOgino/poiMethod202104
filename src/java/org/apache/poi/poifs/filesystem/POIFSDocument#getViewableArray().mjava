@@ -1,57 +1,43 @@
-    /**
-     * Get an array of objects, some of which may implement
-     * POIFSViewable
-     *
-     * @return an array of Object; may not be null, but may be empty
-     */
+	/**
+	 * Get an array of objects, some of which may implement POIFSViewable
+	 *
+	 * @return an array of Object; may not be null, but may be empty
+	 */
+	public Object[] getViewableArray() {
+		Object[] results = new Object[1];
+		String result;
 
-    public Object [] getViewableArray()
-    {
-        Object[] results = new Object[ 1 ];
-        String   result;
+		try {
+			ByteArrayOutputStream output = new ByteArrayOutputStream();
+			BlockWritable[] blocks = null;
 
-        try
-        {
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            BlockWritable[]       blocks = null;
+			if (_big_store.isValid()) {
+				blocks = _big_store.getBlocks();
+			} else if (_small_store.isValid()) {
+				blocks = _small_store.getBlocks();
+			}
+			if (blocks != null) {
+				for (int k = 0; k < blocks.length; k++) {
+					blocks[k].writeBlocks(output);
+				}
+				byte[] data = output.toByteArray();
 
-            if (_big_store.isValid())
-            {
-                blocks = _big_store.getBlocks();
-            }
-            else if (_small_store.isValid())
-            {
-                blocks = _small_store.getBlocks();
-            }
-            if (blocks != null)
-            {
-                for (int k = 0; k < blocks.length; k++)
-                {
-                    blocks[ k ].writeBlocks(output);
-                }
-                byte[] data = output.toByteArray();
+				if (data.length > _property.getSize()) {
+					byte[] tmp = new byte[_property.getSize()];
 
-                if (data.length > _property.getSize())
-                {
-                    byte[] tmp = new byte[ _property.getSize() ];
-
-                    System.arraycopy(data, 0, tmp, 0, tmp.length);
-                    data = tmp;
-                }
-                output = new ByteArrayOutputStream();
-                HexDump.dump(data, 0, output, 0);
-                result = output.toString();
-            }
-            else
-            {
-                result = "<NO DATA>";
-            }
-        }
-        catch (IOException e)
-        {
-            result = e.getMessage();
-        }
-        results[ 0 ] = result;
-        return results;
-    }
+					System.arraycopy(data, 0, tmp, 0, tmp.length);
+					data = tmp;
+				}
+				output = new ByteArrayOutputStream();
+				HexDump.dump(data, 0, output, 0);
+				result = output.toString();
+			} else {
+				result = "<NO DATA>";
+			}
+		} catch (IOException e) {
+			result = e.getMessage();
+		}
+		results[0] = result;
+		return results;
+	}
 
