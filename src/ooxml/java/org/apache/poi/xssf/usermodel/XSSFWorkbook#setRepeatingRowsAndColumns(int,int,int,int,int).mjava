@@ -1,9 +1,6 @@
     /**
      * Sets the repeating rows and columns for a sheet.
-     *   This is function is included in the workbook
-     * because it creates/modifies name records which are stored at the
-     * workbook level.
-     * <p>
+     * <p/>
      * To set just repeating columns:
      * <pre>
      *  workbook.setRepeatingRowsAndColumns(0,0,1,-1,-1);
@@ -17,15 +14,37 @@
      *  workbook.setRepeatingRowsAndColumns(0,-1,-1,-1,-1);
      * </pre>
      *
-     * @param sheetIndex    0 based index to sheet.
-     * @param startColumn   0 based start of repeating columns.
-     * @param endColumn     0 based end of repeating columns.
-     * @param startRow      0 based start of repeating rows.
-     * @param endRow        0 based end of repeating rows.
+     * @param sheetIndex  0 based index to sheet.
+     * @param startColumn 0 based start of repeating columns.
+     * @param endColumn   0 based end of repeating columns.
+     * @param startRow    0 based start of repeating rows.
+     * @param endRow      0 based end of repeating rows.
      */
     public void setRepeatingRowsAndColumns(int sheetIndex,
                                            int startColumn, int endColumn,
                                            int startRow, int endRow) {
-        //TODO
+        //	Check arguments
+        if ((startColumn == -1 && endColumn != -1) || startColumn < -1 || endColumn < -1 || startColumn > endColumn)
+            throw new IllegalArgumentException("Invalid column range specification");
+        if ((startRow == -1 && endRow != -1) || startRow < -1 || endRow < -1 || startRow > endRow)
+            throw new IllegalArgumentException("Invalid row range specification");
+
+        XSSFSheet sheet = getSheetAt(sheetIndex);
+        boolean removingRange = startColumn == -1 && endColumn == -1 && startRow == -1 && endRow == -1;
+
+        XSSFName name = getBuiltInName(XSSFName.BUILTIN_PRINT_TITLE, sheetIndex);
+        if (removingRange && name != null) {
+            namedRanges.remove(name);
+            return;
+        }
+        if (name == null) {
+            name = createBuiltInName(XSSFName.BUILTIN_PRINT_TITLE, sheetIndex);
+            String reference = getReferenceBuiltInRecord(name.getSheetName(), startColumn, endColumn, startRow, endRow);
+            name.setReference(reference);
+            namedRanges.add(name);
+        }
+
+        XSSFPrintSetup printSetup = sheet.getPrintSetup();
+        printSetup.setValidSettings(false);
     }
 
