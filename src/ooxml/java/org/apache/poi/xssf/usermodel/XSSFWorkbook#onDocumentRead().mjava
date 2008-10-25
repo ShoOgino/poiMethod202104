@@ -1,16 +1,10 @@
-    /**
-     * Initialize this workbook from the specified Package
-     */
     @Override
-    protected void onDocumentRead() {
+    protected void onDocumentRead() throws IOException {
         try {
-            //build the POIXMLDocumentPart tree, this workbook is the root
-            read(XSSFFactory.getInstance());
-
             WorkbookDocument doc = WorkbookDocument.Factory.parse(getPackagePart().getInputStream());
             this.workbook = doc.getWorkbook();
 
-            HashMap<String, XSSFSheet> shIdMap = new HashMap<String, XSSFSheet>();
+            Map<String, XSSFSheet> shIdMap = new HashMap<String, XSSFSheet>();
             for(POIXMLDocumentPart p : getRelations()){
                 if(p instanceof SharedStringsTable) sharedStringSource = (SharedStringsTable)p;
                 else if(p instanceof StylesTable) stylesSource = (StylesTable)p;
@@ -19,34 +13,16 @@
                 }
             }
 
-            // Load individual sheets
-            sheets = new LinkedList<XSSFSheet>();
-            embedds = new LinkedList<PackagePart>();
+            // Load individual sheets. The order of sheets is defined by the order of CTSheet beans in the workbook
+            sheets = new ArrayList<XSSFSheet>(shIdMap.size());
             for (CTSheet ctSheet : this.workbook.getSheets().getSheetArray()) {
-                String id = ctSheet.getId();
-                XSSFSheet sh = shIdMap.get(id);
-                sh.sheet = ctSheet;
+                XSSFSheet sh = shIdMap.get(ctSheet.getId());
                 if(sh == null) {
                     log.log(POILogger.WARN, "Sheet with name " + ctSheet.getName() + " and r:id " + ctSheet.getId()+ " was defined, but didn't exist in package, skipping");
                     continue;
                 }
-                //initialize internal arrays of rows and columns
-                sh.initialize();
-
-                PackagePart sheetPart = sh.getPackagePart();
-                // Process external hyperlinks for the sheet,
-                //  if there are any
-                PackageRelationshipCollection hyperlinkRels =
-                    sheetPart.getRelationshipsByType(XSSFRelation.SHEET_HYPERLINKS.getRelation());
-                sh.initHyperlinks(hyperlinkRels);
-
-                // Get the embeddings for the workbook
-                for(PackageRelationship rel : sheetPart.getRelationshipsByType(XSSFRelation.OLEEMBEDDINGS.getRelation()))
-                    embedds.add(getTargetPart(rel)); // TODO: Add this reference to each sheet as well
-
-                for(PackageRelationship rel : sheetPart.getRelationshipsByType(XSSFRelation.PACKEMBEDDINGS.getRelation()))
-                    embedds.add(getTargetPart(rel));
-
+                sh.sheet = ctSheet;
+                sh.onDocumentRead();
                 sheets.add(sh);
             }
 
@@ -56,14 +32,14 @@
             }
 
             // Process the named ranges
-            namedRanges = new LinkedList<XSSFName>();
+            namedRanges = new ArrayList<XSSFName>();
             if(workbook.getDefinedNames() != null) {
                 for(CTDefinedName ctName : workbook.getDefinedNames().getDefinedNameArray()) {
                     namedRanges.add(new XSSFName(ctName, this));
                 }
             }
 
-        } catch (Exception e) {
+        } catch (XmlException e) {
             throw new POIXMLException(e);
         }
     }
