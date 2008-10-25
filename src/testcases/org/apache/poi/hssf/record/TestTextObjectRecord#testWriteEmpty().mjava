@@ -1,0 +1,23 @@
+    /**
+     * Zero {@link ContinueRecord}s follow a {@link TextObjectRecord} if the text is empty
+     */
+    public void testWriteEmpty() {
+        HSSFRichTextString str = new HSSFRichTextString("");
+
+        TextObjectRecord record = new TextObjectRecord();
+        record.setStr(str);
+
+        byte [] ser = record.serialize();
+        
+        int formatDataLen = LittleEndian.getUShort(ser, 16);
+        assertEquals("formatDataLength", 0, formatDataLen);
+
+        assertEquals(22, ser.length); // just the TXO record
+        
+        //read again
+        RecordInputStream is = new RecordInputStream(new ByteArrayInputStream(ser));
+        is.nextRecord();
+        record = new TextObjectRecord(is);
+        assertEquals(0, record.getStr().length());
+    }
+

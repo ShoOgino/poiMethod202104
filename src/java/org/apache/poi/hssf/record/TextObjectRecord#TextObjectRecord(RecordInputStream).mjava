@@ -1,22 +1,55 @@
-    public TextObjectRecord( RecordInputStream in )
-    {
-        super( in );
+	public TextObjectRecord(RecordInputStream in) {
+		field_1_options = in.readUShort();
+		field_2_textOrientation = in.readUShort();
+		field_3_reserved4 = in.readUShort();
+		field_4_reserved5 = in.readUShort();
+		field_5_reserved6 = in.readUShort();
+		int field_6_textLength = in.readUShort();
+		int field_7_formattingDataLength = in.readUShort();
+		field_8_reserved7 = in.readInt();
 
-        if (getTextLength() > 0) {
-        if (in.isContinueNext() && in.remaining() == 0) {
-            //1st Continue
-            in.nextRecord();
-            processRawString(in);
-        } else
-            throw new RecordFormatException("Expected Continue record to hold string data for TextObjectRecord");
-        }
-        if (getFormattingRunLength() > 0) {
-            if (in.isContinueNext() && in.remaining() == 0) {
-                in.nextRecord();
-                processFontRuns(in);
-            } else throw new RecordFormatException("Expected Continue Record to hold font runs for TextObjectRecord");
-        }
-        if (str == null)
-        	str = new HSSFRichTextString("");
-    }
+		if (in.remaining() > 0) {
+			// Text Objects can have simple reference formulas
+			// (This bit not mentioned in the MS document)
+			if (in.remaining() < 11) {
+				throw new RecordFormatException("Not enough remaining data for a link formula");
+			}
+			int formulaSize = in.readUShort();
+			_unknownPreFormulaInt = in.readInt();
+			Ptg[] ptgs = Ptg.readTokens(formulaSize, in);
+			if (ptgs.length != 1) {
+				throw new RecordFormatException("Read " + ptgs.length
+						+ " tokens but expected exactly 1");
+			}
+			_linkRefPtg = ptgs[0];
+			if (in.remaining() > 0) {
+				_unknownPostFormulaByte = new Byte(in.readByte());
+			} else {
+				_unknownPostFormulaByte = null;
+			}
+		} else {
+			_linkRefPtg = null;
+		}
+		if (in.remaining() > 0) {
+			throw new RecordFormatException("Unused " + in.remaining() + " bytes at end of record");
+		}
+
+		String text;
+		if (field_6_textLength > 0) {
+			text = readRawString(in, field_6_textLength);
+		} else {
+			text = "";
+		}
+		_text = new HSSFRichTextString(text);
+
+		if (field_7_formattingDataLength > 0) {
+			if (in.isContinueNext() && in.remaining() == 0) {
+				in.nextRecord();
+				processFontRuns(in, _text, field_7_formattingDataLength);
+			} else {
+				throw new RecordFormatException(
+						"Expected Continue Record to hold font runs for TextObjectRecord");
+			}
+		}
+	}
 
