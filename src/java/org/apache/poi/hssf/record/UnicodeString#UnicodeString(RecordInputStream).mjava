@@ -2,9 +2,45 @@
      * construct a unicode string record and fill its fields, ID is ignored
      * @param in the RecordInputstream to read the record from
      */
+    public UnicodeString(RecordInputStream in) {
+        field_1_charCount   = in.readShort();
+        field_2_optionflags = in.readByte();
 
-    public UnicodeString(RecordInputStream in)
-    {
-      fillFields(in); // TODO - inline
+        int runCount = 0;
+        int extensionLength = 0;
+        //Read the number of rich runs if rich text.
+        if ( isRichText() )
+        {
+            runCount = in.readShort();
+        }
+        //Read the size of extended data if present.
+        if ( isExtendedText() )
+        {
+            extensionLength = in.readInt();
+        }
+
+        boolean isCompressed = ((field_2_optionflags & 1) == 0);
+        if (isCompressed) {
+        	field_3_string = in.readCompressedUnicode(field_1_charCount);
+        } else {
+        	field_3_string = in.readUnicodeLEString(field_1_charCount);
+        }
+ 
+
+        if (isRichText() && (runCount > 0)) {
+          field_4_format_runs = new ArrayList(runCount);
+          for (int i=0;i<runCount;i++) {
+            field_4_format_runs.add(new FormatRun(in.readShort(), in.readShort()));
+            //read reserved
+            //in.readInt();
+            }
+        }
+
+        if (isExtendedText() && (extensionLength > 0)) {
+          field_5_ext_rst = new byte[extensionLength];
+          for (int i=0;i<extensionLength;i++) {
+            field_5_ext_rst[i] = in.readByte();
+            }
+        }
     }
 
