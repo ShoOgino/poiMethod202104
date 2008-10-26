@@ -1,8 +1,19 @@
-  /** Returns true iif a Continue record is next in the excel stream
-   *
-   * @return True when a ContinueRecord is next.
-   */
-  public boolean isContinueNext() {
-    return (nextSid == ContinueRecord.sid);
-  }
+	/**
+	 *
+	 * @return <code>true</code> when a {@link ContinueRecord} is next.
+	 */
+	private boolean isContinueNext() {
+		if (_currentDataLength != DATA_LEN_NEEDS_TO_BE_READ && _currentDataOffset != _currentDataLength) {
+			throw new IllegalStateException("Should never be called before end of current record");
+		}
+		if (!hasNextRecord()) {
+			return false;
+		}
+		// At what point are records continued?
+		//  - Often from within the char data of long strings (caller is within readStringCommon()).
+		//  - From UnicodeString construction (many different points - call via checkRecordPosition)
+		//  - During TextObjectRecord construction (just before the text, perhaps within the text, 
+		//    and before the formatting run data)
+		return _nextSid == ContinueRecord.sid;
+	}
 

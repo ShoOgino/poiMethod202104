@@ -4,7 +4,6 @@
 
       //Basic string overhead
       pos = writeContinueIfRequired(stats, 3, pos, data);
-        // byte[] retval = new byte[ 3 + (getString().length() * charsize)];
       LittleEndian.putShort(data, pos, getCharCount());
       pos += 2;
       data[ pos ] = getOptionFlags();
@@ -58,39 +57,39 @@
       //Check to see if the offset occurs mid string, if so then we need to add
       //the byte to start with that represents the first byte of the continue record.
       if (strSize > stats.remainingSize) {
-        //Ok the offset occurs half way through the string, that means that
+        //OK the offset occurs half way through the string, that means that
         //we need an extra byte after the continue record ie we didnt finish
         //writing out the string the 1st time through
 
         //But hang on, how many continue records did we span? What if this is
         //a REALLY long string. We need to work this all out.
-        int ammountThatCantFit = strSize;
+        int amountThatCantFit = strSize;
         int strPos = 0;
-        while (ammountThatCantFit > 0) {
-          int ammountWritten = Math.min(stats.remainingSize, ammountThatCantFit);
-          //Make sure that the ammount that cant fit takes into account
+        while (amountThatCantFit > 0) {
+          int amountWritten = Math.min(stats.remainingSize, amountThatCantFit);
+          //Make sure that the amount that can't fit takes into account
           //whether we are writing double byte unicode
           if (isUncompressedUnicode()) {
             //We have the '-1' here because whether this is the first record or
             //subsequent continue records, there is always the case that the
-            //number of bytes in a string on doube byte boundaries is actually odd.
-            if ( ( (ammountWritten ) % 2) == 1)
-              ammountWritten--;
+            //number of bytes in a string on double byte boundaries is actually odd.
+            if ( ( (amountWritten ) % 2) == 1)
+              amountWritten--;
           }
-          System.arraycopy(strBytes, strPos, data, pos, ammountWritten);
-          pos += ammountWritten;
-          strPos += ammountWritten;
-          stats.recordSize += ammountWritten;
-          stats.remainingSize -= ammountWritten;
+          System.arraycopy(strBytes, strPos, data, pos, amountWritten);
+          pos += amountWritten;
+          strPos += amountWritten;
+          stats.recordSize += amountWritten;
+          stats.remainingSize -= amountWritten;
 
           //Ok lets subtract what we can write
-          ammountThatCantFit -= ammountWritten;
+          amountThatCantFit -= amountWritten;
 
           //Each iteration of this while loop is another continue record, unless
           //everything  now fits.
-          if (ammountThatCantFit > 0) {
+          if (amountThatCantFit > 0) {
             //We know that a continue WILL be requied, but use this common method
-            pos = writeContinueIfRequired(stats, ammountThatCantFit, pos, data);
+            pos = writeContinueIfRequired(stats, amountThatCantFit, pos, data);
 
             //The first byte after a continue mid string is the extra byte to
             //indicate if this run is compressed or not.

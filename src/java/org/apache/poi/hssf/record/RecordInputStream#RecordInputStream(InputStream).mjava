@@ -1,11 +1,11 @@
-  public RecordInputStream(InputStream in) throws RecordFormatException {
-    this.in = in;
-    try {
-      nextSid = LittleEndian.readShort(in);
-      //Don't increment the pos just yet (technically we are at the start of
-      //the record stream until nextRecord is called).
-    } catch (IOException ex) {
-      throw new RecordFormatException("Error reading bytes", ex);
-    }
-  }
+	public RecordInputStream(InputStream in) throws RecordFormatException {
+		if (in instanceof LittleEndianInput) {
+			// accessing directly is an optimisation
+			_le = (LittleEndianInput) in;
+		} else {
+			// less optimal, but should work OK just the same. Often occurs in junit tests.
+			_le = new LittleEndianInputStream(in);
+		}
+		_nextSid = readNextSid();
+	}
 

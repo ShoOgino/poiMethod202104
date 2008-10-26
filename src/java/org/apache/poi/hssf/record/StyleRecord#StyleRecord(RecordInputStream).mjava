@@ -1,29 +1,28 @@
-    public StyleRecord(RecordInputStream in)
-    {
-        field_1_xf_index = in.readShort();
-        if (getType() == STYLE_BUILT_IN)
-        {
-            field_2_builtin_style       = in.readByte();
-            field_3_outline_style_level = in.readByte();
-        }
-        else if (getType() == STYLE_USER_DEFINED)
-        {
-            field_2_name_length = in.readShort();
-            
-            // Some files from Crystal Reports lack
-            //  the remaining fields, which is naughty
-            if(in.remaining() > 0) {
-	            field_3_string_options = in.readByte();
-	            
-	            byte[] string = in.readRemainder();
-	            if (fHighByte.isSet(field_3_string_options)) {
-	                field_4_name= StringUtil.getFromUnicodeBE(string, 0, field_2_name_length);
-	            } else {
-	                field_4_name=StringUtil.getFromCompressedUnicode(string, 0, field_2_name_length);
-	            }
-            }
-        }
-
-        // todo sanity check exception to make sure we're one or the other
-    }
+	public StyleRecord(RecordInputStream in) {
+		field_1_xf_index = in.readShort();
+		if (isBuiltin()) {
+			field_2_builtin_style	   = in.readByte();
+			field_3_outline_style_level = in.readByte();
+		} else {
+			int field_2_name_length = in.readShort();
+			
+			if(in.remaining() < 1) {
+				// Some files from Crystal Reports lack the is16BitUnicode byte
+				//  the remaining fields, which is naughty
+				if (field_2_name_length != 0) {
+					throw new RecordFormatException("Ran out of data reading style record");
+				}
+				// guess this is OK if the string length is zero
+				field_4_name = "";
+			} else {
+				
+				int is16BitUnicode = in.readByte();
+				if (is16BitUnicodeFlag.isSet(is16BitUnicode)) {
+					field_4_name = StringUtil.readUnicodeLE(in, field_2_name_length);
+				} else {
+					field_4_name = StringUtil.readCompressedUnicode(in, field_2_name_length);
+				}
+			}
+		}
+	}
 

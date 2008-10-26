@@ -1,86 +1,19 @@
-    /**
-     * Reads up to len bytes of data from the input stream into an
-     * array of bytes. An attempt is made to read as many as len
-     * bytes, but a smaller number may be read, possibly zero. The
-     * number of bytes actually read is returned as an integer.
-     * <p>
-     * The definition of this method in java.io.InputStream allows it
-     * to block, but it won't.
-     * <p>
-     * If b is null, a NullPointerException is thrown.
-     * <p>
-     * If off is negative, or len is negative, or off+len is greater
-     * than the length of the array b, then an
-     * IndexOutOfBoundsException is thrown.
-     * <p>
-     * If len is zero, then no bytes are read and 0 is returned;
-     * otherwise, there is an attempt to read at least one byte. If no
-     * byte is available because the stream is at end of file, the
-     * value -1 is returned; otherwise, at least one byte is read and
-     * stored into b.
-     * <p>
-     * The first byte read is stored into element b[off], the next one
-     * into b[off+1], and so on. The number of bytes read is, at most,
-     * equal to len. Let k be the number of bytes actually read; these
-     * bytes will be stored in elements b[off] through b[off+k-1],
-     * leaving elements b[off+k] through b[off+len-1] unaffected.
-     * <p>
-     * In every case, elements b[0] through b[off] and elements
-     * b[off+len] through b[b.length-1] are unaffected.
-     * <p>
-     * If the first byte cannot be read for any reason other than end
-     * of file, then an IOException is thrown. In particular, an
-     * IOException is thrown if the input stream has been closed.
-     *
-     * @param b the buffer into which the data is read.
-     * @param off the start offset in array b at which the data is
-     *            written.
-     * @param len the maximum number of bytes to read.
-     *
-     * @return the total number of bytes read into the buffer, or -1
-     *         if there is no more data because the end of the stream
-     *         has been reached.
-     *
-     * @exception IOException
-     * @exception NullPointerException
-     * @exception IndexOutOfBoundsException
-     */
-
-    public int read(final byte [] b, final int off, final int len)
-        throws IOException, NullPointerException, IndexOutOfBoundsException
-    {
-        dieIfClosed();
-        if (b == null)
-        {
-            throw new NullPointerException("buffer is null");
-        }
-        if ((off < 0) || (len < 0) || (b.length < (off + len)))
-        {
-            throw new IndexOutOfBoundsException(
-                "can't read past buffer boundaries");
-        }
-        if (len == 0)
-        {
-            return 0;
-        }
-        if (atEOD())
-        {
-            return EOD;
-        }
-        int limit = Math.min(available(), len);
-
-        if ((off == 0) && (limit == b.length))
-        {
-            _document.read(b, _current_offset);
-        }
-        else
-        {
-            byte[] buffer = new byte[ limit ];
-
-            _document.read(buffer, _current_offset);
-            System.arraycopy(buffer, 0, b, off, limit);
-        }
-        _current_offset += limit;
-        return limit;
-    }
+	public int read(byte[] b, int off, int len) throws IOException {
+		dieIfClosed();
+		if (b == null) {
+			throw new IllegalArgumentException("buffer must not be null");
+		}
+		if (off < 0 || len < 0 || b.length < off + len) {
+			throw new IndexOutOfBoundsException("can't read past buffer boundaries");
+		}
+		if (len == 0) {
+			return 0;
+		}
+		if (atEOD()) {
+			return EOF;
+		}
+		int limit = Math.min(available(), len);
+		readFully(b, off, limit);
+		return limit;
+	}
 
