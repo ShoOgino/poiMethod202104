@@ -1,19 +1,27 @@
-    public int serialize(int offset, byte[] data)
-    {
-        int pos = 0;
+	public int serialize(int offset, byte[] data) {
+		int dataSize = getDataSize();
 
-        LittleEndian.putShort(data, 0 + offset, sid);
-        LittleEndian.putShort(data, 2 + offset, (short)(getRecordSize() - 4));
+		LittleEndian.putUShort(data, 0 + offset, sid);
+		LittleEndian.putUShort(data, 2 + offset, dataSize);
 
-        pos = offset + 4;
-        for ( Iterator iterator = subrecords.iterator(); iterator.hasNext(); )
-        {
-            Record record = (Record) iterator.next();
-            pos += record.serialize(pos, data);
-        }
-        // assume padding (if present) does not need to be written.
-        // it is probably zero already, and it probably doesn't matter anyway
+		byte[] subRecordBytes;
+		if (_uninterpretedData == null) {
+			ByteArrayOutputStream baos = new ByteArrayOutputStream(dataSize);
+			LittleEndianOutput leo = new LittleEndianOutputStream(baos);
 
-        return getRecordSize();
-    }
+			for (int i = 0; i < subrecords.size(); i++) {
+				SubRecord record = (SubRecord) subrecords.get(i);
+				record.serialize(leo);
+			}
+			// padding
+			while (baos.size() < dataSize) {
+				baos.write(0);
+			}
+			subRecordBytes = baos.toByteArray();
+		} else {
+			subRecordBytes = _uninterpretedData;
+		}
+		System.arraycopy(subRecordBytes, 0, data, offset + 4, dataSize);
+		return 4 + dataSize;
+	}
 
