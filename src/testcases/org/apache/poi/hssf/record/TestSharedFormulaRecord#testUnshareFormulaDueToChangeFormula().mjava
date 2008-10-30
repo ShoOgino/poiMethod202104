@@ -1,0 +1,21 @@
+	public void testUnshareFormulaDueToChangeFormula() {
+		HSSFWorkbook wb;
+		HSSFSheet sheet;
+		HSSFCell cellB32769;
+		HSSFCell cellC32769;
+		
+		wb = HSSFTestDataSamples.openSampleWorkbook(SHARED_FORMULA_TEST_XLS);
+		sheet = wb.getSheetAt(0);
+		cellB32769 = sheet.getRow(32768).getCell(1);
+		cellC32769 = sheet.getRow(32768).getCell(2);
+		
+		// Updating cell formula, causing it to become unshared
+		cellB32769.setCellFormula("1+1");
+		confirmCellEvaluation(wb, cellB32769, 2);
+		// currently (Oct 2008) POI handles this by exploding the whole shared formula group
+		assertEquals(3, countSharedFormulas(sheet)); // one less now
+		// check that nearby cell of the same group still has the same formula
+		assertEquals("C32770*2", cellC32769.getCellFormula());
+		confirmCellEvaluation(wb, cellC32769, 6);
+	}
+
