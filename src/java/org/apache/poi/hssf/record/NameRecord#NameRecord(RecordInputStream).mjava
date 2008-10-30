@@ -4,17 +4,18 @@
 	 *
 	 * @param in the RecordInputstream to read the record from
 	 */
-	public NameRecord(RecordInputStream in) {
+	public NameRecord(RecordInputStream ris) {
+		LittleEndianInput in = ris;
 		field_1_option_flag                 = in.readShort();
 		field_2_keyboard_shortcut           = in.readByte();
 		int field_3_length_name_text        = in.readByte();
 		int field_4_length_name_definition  = in.readShort();
 		field_5_externSheetIndex_plus1      = in.readShort();
 		field_6_sheetNumber                 = in.readUShort();
-		int field_7_length_custom_menu      = in.readUByte();
-		int field_8_length_description_text = in.readUByte();
-		int field_9_length_help_topic_text  = in.readUByte();
-		int field_10_length_status_bar_text = in.readUByte();
+		int f7_customMenuLen      = in.readUByte();
+		int f8_descriptionTextLen = in.readUByte();
+		int f9_helpTopicTextLen  = in.readUByte();
+		int f10_statusBarTextLen = in.readUByte();
 
 		//store the name in byte form if it's a built-in name
 		field_11_nameIsMultibyte = (in.readByte() != 0);
@@ -22,18 +23,20 @@
 			field_12_built_in_code = in.readByte();
 		} else {
 			if (field_11_nameIsMultibyte) {
-				field_12_name_text = in.readUnicodeLEString(field_3_length_name_text);
+				field_12_name_text = StringUtil.readUnicodeLE(in, field_3_length_name_text);
 			} else {
-				field_12_name_text = in.readCompressedUnicode(field_3_length_name_text);
+				field_12_name_text = StringUtil.readCompressedUnicode(in, field_3_length_name_text);
 			}
 		}
 
-		field_13_name_definition = Ptg.readTokens(field_4_length_name_definition, in);
+		int nBytesAvailable = in.available() - (f7_customMenuLen 
+				+ f8_descriptionTextLen + f9_helpTopicTextLen + f10_statusBarTextLen);
+		field_13_name_definition = Formula.read(field_4_length_name_definition, in, nBytesAvailable);
 
 		//Who says that this can only ever be compressed unicode???
-		field_14_custom_menu_text = in.readCompressedUnicode(field_7_length_custom_menu);
-		field_15_description_text = in.readCompressedUnicode(field_8_length_description_text);
-		field_16_help_topic_text  = in.readCompressedUnicode(field_9_length_help_topic_text);
-		field_17_status_bar_text  = in.readCompressedUnicode(field_10_length_status_bar_text);
+		field_14_custom_menu_text = StringUtil.readCompressedUnicode(in, f7_customMenuLen);
+		field_15_description_text = StringUtil.readCompressedUnicode(in, f8_descriptionTextLen);
+		field_16_help_topic_text  = StringUtil.readCompressedUnicode(in, f9_helpTopicTextLen);
+		field_17_status_bar_text  = StringUtil.readCompressedUnicode(in, f10_statusBarTextLen);
 	}
 

@@ -1,0 +1,27 @@
+    /**
+     * Test for row indexes beyond {@link Short#MAX_VALUE}.
+     * This bug was first fixed in svn r352609.
+     */
+    public void testRowIndexesBeyond32768() {
+        HSSFWorkbook workbook = new HSSFWorkbook();
+        HSSFSheet sheet = workbook.createSheet();
+        HSSFRow row;
+        HSSFCell cell;
+        for (int i = 32700; i < 32771; i++) {
+            row = sheet.createRow(i);
+            cell = row.createCell(0);
+            cell.setCellValue(i);
+        }
+        sanityChecker.checkHSSFWorkbook(workbook);
+        assertEquals("LAST ROW == 32770", 32770, sheet.getLastRowNum());
+        cell = sheet.getRow(32770).getCell(0);
+        double lastVal = cell.getNumericCellValue();
+
+        HSSFWorkbook    wb = HSSFTestDataSamples.writeOutAndReadBack(workbook);
+        HSSFSheet       s    = wb.getSheetAt(0);
+        row = s.getRow(32770);
+        cell = row.getCell(0);
+        assertEquals("Value from last row == 32770", lastVal, cell.getNumericCellValue(), 0);
+        assertEquals("LAST ROW == 32770", 32770, s.getLastRowNum());
+    }
+

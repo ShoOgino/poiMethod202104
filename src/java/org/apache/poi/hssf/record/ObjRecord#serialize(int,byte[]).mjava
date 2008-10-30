@@ -1,27 +1,25 @@
 	public int serialize(int offset, byte[] data) {
 		int dataSize = getDataSize();
+		int recSize = 4 + dataSize;
+		LittleEndianByteArrayOutputStream out = new LittleEndianByteArrayOutputStream(data, offset, recSize);
 
-		LittleEndian.putUShort(data, 0 + offset, sid);
-		LittleEndian.putUShort(data, 2 + offset, dataSize);
+		out.writeShort(sid);
+		out.writeShort(dataSize);
 
-		byte[] subRecordBytes;
 		if (_uninterpretedData == null) {
-			ByteArrayOutputStream baos = new ByteArrayOutputStream(dataSize);
-			LittleEndianOutput leo = new LittleEndianOutputStream(baos);
 
 			for (int i = 0; i < subrecords.size(); i++) {
 				SubRecord record = (SubRecord) subrecords.get(i);
-				record.serialize(leo);
+				record.serialize(out);
 			}
+			int expectedEndIx = offset+dataSize;
 			// padding
-			while (baos.size() < dataSize) {
-				baos.write(0);
+			while (out.getWriteIndex() < expectedEndIx) {
+				out.writeByte(0);
 			}
-			subRecordBytes = baos.toByteArray();
 		} else {
-			subRecordBytes = _uninterpretedData;
+			out.write(_uninterpretedData);
 		}
-		System.arraycopy(subRecordBytes, 0, data, offset + 4, dataSize);
-		return 4 + dataSize;
+		return recSize;
 	}
 

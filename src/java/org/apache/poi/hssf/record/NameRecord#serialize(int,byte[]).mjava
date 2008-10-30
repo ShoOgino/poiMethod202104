@@ -12,9 +12,9 @@
 		int field_9_length_help_topic_text = field_16_help_topic_text.length();
 		int field_10_length_status_bar_text = field_17_status_bar_text.length();
 		int rawNameSize = getNameRawSize();
-		
-		int formulaTotalSize = Ptg.getEncodedSize(field_13_name_definition);
-		int dataSize = 15 // 4 shorts + 7 bytes
+
+		int formulaTotalSize = field_13_name_definition.getEncodedSize();
+		int dataSize = 13 // 3 shorts + 7 bytes
 			+ rawNameSize
 			+ field_7_length_custom_menu
 			+ field_8_length_description_text
@@ -22,47 +22,44 @@
 			+ field_10_length_status_bar_text
 			+ formulaTotalSize;
 		
-		LittleEndian.putShort(data, 0 + offset, sid);
-		LittleEndian.putUShort(data, 2 + offset, dataSize);
+		int recSize = 4 + dataSize;
+		LittleEndianByteArrayOutputStream out = new LittleEndianByteArrayOutputStream(data, offset, recSize);
+		
+		out.writeShort(sid);
+		out.writeShort(dataSize);
 		// size defined below
-		LittleEndian.putShort(data, 4 + offset, getOptionFlag());
-		LittleEndian.putByte(data, 6 + offset, getKeyboardShortcut());
-		LittleEndian.putByte(data, 7 + offset, getNameTextLength());
-		// Note -
-		LittleEndian.putUShort(data, 8 + offset, Ptg.getEncodedSizeWithoutArrayData(field_13_name_definition));
-		LittleEndian.putUShort(data, 10 + offset, field_5_externSheetIndex_plus1);
-		LittleEndian.putUShort(data, 12 + offset, field_6_sheetNumber);
-		LittleEndian.putByte(data, 14 + offset, field_7_length_custom_menu);
-		LittleEndian.putByte(data, 15 + offset, field_8_length_description_text);
-		LittleEndian.putByte(data, 16 + offset, field_9_length_help_topic_text);
-		LittleEndian.putByte(data, 17 + offset, field_10_length_status_bar_text);
-		LittleEndian.putByte(data, 18 + offset, field_11_nameIsMultibyte ? 1 : 0);
-		int pos = 19 + offset;
+		out.writeShort(getOptionFlag());
+		out.writeByte(getKeyboardShortcut());
+		out.writeByte(getNameTextLength());
+		// Note - formula size is not immediately before encoded formula, and does not include any array constant data
+		out.writeShort(field_13_name_definition.getEncodedTokenSize());
+		out.writeShort(field_5_externSheetIndex_plus1);
+		out.writeShort(field_6_sheetNumber);
+		out.writeByte(field_7_length_custom_menu);
+		out.writeByte(field_8_length_description_text);
+		out.writeByte(field_9_length_help_topic_text);
+		out.writeByte(field_10_length_status_bar_text);
+		out.writeByte(field_11_nameIsMultibyte ? 1 : 0);
 
 		if (isBuiltInName()) {
 			//can send the builtin name directly in
-			LittleEndian.putByte(data, pos,  field_12_built_in_code);
+			out.writeByte(field_12_built_in_code);
 		} else {
 			String nameText = field_12_name_text;
 			if (field_11_nameIsMultibyte) {
-    			StringUtil.putUnicodeLE(nameText, data, pos);
-     		} else {
-    			StringUtil.putCompressedUnicode(nameText, data, pos);
-    		}
+				StringUtil.putUnicodeLE(nameText, out);
+			} else {
+				StringUtil.putCompressedUnicode(nameText, out);
+			}
 		}
-		pos += rawNameSize;
-
-		Ptg.serializePtgs(field_13_name_definition,  data, pos);
-		pos += formulaTotalSize;
+		field_13_name_definition.serializeTokens(out);
+		field_13_name_definition.serializeArrayConstantData(out);
 		
-		StringUtil.putCompressedUnicode( getCustomMenuText(), data, pos);
-		pos += field_7_length_custom_menu;
-		StringUtil.putCompressedUnicode( getDescriptionText(), data, pos);
-		pos += field_8_length_description_text;
-		StringUtil.putCompressedUnicode( getHelpTopicText(), data, pos);
-		pos += field_9_length_help_topic_text;
-		StringUtil.putCompressedUnicode( getStatusBarText(), data, pos);
+		StringUtil.putCompressedUnicode( getCustomMenuText(), out);
+		StringUtil.putCompressedUnicode( getDescriptionText(), out);
+		StringUtil.putCompressedUnicode( getHelpTopicText(), out);
+		StringUtil.putCompressedUnicode( getStatusBarText(), out);
 
-		return 4 + dataSize;
+		return recSize;
 	}
 

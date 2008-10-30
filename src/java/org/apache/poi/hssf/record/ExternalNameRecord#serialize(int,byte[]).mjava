@@ -9,20 +9,20 @@
 	 */
 	public int serialize( int offset, byte[] data ) {
 		int dataSize = getDataSize();
+		int recSize = dataSize + 4;
+		LittleEndianOutput out = new LittleEndianByteArrayOutputStream(data, offset, recSize);
 
-		LittleEndian.putShort( data, 0 + offset, sid );
-		LittleEndian.putShort( data, 2 + offset, (short) dataSize );
-		LittleEndian.putShort( data, 4 + offset, field_1_option_flag );
-		LittleEndian.putShort( data, 6 + offset, field_2_index );
-		LittleEndian.putShort( data, 8 + offset, field_3_not_used );
+		out.writeShort(sid);
+		out.writeShort(dataSize);
+		out.writeShort(field_1_option_flag);
+		out.writeShort(field_2_index);
+		out.writeShort(field_3_not_used);
 		int nameLen = field_4_name.length();
-		LittleEndian.putUShort( data, 10 + offset, nameLen );
-		StringUtil.putCompressedUnicode( field_4_name, data, 12 + offset );
-		if(hasFormula()) {
-			int defLen = getNameDefinitionSize();
-			LittleEndian.putUShort( data, 12 + nameLen + offset, defLen );
-			Ptg.serializePtgs(field_5_name_definition, data, 14 + nameLen + offset );
+		out.writeShort(nameLen);
+		StringUtil.putCompressedUnicode(field_4_name, out);
+		if (hasFormula()) {
+			field_5_name_definition.serialize(out);
 		}
-		return dataSize + 4;
+		return recSize;
 	}
 
