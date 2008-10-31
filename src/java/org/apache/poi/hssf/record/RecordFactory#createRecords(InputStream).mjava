@@ -20,19 +20,26 @@
 				// After EOF, Excel seems to pad block with zeros
 				continue;
 			}
-			Record[] recs = createRecord(recStream);   // handle MulRK records
+			Record record = createSingleRecord(recStream);
 
-			if (recs.length > 1) {
-				for (int k = 0; k < recs.length; k++) {
-					records.add(recs[ k ]);			   // these will be number records
-				}
+			if (record instanceof DBCellRecord) {
+				// Not needed by POI.  Regenerated from scratch by POI when spreadsheet is written
 				continue;
 			}
-			Record record = recs[ 0 ];
 
-			if (record == null) {
+			if (record instanceof RKRecord) {
+				records.add(convertToNumberRecord((RKRecord) record));
 				continue;
 			}
+			if (record instanceof MulRKRecord) {
+				addAll(records, convertRKRecords((MulRKRecord)record));
+				continue;
+			}
+			if (record instanceof MulBlankRecord) {
+				addAll(records, convertMulBlankRecords((MulBlankRecord)record));
+				continue;
+			}
+
 			if (record.getSid() == DrawingGroupRecord.sid
 				   && lastRecord instanceof DrawingGroupRecord) {
 				DrawingGroupRecord lastDGRecord = (DrawingGroupRecord) lastRecord;
