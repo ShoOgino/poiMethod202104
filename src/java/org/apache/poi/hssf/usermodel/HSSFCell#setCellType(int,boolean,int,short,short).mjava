@@ -57,38 +57,23 @@
                 break;
 
             case CELL_TYPE_STRING :
-                LabelSSTRecord lrec = null;
+                LabelSSTRecord lrec;
 
-                if (cellType != this.cellType)
-                {
+                if (cellType == this.cellType) {
+                    lrec = (LabelSSTRecord) record;
+                } else {
                     lrec = new LabelSSTRecord();
+                    lrec.setColumn(col);
+                    lrec.setRow(row);
+                    lrec.setXFIndex(styleIndex);
                 }
-                else
-                {
-                    lrec = ( LabelSSTRecord ) record;
-                }
-                lrec.setColumn(col);
-                lrec.setRow(row);
-                lrec.setXFIndex(styleIndex);
-                if (setValue)
-                {
-                    if ((getStringCellValue() != null)
-                            && (!getStringCellValue().equals("")))
-                    {
-                        int sst = 0;
-
-                        UnicodeString str = getRichStringCellValue().getUnicodeString();
-//jmh                        if (encoding == ENCODING_COMPRESSED_UNICODE)
-//jmh                        {
-//                      jmh                            str.setCompressedUnicode();
-//                      jmh                        } else if (encoding == ENCODING_UTF_16)
-//                      jmh                        {
-//                      jmh                            str.setUncompressedUnicode();
-//                      jmh                        }
-                        sst = book.getWorkbook().addSSTString(str);
-                        lrec.setSSTIndex(sst);
-                        getRichStringCellValue().setUnicodeString(book.getWorkbook().getSSTString(sst));
-                    }
+                if (setValue) {
+                    String str = convertCellValueToString();
+                    int sstIndex = book.getWorkbook().addSSTString(new UnicodeString(str));
+                    lrec.setSSTIndex(sstIndex);
+                    UnicodeString us = book.getWorkbook().getSSTString(sstIndex);
+                    stringValue = new HSSFRichTextString();
+                    stringValue.setUnicodeString(us);
                 }
                 record = lrec;
                 break;
