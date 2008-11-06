@@ -1,0 +1,55 @@
+	/**
+	 * Writes a unicode string complete with header and character data.  This includes:
+	 * <ul>
+	 * <li>ushort length</li>
+	 * <li>byte optionFlags</li>
+	 * <li>ushort numberOfRichTextRuns (optional)</li>
+	 * <li>ushort extendedDataSize (optional)</li>
+	 * <li>encoded character data (in "ISO-8859-1" or "UTF-16LE" encoding)</li>
+	 * </ul>
+	 * 
+	 * The following bits of the 'optionFlags' byte will be set as appropriate:
+	 * <table border='1'>
+	 * <tr><th>Mask</th><th>Description</th></tr>
+	 * <tr><td>0x01</td><td>is16bitEncoded</td></tr>
+	 * <tr><td>0x04</td><td>hasExtendedData</td></tr>
+	 * <tr><td>0x08</td><td>isRichText</td></tr>
+	 * </table>
+	 * Notes:
+	 * <ul> 
+	 * <li>The value of the 'is16bitEncoded' flag is determined by the actual character data 
+	 * of <tt>text</tt></li>
+	 * <li>The string header fields are never separated (by a {@link ContinueRecord}) from the
+	 * first chunk of character data (i.e. the first character is always encoded in the same
+	 * record as the string header).</li>
+	 * </ul>
+	 */
+	public void writeString(String text, int numberOfRichTextRuns, int extendedDataSize) {
+		boolean is16bitEncoded = StringUtil.hasMultibyte(text);
+		// calculate total size of the header and first encoded char
+		int keepTogetherSize = 2 + 1 + 1; // ushort len, byte optionFlags, at least one character byte
+		int optionFlags = 0x00;
+		if (is16bitEncoded) {
+			optionFlags |= 0x01;
+			keepTogetherSize += 1; // one extra byte for first char
+		}
+		if (numberOfRichTextRuns > 0) {
+			optionFlags |= 0x08;
+			keepTogetherSize += 2;
+		}
+		if (extendedDataSize > 0) {
+			optionFlags |= 0x04;
+			keepTogetherSize += 4;
+		}
+		writeContinueIfRequired(keepTogetherSize);
+		writeShort(text.length());
+		writeByte(optionFlags);
+		if (numberOfRichTextRuns > 0) {
+			writeShort(numberOfRichTextRuns);
+		}
+		if (extendedDataSize > 0) {
+			writeInt(extendedDataSize);
+		}
+		writeCharacterData(text, is16bitEncoded);
+	}
+
