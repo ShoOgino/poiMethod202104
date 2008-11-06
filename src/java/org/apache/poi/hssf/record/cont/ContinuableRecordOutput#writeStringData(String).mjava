@@ -1,0 +1,31 @@
+	/**
+	 * Writes the 'optionFlags' byte and encoded character data of a unicode string.  This includes:
+	 * <ul>
+	 * <li>byte optionFlags</li>
+	 * <li>encoded character data (in "ISO-8859-1" or "UTF-16LE" encoding)</li>
+	 * </ul>
+	 * 
+	 * Notes:
+	 * <ul>
+	 * <li>The value of the 'is16bitEncoded' flag is determined by the actual character data 
+	 * of <tt>text</tt></li>
+	 * <li>The string options flag is never separated (by a {@link ContinueRecord}) from the
+	 * first chunk of character data it refers to.</li>
+	 * <li>The 'ushort length' field is assumed to have been explicitly written earlier.  Hence, 
+	 * there may be an intervening {@link ContinueRecord}</li>
+	 * </ul>
+	 */
+	public void writeStringData(String text) {
+		boolean is16bitEncoded = StringUtil.hasMultibyte(text);
+		// calculate total size of the header and first encoded char
+		int keepTogetherSize = 1 + 1; // ushort len, at least one character byte
+		int optionFlags = 0x00;
+		if (is16bitEncoded) {
+			optionFlags |= 0x01;
+			keepTogetherSize += 1; // one extra byte for first char
+		}
+		writeContinueIfRequired(keepTogetherSize);
+		writeByte(optionFlags);
+		writeCharacterData(text, is16bitEncoded);
+	}
+

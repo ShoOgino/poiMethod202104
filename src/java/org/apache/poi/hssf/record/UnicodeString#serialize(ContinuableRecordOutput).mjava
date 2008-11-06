@@ -1,0 +1,41 @@
+    public void serialize(ContinuableRecordOutput out) {
+        int numberOfRichTextRuns = 0;
+        int extendedDataSize = 0;
+        if (isRichText() && field_4_format_runs != null) {
+            numberOfRichTextRuns = field_4_format_runs.size();
+        }
+        if (isExtendedText() && field_5_ext_rst != null) {
+            extendedDataSize = field_5_ext_rst.length;
+        }
+    
+        out.writeString(field_3_string, numberOfRichTextRuns, extendedDataSize);
+
+        if (numberOfRichTextRuns > 0) {
+
+          //This will ensure that a run does not split a continue
+          for (int i=0;i<numberOfRichTextRuns;i++) {
+              if (out.getAvailableSpace() < 4) {
+                  out.writeContinue();
+              }
+                FormatRun r = (FormatRun)field_4_format_runs.get(i);
+                r.serialize(out);
+          }
+        }
+
+        if (extendedDataSize > 0) {
+            // OK ExtRst is actually not documented, so i am going to hope
+            // that we can actually continue on byte boundaries
+
+            int extPos = 0;
+            while (true) {
+                int nBytesToWrite = Math.min(extendedDataSize - extPos, out.getAvailableSpace());
+                out.write(field_5_ext_rst, extPos, nBytesToWrite);
+                extPos += nBytesToWrite;
+                if (extPos >= extendedDataSize) {
+                    break;
+                }
+                out.writeContinue();
+            }
+        }
+    }
+
