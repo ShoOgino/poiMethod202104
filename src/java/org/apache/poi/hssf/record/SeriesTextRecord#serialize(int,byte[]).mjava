@@ -1,15 +1,21 @@
-    public int serialize(int offset, byte[] data)
-    {
-        int pos = 0;
+	public int serialize(int offset, byte[] data) {
+		int dataSize = getDataSize();
+		int recordSize = 4 + dataSize;
+		LittleEndianOutput out = new LittleEndianByteArrayOutputStream(data, offset, recordSize);
+		out.writeShort(sid);
+		out.writeShort(dataSize);
 
-        LittleEndian.putShort(data, 0 + offset, sid);
-        LittleEndian.putShort(data, 2 + offset, (short)(getRecordSize() - 4));
-
-        LittleEndian.putShort(data, 4 + offset + pos, field_1_id);
-        data[ 6 + offset + pos ] = field_2_textLength;
-        data[ 7 + offset + pos ] = field_3_undocumented;
-        StringUtil.putUnicodeLE(field_4_text, data, 8 + offset + pos);
-
-        return getRecordSize();
-    }
+		out.writeShort(field_1_id);
+		out.writeByte(field_4_text.length());
+		if (is16bit) {
+			// Excel (2007) seems to choose 16bit regardless of whether it is needed
+			out.writeByte(0x01);
+			StringUtil.putUnicodeLE(field_4_text, out);
+		} else {
+			// Excel can read this OK
+			out.writeByte(0x00);
+			StringUtil.putCompressedUnicode(field_4_text, out);
+		}
+		return recordSize;
+	}
 
