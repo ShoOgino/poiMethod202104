@@ -1,0 +1,42 @@
+    /**
+     * Return the cell type.
+     *
+     * @return the cell type
+     * @see Cell#CELL_TYPE_BLANK
+     * @see Cell#CELL_TYPE_NUMERIC
+     * @see Cell#CELL_TYPE_STRING
+     * @see Cell#CELL_TYPE_FORMULA
+     * @see Cell#CELL_TYPE_BOOLEAN
+     * @see Cell#CELL_TYPE_ERROR
+     */
+    public int getCellType() {
+
+        if (cell.getF() != null) {
+            return CELL_TYPE_FORMULA;
+        }
+
+        switch (this.cell.getT().intValue()) {
+            case STCellType.INT_B:
+                return CELL_TYPE_BOOLEAN;
+            case STCellType.INT_N:
+                if (!cell.isSetV()) {
+                    // ooxml does have a separate cell type of 'blank'.  A blank cell gets encoded as
+                    // (either not present or) a numeric cell with no value set.
+                    // The formula evaluator (and perhaps other clients of this interface) needs to
+                    // distinguish blank values which sometimes get translated into zero and sometimes
+                    // empty string, depending on context
+                    return CELL_TYPE_BLANK;
+                }
+                return CELL_TYPE_NUMERIC;
+            case STCellType.INT_E:
+                return CELL_TYPE_ERROR;
+            case STCellType.INT_S: // String is in shared strings
+            case STCellType.INT_INLINE_STR: // String is inline in cell
+                return CELL_TYPE_STRING;
+            case STCellType.INT_STR:
+                return CELL_TYPE_FORMULA;
+            default:
+                throw new IllegalStateException("Illegal cell type: " + this.cell.getT());
+        }
+    }
+

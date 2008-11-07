@@ -1,0 +1,45 @@
+    public static void dump(ZipFile zip) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+
+        String zipname = zip.getName();
+        int sep = zipname.lastIndexOf('.');
+        File root = new File(zipname.substring(0, sep));
+        root.mkdir();
+
+        Enumeration en = zip.entries();
+        while(en.hasMoreElements()){
+            ZipEntry entry = (ZipEntry)en.nextElement();
+            String name = entry.getName();
+            int idx = name.lastIndexOf('/');
+            if(idx != -1){
+                File bs = new File(root, name.substring(0, idx));
+                bs.mkdirs();
+            }
+
+            File f = new File(root, entry.getName());
+            FileOutputStream out = new FileOutputStream(f);
+
+            if(entry.getName().endsWith(".xml") || entry.getName().endsWith(".vml") || entry.getName().endsWith(".rels")){
+                try {
+                    //pass the xml through the Xerces serializer to produce nicely formatted output
+                    Document doc = builder.parse(zip.getInputStream(entry));
+
+                    OutputFormat  format  = new OutputFormat( doc );
+                    format.setIndenting(true);
+
+                    XMLSerializer serial = new  XMLSerializer( out, format );
+                    serial.asDOMSerializer();
+                    serial.serialize( doc.getDocumentElement() );
+                } catch (Exception e){
+                    System.err.println("Failed to parse " + entry.getName() + ", dumping raw content");
+                    dump(zip.getInputStream(entry), out);
+                }
+            } else {
+                dump(zip.getInputStream(entry), out);
+            }
+            out.close();
+
+        }
+    }
+

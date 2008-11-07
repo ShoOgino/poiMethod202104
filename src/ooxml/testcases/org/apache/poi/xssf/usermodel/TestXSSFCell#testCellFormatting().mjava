@@ -1,0 +1,37 @@
+    /**
+     * Tests that cell formatting stuff works as expected
+     */
+    public void testCellFormatting() {
+    	Workbook workbook = new XSSFWorkbook();
+    	Sheet sheet = workbook.createSheet();
+    	CreationHelper creationHelper = workbook.getCreationHelper();
+    	
+    	CellStyle cs = workbook.createCellStyle();
+    	assertNotNull(cs);
+        assertTrue(cs.getIndex() > 0);
+
+    	assertNotNull(creationHelper);
+    	assertNotNull(creationHelper.createDataFormat());
+    	
+    	cs.setDataFormat(
+    			creationHelper.createDataFormat().getFormat("yyyy/mm/dd")
+    	);
+    	Cell cell = sheet.createRow(0).createCell((short)0);
+        assertNotNull(cell.getCellStyle());
+        assertEquals(0, cell.getCellStyle().getIndex());
+    	cell.setCellValue(new Date(654321));
+    	
+    	cell.setCellStyle(cs);
+    	
+    	assertEquals(new Date(654321), cell.getDateCellValue());
+    	assertNotNull(cell.getCellStyle());
+    	assertEquals("yyyy/mm/dd", cell.getCellStyle().getDataFormatString());
+    	
+    	
+    	// Save, re-load, and test again
+    	Workbook wb2 = XSSFTestDataSamples.writeOutAndReadBack(workbook);
+    	Cell c2 = wb2.getSheetAt(0).getRow(0).getCell(0);
+    	assertEquals(new Date(654321), c2.getDateCellValue());
+    	assertEquals("yyyy/mm/dd", c2.getCellStyle().getDataFormatString());
+    }
+

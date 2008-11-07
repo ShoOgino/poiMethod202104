@@ -1,0 +1,54 @@
+    /**
+     * We should carry vba macros over after save
+     */
+    public void test45431() throws Exception {
+        Package pkg = Package.open(getFilePath("45431.xlsm"));
+        XSSFWorkbook wb = new XSSFWorkbook(pkg);
+        assertTrue(wb.isMacroEnabled());
+
+        // Check the various macro related bits can be found
+        PackagePart vba = pkg.getPart(
+                PackagingURIHelper.createPartName("/xl/vbaProject.bin")
+        );
+        assertNotNull(vba);
+        // And the drawing bit
+        PackagePart drw = pkg.getPart(
+                PackagingURIHelper.createPartName("/xl/drawings/vmlDrawing1.vml")
+        );
+        assertNotNull(drw);
+
+
+        // Save and re-open, both still there
+        XSSFWorkbook nwb = XSSFTestDataSamples.writeOutAndReadBack(wb);
+        Package nPkg = nwb.getPackage();
+        assertTrue(nwb.isMacroEnabled());
+
+        vba = nPkg.getPart(
+                PackagingURIHelper.createPartName("/xl/vbaProject.bin")
+        );
+        assertNotNull(vba);
+        drw = nPkg.getPart(
+                PackagingURIHelper.createPartName("/xl/drawings/vmlDrawing1.vml")
+        );
+        assertNotNull(drw);
+
+        // And again, just to be sure
+        nwb = XSSFTestDataSamples.writeOutAndReadBack(nwb);
+        nPkg = nwb.getPackage();
+        assertTrue(nwb.isMacroEnabled());
+
+        vba = nPkg.getPart(
+                PackagingURIHelper.createPartName("/xl/vbaProject.bin")
+        );
+        assertNotNull(vba);
+        drw = nPkg.getPart(
+                PackagingURIHelper.createPartName("/xl/drawings/vmlDrawing1.vml")
+        );
+        assertNotNull(drw);
+
+        // For testing with excel
+//		FileOutputStream fout = new FileOutputStream("/tmp/foo.xlsm");
+//		nwb.write(fout);
+//		fout.close();
+    }
+

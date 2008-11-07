@@ -1,0 +1,37 @@
+    /**
+     * Create an XSSFSheet from an existing sheet in the XSSFWorkbook.
+     *  The cloned sheet is a deep copy of the original.
+     *
+     * @return XSSFSheet representing the cloned sheet.
+     * @throws IllegalArgumentException if the sheet index in invalid
+     * @throws POIXMLException if there were errors when cloning
+     */
+    public XSSFSheet cloneSheet(int sheetNum) {
+        validateSheetIndex(sheetNum);
+
+        XSSFSheet srcSheet = sheets.get(sheetNum);
+        String srcName = srcSheet.getSheetName();
+        String clonedName = getUniqueSheetName(srcName);
+
+        XSSFSheet clonedSheet = createSheet(clonedName);
+        try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            srcSheet.write(out);
+            clonedSheet.read(new ByteArrayInputStream(out.toByteArray()));
+        } catch (IOException e){
+            throw new POIXMLException("Failed to clone sheet", e);
+        }
+        CTWorksheet ct = clonedSheet.getCTWorksheet();
+        if(ct.isSetDrawing()) {
+            logger.log(POILogger.WARN, "Cloning sheets with drawings is not yet supported.");
+            ct.unsetDrawing();
+        }
+        if(ct.isSetLegacyDrawing()) {
+            logger.log(POILogger.WARN, "Cloning sheets with comments is not yet supported.");
+            ct.unsetLegacyDrawing();
+        }
+
+        clonedSheet.setSelected(false);
+        return clonedSheet;
+    }
+

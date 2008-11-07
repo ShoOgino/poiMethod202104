@@ -1,0 +1,49 @@
+    /**
+     * <p>
+     * Returns the formatted value of a cell as a <tt>String</tt> regardless
+     * of the cell type. If the Excel format pattern cannot be parsed then the
+     * cell value will be formatted using a default format.
+     * </p>
+     * <p>When passed a null or blank cell, this method will return an empty
+     * String (""). Formula cells will be evaluated using the given
+     * {@link FormulaEvaluator} if the evaluator is non-null. If the
+     * evaluator is null, then the formula String will be returned. The caller
+     * is responsible for setting the currentRow on the evaluator
+     *</p>
+     *
+     * @param cell The cell (can be null)
+     * @param evaluator The FormulaEvaluator (can be null)
+     * @return a string value of the cell
+     */
+    public String formatCellValue(Cell cell, FormulaEvaluator evaluator) {
+
+        if (cell == null) {
+            return "";
+        }
+
+        int cellType = cell.getCellType();
+        if (cellType == Cell.CELL_TYPE_FORMULA) {
+            if (evaluator == null) {
+                return cell.getCellFormula();
+            }
+            cellType = evaluator.evaluateFormulaCell(cell);
+        }
+        switch (cellType) {
+            case Cell.CELL_TYPE_NUMERIC :
+
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    return getFormattedDateString(cell);
+                }
+                return getFormattedNumberString(cell);
+
+            case Cell.CELL_TYPE_STRING :
+                return cell.getRichStringCellValue().getString();
+
+            case Cell.CELL_TYPE_BOOLEAN :
+                return String.valueOf(cell.getBooleanCellValue());
+            case Cell.CELL_TYPE_BLANK :
+                return "";
+        }
+        throw new RuntimeException("Unexpected celltype (" + cellType + ")");
+    }
+

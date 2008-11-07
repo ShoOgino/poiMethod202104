@@ -1,0 +1,33 @@
+    /**
+     * Set a string value for the cell.
+     *
+     * @param str  value to set the cell to.  For formulas we'll set the 'pre-evaluated result string,
+     * for String cells we'll set its value.  For other types we will
+     * change the cell to a string cell and set its value.
+     * If value is null then we will change the cell to a Blank cell.
+     */
+    public void setCellValue(RichTextString str) {
+        if(str == null){
+            setBlank();
+            return;
+        }
+        int cellType = getCellType();
+        switch(cellType){
+            case Cell.CELL_TYPE_FORMULA:
+                cell.setV(str.getString());
+                break;
+            default:
+                if(cell.getT() == STCellType.INLINE_STR) {
+                    //set the 'pre-evaluated result
+                    cell.setV(str.getString());
+                } else {
+                    cell.setT(STCellType.S);
+                    XSSFRichTextString rt = (XSSFRichTextString)str;
+                    rt.setStylesTableReference(stylesSource);
+                    int sRef = sharedStringSource.addEntry(rt.getCTRst());
+                    cell.setV(Integer.toString(sRef));
+                }
+                break;
+        }
+    }
+

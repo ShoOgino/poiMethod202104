@@ -1,0 +1,56 @@
+	/**
+	 * Returns an array of text extractors, one for each of
+	 *  the embeded documents in the file (if there are any).
+	 * If there are no embeded documents, you'll get back an
+	 *  empty array. Otherwise, you'll get one open 
+	 *  {@link POITextExtractor} for each embeded file.
+	 */
+	public static POITextExtractor[] getEmbededDocsTextExtractors(POIOLE2TextExtractor ext) throws IOException {
+		// Find all the embeded directories
+		ArrayList dirs = new ArrayList();
+		POIFSFileSystem fs = ext.getFileSystem();
+		if(fs == null) {
+			throw new IllegalStateException("The extractor didn't know which POIFS it came from!");
+		}
+		
+		if(ext instanceof ExcelExtractor) {
+			// These are in MBD... under the root
+			Iterator it = fs.getRoot().getEntries();
+			while(it.hasNext()) {
+				Entry entry = (Entry)it.next();
+				if(entry.getName().startsWith("MBD")) {
+					dirs.add(entry);
+				}
+			}
+		} else if(ext instanceof WordExtractor) {
+			// These are in ObjectPool -> _... under the root
+			try {
+				DirectoryEntry op = (DirectoryEntry)
+					fs.getRoot().getEntry("ObjectPool");
+				Iterator it = op.getEntries();
+				while(it.hasNext()) {
+					Entry entry = (Entry)it.next();
+					if(entry.getName().startsWith("_")) {
+						dirs.add(entry);
+					}
+				}
+			} catch(FileNotFoundException e) {}
+		} else if(ext instanceof PowerPointExtractor) {
+			// Tricky, not stored directly in poifs
+			// TODO
+		}
+		
+		// Create the extractors
+		if(dirs == null || dirs.size() == 0) {
+			return new POITextExtractor[0];
+		}
+		
+		POITextExtractor[] te = new POITextExtractor[dirs.size()];
+		for(int i=0; i<te.length; i++) {
+			te[i] = createExtractor(
+					(DirectoryNode)dirs.get(i), ext.getFileSystem()
+			);
+		}
+		return te;
+	}
+

@@ -1,0 +1,20 @@
+	public static POIXMLTextExtractor createExtractor(Package pkg) throws IOException, OpenXML4JException, XmlException {
+		PackageRelationshipCollection core = 
+			pkg.getRelationshipsByType(CORE_DOCUMENT_REL);
+		if(core.size() != 1) {
+			throw new IllegalArgumentException("Invalid OOXML Package received - expected 1 core document, found " + core.size());
+		}
+		
+		PackagePart corePart = pkg.getPart(core.getRelationship(0));
+		if(corePart.getContentType().equals(XSSFRelation.WORKBOOK.getContentType())) {
+			return new XSSFExcelExtractor(pkg);
+		}
+		if(corePart.getContentType().equals(XWPFDocument.MAIN_CONTENT_TYPE)) {
+			return new XWPFWordExtractor(pkg);
+		}
+		if(corePart.getContentType().equals(XSLFSlideShow.MAIN_CONTENT_TYPE)) {
+			return new XSLFPowerPointExtractor(pkg);
+		}
+		throw new IllegalArgumentException("No supported documents found in the OOXML package");
+	}
+

@@ -1,0 +1,46 @@
+    @Override
+    protected void onDocumentRead() throws IOException {
+        try {
+            WorkbookDocument doc = WorkbookDocument.Factory.parse(getPackagePart().getInputStream());
+            this.workbook = doc.getWorkbook();
+
+            Map<String, XSSFSheet> shIdMap = new HashMap<String, XSSFSheet>();
+            for(POIXMLDocumentPart p : getRelations()){
+                if(p instanceof SharedStringsTable) sharedStringSource = (SharedStringsTable)p;
+                else if(p instanceof StylesTable) stylesSource = (StylesTable)p;
+                else if (p instanceof XSSFSheet) {
+                    shIdMap.put(p.getPackageRelationship().getId(), (XSSFSheet)p);
+                }
+            }
+
+            // Load individual sheets. The order of sheets is defined by the order of CTSheet elements in the workbook
+            sheets = new ArrayList<XSSFSheet>(shIdMap.size());
+            for (CTSheet ctSheet : this.workbook.getSheets().getSheetArray()) {
+                XSSFSheet sh = shIdMap.get(ctSheet.getId());
+                if(sh == null) {
+                    logger.log(POILogger.WARN, "Sheet with name " + ctSheet.getName() + " and r:id " + ctSheet.getId()+ " was defined, but didn't exist in package, skipping");
+                    continue;
+                }
+                sh.sheet = ctSheet;
+                sh.onDocumentRead();
+                sheets.add(sh);
+            }
+
+            if(sharedStringSource == null) {
+                //Create SST if it is missing
+                sharedStringSource = (SharedStringsTable)createRelationship(XSSFRelation.SHARED_STRINGS, XSSFFactory.getInstance());
+            }
+
+            // Process the named ranges
+            namedRanges = new ArrayList<XSSFName>();
+            if(workbook.isSetDefinedNames()) {
+                for(CTDefinedName ctName : workbook.getDefinedNames().getDefinedNameArray()) {
+                    namedRanges.add(new XSSFName(ctName, this));
+                }
+            }
+
+        } catch (XmlException e) {
+            throw new POIXMLException(e);
+        }
+    }
+

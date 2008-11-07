@@ -1,0 +1,40 @@
+	public void testGetSetLeftBorderColor() {
+        //defaults
+        assertEquals(IndexedColors.BLACK.getIndex(), cellStyle.getLeftBorderColor());
+        assertNull(cellStyle.getLeftBorderXSSFColor());
+
+        int num = stylesTable.getBorders().size();
+
+        XSSFColor clr;
+
+        //setting indexed color
+        cellStyle.setLeftBorderColor(IndexedColors.BLUE_GREY.getIndex());
+        assertEquals(IndexedColors.BLUE_GREY.getIndex(), cellStyle.getLeftBorderColor());
+        clr = cellStyle.getLeftBorderXSSFColor();
+        assertTrue(clr.getCTColor().isSetIndexed());
+        assertEquals(IndexedColors.BLUE_GREY.getIndex(), clr.getIndexed());
+        //a new border was added to the styles table
+        assertEquals(num + 1, stylesTable.getBorders().size());
+
+        //id of the created border
+        int borderId = (int)cellStyle.getCoreXf().getBorderId();
+        assertTrue(borderId > 0);
+        //check changes in the underlying xml bean
+        CTBorder ctBorder = stylesTable.getBorderAt(borderId).getCTBorder();
+        assertEquals(IndexedColors.BLUE_GREY.getIndex(), ctBorder.getLeft().getColor().getIndexed());
+
+        //setting XSSFColor
+        num = stylesTable.getBorders().size();
+        clr = new XSSFColor(java.awt.Color.CYAN);
+        cellStyle.setLeftBorderColor(clr);
+        assertEquals(clr.getCTColor().toString(), cellStyle.getLeftBorderXSSFColor().getCTColor().toString());
+        byte[] rgb = cellStyle.getLeftBorderXSSFColor().getRgb();
+        assertEquals(java.awt.Color.CYAN, new java.awt.Color(rgb[0] & 0xFF, rgb[1] & 0xFF, rgb[2] & 0xFF));
+        //another border was added to the styles table
+        assertEquals(num + 1, stylesTable.getBorders().size());
+
+        //passing null unsets the color
+        cellStyle.setLeftBorderColor(null);
+        assertNull(cellStyle.getLeftBorderXSSFColor());
+	}
+

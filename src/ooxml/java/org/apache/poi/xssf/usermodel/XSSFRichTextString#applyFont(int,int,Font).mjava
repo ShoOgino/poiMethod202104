@@ -1,0 +1,73 @@
+    /**
+     * Applies a font to the specified characters of a string.
+     *
+     * @param startIndex    The start index to apply the font to (inclusive)
+     * @param endIndex      The end index to apply to font to (exclusive)
+     * @param font          The index of the font to use.
+     */
+    public void applyFont(int startIndex, int endIndex, Font font) {
+        if (startIndex > endIndex)
+            throw new IllegalArgumentException("Start index must be less than end index.");
+        if (startIndex < 0 || endIndex > length())
+            throw new IllegalArgumentException("Start and end index not in range.");
+        if (startIndex == endIndex)
+            return;
+
+        if(st.sizeOfRArray() == 0 && st.isSetT()) {
+            //convert <t>string</t> into a text run: <r><t>string</t></r>
+            st.addNewR().setT(st.getT());
+            st.unsetT();
+        }
+
+        String text = getString();
+
+        XSSFFont xssfFont = (XSSFFont)font;
+        ArrayList<CTRElt> runs = new ArrayList<CTRElt>();
+
+        CTRElt[] r = st.getRArray();
+        int pos = 0;
+        for (int i = 0; i < r.length; i++) {
+            int rStart = pos;
+            String t = r[i].getT();
+            int rEnd = rStart + t.length();
+
+            if(rEnd <= startIndex) {
+                runs.add(r[i]);
+                pos += r[i].getT().length();
+            }
+            else if (startIndex > rStart && startIndex < rEnd){
+                CTRElt c = (CTRElt)r[i].copy();
+                String txt = text.substring(rStart, startIndex);
+                c.setT(txt);
+                runs.add(c);
+                pos += txt.length();
+            } else {
+                break;
+            }
+        }
+        CTRElt rt = CTRElt.Factory.newInstance();
+        String txt = text.substring(startIndex, endIndex);
+        rt.setT(txt);
+        CTRPrElt pr = rt.addNewRPr();
+        setRunAttributes(xssfFont.getCTFont(), pr);
+        runs.add(rt);
+        pos += txt.length();
+
+        for (int i = 0; i < r.length; i++) {
+            int rStart = pos;
+            String t = r[i].getT();
+            int rEnd = Math.min(rStart + t.length(), text.length());
+
+            if (endIndex < rEnd){
+                CTRElt c = (CTRElt)r[i].copy();
+                txt = text.substring(rStart, rEnd);
+                c.setT(txt);
+                runs.add(c);
+                pos += txt.length();
+            }
+        }
+
+
+        st.setRArray(runs.toArray(new CTRElt[runs.size()]));
+    }
+

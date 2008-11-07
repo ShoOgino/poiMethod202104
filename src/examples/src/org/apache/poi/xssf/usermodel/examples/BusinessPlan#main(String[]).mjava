@@ -1,0 +1,113 @@
+    public static void main(String[] args) throws Exception {
+        Calendar calendar = Calendar.getInstance();
+        int year = calendar.get(Calendar.YEAR);
+
+        XSSFWorkbook wb = new XSSFWorkbook();
+        Map<String, XSSFCellStyle> styles = createStyles(wb);
+
+        XSSFSheet sheet = wb.createSheet("Plan");
+
+        //turn off gridlines
+        sheet.setDisplayGridlines(false);
+        sheet.setPrintGridlines(false);
+        XSSFPrintSetup printSetup = sheet.getPrintSetup();
+        printSetup.setOrientation(PrintOrientation.LANDSCAPE);
+        sheet.setFitToPage(true);
+        sheet.setHorizontallyCenter(true);
+
+        //the header row: centered text in 48pt font
+        XSSFRow headerRow = sheet.createRow(0);
+        headerRow.setHeightInPoints(12.75f);
+        for (int i = 0; i < days.length; i++) {
+            XSSFCell cell = headerRow.createCell(i);
+            cell.setCellValue(days[i]);
+            cell.setCellStyle(styles.get("header"));
+        }
+        //columns for 11 weeks starting from 9-Jul
+        calendar.setTime(fmt.parse("9-Jul"));
+        calendar.set(Calendar.YEAR, year);
+        for (int i = 0; i < 11; i++) {
+            XSSFCell cell = headerRow.createCell(days.length + i);
+            cell.setCellValue(calendar);
+            cell.setCellStyle(styles.get("header_date"));
+            calendar.roll(Calendar.WEEK_OF_YEAR, true);
+        }
+
+        sheet.createFreezePane(0, 1);
+        XSSFRow row;
+        XSSFCell cell;
+
+        int rownum = 1;
+        for (int i = 0; i < data.length; i++, rownum++) {
+            row = sheet.createRow(rownum);
+            if(data[i] == null) continue;
+
+            for (int j = 0; j < data[i].length; j++) {
+                cell = row.createCell(j);
+                String styleName;
+                boolean isHeader = i == 0 || data[i-1] == null;
+                switch(j){
+                    case 0:
+                        if(isHeader) {
+                            styleName = "cell_b";
+                            cell.setCellValue(Double.parseDouble(data[i][j]));
+                        } else {
+                            styleName = "cell_normal";
+                            cell.setCellValue(data[i][j]);
+                        }
+                        break;
+                    case 1:
+                        if(isHeader) {
+                            styleName = i == 0 ? "cell_h" : "cell_bb";
+                        } else {
+                            styleName = "cell_indented";
+                        }
+                        cell.setCellValue(data[i][j]);
+                        break;
+                    case 2:
+                        styleName = isHeader ? "cell_b" : "cell_normal";
+                        cell.setCellValue(data[i][j]);
+                        break;
+                    case 3:
+                        styleName = isHeader ? "cell_b_centered" : "cell_normal_centered";
+                        cell.setCellValue(Integer.parseInt(data[i][j]));
+                        break;
+                    case 4: {
+                        calendar.setTime(fmt.parse(data[i][j]));
+                        calendar.set(Calendar.YEAR, year);
+                        cell.setCellValue(calendar);
+                        styleName = isHeader ? "cell_b_date" : "cell_normal_date";
+                        break;
+                    }
+                    case 5: {
+                        int r = rownum + 1;
+                        String fmla = "IF(AND(D"+r+",E"+r+"),E"+r+"+D"+r+",\"\")";
+                        cell.setCellFormula(fmla);
+                        styleName = isHeader ? "cell_bg" : "cell_g";
+                        break;
+                    }
+                    default:
+                        styleName = data[i][j] != null ? "cell_blue" : "cell_normal";
+                }
+
+                cell.setCellStyle(styles.get(styleName));
+            }
+        }
+
+
+        sheet.groupRow(5, 7);
+        sheet.groupRow(10, 14);
+        sheet.groupRow(17, 19);
+
+        sheet.setColumnWidth(0, 256*6);
+        sheet.setColumnWidth(1, 256*33);
+        sheet.setColumnWidth(2, 256*20);
+        sheet.setZoom(75);
+
+
+        // Write the output to a file
+        FileOutputStream out = new FileOutputStream("xssf-plan.xlsx");
+        wb.write(out);
+        out.close();
+    }
+

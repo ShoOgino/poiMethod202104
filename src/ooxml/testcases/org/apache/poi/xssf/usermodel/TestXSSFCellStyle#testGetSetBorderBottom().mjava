@@ -1,0 +1,34 @@
+	public void testGetSetBorderBottom() {
+        //default values
+        assertEquals(CellStyle.BORDER_NONE, cellStyle.getBorderBottom());
+
+        int num = stylesTable.getBorders().size();
+        cellStyle.setBorderBottom(CellStyle.BORDER_MEDIUM);
+        assertEquals(CellStyle.BORDER_MEDIUM, cellStyle.getBorderBottom());
+        //a new border has been added
+        assertEquals(num + 1, stylesTable.getBorders().size());
+        //id of the created border
+        int borderId = (int)cellStyle.getCoreXf().getBorderId();
+        assertTrue(borderId > 0);
+        //check changes in the underlying xml bean
+        CTBorder ctBorder = stylesTable.getBorderAt(borderId).getCTBorder();
+        assertEquals(STBorderStyle.MEDIUM, ctBorder.getBottom().getStyle());
+
+        num = stylesTable.getBorders().size();
+        //setting the same border multiple times should not change borderId
+        for (int i = 0; i < 3; i++) {
+            cellStyle.setBorderBottom(CellStyle.BORDER_MEDIUM);
+            assertEquals(CellStyle.BORDER_MEDIUM, cellStyle.getBorderBottom());
+        }
+        assertEquals(borderId, cellStyle.getCoreXf().getBorderId());
+        assertEquals(num, stylesTable.getBorders().size());
+        assertSame(ctBorder, stylesTable.getBorderAt(borderId).getCTBorder());
+
+        //setting border to none removes the <bottom> element
+        cellStyle.setBorderBottom(CellStyle.BORDER_NONE);
+        assertEquals(num, stylesTable.getBorders().size());
+        borderId = (int)cellStyle.getCoreXf().getBorderId();
+        ctBorder = stylesTable.getBorderAt(borderId).getCTBorder();
+        assertFalse(ctBorder.isSetBottom());
+    }
+

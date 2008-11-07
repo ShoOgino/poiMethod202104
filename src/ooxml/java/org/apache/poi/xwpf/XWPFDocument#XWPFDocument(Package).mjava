@@ -1,0 +1,57 @@
+	public XWPFDocument(Package container) throws OpenXML4JException, IOException, XmlException {
+		super(container);
+
+		hyperlinks = new LinkedList<XWPFHyperlink>();
+		comments = new LinkedList<XWPFComment>();
+		paragraphs = new LinkedList<XWPFParagraph>();
+		tables= new LinkedList<XWPFTable>();
+		
+		wordDoc =
+			DocumentDocument.Factory.parse(getCorePart().getInputStream());
+		
+		// filling paragraph list
+		for (CTP p : getDocumentBody().getPArray())	{
+			paragraphs.add(new XWPFParagraph(p, this));
+		}
+
+		// Get the hyperlinks 
+		// TODO: make me optional/separated in private function
+		try	{
+			Iterator <PackageRelationship> relIter = 
+				getCorePart().getRelationshipsByType(HYPERLINK_RELATION_TYPE).iterator();
+			while(relIter.hasNext()) {
+				PackageRelationship rel = relIter.next();
+				hyperlinks.add(new XWPFHyperlink(rel.getId(), rel.getTargetURI().toString()));
+			}
+		} catch(Exception e) {
+			throw new OpenXML4JException(e.getLocalizedMessage());
+		}
+
+		// Get the comments, if there are any
+		PackageRelationshipCollection commentsRel = getCmntRelations();
+		if(commentsRel != null && commentsRel.size() > 0) {
+			PackagePart commentsPart = getTargetPart(commentsRel.getRelationship(0));
+			CommentsDocument cmntdoc = CommentsDocument.Factory.parse(commentsPart.getInputStream());
+			for(CTComment ctcomment : cmntdoc.getComments().getCommentArray()) {
+				comments.add(new XWPFComment(ctcomment));
+			}
+		}
+		
+		// Get any tables
+		for(CTTbl table : getDocumentBody().getTblArray()) {
+			tables.add(new XWPFTable(table));
+		}
+		
+		/// Process embedded document parts
+        this.embedds = new LinkedList<PackagePart>();
+        for(PackageRelationship rel : getCorePart().getRelationshipsByType(OLE_OBJECT_REL_TYPE)) {
+            embedds.add(getTargetPart(rel));
+        }
+        for(PackageRelationship rel : getCorePart().getRelationshipsByType(PACK_OBJECT_REL_TYPE)) {
+            embedds.add(getTargetPart(rel));
+        }
+        
+        // Sort out headers and footers
+        headerFooterPolicy = new XWPFHeaderFooterPolicy(this);
+	}
+

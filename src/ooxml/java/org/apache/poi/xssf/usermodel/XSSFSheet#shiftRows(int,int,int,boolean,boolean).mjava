@@ -1,0 +1,42 @@
+    /**
+     * Shifts rows between startRow and endRow n number of rows.
+     * If you use a negative number, it will shift rows up.
+     * Code ensures that rows don't wrap around
+     *
+     * <p>
+     * Additionally shifts merged regions that are completely defined in these
+     * rows (ie. merged 2 cells on a row to be shifted).
+     * <p>
+     * @param startRow the row to start shifting
+     * @param endRow the row to end shifting
+     * @param n the number of rows to shift
+     * @param copyRowHeight whether to copy the row height during the shift
+     * @param resetOriginalRowHeight whether to set the original row's height to the default
+     */
+    public void shiftRows(int startRow, int endRow, int n, boolean copyRowHeight, boolean resetOriginalRowHeight) {
+        for (Iterator<Row> it = rowIterator() ; it.hasNext() ; ) {
+            Row row = it.next();
+
+            if (!copyRowHeight) {
+                row.setHeight((short)-1);
+            }
+
+            if (resetOriginalRowHeight && getDefaultRowHeight() >= 0) {
+                row.setHeight(getDefaultRowHeight());
+            }
+            if (removeRow(startRow, endRow, n, row.getRowNum())) {
+                it.remove();
+            }
+            else if (row.getRowNum() >= startRow && row.getRowNum() <= endRow) {
+                row.setRowNum(row.getRowNum() + n);
+                if (row.getFirstCellNum() > -1) {
+                    modifyCellReference((XSSFRow) row);
+                }
+            }
+        }
+        //rebuild the rows map
+        TreeMap<Integer, Row> map = new TreeMap<Integer, Row>();
+        for(Row r : this) map.put(r.getRowNum(), r);
+        rows = map;
+    }
+

@@ -1,0 +1,42 @@
+    public void testGetSetColumnWidth() {
+        XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFSheet sheet = workbook.createSheet("Sheet 1");
+        sheet.setColumnWidth(1,  22*256);
+        assertEquals(22*256, sheet.getColumnWidth(1));
+
+        // Now check the low level stuff, and check that's all
+        //  been set correctly
+        XSSFSheet xs = sheet;
+        CTWorksheet cts = xs.getCTWorksheet();
+
+        CTCols[] cols_s = cts.getColsArray();
+        assertEquals(1, cols_s.length);
+        CTCols cols = cols_s[0];
+        assertEquals(1, cols.sizeOfColArray());
+        CTCol col = cols.getColArray(0);
+
+        // XML is 1 based, POI is 0 based
+        assertEquals(2, col.getMin());
+        assertEquals(2, col.getMax());
+        assertEquals(22.0, col.getWidth());
+
+
+        // Now set another
+        sheet.setColumnWidth(3, 33*256);
+
+        cols_s = cts.getColsArray();
+        assertEquals(1, cols_s.length);
+        cols = cols_s[0];
+        assertEquals(2, cols.sizeOfColArray());
+
+        col = cols.getColArray(0);
+        assertEquals(2, col.getMin()); // POI 1
+        assertEquals(2, col.getMax());
+        assertEquals(22.0, col.getWidth());
+
+        col = cols.getColArray(1);
+        assertEquals(4, col.getMin()); // POI 3
+        assertEquals(4, col.getMax());
+        assertEquals(33.0, col.getWidth());
+    }
+

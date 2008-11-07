@@ -1,0 +1,47 @@
+	public void testDontLoostNewLines() throws Exception {
+		File xml = new File(
+				System.getProperty("HSSF.testdata.path") +
+				File.separator + "WithVariousData.xlsx"
+		);
+		assertTrue(xml.exists());
+    	
+		Package pkg = Package.open(xml.toString());
+		XSSFWorkbook wb = new XSSFWorkbook(pkg);
+        List<POIXMLDocumentPart> rels = wb.getSheetAt(0).getRelations();
+        CommentsTable ct = null;
+        for(POIXMLDocumentPart p : rels) {
+            if(p instanceof CommentsTable){
+                ct = (CommentsTable)p;
+                break;
+            }
+        }
+        assertNotNull(ct);
+		assertEquals(2, ct.getNumberOfComments());
+		assertEquals(1, ct.getNumberOfAuthors());
+
+		XSSFComment comment = ct.findCellComment("C5");
+		
+		assertEquals("Nick Burch", comment.getAuthor());
+		assertEquals("Nick Burch:\nThis is a comment", comment.getString().getString());
+
+        wb = XSSFTestDataSamples.writeOutAndReadBack(wb);
+        rels = wb.getSheetAt(0).getRelations();
+        ct = null;
+        for(POIXMLDocumentPart p : rels) {
+            if(p instanceof CommentsTable){
+                ct = (CommentsTable)p;
+                break;
+            }
+        }
+        assertNotNull(ct);
+
+		assertEquals(2, ct.getNumberOfComments());
+		assertEquals(1, ct.getNumberOfAuthors());
+		
+		comment = ct.findCellComment("C5");
+		
+		assertEquals("Nick Burch", comment.getAuthor());
+		
+		assertEquals("Nick Burch:\nThis is a comment", comment.getString().getString());
+	}
+
