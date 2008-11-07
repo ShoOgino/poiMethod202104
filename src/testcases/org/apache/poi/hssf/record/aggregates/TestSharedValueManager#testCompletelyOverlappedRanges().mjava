@@ -1,0 +1,30 @@
+	/**
+	 * This bug occurs for similar reasons to the bug in {@link #testPartiallyOverlappingRanges()}
+	 * but the symptoms are much uglier - serialization fails with {@link NullPointerException}.<br/>
+	 */
+	public void testCompletelyOverlappedRanges() throws IOException {
+		Record[] records;
+
+		int attempt=1;
+		do {
+    		HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook(SAMPLE_FILE_NAME);
+    			
+    		HSSFSheet sheet = wb.getSheetAt(1);
+    		try {
+    			records = RecordInspector.getRecords(sheet, 0);
+    		} catch (NullPointerException e) {
+    			throw new AssertionFailedError("Identified bug " +
+    					"- cannot reserialize completely overlapped shared formula"
+    					+ " (attempt " + attempt + ")");
+    		}
+		} while (attempt++ < MAX_ATTEMPTS);
+		
+		int count=0;
+		for (int i = 0; i < records.length; i++) {
+			if (records[i] instanceof SharedFormulaRecord) {
+				count++;
+			}
+		}
+		assertEquals(2, count);
+	}
+

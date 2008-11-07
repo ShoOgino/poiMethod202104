@@ -1,0 +1,31 @@
+	/**
+	 * This bug happened when there were two or more shared formula ranges that overlapped.  POI
+	 * would sometimes associate formulas in the overlapping region with the wrong shared formula
+	 */
+	public void testPartiallyOverlappingRanges() throws IOException {
+		Record[] records;
+
+		int attempt=1;
+		do {
+    		HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook(SAMPLE_FILE_NAME);
+    		
+    		HSSFSheet sheet = wb.getSheetAt(0);
+    		RecordInspector.getRecords(sheet, 0);
+    		assertEquals("1+1", sheet.getRow(2).getCell(0).getCellFormula());
+    		if ("1+1".equals(sheet.getRow(3).getCell(0).getCellFormula())) {
+    			throw new AssertionFailedError("Identified bug - wrong shared formula record chosen"
+    					+ " (attempt " + attempt + ")");
+    		}
+    		assertEquals("2+2", sheet.getRow(3).getCell(0).getCellFormula());
+    		records = RecordInspector.getRecords(sheet, 0);
+		} while (attempt++ < MAX_ATTEMPTS);
+    		
+		int count=0;
+		for (int i = 0; i < records.length; i++) {
+			if (records[i] instanceof SharedFormulaRecord) {
+				count++;
+			}
+		}
+		assertEquals(2, count);
+	}
+

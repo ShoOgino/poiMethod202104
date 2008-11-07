@@ -1,0 +1,41 @@
+	private static SharedValueGroup findGroup(SharedValueGroup[] groups, CellReference firstCell) {
+		int row = firstCell.getRow();
+		int column = firstCell.getCol();
+		// Traverse the list of shared formulas and try to find the correct one for us
+
+		// perhaps this could be optimised to some kind of binary search
+		for (int i = 0; i < groups.length; i++) {
+			SharedValueGroup svg = groups[i];
+			if (svg.getSVR().isFirstCell(row, column)) {
+				return svg;
+			}
+		}
+		// else - no SharedFormulaRecord was found with the specified firstCell.
+		// This is unusual, but one sample file exhibits the anomaly: "ex45046-21984.xls"
+		// Excel seems to handle the problem OK, and doesn't even correct it.  Perhaps POI should.
+
+		// search for shared formula by range
+		SharedValueGroup result = null;
+		for (int i = 0; i < groups.length; i++) {
+			SharedValueGroup svg = groups[i];
+			if (svg.getSVR().isInRange(row, column)) {
+				if (result != null) {
+					// This happens in sample file "15228.xls"
+					if (sharedFormulasAreSame(result, svg)) {
+						// hopefully this is OK - just use the first one since they are the same
+						// not quite
+						// TODO - fix file "15228.xls" so it opens in Excel after rewriting with POI
+					} else {
+						throw new RuntimeException("This cell is in the range of more than one distinct shared formula");
+					}
+				} else {
+					result = svg;
+				}
+			}
+		}
+		if (result == null) {
+			throw new RuntimeException("Failed to find a matching shared formula record");
+		}
+		return result;
+	}
+
