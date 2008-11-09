@@ -1,0 +1,43 @@
+    @Override
+    protected void onDocumentRead() throws IOException {
+        hyperlinks = new ArrayList<XWPFHyperlink>();
+        comments = new ArrayList<XWPFComment>();
+        paragraphs = new ArrayList<XWPFParagraph>();
+        tables= new ArrayList<XWPFTable>();
+
+        try {
+            DocumentDocument doc = DocumentDocument.Factory.parse(getPackagePart().getInputStream());
+            ctDocument = doc.getDocument();
+
+            CTBody body = ctDocument.getBody();
+
+            // filling paragraph list
+            for (CTP p : body.getPArray())	{
+                paragraphs.add(new XWPFParagraph(p, this));
+            }
+
+            // Get any tables
+            for(CTTbl table : body.getTblArray()) {
+                tables.add(new XWPFTable(table));
+            }
+
+            // Sort out headers and footers
+            headerFooterPolicy = new XWPFHeaderFooterPolicy(this);
+
+            for(POIXMLDocumentPart p : getRelations()){
+                String relation = p.getPackageRelationship().getRelationshipType();
+                if(relation.equals(XWPFRelation.COMMENT_RELATION_TYPE)){
+                    CommentsDocument cmntdoc = CommentsDocument.Factory.parse(p.getPackagePart().getInputStream());
+                    for(CTComment ctcomment : cmntdoc.getComments().getCommentArray()) {
+                        comments.add(new XWPFComment(ctcomment));
+                    }
+                }
+            }
+
+            initHyperlinks();
+
+        } catch (XmlException e) {
+            throw new POIXMLException(e);
+        }
+    }
+
