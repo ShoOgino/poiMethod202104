@@ -1,5 +1,5 @@
 	public EmbeddedObjectRefSubRecord(LittleEndianInput in, int size) {
-		// TODO use 'size' param 
+
 		// Much guess-work going on here due to lack of any documentation.
 		// See similar source code in OOO:
 		// http://lxr.go-oo.org/source/sc/sc/source/filter/excel/xiescher.cxx
@@ -28,26 +28,25 @@
 		int stringByteCount;
 		if (remaining >= dataLenAfterFormula + 3) {
 			int tag = in.readByte();
-			remaining -= LittleEndian.BYTE_SIZE;
+			stringByteCount = LittleEndian.BYTE_SIZE;
 			if (tag != 0x03) {
 				throw new RecordFormatException("Expected byte 0x03 here");
 			}
 			int nChars = in.readUShort();
-			remaining -= LittleEndian.SHORT_SIZE;
+			stringByteCount += LittleEndian.SHORT_SIZE;
 			if (nChars > 0) {
 				 // OOO: the 4th way Xcl stores a unicode string: not even a Grbit byte present if length 0
 				field_3_unicode_flag = ( in.readByte() & 0x01 ) != 0;
-				remaining -= LittleEndian.BYTE_SIZE;
+				stringByteCount += LittleEndian.BYTE_SIZE;
 				if (field_3_unicode_flag) {
 					field_4_ole_classname = StringUtil.readUnicodeLE(in, nChars);
-					stringByteCount = nChars * 2;
+					stringByteCount += nChars * 2;
 				} else {
 					field_4_ole_classname = StringUtil.readCompressedUnicode(in, nChars);
-					stringByteCount = nChars;
+					stringByteCount += nChars;
 				}
 			} else {
 				field_4_ole_classname = "";
-				stringByteCount = 0;
 			}
 		} else {
 			field_4_ole_classname = null;
@@ -77,9 +76,6 @@
 		} else {
 			field_5_stream_id = null;
 		}
-
-		byte [] buf = new byte[remaining];
-		in.readFully(buf);
-		field_6_unknown = buf;
+		field_6_unknown = readRawData(in, remaining);
 	}
 
