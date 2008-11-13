@@ -4,14 +4,21 @@
 	private ValueEval evaluateAny(EvaluationCell srcCell, int sheetIndex,
 				int rowIndex, int columnIndex, EvaluationTracker tracker) {
 
+		// avoid tracking dependencies for cells that have constant definition
+		boolean shouldCellDependencyBeRecorded = _stabilityClassifier == null ? true
+					: !_stabilityClassifier.isCellFinal(sheetIndex, rowIndex, columnIndex);
 		if (srcCell == null || srcCell.getCellType() != Cell.CELL_TYPE_FORMULA) {
 			ValueEval result = getValueFromNonFormulaCell(srcCell);
-			tracker.acceptPlainValueDependency(_workbookIx, sheetIndex, rowIndex, columnIndex, result);
+			if (shouldCellDependencyBeRecorded) {
+				tracker.acceptPlainValueDependency(_workbookIx, sheetIndex, rowIndex, columnIndex, result);
+			}
 			return result;
 		}
 
 		FormulaCellCacheEntry cce = _cache.getOrCreateFormulaCellEntry(srcCell);
-		tracker.acceptFormulaDependency(cce);
+		if (shouldCellDependencyBeRecorded || cce.isInputSensitive()) {
+			tracker.acceptFormulaDependency(cce);
+		}
 		IEvaluationListener evalListener = _evaluationListener;
 		if (cce.getValue() == null) {
 			if (!tracker.startEvaluate(cce)) {
