@@ -1,26 +1,29 @@
     public static void main(String[] args) throws Exception {
+        Workbook wb;
 
-        XSSFWorkbook wb = new XSSFWorkbook();
-        Map<String, XSSFCellStyle> styles = createStyles(wb);
+        if(args.length > 0 && args[0].equals("-xls")) wb = new HSSFWorkbook();
+        else wb = new XSSFWorkbook();
 
-        XSSFSheet sheet = wb.createSheet("Timesheet");
-        XSSFPrintSetup printSetup = sheet.getPrintSetup();
-        printSetup.setOrientation(PrintOrientation.LANDSCAPE);
+        Map<String, CellStyle> styles = createStyles(wb);
+
+        Sheet sheet = wb.createSheet("Timesheet");
+        PrintSetup printSetup = sheet.getPrintSetup();
+        printSetup.setLandscape(true);
         sheet.setFitToPage(true);
         sheet.setHorizontallyCenter(true);
 
         //title row
-        XSSFRow titleRow = sheet.createRow(0);
+        Row titleRow = sheet.createRow(0);
         titleRow.setHeightInPoints(45);
-        XSSFCell titleCell = titleRow.createCell(0);
+        Cell titleCell = titleRow.createCell(0);
         titleCell.setCellValue("Weekly Timesheet");
         titleCell.setCellStyle(styles.get("title"));
         sheet.addMergedRegion(CellRangeAddress.valueOf("$A$1:$L$1"));
 
         //header row
-        XSSFRow headerRow = sheet.createRow(1);
+        Row headerRow = sheet.createRow(1);
         headerRow.setHeightInPoints(40);
-        XSSFCell headerCell;
+        Cell headerCell;
         for (int i = 0; i < titles.length; i++) {
             headerCell = headerRow.createCell(i);
             headerCell.setCellValue(titles[i]);
@@ -29,9 +32,9 @@
 
         int rownum = 2;
         for (int i = 0; i < 10; i++) {
-            XSSFRow row = sheet.createRow(rownum++);
+            Row row = sheet.createRow(rownum++);
             for (int j = 0; j < titles.length; j++) {
-                XSSFCell cell = row.createCell(j);
+                Cell cell = row.createCell(j);
                 if(j == 9){
                     //the 10th cell contains sum over week days, e.g. SUM(C3:I3)
                     String ref = "C" +rownum+ ":I" + rownum;
@@ -47,9 +50,9 @@
         }
 
         //row with totals below
-        XSSFRow sumRow = sheet.createRow(rownum++);
+        Row sumRow = sheet.createRow(rownum++);
         sumRow.setHeightInPoints(35);
-        XSSFCell cell;
+        Cell cell;
         cell = sumRow.createCell(0);
         cell.setCellStyle(styles.get("formula"));
         cell = sumRow.createCell(1);
@@ -83,7 +86,7 @@
 
         //set sample data
         for (int i = 0; i < sample_data.length; i++) {
-            XSSFRow row = sheet.getRow(2 + i);
+            Row row = sheet.getRow(2 + i);
             for (int j = 0; j < sample_data[i].length; j++) {
                 if(sample_data[i][j] == null) continue;
 
@@ -95,14 +98,17 @@
             }
         }
 
-        //finally set column widths
-        sheet.setColumnWidth(0, 30*256);
+        //finally set column widths, the width is measured in units of 1/256th of a character width
+        sheet.setColumnWidth(0, 30*256); //30 characters wide
         for (int i = 2; i < 9; i++) {
-            sheet.setColumnWidth(i, 6*256);
+            sheet.setColumnWidth(i, 6*256);  //6 characters wide
         }
+        sheet.setColumnWidth(10, 10*256); //10 characters wide
 
         // Write the output to a file
-        FileOutputStream out = new FileOutputStream("ooxml-timesheet.xlsx");
+        String file = "timesheet.xls";
+        if(wb instanceof XSSFWorkbook) file += "x";
+        FileOutputStream out = new FileOutputStream(file);
         wb.write(out);
         out.close();
     }

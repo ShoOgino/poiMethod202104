@@ -1,42 +1,51 @@
     public static void main(String[] args) throws Exception {
-        Calendar calendar = Calendar.getInstance();
-        int year = calendar.get(Calendar.YEAR);
+        Workbook wb;
 
-        XSSFWorkbook wb = new XSSFWorkbook();
-        Map<String, XSSFCellStyle> styles = createStyles(wb);
+        if(args.length > 0 && args[0].equals("-xls")) wb = new HSSFWorkbook();
+        else wb = new XSSFWorkbook();
 
-        XSSFSheet sheet = wb.createSheet("Plan");
+        Map<String, CellStyle> styles = createStyles(wb);
+
+        Sheet sheet = wb.createSheet("Business Plan");
 
         //turn off gridlines
         sheet.setDisplayGridlines(false);
         sheet.setPrintGridlines(false);
-        XSSFPrintSetup printSetup = sheet.getPrintSetup();
-        printSetup.setOrientation(PrintOrientation.LANDSCAPE);
         sheet.setFitToPage(true);
         sheet.setHorizontallyCenter(true);
+        PrintSetup printSetup = sheet.getPrintSetup();
+        printSetup.setLandscape(true);
+
+        //the following three statements are required only for HSSF
+        sheet.setAutobreaks(true);
+        printSetup.setFitHeight((short)1);
+        printSetup.setFitWidth((short)1);
 
         //the header row: centered text in 48pt font
-        XSSFRow headerRow = sheet.createRow(0);
+        Row headerRow = sheet.createRow(0);
         headerRow.setHeightInPoints(12.75f);
-        for (int i = 0; i < days.length; i++) {
-            XSSFCell cell = headerRow.createCell(i);
-            cell.setCellValue(days[i]);
+        for (int i = 0; i < titles.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(titles[i]);
             cell.setCellStyle(styles.get("header"));
         }
         //columns for 11 weeks starting from 9-Jul
+        Calendar calendar = Calendar.getInstance();
+        int year = calendar.get(Calendar.YEAR);
+
         calendar.setTime(fmt.parse("9-Jul"));
         calendar.set(Calendar.YEAR, year);
         for (int i = 0; i < 11; i++) {
-            XSSFCell cell = headerRow.createCell(days.length + i);
+            Cell cell = headerRow.createCell(titles.length + i);
             cell.setCellValue(calendar);
             cell.setCellStyle(styles.get("header_date"));
             calendar.roll(Calendar.WEEK_OF_YEAR, true);
         }
-
+        //freeze the first row
         sheet.createFreezePane(0, 1);
-        XSSFRow row;
-        XSSFCell cell;
 
+        Row row;
+        Cell cell;
         int rownum = 1;
         for (int i = 0; i < data.length; i++, rownum++) {
             row = sheet.createRow(rownum);
@@ -94,19 +103,22 @@
             }
         }
 
+        //group rows for each phase, row numbers are 0-based
+        sheet.groupRow(4, 6);
+        sheet.groupRow(9, 13);
+        sheet.groupRow(16, 18);
 
-        sheet.groupRow(5, 7);
-        sheet.groupRow(10, 14);
-        sheet.groupRow(17, 19);
-
+        //set column widths, the width is measured in units of 1/256th of a character width
         sheet.setColumnWidth(0, 256*6);
         sheet.setColumnWidth(1, 256*33);
         sheet.setColumnWidth(2, 256*20);
-        sheet.setZoom(75);
+        sheet.setZoom(3, 4);
 
 
         // Write the output to a file
-        FileOutputStream out = new FileOutputStream("xssf-plan.xlsx");
+        String file = "businessplan.xls";
+        if(wb instanceof XSSFWorkbook) file += "x";
+        FileOutputStream out = new FileOutputStream(file);
         wb.write(out);
         out.close();
     }

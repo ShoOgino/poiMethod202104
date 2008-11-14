@@ -1,12 +1,16 @@
     public static void main(String[] args) throws Exception {
-        XSSFWorkbook wb = new XSSFWorkbook();
-        Map<String, XSSFCellStyle> styles = createStyles(wb);
-        XSSFSheet sheet = wb.createSheet("Loan Calculator");
+        Workbook wb;
+
+        if(args.length > 0 && args[0].equals("-xls")) wb = new HSSFWorkbook();
+        else wb = new XSSFWorkbook();
+
+        Map<String, CellStyle> styles = createStyles(wb);
+        Sheet sheet = wb.createSheet("Loan Calculator");
         sheet.setPrintGridlines(false);
         sheet.setDisplayGridlines(false);
 
-        XSSFPrintSetup printSetup = sheet.getPrintSetup();
-        printSetup.setOrientation(PrintOrientation.LANDSCAPE);
+        PrintSetup printSetup = sheet.getPrintSetup();
+        printSetup.setLandscape(true);
         sheet.setFitToPage(true);
         sheet.setHorizontallyCenter(true);
 
@@ -20,17 +24,17 @@
 
         createNames(wb);
 
-        XSSFRow titleRow = sheet.createRow(0);
+        Row titleRow = sheet.createRow(0);
         titleRow.setHeightInPoints(35);
         for (int i = 1; i <= 7; i++) {
             titleRow.createCell(i).setCellStyle(styles.get("title"));
         }
-        XSSFCell titleCell = titleRow.getCell(2);
+        Cell titleCell = titleRow.getCell(2);
         titleCell.setCellValue("Simple Loan Calculator");
         sheet.addMergedRegion(CellRangeAddress.valueOf("$C$1:$H$1"));
 
-        XSSFRow row = sheet.createRow(2);
-        XSSFCell cell = row.createCell(4);
+        Row row = sheet.createRow(2);
+        Cell cell = row.createCell(4);
         cell.setCellValue("Enter values");
         cell.setCellStyle(styles.get("item_right"));
 
@@ -40,6 +44,7 @@
         cell.setCellStyle(styles.get("item_left"));
         cell = row.createCell(4);
         cell.setCellStyle(styles.get("input_$"));
+        cell.setAsActiveCell();
 
         row = sheet.createRow(4);
         cell = row.createCell(2);
@@ -94,10 +99,11 @@
         cell.setCellFormula("IF(Values_Entered,Monthly_Payment*Number_of_Payments,\"\")");
         cell.setCellStyle(styles.get("formula_$"));
 
-        sheet.setActiveCell("E4");
 
         // Write the output to a file
-        FileOutputStream out = new FileOutputStream("loan-calculator.xlsx");
+        String file = "loan-calculator.xls";
+        if(wb instanceof XSSFWorkbook) file += "x";
+        FileOutputStream out = new FileOutputStream(file);
         wb.write(out);
         out.close();
     }
