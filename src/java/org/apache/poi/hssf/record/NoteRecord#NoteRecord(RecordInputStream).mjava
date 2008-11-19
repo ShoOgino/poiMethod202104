@@ -1,14 +1,20 @@
     /**
      * Read the record data from the supplied <code>RecordInputStream</code>
      */
-    public NoteRecord(RecordInputStream in)
-    {
+    public NoteRecord(RecordInputStream in) {
         field_1_row = in.readShort();
         field_2_col = in.readShort();
         field_3_flags = in.readShort();
         field_4_shapeid = in.readShort();
         int length = in.readShort();
-        byte[] bytes = in.readRemainder();
-        field_5_author = new String(bytes, 1, length);
+        field_5_hasMultibyte = in.readByte() != 0x00;
+        if (field_5_hasMultibyte) {
+        	field_6_author = StringUtil.readUnicodeLE(in, length);
+        } else {
+        	field_6_author = StringUtil.readCompressedUnicode(in, length);
+        }
+ 		if (in.available() == 1) {
+			field_7_padding = new Byte(in.readByte());
+        }
     }
 

@@ -1,0 +1,20 @@
+    public void testUnicodeAuthor() {
+        // This sample data was created by setting the 'user name' field in the 'Personalize' 
+        // section of Excel's options to \u30A2\u30D1\u30C3\u30C1\u65CF, and then 
+        // creating a cell comment.
+        byte[] data = HexRead.readFromString("01 00 01 00 00 00 03 00 " +
+                "05 00 01 " + // len=5, 16bit
+                "A2 30 D1 30 C3 30 C1 30 CF 65 " + // character data 
+                "00 " // padding byte
+                );
+        RecordInputStream in = TestcaseRecordInputStream.create(NoteRecord.sid, data);
+        NoteRecord nr = new NoteRecord(in);
+        if ("\u00A2\u0030\u00D1\u0030\u00C3".equals(nr.getAuthor())) {
+            throw new AssertionFailedError("Identified bug in reading note with unicode author");
+        }
+        assertEquals("\u30A2\u30D1\u30C3\u30C1\u65CF", nr.getAuthor());
+        
+        byte[] ser = nr.serialize();
+        TestcaseRecordInputStream.confirmRecordEncoding(NoteRecord.sid, data, ser);
+    }
+
