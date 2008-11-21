@@ -1,55 +1,81 @@
-    /**
-     * @param in the RecordInputstream to read the record from
-     */
-    public HyperlinkRecord(RecordInputStream in)
-    {
-        try {
-            rwFirst = in.readShort();
-            rwLast = in.readUShort();
-            colFirst = in.readShort();
-            colLast = in.readShort();
+    public HyperlinkRecord(RecordInputStream in) {
+        _range = new CellRangeAddress(in);
 
-            // 16-byte GUID
-            guid = new byte[16];
-            in.read(guid);
+        _guid = new GUID(in);
 
-            label_opts = in.readInt();
-            link_opts = in.readInt();
+        if (in.readInt() != 0x00000002) {
+            throw new RecordFormatException("expected "); // TODO
+        }
+        _linkOpts = in.readInt();
 
-            if ((link_opts & HLINK_LABEL) != 0){
-                int label_len = in.readInt();
-                label = in.readUnicodeLEString(label_len);
-            }
-
-            if ((link_opts & HLINK_URL) != 0){
-                moniker = new byte[16];
-                in.read(moniker);
-
-                if(Arrays.equals(URL_MONIKER, moniker)){
-                    int len = in.readInt();
-
-                    address = in.readUnicodeLEString(len/2);
-
-                    tail = in.readRemainder();
-                } else if (Arrays.equals(FILE_MONIKER, moniker)){
-                    file_opts = in.readShort();
-
-                    int len = in.readInt();
-
-                    byte[] path_bytes = new byte[len];
-                    in.read(path_bytes);
-
-                    address = new String(path_bytes);
-
-                    tail = in.readRemainder();
-                }
-            } else if((link_opts & HLINK_PLACE) != 0){
-                int len = in.readInt();
-                address = in.readUnicodeLEString(len);
-            }
-        } catch (IOException e){
-            throw new RuntimeException(e);
+        if ((_linkOpts & HLINK_LABEL) != 0){
+            int label_len = in.readInt();
+            _label = in.readUnicodeLEString(label_len);
         }
 
+        if ((_linkOpts & HLINK_TARGET_FRAME) != 0){
+            int len = in.readInt();
+            _targetFrame = in.readUnicodeLEString(len);
+        }
+
+        if ((_linkOpts & HLINK_UNC_PATH) != 0) {
+            _moniker = null;
+            int nChars = in.readInt();
+            _address = in.readUnicodeLEString(nChars);
+
+        } else if ((_linkOpts & HLINK_URL) != 0) {
+            _moniker = new GUID(in);
+
+            if(URL_MONIKER.equals(_moniker)){
+                int fieldSize = in.readInt();
+
+                if ((_linkOpts & HLINK_TARGET_FRAME) != 0) { 
+                    int nChars = fieldSize/2;
+                    _address = in.readUnicodeLEString(nChars);
+                } else {
+                    int nChars = (fieldSize - TAIL_SIZE)/2;
+                    _address = in.readUnicodeLEString(nChars);
+                    _uninterpretedTail = readTail(URL_TAIL, in);
+                }
+            } else if (FILE_MONIKER.equals(_moniker)) {
+                _fileOpts = in.readShort();
+
+                int len = in.readInt();
+                _shortFilename = StringUtil.readCompressedUnicode(in, len);
+                _uninterpretedTail = readTail(FILE_TAIL, in);
+                int size = in.readInt();
+                if (size > 0) {
+                    int charDataSize = in.readInt();
+                    if (in.readUShort() != 0x0003) {
+                        throw new RecordFormatException("expected "); // TODO
+                    }
+                    _address = StringUtil.readUnicodeLE(in, charDataSize/2);
+                } else {
+                    _address = null; // TODO
+                }
+            } else if (STD_MONIKER.equals(_moniker)) {
+                _fileOpts = in.readShort();
+
+                int len = in.readInt();
+
+                byte[] path_bytes = new byte[len];
+                in.readFully(path_bytes);
+
+                _address = new String(path_bytes);
+            }
+        } else {
+            // can happen for a plain link within the current document
+            _moniker = null;
+        }
+
+        if((_linkOpts & HLINK_PLACE) != 0) {
+
+            int len = in.readInt();
+            _textMark = in.readUnicodeLEString(len);
+        }
+
+        if (in.remaining() > 0) {
+            System.out.println(HexDump.toHex(in.readRemainder()));
+        }
     }
 

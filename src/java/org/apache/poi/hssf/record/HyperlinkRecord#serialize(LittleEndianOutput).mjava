@@ -1,0 +1,52 @@
+    public void serialize(LittleEndianOutput out) {
+        _range.serialize(out);
+
+        _guid.serialize(out);
+        out.writeInt(0x00000002); // TODO const
+        out.writeInt(_linkOpts);
+
+        if ((_linkOpts & HLINK_LABEL) != 0){
+            out.writeInt(_label.length());
+            StringUtil.putUnicodeLE(_label, out);
+        }
+        if ((_linkOpts & HLINK_TARGET_FRAME) != 0){
+            out.writeInt(_targetFrame.length());
+            StringUtil.putUnicodeLE(_targetFrame, out);
+        }
+
+        if ((_linkOpts & HLINK_UNC_PATH) != 0) {
+            out.writeInt(_address.length());
+            StringUtil.putUnicodeLE(_address, out);
+        } else if ((_linkOpts & HLINK_URL) != 0){
+            _moniker.serialize(out);
+            if(URL_MONIKER.equals(_moniker)){
+                if ((_linkOpts & HLINK_TARGET_FRAME) != 0) {
+                    out.writeInt(_address.length()*2);
+                    StringUtil.putUnicodeLE(_address, out);
+                } else {
+                    out.writeInt(_address.length()*2 + TAIL_SIZE);
+                    StringUtil.putUnicodeLE(_address, out);
+                    writeTail(_uninterpretedTail, out);
+                }
+            } else if (FILE_MONIKER.equals(_moniker)){
+                out.writeShort(_fileOpts);
+                out.writeInt(_shortFilename.length());
+                StringUtil.putCompressedUnicode(_shortFilename, out);
+                writeTail(_uninterpretedTail, out);
+                if (_address == null) {
+                    out.writeInt(0);
+                } else {
+                    int addrLen = _address.length() * 2;
+                    out.writeInt(addrLen + 6);
+                    out.writeInt(addrLen);
+                    out.writeShort(0x0003); // TODO const
+                    StringUtil.putUnicodeLE(_address, out);
+                }
+            }
+        }
+        if((_linkOpts & HLINK_PLACE) != 0){
+               out.writeInt(_textMark.length());
+            StringUtil.putUnicodeLE(_textMark, out);
+        }
+    }
+

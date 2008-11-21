@@ -1,28 +1,44 @@
     protected int getDataSize() {
         int size = 0;
         size += 2 + 2 + 2 + 2;  //rwFirst, rwLast, colFirst, colLast
-        size += guid.length;
+        size += GUID.ENCODED_SIZE;
         size += 4;  //label_opts
         size += 4;  //link_opts
-        if ((link_opts & HLINK_LABEL) != 0){
+        if ((_linkOpts & HLINK_LABEL) != 0){
             size += 4;  //link length
-            size += label.length()*2;
+            size += _label.length()*2;
         }
-        if ((link_opts & HLINK_URL) != 0){
-            size += moniker.length;  //moniker length
-            if(Arrays.equals(URL_MONIKER, moniker)){
+        if ((_linkOpts & HLINK_TARGET_FRAME) != 0){
+            size += 4;  // int nChars
+            size += _targetFrame.length()*2;
+        }
+        if ((_linkOpts & HLINK_UNC_PATH) != 0) {
+            size += 4;  // int nChars
+            size += _address.length()*2;
+        } else if ((_linkOpts & HLINK_URL) != 0){
+            size += GUID.ENCODED_SIZE;
+            if(URL_MONIKER.equals(_moniker)){
                 size += 4;  //address length
-                size += address.length()*2;
-                size += tail.length;
-            } else if (Arrays.equals(FILE_MONIKER, moniker)){
+                size += _address.length()*2;
+                if ((_linkOpts & HLINK_TARGET_FRAME) == 0) {
+                	size += TAIL_SIZE;
+                }
+            } else if (FILE_MONIKER.equals(_moniker)){
                 size += 2;  //file_opts
                 size += 4;  //address length
-                size += address.length();
-                size += tail.length;
+                size += _shortFilename.length();
+                size += TAIL_SIZE;
+                size += 4;
+                if (_address != null) {
+                    size += 6;
+                    size += _address.length() * 2;
+                }
+
             }
-        } else if((link_opts & HLINK_PLACE) != 0){
+        }
+        if((_linkOpts & HLINK_PLACE) != 0){
             size += 4;  //address length
-            size += address.length()*2;
+            size += _textMark.length()*2;
         }
         return size;
     }
