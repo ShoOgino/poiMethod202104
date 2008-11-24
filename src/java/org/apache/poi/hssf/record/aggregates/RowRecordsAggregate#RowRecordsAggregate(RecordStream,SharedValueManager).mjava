@@ -1,29 +1,32 @@
-    /**
-     * @param rs record stream with all {@link SharedFormulaRecord}
-     * {@link ArrayRecord}, {@link TableRecord} {@link MergeCellsRecord} Records removed
-     */
-    public RowRecordsAggregate(RecordStream rs, SharedValueManager svm) {
-        this(svm);
-        while(rs.hasNext()) {
-            Record rec = rs.getNext();
-            switch (rec.getSid()) {
-                case RowRecord.sid:
-                    insertRow((RowRecord) rec);
-                    continue;
-                case DBCellRecord.sid:
-                    // end of 'Row Block'.  Should only occur after cell records
-                    // ignore DBCELL records because POI generates them upon re-serialization
-                    continue;
-            }
-            if (rec instanceof UnknownRecord) {
-                addUnknownRecord((UnknownRecord)rec);
-                // might need to keep track of where exactly these belong
-                continue;
-            }
-            if (!(rec instanceof CellValueRecordInterface)) {
-                throw new RuntimeException("Unexpected record type (" + rec.getClass().getName() + ")");
-            }
-            _valuesAgg.construct((CellValueRecordInterface)rec, rs, svm);
-        }
-    }
+	/**
+	 * @param rs record stream with all {@link SharedFormulaRecord}
+	 * {@link ArrayRecord}, {@link TableRecord} {@link MergeCellsRecord} Records removed
+	 */
+	public RowRecordsAggregate(RecordStream rs, SharedValueManager svm) {
+		this(svm);
+		while(rs.hasNext()) {
+			Record rec = rs.getNext();
+			switch (rec.getSid()) {
+				case RowRecord.sid:
+					insertRow((RowRecord) rec);
+					continue;
+				case DBCellRecord.sid:
+					// end of 'Row Block'.  Should only occur after cell records
+					// ignore DBCELL records because POI generates them upon re-serialization
+					continue;
+			}
+			if (rec instanceof UnknownRecord) {
+				// might need to keep track of where exactly these belong
+				addUnknownRecord(rec);
+				while (rs.peekNextSid() == ContinueRecord.sid) {
+					addUnknownRecord(rs.getNext());
+				}
+				continue;
+			}
+			if (!(rec instanceof CellValueRecordInterface)) {
+				throw new RuntimeException("Unexpected record type (" + rec.getClass().getName() + ")");
+			}
+			_valuesAgg.construct((CellValueRecordInterface)rec, rs, svm);
+		}
+	}
 

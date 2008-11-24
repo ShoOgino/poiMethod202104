@@ -1,39 +1,39 @@
-    public void visitContainedRecords(RecordVisitor rv) {
+	public void visitContainedRecords(RecordVisitor rv) {
 
-        PositionTrackingVisitor stv = new PositionTrackingVisitor(rv, 0);
-        //DBCells are serialized before row records.
-        final int blockCount = getRowBlockCount();
-        for (int blockIndex = 0; blockIndex < blockCount; blockIndex++) {
-            // Serialize a block of rows.
-            // Hold onto the position of the first row in the block
-            int pos=0;
-            // Hold onto the size of this block that was serialized
-            final int rowBlockSize = visitRowRecordsForBlock(blockIndex, rv);
-            pos += rowBlockSize;
-            // Serialize a block of cells for those rows
-            final int startRowNumber = getStartRowNumberForBlock(blockIndex);
-            final int endRowNumber = getEndRowNumberForBlock(blockIndex);
-            DBCellRecord.Builder dbcrBuilder = new DBCellRecord.Builder();
-            // Note: Cell references start from the second row...
-            int cellRefOffset = (rowBlockSize - RowRecord.ENCODED_SIZE);
-            for (int row = startRowNumber; row <= endRowNumber; row++) {
-                if (_valuesAgg.rowHasCells(row)) {
-                    stv.setPosition(0);
-                    _valuesAgg.visitCellsForRow(row, stv);
-                    int rowCellSize = stv.getPosition();
-                    pos += rowCellSize;
-                    // Add the offset to the first cell for the row into the
-                    // DBCellRecord.
-                    dbcrBuilder.addCellOffset(cellRefOffset);
-                    cellRefOffset = rowCellSize;
-                }
-            }
-            // Calculate Offset from the start of a DBCellRecord to the first Row
-            rv.visitRecord(dbcrBuilder.build(pos));
-        }
-        for (int i=0; i< _unknownRecords.size(); i++) {
-            // Potentially breaking the file here since we don't know exactly where to write these records
-            rv.visitRecord((Record) _unknownRecords.get(i));
-        }
-    }
+		PositionTrackingVisitor stv = new PositionTrackingVisitor(rv, 0);
+		//DBCells are serialized before row records.
+		final int blockCount = getRowBlockCount();
+		for (int blockIndex = 0; blockIndex < blockCount; blockIndex++) {
+			// Serialize a block of rows.
+			// Hold onto the position of the first row in the block
+			int pos=0;
+			// Hold onto the size of this block that was serialized
+			final int rowBlockSize = visitRowRecordsForBlock(blockIndex, rv);
+			pos += rowBlockSize;
+			// Serialize a block of cells for those rows
+			final int startRowNumber = getStartRowNumberForBlock(blockIndex);
+			final int endRowNumber = getEndRowNumberForBlock(blockIndex);
+			DBCellRecord.Builder dbcrBuilder = new DBCellRecord.Builder();
+			// Note: Cell references start from the second row...
+			int cellRefOffset = (rowBlockSize - RowRecord.ENCODED_SIZE);
+			for (int row = startRowNumber; row <= endRowNumber; row++) {
+				if (_valuesAgg.rowHasCells(row)) {
+					stv.setPosition(0);
+					_valuesAgg.visitCellsForRow(row, stv);
+					int rowCellSize = stv.getPosition();
+					pos += rowCellSize;
+					// Add the offset to the first cell for the row into the
+					// DBCellRecord.
+					dbcrBuilder.addCellOffset(cellRefOffset);
+					cellRefOffset = rowCellSize;
+				}
+			}
+			// Calculate Offset from the start of a DBCellRecord to the first Row
+			rv.visitRecord(dbcrBuilder.build(pos));
+		}
+		for (int i=0; i< _unknownRecords.size(); i++) {
+			// Potentially breaking the file here since we don't know exactly where to write these records
+			rv.visitRecord(_unknownRecords.get(i));
+		}
+	}
 

@@ -1,0 +1,33 @@
+	/**
+	 * This problem was noted as the overt symptom of bug 46280.  The logic for skipping {@link
+	 * UnknownRecord}s in the constructor {@link RowRecordsAggregate} did not allow for the
+	 * possibility of tailing {@link ContinueRecord}s.<br/>
+	 * The functionality change being tested here is actually not critical to the overall fix
+	 * for bug 46280, since the fix involved making sure the that offending <i>PivotTable</i>
+	 * records do not get into {@link RowRecordsAggregate}.<br/>
+	 * This fix in {@link RowRecordsAggregate} was implemented anyway since any {@link 
+	 * UnknownRecord} has the potential of being 'continued'.
+	 */
+	public void testUnknownContinue_bug46280() {
+		Record[] inRecs = {
+			new RowRecord(0),
+			new NumberRecord(),
+			new UnknownRecord(0x5555, "dummydata".getBytes()),
+			new ContinueRecord("moredummydata".getBytes()),
+		};
+		RecordStream rs = new RecordStream(Arrays.asList(inRecs), 0);
+		RowRecordsAggregate rra;
+		try {
+			rra = new RowRecordsAggregate(rs, SharedValueManager.EMPTY);
+		} catch (RuntimeException e) {
+			if (e.getMessage().startsWith("Unexpected record type")) {
+				throw new AssertionFailedError("Identified bug 46280a");
+			}
+			throw e;
+		}
+		RecordCollector rv = new RecordCollector();
+		rra.visitContainedRecords(rv);
+		Record[] outRecs = rv.getRecords();
+		assertEquals(5, outRecs.length);
+	}
+

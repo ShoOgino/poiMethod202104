@@ -1,35 +1,35 @@
-    public IndexRecord createIndexRecord(int indexRecordOffset, int sizeOfInitialSheetRecords) {
-        IndexRecord result = new IndexRecord();
-        result.setFirstRow(_firstrow);
-        result.setLastRowAdd1(_lastrow + 1);
-        // Calculate the size of the records from the end of the BOF
-        // and up to the RowRecordsAggregate...
+	public IndexRecord createIndexRecord(int indexRecordOffset, int sizeOfInitialSheetRecords) {
+		IndexRecord result = new IndexRecord();
+		result.setFirstRow(_firstrow);
+		result.setLastRowAdd1(_lastrow + 1);
+		// Calculate the size of the records from the end of the BOF
+		// and up to the RowRecordsAggregate...
 
-        // Add the references to the DBCells in the IndexRecord (one for each block)
-        // Note: The offsets are relative to the Workbook BOF. Assume that this is
-        // 0 for now.....
+		// Add the references to the DBCells in the IndexRecord (one for each block)
+		// Note: The offsets are relative to the Workbook BOF. Assume that this is
+		// 0 for now.....
 
-        int blockCount = getRowBlockCount();
-        // Calculate the size of this IndexRecord
-        int indexRecSize = IndexRecord.getRecordSizeForBlockCount(blockCount);
+		int blockCount = getRowBlockCount();
+		// Calculate the size of this IndexRecord
+		int indexRecSize = IndexRecord.getRecordSizeForBlockCount(blockCount);
 
-        int currentOffset = indexRecordOffset + indexRecSize + sizeOfInitialSheetRecords;
+		int currentOffset = indexRecordOffset + indexRecSize + sizeOfInitialSheetRecords;
 
-        for (int block = 0; block < blockCount; block++) {
-            // each row-block has a DBCELL record.
-            // The offset of each DBCELL record needs to be updated in the INDEX record
+		for (int block = 0; block < blockCount; block++) {
+			// each row-block has a DBCELL record.
+			// The offset of each DBCELL record needs to be updated in the INDEX record
 
-            // account for row records in this row-block
-            currentOffset += getRowBlockSize(block);
-            // account for cell value records after those
-            currentOffset += _valuesAgg.getRowCellBlockSize(
-                    getStartRowNumberForBlock(block), getEndRowNumberForBlock(block));
+			// account for row records in this row-block
+			currentOffset += getRowBlockSize(block);
+			// account for cell value records after those
+			currentOffset += _valuesAgg.getRowCellBlockSize(
+					getStartRowNumberForBlock(block), getEndRowNumberForBlock(block));
 
-            // currentOffset is now the location of the DBCELL record for this row-block
-            result.addDbcell(currentOffset);
-            // Add space required to write the DBCELL record (whose reference was just added).
-            currentOffset += (8 + (getRowCountForBlock(block) * 2));
-        }
-        return result;
-    }
+			// currentOffset is now the location of the DBCELL record for this row-block
+			result.addDbcell(currentOffset);
+			// Add space required to write the DBCELL record (whose reference was just added).
+			currentOffset += (8 + (getRowCountForBlock(block) * 2));
+		}
+		return result;
+	}
 
