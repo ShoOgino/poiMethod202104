@@ -2,55 +2,60 @@
 	 * Method main with 1 argument just run straight biffview against given
 	 * file<P>
 	 *
-	 * with 2 arguments where the second argument is "on" - run biffviewer<P>
+	 * <b>Usage</b>:<br/>
 	 *
-	 * with hex dumps of records <P>
+	 * BiffViewer [--biffhex] [--noint] [--out] &lt;fileName&gt; <br/>
+	 * BiffViewer --rawhex  [--out] &lt;fileName&gt; <br/>
+	 * <br/>
 	 *
-	 * with 2 arguments where the second argument is "bfd" just run a big fat
-	 * hex dump of the file...don't worry about biffviewing it at all
-	 * <p>
+	 * <table>
+	 * <tr><td>--biffhex</td><td>show hex dump of each BIFF record</td></tr>
+	 * <tr><td>--noint</td><td>do not output interpretation of BIFF records</td></tr>
+	 * <tr><td>--out</td><td>send output to &lt;fileName&gt;.out</td></tr>
+	 * <tr><td>--rawhex</td><td>output raw hex dump of whole workbook stream</td></tr>
+	 * </table>
+	 *
 	 * Define the system property <code>poi.deserialize.escher</code> to turn on
 	 * deserialization of escher records.
 	 *
 	 */
 	public static void main(String[] args) {
 
-		System.setProperty("poi.deserialize.escher", "true");
-
-		if (args.length == 0) {
-			System.out.println( "Biff viewer needs a filename" );
+		CommandArgs cmdArgs;
+		try {
+			cmdArgs = CommandArgs.parse(args);
+		} catch (CommandParseException e) {
+			e.printStackTrace();
 			return;
 		}
 
+		System.setProperty("poi.deserialize.escher", "true");
+
+
 		try {
-			String inFileName = args[0];
-			File inputFile = new File(inFileName);
-			if(!inputFile.exists()) {
-				throw new RuntimeException("specified inputFile '" + inFileName + "' does not exist");
-			}
+
 			PrintStream ps;
-			if (false) { // set to true to output to file
-				OutputStream os = new FileOutputStream(inFileName + ".out");
+			if (cmdArgs.shouldOutputToFile()) {
+				OutputStream os = new FileOutputStream(cmdArgs.getFile().getAbsolutePath() + ".out");
 				ps = new PrintStream(os);
 			} else {
 				ps = System.out;
 			}
- 
-			if (args.length > 1 && args[1].equals("bfd")) {
-				POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(inputFile));
-				InputStream stream = fs.createDocumentInputStream("Workbook");
-				int size = stream.available();
+
+			POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(cmdArgs.getFile()));
+			InputStream is = fs.createDocumentInputStream("Workbook");
+
+			if (cmdArgs.shouldOutputRawHexOnly()) {
+				int size = is.available();
 				byte[] data = new byte[size];
 
-				stream.read(data);
+				is.read(data);
 				HexDump.dump(data, 0, System.out, 0);
 			} else {
-				boolean dumpInterpretedRecords = true;
-				boolean dumpHex = args.length > 1 && args[1].equals("on");
-
-				POIFSFileSystem fs = new POIFSFileSystem(new FileInputStream(inputFile));
-				InputStream is = fs.createDocumentInputStream("Workbook");
-				BiffRecordListener recListener = new BiffRecordListener(dumpHex ? new OutputStreamWriter(ps) : null);
+				boolean dumpInterpretedRecords = cmdArgs.shouldDumpRecordInterpretations();
+				boolean dumpHex = cmdArgs.shouldDumpBiffHex();
+				boolean zeroAlignHexDump = dumpInterpretedRecords;
+				BiffRecordListener recListener = new BiffRecordListener(dumpHex ? new OutputStreamWriter(ps) : null, zeroAlignHexDump);
 				is = new BiffDumpingStream(is, recListener);
 				createRecords(is, ps, recListener, dumpInterpretedRecords);
 			}
