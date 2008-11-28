@@ -2,7 +2,7 @@
         _mergedCellsTable = new MergedCellsTable();
         RowRecordsAggregate rra = null;
 
-        records            = new ArrayList(128);
+        records            = new ArrayList<RecordBase>(128);
         // TODO - take chart streams off into separate java objects
         int       bofEofNestingLevel = 0;  // nesting level can only get to 2 (when charts are present)
         int dimsloc = -1;
@@ -144,11 +144,24 @@
 
             records.add(rec);
         }
-        if (_dimensions == null) {
-            throw new RuntimeException("DimensionsRecord was not found");
-        }
         if (windowTwo == null) {
             throw new RuntimeException("WINDOW2 was not found");
+        }
+        if (_dimensions == null) {
+            // Excel seems to always write the DIMENSION record, but tolerates when it is not present
+            // in all cases Excel (2007) adds the missing DIMENSION record
+            if (rra == null) {
+                // bug 46206 alludes to files which skip the DIMENSION record 
+                // when there are no row/cell records.
+                // Not clear which application wrote these files.
+                rra = new RowRecordsAggregate();
+            } else {
+                log.log(POILogger.WARN, "DIMENSION record not found even though row/cells present");
+                // Not sure if any tools write files like this, but Excel reads them OK  
+            }
+            dimsloc = findFirstRecordLocBySid(WindowTwoRecord.sid);
+            _dimensions = rra.createDimensions();
+            records.add(dimsloc, _dimensions);
         }
         if (rra == null) {
             rra = new RowRecordsAggregate();

@@ -1,0 +1,40 @@
+    /**
+     * Some apps seem to write files with missing DIMENSION records.
+     * Excel(2007) tolerates this, so POI should too.
+     */
+    public void testMissingDims() {
+
+        int rowIx = 5;
+        int colIx = 6;
+        NumberRecord nr = new NumberRecord();
+        nr.setRow(rowIx);
+        nr.setColumn((short) colIx);
+        nr.setValue(3.0);
+
+        List<Record> inRecs = new ArrayList<Record>();
+        inRecs.add(new BOFRecord());
+        inRecs.add(new RowRecord(rowIx));
+        inRecs.add(nr);
+        inRecs.add(createWindow2Record());
+        inRecs.add(EOFRecord.instance);
+        Sheet sheet;
+        try {
+            sheet = createSheet(inRecs);
+        } catch (RuntimeException e) {
+            if (e.getMessage().equals("DimensionsRecord was not found")) {
+                throw new AssertionFailedError("Identified bug 46206");
+            }
+            throw e;
+        }
+
+        RecordCollector rv = new RecordCollector();
+        sheet.visitContainedRecords(rv, rowIx);
+        Record[] outRecs = rv.getRecords();
+        assertEquals(8, outRecs.length);
+        DimensionsRecord dims = (DimensionsRecord) outRecs[5];
+        assertEquals(rowIx, dims.getFirstRow());
+        assertEquals(rowIx, dims.getLastRow());
+        assertEquals(colIx, dims.getFirstCol());
+        assertEquals(colIx, dims.getLastCol());
+    }
+
