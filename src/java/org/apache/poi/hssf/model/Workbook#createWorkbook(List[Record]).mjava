@@ -10,17 +10,17 @@
      * @param recs an array of Record objects
      * @return Workbook object
      */
-    public static Workbook createWorkbook(List recs) {
+    public static Workbook createWorkbook(List<Record> recs) {
         if (log.check( POILogger.DEBUG ))
             log.log(DEBUG, "Workbook (readfile) created with reclen=",
                     new Integer(recs.size()));
-        Workbook  retval  = new Workbook();
-        ArrayList records = new ArrayList(recs.size() / 3);
+        Workbook retval = new Workbook();
+        List<Record> records = new ArrayList<Record>(recs.size() / 3);
         retval.records.setRecords(records);
 
         int k;
         for (k = 0; k < recs.size(); k++) {
-            Record rec = ( Record ) recs.get(k);
+            Record rec = recs.get(k);
 
             if (rec.getSid() == EOFRecord.sid) {
                 records.add(rec);
@@ -33,7 +33,7 @@
                 case BoundSheetRecord.sid :
                     if (log.check( POILogger.DEBUG ))
                         log.log(DEBUG, "found boundsheet record at " + k);
-                    retval.boundsheets.add(rec);
+                    retval.boundsheets.add((BoundSheetRecord) rec);
                     retval.records.setBspos( k );
                     break;
 
@@ -87,7 +87,7 @@
                 case FormatRecord.sid :
                     if (log.check( POILogger.DEBUG ))
                         log.log(DEBUG, "found format record at " + k);
-                    retval.formats.add(rec);
+                    retval.formats.add((FormatRecord) rec);
                     retval.maxformatid = retval.maxformatid >= ((FormatRecord)rec).getIndexCode() ? retval.maxformatid : ((FormatRecord)rec).getIndexCode();
                     break;
                 case DateWindow1904Record.sid :
@@ -132,16 +132,16 @@
         // Look for other interesting values that
         //  follow the EOFRecord
         for ( ; k < recs.size(); k++) {
-            Record rec = ( Record ) recs.get(k);
+            Record rec = recs.get(k);
             switch (rec.getSid()) {
                 case HyperlinkRecord.sid:
-                    retval.hyperlinks.add(rec);
+                    retval.hyperlinks.add((HyperlinkRecord)rec);
                     break;
             }
         }
         
         if (retval.windowOne == null) {
-            retval.windowOne = (WindowOneRecord) retval.createWindowOne();
+            retval.windowOne = createWindowOne();
         }
         if (log.check( POILogger.DEBUG ))
             log.log(DEBUG, "exit create workbook from existing file function");
