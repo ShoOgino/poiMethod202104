@@ -1,0 +1,30 @@
+	public void testRemoveNewRow_bug46312() {
+		// To make bug occur, rowIndex needs to be >= ValueRecordsAggregate.records.length
+		int rowIndex = 30;
+		
+		ValueRecordsAggregate vra = new ValueRecordsAggregate();
+		try {
+			vra.removeAllCellsValuesForRow(rowIndex);
+		} catch (IllegalArgumentException e) {
+			if (e.getMessage().equals("Specified rowIndex 30 is outside the allowable range (0..30)")) {
+				throw new AssertionFailedError("Identified bug 46312");
+			}
+			throw e;
+		}
+
+		if (false) { // same bug as demonstrated through usermodel API
+
+			HSSFWorkbook wb = new HSSFWorkbook();
+			HSSFSheet sheet = wb.createSheet();
+			HSSFRow row = sheet.createRow(rowIndex);
+			if (false) { // must not add any cells to the new row if we want to see the bug
+				row.createCell(0); // this causes ValueRecordsAggregate.records to auto-extend
+			}
+			try {
+				sheet.createRow(rowIndex);
+			} catch (IllegalArgumentException e) {
+				throw new AssertionFailedError("Identified bug 46312");
+			}
+		}
+	}
+
