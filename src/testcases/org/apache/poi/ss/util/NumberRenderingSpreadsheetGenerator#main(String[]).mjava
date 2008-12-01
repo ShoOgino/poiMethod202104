@@ -1,0 +1,34 @@
+	public static void main(String[] args) {
+		writeJavaDoc();
+		
+		HSSFWorkbook wb = new HSSFWorkbook();
+		SheetWriter sw = new SheetWriter(wb);
+		
+		ExampleConversion[] exampleValues = NumberToTextConversionExamples.getExampleConversions();
+		for (int i = 0; i < exampleValues.length; i++) {
+			ExampleConversion example = exampleValues[i];
+			sw.addTestRow(example.getRawDoubleBits(), example.getExcelRendering());
+		}
+		
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		try {
+			wb.write(baos);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		byte[] fileContent = baos.toByteArray();
+		replaceNaNs(fileContent, sw.getReplacementNaNs());
+		
+		
+		File outputFile = new File("ExcelNumberRendering.xls");
+		
+		try {
+			FileOutputStream os = new FileOutputStream(outputFile);
+			os.write(fileContent);
+			os.close();
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		System.out.println("Finished writing '" + outputFile.getAbsolutePath() + "'");
+	}
+

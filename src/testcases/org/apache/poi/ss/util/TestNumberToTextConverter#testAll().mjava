@@ -1,0 +1,40 @@
+	/**
+	 * Confirms that <tt>ExcelNumberToTextConverter.toText(d)</tt> produces the right results.
+	 * As part of preparing this test class, the <tt>ExampleConversion</tt> instances should be set
+	 * up to contain the rendering as produced by Excel.
+	 */
+	public void testAll() {
+		int failureCount = 0;
+		
+		ExampleConversion[] examples = NumberToTextConversionExamples.getExampleConversions();
+
+		for (int i = 0; i < examples.length; i++) {
+			ExampleConversion example = examples[i];
+			try {
+				if (example.isNaN()) {
+					confirmNaN(example.getRawDoubleBits(), example.getExcelRendering());
+					continue;
+				}
+				String actual = NumberToTextConverter.toText(example.getDoubleValue());
+				if (!example.getExcelRendering().equals(actual)) {
+					failureCount++;
+					String msg = "Error rendering for examples[" + i + "] "
+							+ formatExample(example) + " "
+							+ " bad-result='" + actual + "' "
+							+ new ComparisonFailure(null, example.getExcelRendering(), actual).getMessage();
+					System.err.println(msg);
+					continue;
+				}
+			} catch (RuntimeException e) {
+				failureCount++;
+				System.err.println("Error in excel rendering for examples[" + i + "] "
+						+ formatExample(example) + "':" + e.getMessage());
+				e.printStackTrace();
+			}
+		}
+		if (failureCount > 0) {
+			throw new AssertionFailedError(failureCount 
+					+ " error(s) in excel number to text conversion (see std-err)");
+		}
+	}
+

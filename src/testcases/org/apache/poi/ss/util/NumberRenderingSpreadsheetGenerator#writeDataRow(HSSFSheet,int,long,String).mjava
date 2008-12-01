@@ -1,0 +1,28 @@
+	static void writeDataRow(HSSFSheet sheet, int rowIx, long rawLongBits, String expectedExcelRendering) {
+		double d = Double.longBitsToDouble(rawLongBits);
+		HSSFRow row = sheet.createRow(rowIx);
+		
+		int rowNum = rowIx + 1;
+		String cel0ref = "A" + rowNum;
+		String rawBitsText = formatLongAsHex(rawLongBits);
+		String jmExpr = "'ec(" + rawBitsText + ", ''\" & C" + rowNum + " & \"'', ''\" & D" + rowNum + " & \"''),'";
+		
+		// The 'Match' column will contain 'OK' if the metadata (from NumberToTextConversionExamples)
+		// matches Excel's rendering.
+		String matchExpr = "if(D" + rowNum + "=E" + rowNum + ", \"OK\", \"ERROR\")";
+		
+		row.createCell(0).setCellValue(d);
+		row.createCell(1).setCellValue(new HSSFRichTextString(rawBitsText));
+		row.createCell(2).setCellValue(new HSSFRichTextString(Double.toString(d)));
+		row.createCell(3).setCellFormula("\"\" & " + cel0ref);
+		row.createCell(4).setCellValue(new HSSFRichTextString(expectedExcelRendering));
+		row.createCell(5).setCellFormula(matchExpr);
+		row.createCell(6).setCellFormula(jmExpr.replaceAll("'", "\""));
+
+		if (false) {
+			// for observing arithmetic near numeric range boundaries
+			row.createCell(7).setCellFormula(cel0ref + " * 1.0001");
+			row.createCell(8).setCellFormula(cel0ref + " / 1.0001");
+		}
+	}
+
