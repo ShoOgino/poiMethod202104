@@ -6,38 +6,29 @@
 		if(ptg == null) {
 			throw new IllegalArgumentException("ptg must not be null");
 		}
-		Object result;
-		
+		OperationEval result;
+
 		Class ptgClass = ptg.getClass();
-		
+
 		result = _instancesByPtgClass.get(ptgClass);
 		if (result != null) {
-			return (OperationEval) result;
+			return  result;
 		}
 		
-		
-		Constructor constructor = (Constructor) _constructorsByPtgClass.get(ptgClass);
-		if(constructor == null) {
-			if(ptgClass == ExpPtg.class) {
-				// ExpPtg is used for array formulas and shared formulas.
-				// it is currently unsupported, and may not even get implemented here
-				throw new RuntimeException("ExpPtg currently not supported");
-			}
-			throw new RuntimeException("Unexpected operation ptg class (" + ptgClass.getName() + ")");
+		if (ptgClass == FuncPtg.class) {
+			return new FuncVarEval((FuncPtg)ptg);
 		}
-		
-		Object[] initargs = { ptg };
-		try {
-			result = constructor.newInstance(initargs);
-		} catch (IllegalArgumentException e) {
-			throw new RuntimeException(e);
-		} catch (InstantiationException e) {
-			throw new RuntimeException(e);
-		} catch (IllegalAccessException e) {
-			throw new RuntimeException(e);
-		} catch (InvocationTargetException e) {
-			throw new RuntimeException(e);
+		if (ptgClass == FuncVarPtg.class) {
+			return new FuncVarEval((FuncVarPtg)ptg);
 		}
-		return (OperationEval) result;
+		if (ptgClass == ConcatPtg.class) {
+			return new ConcatEval((ConcatPtg)ptg);
+		}
+		if(ptgClass == ExpPtg.class) {
+			// ExpPtg is used for array formulas and shared formulas.
+			// it is currently unsupported, and may not even get implemented here
+			throw new RuntimeException("ExpPtg currently not supported");
+		}
+		throw new RuntimeException("Unexpected operation ptg class (" + ptgClass.getName() + ")");
 	}
 
