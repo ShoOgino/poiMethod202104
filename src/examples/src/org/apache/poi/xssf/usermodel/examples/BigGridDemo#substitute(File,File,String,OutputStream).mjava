@@ -1,0 +1,29 @@
+    /**
+     *
+     * @param zipfile the template file
+     * @param tmpfile the XML file with the sheet data
+     * @param entry the name of the sheet entry to substitute, e.g. xl/worksheets/sheet1.xml
+     * @param out the stream to write the result to
+     */
+    private static void substitute(File zipfile, File tmpfile, String entry, OutputStream out) throws IOException {
+        ZipFile zip = new ZipFile(zipfile);
+
+        ZipOutputStream zos = new ZipOutputStream(out);
+
+        for (Enumeration en = zip.entries(); en.hasMoreElements(); ) {
+            ZipEntry ze = (ZipEntry)en.nextElement();
+            if(!ze.getName().equals(entry)){
+                zos.putNextEntry(new ZipEntry(ze.getName()));
+                InputStream is = zip.getInputStream(ze);
+                copyStream(is, zos);
+                is.close();
+            }
+        }
+        zos.putNextEntry(new ZipEntry(entry));
+        InputStream is = new FileInputStream(tmpfile);
+        copyStream(is, zos);
+        is.close();
+
+        zos.close();
+    }
+

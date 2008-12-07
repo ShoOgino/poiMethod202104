@@ -1,0 +1,29 @@
+    public static void main(String[] args) throws Exception {
+
+        // Step 1. Create a template file. Setup sheets and workbook-level objects such as
+        // cell styles, number formats, etc.
+
+        XSSFWorkbook wb = new XSSFWorkbook();
+        XSSFSheet sheet = wb.createSheet("Big Grid");
+
+        Map<String, XSSFCellStyle> styles = createStyles(wb);
+        //name of the zip entry holding sheet data, e.g. /xl/worksheets/sheet1.xml
+        String sheetRef = sheet.getPackagePart().getPartName().getName();
+
+        //save the template
+        FileOutputStream os = new FileOutputStream("template.xlsx");
+        wb.write(os);
+        os.close();
+
+        //Step 2. Generate XML file.
+        File tmp = File.createTempFile("sheet", ".xml");
+        Writer fw = new FileWriter(tmp);
+        generate(fw, styles);
+        fw.close();
+
+        //Step 3. Substitute the template entry with the generated data
+        FileOutputStream out = new FileOutputStream("big-grid.xlsx");
+        substitute(new File("template.xlsx"), tmp, sheetRef.substring(1), out);
+        out.close();
+    }
+
