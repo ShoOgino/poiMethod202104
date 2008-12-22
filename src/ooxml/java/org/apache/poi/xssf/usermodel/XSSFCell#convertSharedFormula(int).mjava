@@ -1,0 +1,19 @@
+    /**
+     * Creates a non shared formula from the shared formula counterpart
+     *
+     * @return non shared formula created for the given shared formula and this cell
+     */
+    private String convertSharedFormula(int idx){
+        XSSFSheet sheet = getSheet();
+        XSSFCell sfCell = sheet.getSharedFormulaCell(idx);
+        if(sfCell == null){
+            throw new IllegalStateException("Shared Formula not found for group index " + idx);
+        }
+        String sharedFormula = sfCell.getCTCell().getF().getStringValue();
+        XSSFEvaluationWorkbook fpb = XSSFEvaluationWorkbook.create(sheet.getWorkbook());
+        Ptg[] ptgs = FormulaParser.parse(sharedFormula, fpb);
+        Ptg[] fmla = SharedFormulaRecord.convertSharedFormulas(ptgs,
+                getRowIndex() - sfCell.getRowIndex(), getColumnIndex() - sfCell.getColumnIndex());
+        return FormulaRenderer.toFormulaString(fpb, fmla);
+    }
+
