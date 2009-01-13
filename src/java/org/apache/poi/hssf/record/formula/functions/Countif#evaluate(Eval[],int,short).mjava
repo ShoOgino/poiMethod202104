@@ -1,4 +1,4 @@
-	public Eval evaluate(Eval[] args, int srcCellRow, short srcCellCol) {
+	public Eval evaluate(Eval[] args, int srcRowIndex, short srcColumnIndex) {
 		switch(args.length) {
 			case 2:
 				// expected
@@ -9,21 +9,12 @@
 				return ErrorEval.VALUE_INVALID;
 		}
 
-		Eval criteriaArg = args[1];
-		if(criteriaArg instanceof RefEval) {
-			// criteria is not a literal value, but a cell reference
-			// for example COUNTIF(B2:D4, E1)
-			RefEval re = (RefEval)criteriaArg;
-			criteriaArg = re.getInnerValueEval();
-		} else {
-			// other non literal tokens such as function calls, have been fully evaluated
-			// for example COUNTIF(B2:D4, COLUMN(E1))
-		}
-		if(criteriaArg instanceof BlankEval) {
+		I_MatchPredicate mp = createCriteriaPredicate(args[1], srcRowIndex, srcColumnIndex);
+		if(mp == null) {
 			// If the criteria arg is a reference to a blank cell, countif always returns zero.
 			return NumberEval.ZERO;
 		}
-		I_MatchPredicate mp = createCriteriaPredicate(criteriaArg);
-		return countMatchingCellsInArea(args[0], mp);
+		double result = countMatchingCellsInArea(args[0], mp);
+		return new NumberEval(result);
 	}
 
