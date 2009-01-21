@@ -1,0 +1,32 @@
+	/**
+	 * Test for small bug observable around r736460 (prior to version 3.5).  POI fails to remove
+	 * the {@link StringRecord} following the {@link FormulaRecord} after the result type had been 
+	 * changed to number/boolean/error.  Excel silently ignores the extra record, but some POI
+	 * versions (prior to bug 46213 / r717883) crash instead.
+	 */
+	public void testCachedTypeChange() {
+		HSSFSheet sheet = new HSSFWorkbook().createSheet("Sheet1");
+		HSSFCell cell = sheet.createRow(0).createCell(0);
+		cell.setCellFormula("A1");
+		cell.setCellValue("abc");
+		confirmStringRecord(sheet, true);
+		cell.setCellValue(123);
+		Record[] recs = RecordInspector.getRecords(sheet, 0);
+		if (recs.length == 28 && recs[23] instanceof StringRecord) {
+			throw new AssertionFailedError("Identified bug - leftover StringRecord");
+		}
+		confirmStringRecord(sheet, false);
+		
+		// string to error code
+		cell.setCellValue("abc");
+		confirmStringRecord(sheet, true);
+		cell.setCellErrorValue((byte)ErrorConstants.ERROR_REF);
+		confirmStringRecord(sheet, false);
+		
+		// string to boolean
+		cell.setCellValue("abc");
+		confirmStringRecord(sheet, true);
+		cell.setCellValue(false);
+		confirmStringRecord(sheet, false);
+	}
+
