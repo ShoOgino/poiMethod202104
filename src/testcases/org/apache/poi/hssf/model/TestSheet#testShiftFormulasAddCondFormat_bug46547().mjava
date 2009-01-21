@@ -1,0 +1,23 @@
+	/**
+	 * Prior to the fix for bug 46547, shifting formulas would have the side-effect 
+	 * of creating a {@link ConditionalFormattingTable}.  There was no impairment to
+	 * functionality since empty record aggregates are equivalent to missing record 
+	 * aggregates. However, since this unnecessary creation helped expose bug 46547b,
+	 * and since there is a slight performance hit the fix was made to avoid it.
+	 */
+	public void testShiftFormulasAddCondFormat_bug46547() {
+		// Create a sheet with data validity (similar to bugzilla attachment id=23131).
+		Sheet sheet = Sheet.createSheet();
+
+		List<RecordBase> sheetRecs = sheet.getRecords();
+		assertEquals(22, sheetRecs.size());
+		
+		FormulaShifter shifter = FormulaShifter.createForRowShift(0, 0, 0, 1);
+		sheet.updateFormulasAfterCellShift(shifter, 0);
+		if (sheetRecs.size() == 23 && sheetRecs.get(21) instanceof ConditionalFormattingTable) {
+			throw new AssertionFailedError("Identified bug 46547a");
+		}
+		assertEquals(22, sheetRecs.size());
+		
+	}
+
