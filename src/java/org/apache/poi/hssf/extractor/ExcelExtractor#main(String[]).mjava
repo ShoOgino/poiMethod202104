@@ -1,0 +1,41 @@
+	/**
+	 * Command line extractor.
+	 */
+	public static void main(String[] args) {
+		
+		CommandArgs cmdArgs;
+		try {
+			cmdArgs = new CommandArgs(args);
+		} catch (CommandParseException e) {
+			System.err.println(e.getMessage());
+			printUsageMessage(System.err);
+			System.exit(1);
+			return; // suppress compiler error
+		}
+		
+		if (cmdArgs.isRequestHelp()) {
+			printUsageMessage(System.out);
+			return;
+		}
+		
+		try {
+			InputStream is;
+			if(cmdArgs.getInputFile() == null) {
+				is = System.in;
+			} else {
+				is = new FileInputStream(cmdArgs.getInputFile());
+			}
+			HSSFWorkbook wb = new HSSFWorkbook(is);
+
+			ExcelExtractor extractor = new ExcelExtractor(wb);
+			extractor.setIncludeSheetNames(cmdArgs.shouldShowSheetNames());
+			extractor.setFormulasNotResults(!cmdArgs.shouldEvaluateFormulas());
+			extractor.setIncludeCellComments(cmdArgs.shouldShowCellComments());
+			extractor.setIncludeBlankCells(cmdArgs.shouldShowBlankCells());
+			System.out.println(extractor.getText());
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.exit(1);
+		}
+	}
+
