@@ -1,0 +1,40 @@
+	/**
+	 * Delete the part with the specified name and all part listed in its
+	 * associated relationships part if one exists. This process is recursively
+	 * apply to all parts in the relationships part of the specified part.
+	 * Prefer the use of this method to delete a part in the package, compare to
+	 * the remove() methods that don't remove associated relationships part.
+	 * 
+	 * @param partName
+	 *            Name of the part to delete
+	 */
+	public void deletePartRecursive(PackagePartName partName) {
+		if (partName == null || !this.containPart(partName))
+			throw new IllegalArgumentException("partName");
+
+		PackagePart partToDelete = this.getPart(partName);
+		// Remove the part
+		this.removePart(partName);
+		// Remove all relationship parts associated
+		try {
+			for (PackageRelationship relationship : partToDelete
+					.getRelationships()) {
+				PackagePartName targetPartName = PackagingURIHelper
+						.createPartName(PackagingURIHelper.resolvePartUri(
+								partName.getURI(), relationship.getTargetURI()));
+				this.deletePartRecursive(targetPartName);
+			}
+		} catch (InvalidFormatException e) {
+			logger.warn("An exception occurs while deleting part '"
+					+ partName.getName()
+					+ "'. Some parts may remain in the package. - "
+					+ e.getMessage());
+			return;
+		}
+		// Remove the relationships part
+		PackagePartName relationshipPartName = PackagingURIHelper
+				.getRelationshipPartName(partName);
+		if (relationshipPartName != null && containPart(relationshipPartName))
+			this.removePart(relationshipPartName);
+	}
+

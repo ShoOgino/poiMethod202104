@@ -1,0 +1,24 @@
+    /**
+     * Test relationships are correctly loaded. This at the moment fails (as of r499)
+     * whenever a document is loaded before its correspondig .rels file has been found.
+     * The code in this case assumes there are no relationships defined, but it should
+     * really look also for not yet loaded parts.
+     */
+    public void testLoadRelationships() throws Exception {
+        String filepath = System.getProperty("openxml4j.testdata.input") + File.separator
+            + "sample.xlsx";
+        Package pkg = Package.open(filepath, PackageAccess.READ);
+        TestCore.getLogger().debug("1: " + pkg);
+        PackageRelationshipCollection rels = pkg.getRelationshipsByType(PackageRelationshipTypes.CORE_DOCUMENT);
+        PackageRelationship coreDocRelationship = rels.getRelationship(0);
+        PackagePart corePart = pkg.getPart(coreDocRelationship);
+        String relIds[] = { "rId1", "rId2", "rId3" };
+        for (String relId : relIds) {
+            PackageRelationship rel = corePart.getRelationship(relId);
+            assertNotNull(rel);
+            PackagePartName relName = PackagingURIHelper.createPartName(rel.getTargetURI());
+            PackagePart sheetPart = pkg.getPart(relName);
+            assertEquals("Number of relationships1 for " + sheetPart.getPartName(), 1, sheetPart.getRelationships().size());
+        }
+    }
+

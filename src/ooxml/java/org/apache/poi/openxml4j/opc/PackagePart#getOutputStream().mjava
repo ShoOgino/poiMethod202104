@@ -1,0 +1,31 @@
+	/**
+	 * Get the output stream of this part. If the part is originally embedded in
+	 * Zip package, it'll be transform intot a <i>MemoryPackagePart</i> in
+	 * order to write inside (the standard Java API doesn't allow to write in
+	 * the file)
+	 * 
+	 * @see org.apache.poi.openxml4j.opc.internal.MemoryPackagePart
+	 */
+	public OutputStream getOutputStream() {
+		OutputStream outStream;
+		// If this part is a zip package part (read only by design) we convert
+		// this part into a MemoryPackagePart instance for write purpose.
+		if (this instanceof ZipPackagePart) {
+			// Delete logically this part
+			this.container.removePart(this.partName);
+
+			// Create a memory part
+			PackagePart part = container.createPart(this.partName,
+					this.contentType.toString(), false);
+			part.relationships = this.relationships;
+			if (part == null) {
+				throw new InvalidOperationException(
+						"Can't create a temporary part !");
+			}
+			outStream = part.getOutputStreamImpl();
+		} else {
+			outStream = this.getOutputStreamImpl();
+		}
+		return outStream;
+	}
+

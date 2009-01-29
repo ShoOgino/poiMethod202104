@@ -1,0 +1,39 @@
+	public void testDeletePartRecursive() throws InvalidFormatException {
+		TreeMap<PackagePartName, String> expectedValues;
+		TreeMap<PackagePartName, String> values;
+
+		values = new TreeMap<PackagePartName, String>();
+
+		// Expected values
+		expectedValues = new TreeMap<PackagePartName, String>();
+		expectedValues.put(PackagingURIHelper.createPartName("/_rels/.rels"),
+				"application/vnd.openxmlformats-package.relationships+xml");
+
+		expectedValues
+				.put(PackagingURIHelper.createPartName("/docProps/app.xml"),
+						"application/vnd.openxmlformats-officedocument.extended-properties+xml");
+		expectedValues.put(PackagingURIHelper
+				.createPartName("/docProps/core.xml"),
+				"application/vnd.openxmlformats-package.core-properties+xml");
+
+		String filepath = System.getProperty("openxml4j.testdata.input") + File.separator
+				+ "sample.docx";
+
+		Package p = Package.open(filepath, PackageAccess.READ_WRITE);
+		// Remove the core part
+		p.deletePartRecursive(PackagingURIHelper.createPartName("/word/document.xml"));
+
+		for (PackagePart part : p.getParts()) {
+			values.put(part.getPartName(), part.getContentType());
+			TestCore.getLogger().debug(part.getPartName());
+		}
+
+		// Compare expected values with values return by the package
+		for (PackagePartName partName : expectedValues.keySet()) {
+			assertNotNull(values.get(partName));
+			assertEquals(expectedValues.get(partName), values.get(partName));
+		}
+		// Don't save modfications
+		p.revert();
+	}
+

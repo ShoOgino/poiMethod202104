@@ -1,0 +1,49 @@
+    public void testCreateRelationsFromScratch() throws Exception {
+    	ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    	Package pkg = Package.create(baos);
+    	
+    	PackagePart partA =
+    		pkg.createPart(PackagingURIHelper.createPartName("/partA"), "text/plain");
+    	PackagePart partB =
+    		pkg.createPart(PackagingURIHelper.createPartName("/partB"), "image/png");
+    	assertNotNull(partA);
+    	assertNotNull(partB);
+    	
+    	// Internal
+    	partA.addRelationship(partB.getPartName(), TargetMode.INTERNAL, "http://example/Rel");
+    	
+    	// External
+    	partA.addExternalRelationship("http://poi.apache.org/", "http://example/poi");
+    	partB.addExternalRelationship("http://poi.apache.org/ss/", "http://example/poi/ss");
+
+    	// Check as expected currently
+    	assertEquals("/partB", partA.getRelationship("rId1").getTargetURI().toString());
+    	assertEquals("http://poi.apache.org/", 
+    			partA.getRelationship("rId2").getTargetURI().toString());
+    	assertEquals("http://poi.apache.org/ss/", 
+    			partB.getRelationship("rId1").getTargetURI().toString());
+    	
+    	
+    	// Save, and re-load
+    	pkg.close();
+    	ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    	pkg = Package.open(bais);
+    	
+    	partA = pkg.getPart(PackagingURIHelper.createPartName("/partA"));
+    	partB = pkg.getPart(PackagingURIHelper.createPartName("/partB"));
+    	
+    	
+    	// Check the relations
+    	assertEquals(2, partA.getRelationships().size());
+    	assertEquals(1, partB.getRelationships().size());
+    	
+    	assertEquals("/partB", partA.getRelationship("rId1").getTargetURI().toString());
+    	assertEquals("http://poi.apache.org/", 
+    			partA.getRelationship("rId2").getTargetURI().toString());
+    	assertEquals("http://poi.apache.org/ss/", 
+    			partB.getRelationship("rId1").getTargetURI().toString());
+    	// Check core too
+    	assertEquals("/docProps/core.xml",
+    			pkg.getRelationshipsByType("http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties").getRelationship(0).getTargetURI().toString());
+    }
+

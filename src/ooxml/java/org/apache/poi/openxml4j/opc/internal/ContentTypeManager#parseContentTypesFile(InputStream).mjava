@@ -1,0 +1,47 @@
+	/**
+	 * Parse the content types part.
+	 * 
+	 * @throws InvalidFormatException
+	 *             Throws if the content type doesn't exist or the XML format is
+	 *             invalid.
+	 */
+	private void parseContentTypesFile(InputStream in)
+			throws InvalidFormatException {
+		try {
+			SAXReader xmlReader = new SAXReader();
+			Document xmlContentTypetDoc = xmlReader.read(in);
+
+			// Default content types
+			List defaultTypes = xmlContentTypetDoc.getRootElement().elements(
+					DEFAULT_TAG_NAME);
+			Iterator elementIteratorDefault = defaultTypes.iterator();
+			while (elementIteratorDefault.hasNext()) {
+				Element element = (Element) elementIteratorDefault.next();
+				String extension = element.attribute(EXTENSION_ATTRIBUTE_NAME)
+						.getValue();
+				String contentType = element.attribute(
+						CONTENT_TYPE_ATTRIBUTE_NAME).getValue();
+				addDefaultContentType(extension, contentType);
+			}
+
+			// Overriden content types
+			List overrideTypes = xmlContentTypetDoc.getRootElement().elements(
+					OVERRIDE_TAG_NAME);
+			Iterator elementIteratorOverride = overrideTypes.iterator();
+			while (elementIteratorOverride.hasNext()) {
+				Element element = (Element) elementIteratorOverride.next();
+				URI uri = new URI(element.attribute(PART_NAME_ATTRIBUTE_NAME)
+						.getValue());
+				PackagePartName partName = PackagingURIHelper
+						.createPartName(uri);
+				String contentType = element.attribute(
+						CONTENT_TYPE_ATTRIBUTE_NAME).getValue();
+				addOverrideContentType(partName, contentType);
+			}
+		} catch (URISyntaxException urie) {
+			throw new InvalidFormatException(urie.getMessage());
+		} catch (DocumentException e) {
+			throw new InvalidFormatException(e.getMessage());
+		}
+	}
+

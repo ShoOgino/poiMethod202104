@@ -1,0 +1,61 @@
+	/**
+	 * Test package opening.
+	 */
+	public void testOpenPackage() throws Exception {
+		File targetFile = new File(System.getProperty("openxml4j.testdata.output")
+				+ File.separator + "TestOpenPackageTMP.docx");
+
+		File inputFile = new File(System.getProperty("openxml4j.testdata.input")
+				+ File.separator + "TestOpenPackageINPUT.docx");
+
+		File expectedFile = new File(System.getProperty("openxml4j.testdata.output")
+                + File.separator + "TestOpenPackageOUTPUT.docx");
+
+		// Copy the input file in the output directory
+		FileHelper.copyFile(inputFile, targetFile);
+
+		// Create a package
+		Package pkg = Package.open(targetFile.getAbsolutePath());
+
+		// Modify core part
+		PackagePartName corePartName = PackagingURIHelper
+				.createPartName("/word/document.xml");
+
+		PackagePart corePart = pkg.getPart(corePartName);
+
+		// Delete some part to have a valid document
+		for (PackageRelationship rel : corePart.getRelationships()) {
+			corePart.removeRelationship(rel.getId());
+			pkg.removePart(PackagingURIHelper.createPartName(PackagingURIHelper
+					.resolvePartUri(corePart.getPartName().getURI(), rel
+							.getTargetURI())));
+		}
+
+		// Create a content
+		Document doc = DocumentHelper.createDocument();
+		Namespace nsWordprocessinML = new Namespace("w",
+				"http://schemas.openxmlformats.org/wordprocessingml/2006/main");
+		Element elDocument = doc.addElement(new QName("document",
+				nsWordprocessinML));
+		Element elBody = elDocument.addElement(new QName("body",
+				nsWordprocessinML));
+		Element elParagraph = elBody.addElement(new QName("p",
+				nsWordprocessinML));
+		Element elRun = elParagraph
+				.addElement(new QName("r", nsWordprocessinML));
+		Element elText = elRun.addElement(new QName("t", nsWordprocessinML));
+		elText.setText("Hello Open XML !");
+
+		StreamHelper.saveXmlInStream(doc, corePart.getOutputStream());
+
+		// Save and close
+		try {
+			pkg.close();
+		} catch (IOException e) {
+			fail();
+		}
+
+		//ZipFileAssert.assertEquals(expectedFile, targetFile);
+		assertTrue(targetFile.delete());
+	}
+

@@ -1,0 +1,44 @@
+	/**
+	 * Close and save the package.
+	 * 
+	 * @see #close()
+	 */
+	@Override
+	protected void closeImpl() throws IOException {
+		// Flush the package
+		flush();
+
+		// Save the content
+		if (this.originalPackagePath != null
+				&& !"".equals(this.originalPackagePath)) {
+			File targetFile = new File(this.originalPackagePath);
+			if (targetFile.exists()) {
+				// Case of a package previously open
+
+				File tempFile = File.createTempFile(
+						generateTempFileName(FileHelper
+								.getDirectory(targetFile)), ".tmp");
+
+				// Save the final package to a temporary file
+				try {
+					save(tempFile);
+					this.zipArchive.close(); // Close the zip archive to be
+					// able to delete it
+					FileHelper.copyFile(tempFile, targetFile);
+				} finally {
+					// Either the save operation succeed or not, we delete the
+					// temporary file
+					if (!tempFile.delete()) {
+						logger
+								.warn("The temporary file: '"
+										+ targetFile.getAbsolutePath()
+										+ "' cannot be deleted ! Make sure that no other application use it.");
+					}
+				}
+			} else {
+				throw new InvalidOperationException(
+						"Can't close a package not previously open with the open() method !");
+			}
+		}
+	}
+

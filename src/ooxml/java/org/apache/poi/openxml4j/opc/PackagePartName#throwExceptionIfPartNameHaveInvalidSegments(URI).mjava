@@ -1,0 +1,67 @@
+	/**
+	 * Throws an exception if the part name has empty segments. [M1.3]
+	 * 
+	 * Throws an exception if a segment any characters other than pchar
+	 * characters. [M1.6]
+	 * 
+	 * Throws an exception if a segment contain percent-encoded forward slash
+	 * ('/'), or backward slash ('\') characters. [M1.7]
+	 * 
+	 * Throws an exception if a segment contain percent-encoded unreserved
+	 * characters. [M1.8]
+	 * 
+	 * Throws an exception if the specified part name's segments end with a dot
+	 * ('.') character. [M1.9]
+	 * 
+	 * Throws an exception if a segment doesn't include at least one non-dot
+	 * character. [M1.10]
+	 * 
+	 * @param partUri
+	 *            The part name to check.
+	 * @throws InvalidFormatException
+	 *             if the specified URI contain an empty segments or if one the
+	 *             segments contained in the part name, ends with a dot ('.')
+	 *             character.
+	 */
+	private static void throwExceptionIfPartNameHaveInvalidSegments(URI partUri)
+			throws InvalidFormatException {
+		if (partUri == null || "".equals(partUri)) {
+			throw new IllegalArgumentException("partUri");
+		}
+
+		// Split the URI into several part and analyze each
+		String[] segments = partUri.toASCIIString().split("/");
+		if (segments.length <= 1 || !segments[0].equals(""))
+			throw new InvalidFormatException(
+					"A part name shall not have empty segments [M1.3]: "
+							+ partUri.getPath());
+
+		for (int i = 1; i < segments.length; ++i) {
+			String seg = segments[i];
+			if (seg == null || "".equals(seg)) {
+				throw new InvalidFormatException(
+						"A part name shall not have empty segments [M1.3]: "
+								+ partUri.getPath());
+			}
+
+			if (seg.endsWith(".")) {
+				throw new InvalidFormatException(
+						"A segment shall not end with a dot ('.') character [M1.9]: "
+								+ partUri.getPath());
+			}
+
+			if ("".equals(seg.replaceAll("\\\\.", ""))) {
+				// Normally will never been invoked with the previous
+				// implementation rule [M1.9]
+				throw new InvalidFormatException(
+						"A segment shall include at least one non-dot character. [M1.10]: "
+								+ partUri.getPath());
+			}
+
+			/*
+			 * Check for rule M1.6, M1.7, M1.8
+			 */
+			checkPCharCompliance(seg);
+		}
+	}
+

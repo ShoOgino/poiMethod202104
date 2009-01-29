@@ -1,0 +1,42 @@
+	/**
+	 * Build a part name where the relationship should be stored ((ex
+	 * /word/document.xml -> /word/_rels/document.xml.rels)
+	 * 
+	 * @param partName
+	 *            Source part URI
+	 * @return the full path (as URI) of the relation file
+	 * @throws InvalidOperationException
+	 *             Throws if the specified URI is a relationshp part.
+	 */
+	public static PackagePartName getRelationshipPartName(
+			PackagePartName partName) {
+		if (partName == null)
+			throw new IllegalArgumentException("partName");
+
+		if (PackagingURIHelper.PACKAGE_ROOT_URI.getPath() == partName.getURI()
+				.getPath())
+			return PackagingURIHelper.PACKAGE_RELATIONSHIPS_ROOT_PART_NAME;
+
+		if (partName.isRelationshipPartURI())
+			throw new InvalidOperationException("Can't be a relationship part");
+
+		String fullPath = partName.getURI().getPath();
+		String filename = getFilename(partName.getURI());
+		fullPath = fullPath.substring(0, fullPath.length() - filename.length());
+		fullPath = combine(fullPath,
+				PackagingURIHelper.RELATIONSHIP_PART_SEGMENT_NAME);
+		fullPath = combine(fullPath, filename);
+		fullPath = fullPath
+				+ PackagingURIHelper.RELATIONSHIP_PART_EXTENSION_NAME;
+
+		PackagePartName retPartName;
+		try {
+			retPartName = createPartName(fullPath);
+		} catch (InvalidFormatException e) {
+			// Should never happen in production as all data are fixed but in
+			// case of return null:
+			return null;
+		}
+		return retPartName;
+	}
+

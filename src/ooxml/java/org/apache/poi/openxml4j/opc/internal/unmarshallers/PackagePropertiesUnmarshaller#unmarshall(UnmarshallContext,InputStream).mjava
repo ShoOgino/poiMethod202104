@@ -1,0 +1,67 @@
+	// TODO Load element with XMLBeans or dynamic table
+	// TODO Check every element/namespace for compliance
+	public PackagePart unmarshall(UnmarshallContext context, InputStream in)
+			throws InvalidFormatException, IOException {
+		PackagePropertiesPart coreProps = new PackagePropertiesPart(context
+				.getPackage(), context.getPartName());
+
+		// If the input stream is null then we try to get it from the
+		// package.
+		if (in == null) {
+			if (context.getZipEntry() != null) {
+				in = ((ZipPackage) context.getPackage()).getZipArchive()
+						.getInputStream(context.getZipEntry());
+			} else if (context.getPackage() != null) {
+				// Try to retrieve the part inputstream from the URI
+				ZipEntry zipEntry;
+				try {
+					zipEntry = ZipHelper
+							.getCorePropertiesZipEntry((ZipPackage) context
+									.getPackage());
+				} catch (OpenXML4JException e) {
+					throw new IOException(
+							"Error while trying to get the part input stream.");
+				}
+				in = ((ZipPackage) context.getPackage()).getZipArchive()
+						.getInputStream(zipEntry);
+			} else
+				throw new IOException(
+						"Error while trying to get the part input stream.");
+		}
+
+		SAXReader xmlReader = new SAXReader();
+		Document xmlDoc;
+		try {
+			xmlDoc = xmlReader.read(in);
+
+			/* Check OPC compliance */
+
+			// Rule M4.2, M4.3, M4.4 and M4.5/
+			checkElementForOPCCompliance(xmlDoc.getRootElement());
+
+			/* End OPC compliance */
+
+		} catch (DocumentException e) {
+			throw new IOException(e.getMessage());
+		}
+
+		coreProps.setCategoryProperty(loadCategory(xmlDoc));
+		coreProps.setContentStatusProperty(loadContentStatus(xmlDoc));
+		coreProps.setContentTypeProperty(loadContentType(xmlDoc));
+		coreProps.setCreatedProperty(loadCreated(xmlDoc));
+		coreProps.setCreatorProperty(loadCreator(xmlDoc));
+		coreProps.setDescriptionProperty(loadDescription(xmlDoc));
+		coreProps.setIdentifierProperty(loadIdentifier(xmlDoc));
+		coreProps.setKeywordsProperty(loadKeywords(xmlDoc));
+		coreProps.setLanguageProperty(loadLanguage(xmlDoc));
+		coreProps.setLastModifiedByProperty(loadLastModifiedBy(xmlDoc));
+		coreProps.setLastPrintedProperty(loadLastPrinted(xmlDoc));
+		coreProps.setModifiedProperty(loadModified(xmlDoc));
+		coreProps.setRevisionProperty(loadRevision(xmlDoc));
+		coreProps.setSubjectProperty(loadSubject(xmlDoc));
+		coreProps.setTitleProperty(loadTitle(xmlDoc));
+		coreProps.setVersionProperty(loadVersion(xmlDoc));
+
+		return coreProps;
+	}
+

@@ -1,0 +1,74 @@
+    /*
+     * Excel uses relations on sheets to store the details of 
+     *  external hyperlinks. Check we can create these ok, 
+     *  then still read them later
+     */
+    public void testCreateExcelHyperlinkRelations() throws Exception {
+        String filepath = System.getProperty("openxml4j.testdata.input") + File.separator
+	    	+ "ExcelWithHyperlinks.xlsx";
+		
+	    Package pkg = Package.open(filepath, PackageAccess.READ_WRITE);
+	    PackagePart sheet = pkg.getPart(
+	    		PackagingURIHelper.createPartName(SHEET_WITH_COMMENTS));
+	    assertNotNull(sheet);
+	    
+	    assertEquals(3, sheet.getRelationshipsByType(HYPERLINK_REL_TYPE).size());
+	    
+	    // Add three new ones
+	    PackageRelationship openxml4j =
+	    	sheet.addExternalRelationship("http://www.openxml4j.org/", HYPERLINK_REL_TYPE);
+	    PackageRelationship sf =
+	    	sheet.addExternalRelationship("http://openxml4j.sf.net/", HYPERLINK_REL_TYPE);
+	    PackageRelationship file =
+	    	sheet.addExternalRelationship("MyDocument.docx", HYPERLINK_REL_TYPE);
+	    
+	    // Check they were added properly
+	    assertNotNull(openxml4j);
+	    assertNotNull(sf);
+	    assertNotNull(file);
+	    
+	    assertEquals(6, sheet.getRelationshipsByType(HYPERLINK_REL_TYPE).size());
+	    
+	    assertEquals("http://www.openxml4j.org/", openxml4j.getTargetURI().toString());
+	    assertEquals("/xl/worksheets/sheet1.xml", openxml4j.getSourceURI().toString());
+	    assertEquals(HYPERLINK_REL_TYPE, openxml4j.getRelationshipType());
+	    
+	    assertEquals("http://openxml4j.sf.net/", sf.getTargetURI().toString());
+	    assertEquals("/xl/worksheets/sheet1.xml", sf.getSourceURI().toString());
+	    assertEquals(HYPERLINK_REL_TYPE, sf.getRelationshipType());
+	    
+	    assertEquals("MyDocument.docx", file.getTargetURI().toString());
+	    assertEquals("/xl/worksheets/sheet1.xml", file.getSourceURI().toString());
+	    assertEquals(HYPERLINK_REL_TYPE, file.getRelationshipType());
+	    
+	    // Will get ids 7, 8 and 9, as we already have 1-6
+	    assertEquals("rId7", openxml4j.getId());
+	    assertEquals("rId8", sf.getId());
+	    assertEquals("rId9", file.getId());
+	    
+	    
+	    // Write out and re-load
+	    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+	    pkg.save(baos);
+	    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+	    pkg = Package.open(bais);
+	    
+	    // Check again
+	    sheet = pkg.getPart(
+	    		PackagingURIHelper.createPartName(SHEET_WITH_COMMENTS));
+	    
+	    assertEquals(6, sheet.getRelationshipsByType(HYPERLINK_REL_TYPE).size());
+	    
+	    assertEquals("http://poi.apache.org/",
+	    		sheet.getRelationship("rId1").getTargetURI().toString());
+	    assertEquals("mailto:dev@poi.apache.org?subject=XSSF%20Hyperlinks",
+	    		sheet.getRelationship("rId3").getTargetURI().toString());
+	    
+	    assertEquals("http://www.openxml4j.org/",
+	    		sheet.getRelationship("rId7").getTargetURI().toString());
+	    assertEquals("http://openxml4j.sf.net/",
+	    		sheet.getRelationship("rId8").getTargetURI().toString());
+	    assertEquals("MyDocument.docx",
+	    		sheet.getRelationship("rId9").getTargetURI().toString());
+    }
+

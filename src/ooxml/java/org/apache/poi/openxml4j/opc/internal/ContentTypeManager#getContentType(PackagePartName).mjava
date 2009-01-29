@@ -1,0 +1,66 @@
+	/**
+	 * Get the content type for the specified part, if any.
+	 * 
+	 * Rule [M2.9]: To get the content type of a part, the package implementer
+	 * shall perform the steps described in��9.1.2.4:
+	 * 
+	 * 1. Compare the part name with the values specified for the PartName
+	 * attribute of the Override elements. The comparison shall be
+	 * case-insensitive ASCII.
+	 * 
+	 * 2. If there is an Override element with a matching PartName attribute,
+	 * return the value of its ContentType attribute. No further action is
+	 * required.
+	 * 
+	 * 3. If there is no Override element with a matching PartName attribute,
+	 * then a. Get the extension from the part name by taking the substring to
+	 * the right of the rightmost occurrence of the dot character (.) from the
+	 * rightmost segment. b. Check the Default elements of the Content Types
+	 * stream, comparing the extension with the value of the Extension
+	 * attribute. The comparison shall be case-insensitive ASCII.
+	 * 
+	 * 4. If there is a Default element with a matching Extension attribute,
+	 * return the value of its ContentType attribute. No further action is
+	 * required.
+	 * 
+	 * 5. If neither Override nor Default elements with matching attributes are
+	 * found for the specified part name, the implementation shall not map this
+	 * part name to a part.
+	 * 
+	 * @param partUri
+	 *            The URI part to check.
+	 * @return The content type associated with the URI (in case of an override
+	 *         content type) or the extension (in case of default content type),
+	 *         else <code>null</code>.
+	 * 
+	 * @exception OpenXML4JRuntimeException
+	 *                Throws if the content type manager is not able to find the
+	 *                content from an existing part.
+	 */
+	public String getContentType(PackagePartName partName) {
+		if (partName == null)
+			throw new IllegalArgumentException("partName");
+
+		if ((this.overrideContentType != null)
+				&& this.overrideContentType.containsKey(partName))
+			return this.overrideContentType.get(partName);
+
+		String extension = partName.getExtension().toLowerCase();
+		if (this.defaultContentType.containsKey(extension))
+			return this.defaultContentType.get(extension);
+
+		/*
+		 * [M2.4] : The package implementer shall require that the Content Types
+		 * stream contain one of the following for every part in the package:
+		 * One matching Default element, One matching Override element, Both a
+		 * matching Default element and a matching Override element, in which
+		 * case the Override element takes precedence.
+		 */
+		if (this.container != null && this.container.getPart(partName) != null) {
+			throw new OpenXML4JRuntimeException(
+					"Rule M2.4 exception : this error should NEVER happen, if so please send a mail to the developers team, thanks !");
+		} else {
+			return null;
+		}
+	}
+

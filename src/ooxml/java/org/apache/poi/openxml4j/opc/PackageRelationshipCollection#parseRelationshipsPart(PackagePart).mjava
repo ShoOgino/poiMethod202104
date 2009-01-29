@@ -1,0 +1,85 @@
+	/**
+	 * Parse the relationship part and add all relationship in this collection.
+	 * 
+	 * @param relPart
+	 *            The package part to parse.
+	 * @throws InvalidFormatException
+	 *             Throws if the relationship part is invalid.
+	 */
+	private void parseRelationshipsPart(PackagePart relPart)
+			throws InvalidFormatException {
+		try {
+			SAXReader reader = new SAXReader();
+			logger.debug("Parsing relationship: " + relPart.getPartName());
+			Document xmlRelationshipsDoc = reader
+					.read(relPart.getInputStream());
+
+			// Browse default types
+			Element root = xmlRelationshipsDoc.getRootElement();
+
+			// Check OPC compliance M4.1 rule
+			boolean fCorePropertiesRelationship = false;
+
+			for (Iterator i = root
+					.elementIterator(PackageRelationship.RELATIONSHIP_TAG_NAME); i
+					.hasNext();) {
+				Element element = (Element) i.next();
+				// Relationship ID
+				String id = element.attribute(
+						PackageRelationship.ID_ATTRIBUTE_NAME).getValue();
+				// Relationship type
+				String type = element.attribute(
+						PackageRelationship.TYPE_ATTRIBUTE_NAME).getValue();
+
+				/* Check OPC Compliance */
+				// Check Rule M4.1
+				if (type.equals(PackageRelationshipTypes.CORE_PROPERTIES))
+					if (!fCorePropertiesRelationship)
+						fCorePropertiesRelationship = true;
+					else
+						throw new InvalidFormatException(
+								"OPC Compliance error [M4.1]: there is more than one core properties relationship in the package !");
+
+				/* End OPC Compliance */
+
+				// TargetMode (default value "Internal")
+				Attribute targetModeAttr = element
+						.attribute(PackageRelationship.TARGET_MODE_ATTRIBUTE_NAME);
+				TargetMode targetMode = TargetMode.INTERNAL;
+				if (targetModeAttr != null) {
+					targetMode = targetModeAttr.getValue().toLowerCase()
+							.equals("internal") ? TargetMode.INTERNAL
+							: TargetMode.EXTERNAL;
+				}
+
+				// Target converted in URI
+				URI target;
+				String value = "";
+				try {
+					value = element.attribute(
+							PackageRelationship.TARGET_ATTRIBUTE_NAME)
+							.getValue();
+
+					if (value.indexOf("\\") != -1) {
+						logger
+								.info("target contains \\ therefore not a valid URI"
+										+ value + " replaced by /");
+						value = value.replaceAll("\\\\", "/");
+						// word can save external relationship with a \ instead
+						// of /
+					}
+
+					target = new URI(value);
+				} catch (URISyntaxException e) {
+					logger.error("Cannot convert " + value
+							+ " in a valid relationship URI-> ignored", e);
+					continue;
+				}
+				addRelationship(target, targetMode, type, id);
+			}
+		} catch (Exception e) {
+			logger.error(e);
+			throw new InvalidFormatException(e.getMessage());
+		}
+	}
+

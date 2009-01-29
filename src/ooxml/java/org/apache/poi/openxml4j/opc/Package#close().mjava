@@ -1,0 +1,42 @@
+	/**
+	 * Close the package and save its content.
+	 * 
+	 * @throws IOException
+	 *             If an IO exception occur during the saving process.
+	 */
+	public void close() throws IOException {
+		if (this.packageAccess == PackageAccess.READ) {
+			logger
+					.warn("The close() method is intended to SAVE a package. This package is open in READ ONLY mode, use the revert() method instead !");
+			return;
+		}
+
+		// Save the content
+		ReentrantReadWriteLock l = new ReentrantReadWriteLock();
+		try {
+			l.writeLock().lock();
+			if (this.originalPackagePath != null
+					&& !"".equals(this.originalPackagePath.trim())) {
+				File targetFile = new File(this.originalPackagePath);
+				if (!targetFile.exists()
+						|| !(this.originalPackagePath
+								.equalsIgnoreCase(targetFile.getAbsolutePath()))) {
+					// Case of a package created from scratch
+					save(targetFile);
+				} else {
+					closeImpl();
+				}
+			} else if (this.output != null) {
+				save(this.output);
+			}
+		} finally {
+			l.writeLock().unlock();
+		}
+
+		// Clear
+		this.contentTypeManager.clearAll();
+
+		// Call the garbage collector
+		Runtime.getRuntime().gc();
+	}
+

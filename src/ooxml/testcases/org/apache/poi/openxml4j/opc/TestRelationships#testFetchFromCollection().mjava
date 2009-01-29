@@ -1,0 +1,43 @@
+    /**
+     * Checks that we can fetch a collection of relations by
+     *  type, then grab from within there by id
+     */
+    public void testFetchFromCollection() throws Exception {
+        String filepath = System.getProperty("openxml4j.testdata.input") + File.separator
+        	+ "ExcelWithHyperlinks.xlsx";
+    	
+        Package pkg = Package.open(filepath, PackageAccess.READ);
+        PackagePart sheet = pkg.getPart(
+        		PackagingURIHelper.createPartName(SHEET_WITH_COMMENTS));
+        assertNotNull(sheet);
+        
+        assertTrue(sheet.hasRelationships());
+        assertEquals(6, sheet.getRelationships().size());
+        
+        // Should have three hyperlinks, and one comment
+        PackageRelationshipCollection hyperlinks =
+        	sheet.getRelationshipsByType(HYPERLINK_REL_TYPE);
+        PackageRelationshipCollection comments =
+        	sheet.getRelationshipsByType(COMMENTS_REL_TYPE);
+        assertEquals(3, hyperlinks.size());
+        assertEquals(1, comments.size());
+        
+        // Check we can get bits out by id
+        // Hyperlinks are rId1, rId2 and rId3
+        // Comment is rId6
+        assertNotNull(hyperlinks.getRelationshipByID("rId1"));
+        assertNotNull(hyperlinks.getRelationshipByID("rId2"));
+        assertNotNull(hyperlinks.getRelationshipByID("rId3"));
+        assertNull(hyperlinks.getRelationshipByID("rId6"));
+        
+        assertNull(comments.getRelationshipByID("rId1"));
+        assertNull(comments.getRelationshipByID("rId2"));
+        assertNull(comments.getRelationshipByID("rId3"));
+        assertNotNull(comments.getRelationshipByID("rId6"));
+        
+        assertNotNull(sheet.getRelationship("rId1"));
+        assertNotNull(sheet.getRelationship("rId2"));
+        assertNotNull(sheet.getRelationship("rId3"));
+        assertNotNull(sheet.getRelationship("rId6"));
+    }
+

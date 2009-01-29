@@ -1,0 +1,39 @@
+	/**
+	 * Constructor. Check the input with the RFC 2616 grammar.
+	 * 
+	 * @param contentType
+	 *            The content type to store.
+	 * @throws InvalidFormatException
+	 *             If the specified content type is not valid with RFC 2616.
+	 */
+	public ContentType(String contentType) throws InvalidFormatException {
+		// Conversion en US-ASCII
+		String contentTypeASCII = null;
+		try {
+			contentTypeASCII = new String(contentType.getBytes(), "US-ASCII");
+		} catch (UnsupportedEncodingException e) {
+			throw new InvalidFormatException(
+					"The specified content type is not an ASCII value.");
+		}
+
+		Matcher mMediaType = patternMediaType.matcher(contentTypeASCII);
+		if (!mMediaType.matches())
+			throw new InvalidFormatException(
+					"The specified content type '"
+							+ contentType
+							+ "' is not compliant with RFC 2616: malformed content type.");
+
+		// Type/subtype
+		if (mMediaType.groupCount() >= 2) {
+			this.type = mMediaType.group(1);
+			this.subType = mMediaType.group(2);
+			// Parameters
+			this.parameters = new Hashtable<String, String>(1);
+			for (int i = 4; i <= mMediaType.groupCount()
+					&& (mMediaType.group(i) != null); i += 2) {
+				this.parameters.put(mMediaType.group(i), mMediaType
+						.group(i + 1));
+			}
+		}
+	}
+

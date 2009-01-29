@@ -1,0 +1,58 @@
+	/**
+	 * Tests that we can create a new package, add a core
+	 *  document and another part, save and re-load and
+	 *  have everything setup as expected
+	 */
+	public void testCreatePackageWithCoreDocument() throws Exception {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		Package pkg = Package.create(baos);
+		
+		// Add a core document
+        PackagePartName corePartName = PackagingURIHelper.createPartName("/xl/workbook.xml");
+        // Create main part relationship
+        pkg.addRelationship(corePartName, TargetMode.INTERNAL, PackageRelationshipTypes.CORE_DOCUMENT, "rId1");
+        // Create main document part
+        PackagePart corePart = pkg.createPart(corePartName, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
+        // Put in some dummy content
+        OutputStream coreOut = corePart.getOutputStream();
+        coreOut.write("<dummy-xml />".getBytes());
+        coreOut.close();
+		
+		// And another bit
+        PackagePartName sheetPartName = PackagingURIHelper.createPartName("/xl/worksheets/sheet1.xml");
+        PackageRelationship rel =
+        	 corePart.addRelationship(sheetPartName, TargetMode.INTERNAL, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet", "rSheet1");
+        PackagePart part = pkg.createPart(sheetPartName, "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml");
+        // Dummy content again
+        coreOut = corePart.getOutputStream();
+        coreOut.write("<dummy-xml2 />".getBytes());
+        coreOut.close();
+        
+        
+        // Check things are as expected
+        PackageRelationshipCollection coreRels =
+        	pkg.getRelationshipsByType(PackageRelationshipTypes.CORE_DOCUMENT);
+        assertEquals(1, coreRels.size());
+        PackageRelationship coreRel = coreRels.getRelationship(0);
+        assertEquals("/", coreRel.getSourceURI().toString());
+        assertEquals("/xl/workbook.xml", coreRel.getTargetURI().toString());
+        assertNotNull(pkg.getPart(coreRel));
+        
+        
+        // Save and re-load
+        pkg.close();
+        FileOutputStream fout = new FileOutputStream(File.createTempFile("testCreatePackageWithCoreDocument", ".zip"));
+        fout.write(baos.toByteArray());
+        fout.close();
+        pkg = Package.open(new ByteArrayInputStream(baos.toByteArray()));
+        
+        
+        // Check still right
+        coreRels = pkg.getRelationshipsByType(PackageRelationshipTypes.CORE_DOCUMENT);
+        assertEquals(1, coreRels.size());
+        coreRel = coreRels.getRelationship(0);
+        assertEquals("/", coreRel.getSourceURI().toString());
+        assertEquals("/xl/workbook.xml", coreRel.getTargetURI().toString());
+        assertNotNull(pkg.getPart(coreRel));
+	}
+

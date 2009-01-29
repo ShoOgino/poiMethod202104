@@ -1,0 +1,101 @@
+	/**
+	 * Throws an exception if a segment any characters other than pchar
+	 * characters. [M1.6]
+	 * 
+	 * Throws an exception if a segment contain percent-encoded forward slash
+	 * ('/'), or backward slash ('\') characters. [M1.7]
+	 * 
+	 * Throws an exception if a segment contain percent-encoded unreserved
+	 * characters. [M1.8]
+	 * 
+	 * @param segment
+	 *            The segment to check
+	 */
+	private static void checkPCharCompliance(String segment)
+			throws InvalidFormatException {
+		boolean errorFlag;
+		for (int i = 0; i < segment.length(); ++i) {
+			char c = segment.charAt(i);
+			errorFlag = true;
+
+			/* Check rule M1.6 */
+
+			// Check for digit or letter
+			if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')
+					|| (c >= '0' && c <= '9')) {
+				errorFlag = false;
+			} else {
+				// Check "-", ".", "_", "~"
+				for (int j = 0; j < RFC3986_PCHAR_UNRESERVED_SUP.length; ++j) {
+					if (c == RFC3986_PCHAR_UNRESERVED_SUP[j].charAt(0)) {
+						errorFlag = false;
+						break;
+					}
+				}
+
+				// Check ":", "@"
+				for (int j = 0; errorFlag
+						&& j < RFC3986_PCHAR_AUTHORIZED_SUP.length; ++j) {
+					if (c == RFC3986_PCHAR_AUTHORIZED_SUP[j].charAt(0)) {
+						errorFlag = false;
+					}
+				}
+
+				// Check "!", "$", "&", "'", "(", ")", "*", "+", ",", ";", "="
+				for (int j = 0; errorFlag
+						&& j < RFC3986_PCHAR_SUB_DELIMS.length; ++j) {
+					if (c == RFC3986_PCHAR_SUB_DELIMS[j].charAt(0)) {
+						errorFlag = false;
+					}
+				}
+			}
+
+			if (errorFlag && c == '%') {
+				// We certainly found an encoded character, check for length
+				// now ( '%' HEXDIGIT HEXDIGIT)
+				if (((segment.length() - i) < 2)) {
+					throw new InvalidFormatException("The segment " + segment
+							+ " contain invalid encoded character !");
+				}
+
+				// If not percent encoded character error occur then reset the
+				// flag -> the character is valid
+				errorFlag = false;
+
+				// Decode the encoded character
+				char decodedChar = (char) Integer.parseInt(segment.substring(
+						i + 1, i + 3), 16);
+				i += 2;
+
+				/* Check rule M1.7 */
+				if (decodedChar == '/' || decodedChar == '\\')
+					throw new InvalidFormatException(
+							"A segment shall not contain percent-encoded forward slash ('/'), or backward slash ('\') characters. [M1.7]");
+
+				/* Check rule M1.8 */
+
+				// Check for unreserved character like define in RFC3986
+				if ((decodedChar >= 'A' && decodedChar <= 'Z')
+						|| (decodedChar >= 'a' && decodedChar <= 'z')
+						|| (decodedChar >= '0' && decodedChar <= '9'))
+					errorFlag = true;
+
+				// Check for unreserved character "-", ".", "_", "~"
+				for (int j = 0; !errorFlag
+						&& j < RFC3986_PCHAR_UNRESERVED_SUP.length; ++j) {
+					if (c == RFC3986_PCHAR_UNRESERVED_SUP[j].charAt(0)) {
+						errorFlag = true;
+						break;
+					}
+				}
+				if (errorFlag)
+					throw new InvalidFormatException(
+							"A segment shall not contain percent-encoded unreserved characters. [M1.8]");
+			}
+
+			if (errorFlag)
+				throw new InvalidFormatException(
+						"A segment shall not hold any characters other than pchar characters. [M1.6]");
+		}
+	}
+

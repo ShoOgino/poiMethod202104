@@ -1,0 +1,76 @@
+	/**
+	 * Delete a content type based on the specified part name. If the specified
+	 * part name is register with an override content type, then this content
+	 * type is remove, else the content type is remove in the default content
+	 * type list if it exists and if no part is associated with it yet.
+	 * 
+	 * Check rule M2.4: The package implementer shall require that the Content
+	 * Types stream contain one of the following for every part in the package:
+	 * One matching Default element One matching Override element Both a
+	 * matching Default element and a matching Override element, in which case
+	 * the Override element takes precedence.
+	 * 
+	 * @param partUri
+	 *            The part URI associated with the override content type to
+	 *            delete.
+	 * @exception InvalidOperationException
+	 *                Throws if
+	 */
+	public void removeContentType(PackagePartName partName)
+			throws InvalidOperationException {
+		if (partName == null)
+			throw new IllegalArgumentException("partName");
+
+		/* Override content type */
+		if (this.overrideContentType != null
+				&& (this.overrideContentType.get(partName) != null)) {
+			// Remove the override definition for the specified part.
+			this.overrideContentType.remove(partName);
+			return;
+		}
+
+		/* Default content type */
+		String extensionToDelete = partName.getExtension();
+		boolean deleteDefaultContentTypeFlag = true;
+		if (this.container != null) {
+			try {
+				for (PackagePart part : this.container.getParts()) {
+					if (!part.getPartName().equals(partName)
+							&& part.getPartName().getExtension()
+									.equalsIgnoreCase(extensionToDelete)) {
+						deleteDefaultContentTypeFlag = false;
+						break;
+					}
+				}
+			} catch (InvalidFormatException e) {
+				throw new InvalidOperationException(e.getMessage());
+			}
+		}
+
+		// Remove the default content type, no other part use this content type.
+		if (deleteDefaultContentTypeFlag) {
+			this.defaultContentType.remove(extensionToDelete);
+		}
+
+		/*
+		 * Check rule 2.4: The package implementer shall require that the
+		 * Content Types stream contain one of the following for every part in
+		 * the package: One matching Default element One matching Override
+		 * element Both a matching Default element and a matching Override
+		 * element, in which case the Override element takes precedence.
+		 */
+		if (this.container != null) {
+			try {
+				for (PackagePart part : this.container.getParts()) {
+					if (!part.getPartName().equals(partName)
+							&& this.getContentType(part.getPartName()) == null)
+						throw new InvalidOperationException(
+								"Rule M2.4 is not respected: Nor a default element or override element is associated with the part: "
+										+ part.getPartName().getName());
+				}
+			} catch (InvalidFormatException e) {
+				throw new InvalidOperationException(e.getMessage());
+			}
+		}
+	}
+
