@@ -25,6 +25,12 @@
             s = endRow;
             inc = -1;
         }
+        NoteRecord[] noteRecs;
+        if (moveComments) {
+            noteRecs = sheet.getNoteRecords(); 
+        } else {
+            noteRecs = NoteRecord.EMPTY_ARRAY;
+        }
 
         shiftMerged(startRow, endRow, n, true);
         sheet.getPageSettings().shiftRowBreaks(startRow, endRow, n);
@@ -47,12 +53,6 @@
             //  be done for the now empty destination row
             if (row == null) continue; // Nothing to do for this row
 
-            // Fetch the first and last columns of the
-            //  row now, so we still have them to hand
-            //  once we start removing cells
-            short firstCol = row.getFirstCellNum();
-            short lastCol = row.getLastCellNum();
-
             // Fix up row heights if required
             if (copyRowHeight) {
                 row2Replace.setHeight(row.getHeight());
@@ -63,7 +63,7 @@
 
             // Copy each cell from the source row to
             //  the destination row
-            for(Iterator cells = row.cellIterator(); cells.hasNext(); ) {
+            for(Iterator<Cell> cells = row.cellIterator(); cells.hasNext(); ) {
                 HSSFCell cell = (HSSFCell)cells.next();
                 row.removeCell( cell );
                 CellValueRecordInterface cellRecord = cell.getCellValueRecord();
@@ -84,8 +84,13 @@
             //  destination row. Note that comments can
             //  exist for cells which are null
             if(moveComments) {
-                for( short col = firstCol; col <= lastCol; col++ ) {
-                    HSSFComment comment = getCellComment(rowNum, col);
+                // This code would get simpler if NoteRecords could be organised by HSSFRow.
+                for(int i=noteRecs.length-1; i>=0; i--) {
+                    NoteRecord nr = noteRecs[i];
+                    if (nr.getRow() != rowNum) {
+                        continue;
+                    }
+                    HSSFComment comment = getCellComment(rowNum, nr.getColumn());
                     if (comment != null) {
                        comment.setRow(rowNum + n);
                     }

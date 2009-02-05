@@ -1,0 +1,27 @@
+    public void testLastAndFirstColumns_bug46654() {
+        int ROW_IX = 10;
+        int COL_IX = 3;
+        HSSFWorkbook workbook = new HSSFWorkbook();
+        HSSFSheet sheet = workbook.createSheet("Sheet1");
+        RowRecord rowRec = new RowRecord(ROW_IX);
+        rowRec.setFirstCol((short)2);
+        rowRec.setLastCol((short)5);
+
+        BlankRecord br = new BlankRecord();
+        br.setRow(ROW_IX);
+		br.setColumn((short)COL_IX);
+
+        sheet.getSheet().addValueRecord(ROW_IX, br);
+        HSSFRow row = new HSSFRow(workbook, sheet, rowRec);
+        HSSFCell cell = row.createCellFromRecord(br);
+
+        if (row.getFirstCellNum() == 2 && row.getLastCellNum() == 5) {
+            throw new AssertionFailedError("Identified bug 46654a");
+        }
+        assertEquals(COL_IX, row.getFirstCellNum());
+        assertEquals(COL_IX + 1, row.getLastCellNum());
+        row.removeCell(cell);
+        assertEquals(-1, row.getFirstCellNum());
+        assertEquals(-1, row.getLastCellNum());
+    }
+
