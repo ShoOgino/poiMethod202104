@@ -1,0 +1,27 @@
+	/**
+	 * Test M4.1 rule.
+	 */
+	public void testOnlyOneCorePropertiesPart_AddRelationship() {
+		InputStream is = OpenXML4JTestDataSamples.openComplianceSampleStream("OPCCompliance_CoreProperties_OnlyOneCorePropertiesPart.docx");
+		Package pkg;
+		try {
+			pkg = Package.open(is);
+		} catch (InvalidFormatException e) {
+			throw new RuntimeException(e);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+		URI partUri = createURI("/docProps/core2.xml");
+		try {
+			pkg.addRelationship(PackagingURIHelper.createPartName(partUri), TargetMode.INTERNAL,
+					PackageRelationshipTypes.CORE_PROPERTIES);
+			fail("expected OPC compliance exception was not thrown");
+		} catch (InvalidFormatException e) {
+			throw new RuntimeException(e);
+		} catch (InvalidOperationException e) {
+			// expected during successful test
+			assertEquals("OPC Compliance error [M4.1]: can't add another core properties part ! Use the built-in package method instead.", e.getMessage());
+		}
+		pkg.revert();
+	}
+
