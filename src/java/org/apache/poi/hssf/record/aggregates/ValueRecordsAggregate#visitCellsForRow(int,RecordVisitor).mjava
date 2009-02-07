@@ -1,19 +1,25 @@
 	public void visitCellsForRow(int rowIndex, RecordVisitor rv) {
 
-		CellValueRecordInterface[] cellRecs = records[rowIndex];
-		if (cellRecs != null) {
-			for (int i = 0; i < cellRecs.length; i++) {
-				CellValueRecordInterface cvr = cellRecs[i];
-				if (cvr == null) {
-					continue;
-				}
-				if (cvr instanceof RecordAggregate) {
-					RecordAggregate agg = (RecordAggregate) cvr;
-					agg.visitContainedRecords(rv);
-				} else {
-					Record rec = (Record) cvr;
-					rv.visitRecord(rec);
-				}
+		CellValueRecordInterface[] rowCells = records[rowIndex];
+		if(rowCells == null) {
+			throw new IllegalArgumentException("Row [" + rowIndex + "] is empty");
+		}
+
+
+		for (int i = 0; i < rowCells.length; i++) {
+			RecordBase cvr = (RecordBase) rowCells[i];
+			if(cvr == null) {
+				continue;
+			}
+			int nBlank = countBlanks(rowCells, i);
+			if (nBlank > 1) {
+				rv.visitRecord(createMBR(rowCells, i, nBlank));
+				i+=nBlank-1;
+			} else if (cvr instanceof RecordAggregate) {
+				RecordAggregate agg = (RecordAggregate) cvr;
+				agg.visitContainedRecords(rv);
+			} else {
+				rv.visitRecord((Record) cvr);
 			}
 		}
 	}

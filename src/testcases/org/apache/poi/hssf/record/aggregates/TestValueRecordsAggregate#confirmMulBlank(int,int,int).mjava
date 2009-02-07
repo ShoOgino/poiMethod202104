@@ -1,0 +1,38 @@
+	private void confirmMulBlank(int expectedTotalBlankCells,
+			int expectedNumberOfMulBlankRecords, int expectedNumberOfSingleBlankRecords) {
+		// assumed row ranges set-up by caller:
+		final int firstRow = 1;
+		final int lastRow = 2;
+
+
+		final class BlankStats {
+			public int countBlankCells;
+			public int countMulBlankRecords;
+			public int countSingleBlankRecords;
+		}
+
+		final BlankStats bs = new BlankStats();
+		RecordVisitor rv = new RecordVisitor() {
+
+			public void visitRecord(Record r) {
+				if (r instanceof MulBlankRecord) {
+					MulBlankRecord mbr = (MulBlankRecord) r;
+					bs.countMulBlankRecords++;
+					bs.countBlankCells += mbr.getNumColumns();
+				} else if (r instanceof BlankRecord) {
+					bs.countSingleBlankRecords++;
+					bs.countBlankCells++;
+				}
+			}
+		};
+
+		for (int rowIx = firstRow; rowIx <=lastRow; rowIx++) {
+			if (valueRecord.rowHasCells(rowIx)) {
+				valueRecord.visitCellsForRow(rowIx, rv);
+			}
+		}
+		assertEquals(expectedTotalBlankCells, bs.countBlankCells);
+		assertEquals(expectedNumberOfMulBlankRecords, bs.countMulBlankRecords);
+		assertEquals(expectedNumberOfSingleBlankRecords, bs.countSingleBlankRecords);
+	}
+

@@ -1,17 +1,17 @@
 	/**
-	 * Sometimes the 'shared formula' flag (<tt>FormulaRecord.isSharedFormula()</tt>) is set when 
+	 * Sometimes the 'shared formula' flag (<tt>FormulaRecord.isSharedFormula()</tt>) is set when
 	 * there is no corresponding SharedFormulaRecord available. SharedFormulaRecord definitions do
-	 * not span multiple sheets.  They are are only defined within a sheet, and thus they do not 
+	 * not span multiple sheets.  They are are only defined within a sheet, and thus they do not
 	 * have a sheet index field (only row and column range fields).<br/>
-	 * So it is important that the code which locates the SharedFormulaRecord for each 
-	 * FormulaRecord does not allow matches across sheets.</br> 
-	 * 
-	 * Prior to bugzilla 44449 (Feb 2008), POI <tt>ValueRecordsAggregate.construct(int, List)</tt> 
+	 * So it is important that the code which locates the SharedFormulaRecord for each
+	 * FormulaRecord does not allow matches across sheets.</br>
+	 *
+	 * Prior to bugzilla 44449 (Feb 2008), POI <tt>ValueRecordsAggregate.construct(int, List)</tt>
 	 * allowed <tt>SharedFormulaRecord</tt>s to be erroneously used across sheets.  That incorrect
 	 * behaviour is shown by this test.<p/>
-	 * 
+	 *
 	 * <b>Notes on how to produce the test spreadsheet</b>:</p>
-	 * The setup for this test (AbnormalSharedFormulaFlag.xls) is rather fragile, insomuchas 
+	 * The setup for this test (AbnormalSharedFormulaFlag.xls) is rather fragile, insomuchas
 	 * re-saving the file (either with Excel or POI) clears the flag.<br/>
 	 * <ol>
 	 * <li>A new spreadsheet was created in Excel (File | New | Blank Workbook).</li>
@@ -21,15 +21,15 @@
 	 * <li>Four rows on Sheet1 "5" through "8" were deleted ('delete rows' alt-E D, not 'clear' Del).</li>
 	 * <li>The spreadsheet was saved as AbnormalSharedFormulaFlag.xls.</li>
 	 * </ol>
-	 * Prior to the row delete action the spreadsheet has two <tt>SharedFormulaRecord</tt>s. One 
+	 * Prior to the row delete action the spreadsheet has two <tt>SharedFormulaRecord</tt>s. One
 	 * for each sheet. To expose the bug, the shared formulas have been made to overlap.<br/>
-	 * The row delete action (as described here) seems to to delete the 
+	 * The row delete action (as described here) seems to to delete the
 	 * <tt>SharedFormulaRecord</tt> from Sheet1 (but not clear the 'shared formula' flags.<br/>
-	 * There are other variations on this theme to create the same effect.  
-	 * 
+	 * There are other variations on this theme to create the same effect.
+	 *
 	 */
 	public void testSpuriousSharedFormulaFlag() {
-		
+
 		long actualCRC = getFileCRC(HSSFTestDataSamples.openSampleFileStream(ABNORMAL_SHARED_FORMULA_FLAG_TEST_FILE));
 		long expectedCRC = 2277445406L;
 		if(actualCRC != expectedCRC) {
@@ -37,17 +37,17 @@
 			throw failUnexpectedTestFileChange();
 		}
 		HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook(ABNORMAL_SHARED_FORMULA_FLAG_TEST_FILE);
-		
+
 		HSSFSheet s = wb.getSheetAt(0); // Sheet1
-		
+
 		String cellFormula;
 		cellFormula = getFormulaFromFirstCell(s, 0); // row "1"
 		// the problem is not observable in the first row of the shared formula
 		if(!cellFormula.equals("\"first formula\"")) {
 			throw new RuntimeException("Something else wrong with this test case");
 		}
-		
-		// but the problem is observable in rows 2,3,4 
+
+		// but the problem is observable in rows 2,3,4
 		cellFormula = getFormulaFromFirstCell(s, 1); // row "2"
 		if(cellFormula.equals("\"second formula\"")) {
 			throw new AssertionFailedError("found bug 44449 (Wrong SharedFormulaRecord was used).");
