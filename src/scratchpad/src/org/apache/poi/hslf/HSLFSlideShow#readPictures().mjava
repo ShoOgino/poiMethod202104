@@ -2,6 +2,8 @@
 	 * Find and read in pictures contained in this presentation
 	 */
 	private void readPictures() throws IOException {
+        _pictures = new ArrayList<PictureData>();
+
 		byte[] pictstream;
 
 		try {
@@ -15,9 +17,7 @@
 			return;
 		}
 
-        List p = new ArrayList();
         int pos = 0;
-
 		// An empty picture record (length 0) will take up 8 bytes
         while (pos <= (pictstream.length-8)) {
             int offset = pos;
@@ -36,7 +36,7 @@
 			// (0 is allowed, but odd, since we do wind on by the header each
 			//  time, so we won't get stuck)
 			if(imgsize < 0) {
-				throw new CorruptPowerPointFileException("The file contains a picture, at position " + p.size() + ", which has a negatively sized data length, so we can't trust any of the picture data");
+				throw new CorruptPowerPointFileException("The file contains a picture, at position " + _pictures.size() + ", which has a negatively sized data length, so we can't trust any of the picture data");
 			}
 
 			// If they type (including the bonus 0xF018) is 0, skip it
@@ -54,7 +54,7 @@
                     pict.setRawData(imgdata);
 
                     pict.setOffset(offset);
-					p.add(pict);
+					_pictures.add(pict);
 				} catch(IllegalArgumentException e) {
 					logger.log(POILogger.ERROR, "Problem reading picture: " + e + "\nYou document will probably become corrupted if you save it!");
 				}
@@ -62,7 +62,5 @@
             
             pos += imgsize;
         }
-
-		_pictures = (PictureData[])p.toArray(new PictureData[p.size()]);
 	}
 
