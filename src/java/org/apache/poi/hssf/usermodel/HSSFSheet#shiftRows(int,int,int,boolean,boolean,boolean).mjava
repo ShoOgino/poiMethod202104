@@ -27,13 +27,13 @@
         }
         NoteRecord[] noteRecs;
         if (moveComments) {
-            noteRecs = sheet.getNoteRecords(); 
+            noteRecs = _sheet.getNoteRecords(); 
         } else {
             noteRecs = NoteRecord.EMPTY_ARRAY;
         }
 
         shiftMerged(startRow, endRow, n, true);
-        sheet.getPageSettings().shiftRowBreaks(startRow, endRow, n);
+        _sheet.getPageSettings().shiftRowBreaks(startRow, endRow, n);
 
         for ( int rowNum = s; rowNum >= startRow && rowNum <= endRow && rowNum >= 0 && rowNum < 65536; rowNum += inc ) {
             HSSFRow row = getRow( rowNum );
@@ -69,7 +69,7 @@
                 CellValueRecordInterface cellRecord = cell.getCellValueRecord();
                 cellRecord.setRow( rowNum + n );
                 row2Replace.createCellFromRecord( cellRecord );
-                sheet.addValueRecord( rowNum + n, cellRecord );
+                _sheet.addValueRecord( rowNum + n, cellRecord );
 
                 HSSFHyperlink link = cell.getHyperlink();
                 if(link != null){
@@ -97,23 +97,23 @@
                 }
             }
         }
-        if ( endRow == lastrow || endRow + n > lastrow ) lastrow = Math.min( endRow + n, 65535 );
-        if ( startRow == firstrow || startRow + n < firstrow ) firstrow = Math.max( startRow + n, 0 );
+        if ( endRow == _lastrow || endRow + n > _lastrow ) _lastrow = Math.min( endRow + n, 65535 );
+        if ( startRow == _firstrow || startRow + n < _firstrow ) _firstrow = Math.max( startRow + n, 0 );
 
         // Update any formulas on this sheet that point to
         //  rows which have been moved
-        int sheetIndex = workbook.getSheetIndex(this);
-        short externSheetIndex = book.checkExternSheet(sheetIndex);
+        int sheetIndex = _workbook.getSheetIndex(this);
+        short externSheetIndex = _book.checkExternSheet(sheetIndex);
         FormulaShifter shifter = FormulaShifter.createForRowShift(externSheetIndex, startRow, endRow, n);
-        sheet.updateFormulasAfterCellShift(shifter, externSheetIndex);
+        _sheet.updateFormulasAfterCellShift(shifter, externSheetIndex);
 
-        int nSheets = workbook.getNumberOfSheets();
+        int nSheets = _workbook.getNumberOfSheets();
         for(int i=0; i<nSheets; i++) {
-            Sheet otherSheet = workbook.getSheetAt(i).getSheet();
-            if (otherSheet == this.sheet) {
+            Sheet otherSheet = _workbook.getSheetAt(i).getSheet();
+            if (otherSheet == this._sheet) {
                 continue;
             }
-            short otherExtSheetIx = book.checkExternSheet(i);
+            short otherExtSheetIx = _book.checkExternSheet(i);
             otherSheet.updateFormulasAfterCellShift(shifter, otherExtSheetIx);
         }
         // TODO - adjust formulas in named ranges
