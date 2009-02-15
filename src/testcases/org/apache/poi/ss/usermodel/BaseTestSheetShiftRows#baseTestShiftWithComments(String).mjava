@@ -1,0 +1,58 @@
+    public final void baseTestShiftWithComments(String sampleName) {
+        Workbook wb = openSampleWorkbook(sampleName);
+
+        Sheet sheet = wb.getSheet("Sheet1");
+        assertEquals(3, sheet.getLastRowNum());
+
+        // Verify comments are in the position expected
+        assertNotNull(sheet.getCellComment(0,0));
+        assertNull(sheet.getCellComment(1,0));
+        assertNotNull(sheet.getCellComment(2,0));
+        assertNotNull(sheet.getCellComment(3,0));
+
+        String comment1 = sheet.getCellComment(0,0).getString().getString();
+        assertEquals(comment1,"comment top row1 (index0)\n");
+        String comment3 = sheet.getCellComment(2,0).getString().getString();
+        assertEquals(comment3,"comment top row3 (index2)\n");
+        String comment4 = sheet.getCellComment(3,0).getString().getString();
+        assertEquals(comment4,"comment top row4 (index3)\n");
+
+        // Shifting all but first line down to test comments shifting
+        sheet.shiftRows(1, sheet.getLastRowNum(), 1, true, true);
+
+        // Test that comments were shifted as expected
+        assertEquals(4, sheet.getLastRowNum());
+        assertNotNull(sheet.getCellComment(0,0));
+        assertNull(sheet.getCellComment(1,0));
+        assertNull(sheet.getCellComment(2,0));
+        assertNotNull(sheet.getCellComment(3,0));
+        assertNotNull(sheet.getCellComment(4,0));
+
+        String comment1_shifted = sheet.getCellComment(0,0).getString().getString();
+        assertEquals(comment1,comment1_shifted);
+        String comment3_shifted = sheet.getCellComment(3,0).getString().getString();
+        assertEquals(comment3,comment3_shifted);
+        String comment4_shifted = sheet.getCellComment(4,0).getString().getString();
+        assertEquals(comment4,comment4_shifted);
+
+        // Write out and read back in again
+        // Ensure that the changes were persisted
+        wb = writeOutAndReadBack(wb);
+        sheet = wb.getSheet("Sheet1");
+        assertEquals(4, sheet.getLastRowNum());
+
+        // Verify comments are in the position expected after the shift
+        assertNotNull(sheet.getCellComment(0,0));
+        assertNull(sheet.getCellComment(1,0));
+        assertNull(sheet.getCellComment(2,0));
+        assertNotNull(sheet.getCellComment(3,0));
+        assertNotNull(sheet.getCellComment(4,0));
+
+        comment1_shifted = sheet.getCellComment(0,0).getString().getString();
+        assertEquals(comment1,comment1_shifted);
+        comment3_shifted = sheet.getCellComment(3,0).getString().getString();
+        assertEquals(comment3,comment3_shifted);
+        comment4_shifted = sheet.getCellComment(4,0).getString().getString();
+        assertEquals(comment4,comment4_shifted);
+    }
+

@@ -5,16 +5,20 @@
      * </p>
      *
      * @param formula the formula to shift
-     * @param n the number of rows to shift
-     * @return the shifted formula
+     * @param shifter the FormulaShifter object that operates on the parsed formula tokens
+     * @return the shifted formula if the formula was changed,
+     *   <code>null</code> if the formula wasn't modified
      */
-    private String shiftFormula(String formula, int n){
+    private String shiftFormula(String formula, FormulaShifter shifter){
         XSSFSheet sheet = getSheet();
         XSSFWorkbook wb = sheet.getWorkbook();
         int sheetIndex = wb.getSheetIndex(sheet);
         XSSFEvaluationWorkbook fpb = XSSFEvaluationWorkbook.create(wb);
         Ptg[] ptgs = FormulaParser.parse(formula, fpb, FormulaType.CELL, sheetIndex);
-        Ptg[] fmla = SharedFormulaRecord.convertSharedFormulas(ptgs, n, 0);
-        return FormulaRenderer.toFormulaString(fpb, fmla);
+        String shiftedFmla = null;
+        if (shifter.adjustFormula(ptgs, sheetIndex)) {
+            shiftedFmla = FormulaRenderer.toFormulaString(fpb, ptgs);
+        }
+        return shiftedFmla;
     }
 

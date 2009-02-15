@@ -4,32 +4,18 @@
      * @param n the number of rows to move
      */
     protected void shift(int n) {
-        XSSFSheet sheet = getSheet();
-        CalculationChain calcChain = sheet.getWorkbook().getCalculationChain();
         int rownum = getRowNum() + n;
+        CalculationChain calcChain = sheet.getWorkbook().getCalculationChain();
+        int sheetId = (int)sheet.sheet.getSheetId();
         for(Cell c : this){
             XSSFCell cell = (XSSFCell)c;
 
             //remove the reference in the calculation chain
-            if(calcChain != null) calcChain.removeItem((int)sheet.sheet.getSheetId(), cell.getReference());
+            if(calcChain != null) calcChain.removeItem(sheetId, cell.getReference());
 
             CTCell ctCell = cell.getCTCell();
             String r = new CellReference(rownum, cell.getColumnIndex()).formatAsString();
             ctCell.setR(r);
-
-            if(ctCell.isSetF()){
-                CTCellFormula f = ctCell.getF();
-                String fmla = f.getStringValue();
-                if(fmla.length() > 0) {
-                    String shiftedFmla = shiftFormula(fmla, n);
-                    f.setStringValue(shiftedFmla);
-                }
-                if(f.isSetRef()){ //Range of cells which the formula applies to.
-                    String ref = f.getRef();
-                    String shiftedRef = shiftFormula(ref, n);
-                    f.setRef(shiftedRef);
-                }
-            }
         }
         setRowNum(rownum);
     }
