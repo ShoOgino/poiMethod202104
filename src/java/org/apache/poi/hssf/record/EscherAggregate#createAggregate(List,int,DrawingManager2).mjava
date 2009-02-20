@@ -1,75 +1,75 @@
-    /**
-     * Collapses the drawing records into an aggregate.
-     */
-    public static EscherAggregate createAggregate( List records, int locFirstDrawingRecord, DrawingManager2 drawingManager )
-    {
-        // Keep track of any shape records created so we can match them back to the object id's.
-        // Textbox objects are also treated as shape objects.
-        final List shapeRecords = new ArrayList();
-        EscherRecordFactory recordFactory = new DefaultEscherRecordFactory()
-        {
-            public EscherRecord createRecord( byte[] data, int offset )
-            {
-                EscherRecord r = super.createRecord( data, offset );
-                if ( r.getRecordId() == EscherClientDataRecord.RECORD_ID || r.getRecordId() == EscherTextboxRecord.RECORD_ID )
-                {
-                    shapeRecords.add( r );
-                }
-                return r;
-            }
-        };
+	/**
+	 * Collapses the drawing records into an aggregate.
+	 */
+	public static EscherAggregate createAggregate( List records, int locFirstDrawingRecord, DrawingManager2 drawingManager )
+	{
+		// Keep track of any shape records created so we can match them back to the object id's.
+		// Textbox objects are also treated as shape objects.
+		final List<EscherRecord> shapeRecords = new ArrayList<EscherRecord>();
+		EscherRecordFactory recordFactory = new DefaultEscherRecordFactory()
+		{
+			public EscherRecord createRecord( byte[] data, int offset )
+			{
+				EscherRecord r = super.createRecord( data, offset );
+				if ( r.getRecordId() == EscherClientDataRecord.RECORD_ID || r.getRecordId() == EscherTextboxRecord.RECORD_ID )
+				{
+					shapeRecords.add( r );
+				}
+				return r;
+			}
+		};
 
-        // Calculate the size of the buffer
-        EscherAggregate agg = new EscherAggregate(drawingManager);
-        int loc = locFirstDrawingRecord;
-        int dataSize = 0;
-        while ( loc + 1 < records.size()
-                && sid( records, loc ) == DrawingRecord.sid
-                && isObjectRecord( records, loc + 1 ) )
-        {
-            dataSize += ( (DrawingRecord) records.get( loc ) ).getData().length;
-            loc += 2;
-        }
+		// Calculate the size of the buffer
+		EscherAggregate agg = new EscherAggregate(drawingManager);
+		int loc = locFirstDrawingRecord;
+		int dataSize = 0;
+		while ( loc + 1 < records.size()
+				&& sid( records, loc ) == DrawingRecord.sid
+				&& isObjectRecord( records, loc + 1 ) )
+		{
+			dataSize += ( (DrawingRecord) records.get( loc ) ).getData().length;
+			loc += 2;
+		}
 
-        // Create one big buffer
-        byte buffer[] = new byte[dataSize];
-        int offset = 0;
-        loc = locFirstDrawingRecord;
-        while ( loc + 1 < records.size()
-                && sid( records, loc ) == DrawingRecord.sid
-                && isObjectRecord( records, loc + 1 ) )
-        {
-            DrawingRecord drawingRecord = (DrawingRecord) records.get( loc );
-            System.arraycopy( drawingRecord.getData(), 0, buffer, offset, drawingRecord.getData().length );
-            offset += drawingRecord.getData().length;
-            loc += 2;
-        }
+		// Create one big buffer
+		byte buffer[] = new byte[dataSize];
+		int offset = 0;
+		loc = locFirstDrawingRecord;
+		while ( loc + 1 < records.size()
+				&& sid( records, loc ) == DrawingRecord.sid
+				&& isObjectRecord( records, loc + 1 ) )
+		{
+			DrawingRecord drawingRecord = (DrawingRecord) records.get( loc );
+			System.arraycopy( drawingRecord.getData(), 0, buffer, offset, drawingRecord.getData().length );
+			offset += drawingRecord.getData().length;
+			loc += 2;
+		}
 
-        // Decode the shapes
-        //        agg.escherRecords = new ArrayList();
-        int pos = 0;
-        while ( pos < dataSize )
-        {
-            EscherRecord r = recordFactory.createRecord( buffer, pos );
-            int bytesRead = r.fillFields( buffer, pos, recordFactory );
-            agg.addEscherRecord( r );
-            pos += bytesRead;
-        }
+		// Decode the shapes
+		//		agg.escherRecords = new ArrayList();
+		int pos = 0;
+		while ( pos < dataSize )
+		{
+			EscherRecord r = recordFactory.createRecord( buffer, pos );
+			int bytesRead = r.fillFields( buffer, pos, recordFactory );
+			agg.addEscherRecord( r );
+			pos += bytesRead;
+		}
 
-        // Associate the object records with the shapes
-        loc = locFirstDrawingRecord;
-        int shapeIndex = 0;
-        agg.shapeToObj = new HashMap();
-        while ( loc + 1 < records.size()
-                && sid( records, loc ) == DrawingRecord.sid
-                && isObjectRecord( records, loc + 1 ) )
-        {
-            Record objRecord = (Record) records.get( loc + 1 );
-            agg.shapeToObj.put( shapeRecords.get( shapeIndex++ ), objRecord );
-            loc += 2;
-        }
+		// Associate the object records with the shapes
+		loc = locFirstDrawingRecord;
+		int shapeIndex = 0;
+		agg.shapeToObj = new HashMap<EscherRecord, Record>();
+		while ( loc + 1 < records.size()
+				&& sid( records, loc ) == DrawingRecord.sid
+				&& isObjectRecord( records, loc + 1 ) )
+		{
+			Record objRecord = (Record) records.get( loc + 1 );
+			agg.shapeToObj.put( shapeRecords.get( shapeIndex++ ), objRecord );
+			loc += 2;
+		}
 
-        return agg;
+		return agg;
 
-    }
+	}
 
