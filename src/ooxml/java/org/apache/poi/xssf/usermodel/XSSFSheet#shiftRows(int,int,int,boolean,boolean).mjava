@@ -17,18 +17,16 @@
         for (Iterator<Row> it = rowIterator() ; it.hasNext() ; ) {
             XSSFRow row = (XSSFRow)it.next();
             int rownum = row.getRowNum();
+            if(rownum < startRow) continue;
 
             if (!copyRowHeight) {
                 row.setHeight((short)-1);
             }
 
-            if (resetOriginalRowHeight && getDefaultRowHeight() >= 0) {
-                row.setHeight(getDefaultRowHeight());
-            }
-            if (removeRow(startRow, endRow, n, row.getRowNum())) {
+            if (removeRow(startRow, endRow, n, rownum)) {
                 it.remove();
             }
-            else if (row.getRowNum() >= startRow && row.getRowNum() <= endRow) {
+            else if (rownum >= startRow && rownum <= endRow) {
                 row.shift(n);
             }
 
@@ -44,25 +42,20 @@
                 }
             }
         }
-        //rebuild the rows map
+        XSSFRowShifter rowShifter = new XSSFRowShifter(this);
+
         int sheetIndex = getWorkbook().getSheetIndex(this);
         FormulaShifter shifter = FormulaShifter.createForRowShift(sheetIndex, startRow, endRow, n);
-        TreeMap<Integer, Row> map = new TreeMap<Integer, Row>();
-        for(Row r : this) {
-            XSSFRow row = (XSSFRow)r;
-            row.updateFormulasAfterCellShift(shifter);
+
+        rowShifter.updateNamedRanges(shifter);
+        rowShifter.updateFormulas(shifter);
+        rowShifter.shiftMerged(startRow, endRow, n);
+
+        //rebuild the rows map
+        TreeMap<Integer, XSSFRow> map = new TreeMap<Integer, XSSFRow>();
+        for(XSSFRow r : rows.values()) {
             map.put(r.getRowNum(), r);
         }
         rows = map;
-
-        //update formulas on other sheets
-        for(XSSFSheet sheet : getWorkbook()) {
-            if (sheet == this) continue;
-            for(Row r : sheet) {
-                XSSFRow row = (XSSFRow)r;
-                row.updateFormulasAfterCellShift(shifter);
-            }
-        }
-
     }
 

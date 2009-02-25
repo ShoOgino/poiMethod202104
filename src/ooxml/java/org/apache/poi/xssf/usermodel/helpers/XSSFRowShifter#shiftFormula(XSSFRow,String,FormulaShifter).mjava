@@ -1,0 +1,22 @@
+    /**
+     * Shift a formula using the supplied FormulaShifter
+     *
+     * @param row     the row of the cell this formula belongs to. Used to get a reference to the parent workbook.
+     * @param formula the formula to shift
+     * @param shifter the FormulaShifter object that operates on the parsed formula tokens
+     * @return the shifted formula if the formula was changed,
+     *         <code>null</code> if the formula wasn't modified
+     */
+    private static String shiftFormula(XSSFRow row, String formula, FormulaShifter shifter) {
+        XSSFSheet sheet = row.getSheet();
+        XSSFWorkbook wb = sheet.getWorkbook();
+        int sheetIndex = wb.getSheetIndex(sheet);
+        XSSFEvaluationWorkbook fpb = XSSFEvaluationWorkbook.create(wb);
+        Ptg[] ptgs = FormulaParser.parse(formula, fpb, FormulaType.CELL, sheetIndex);
+        String shiftedFmla = null;
+        if (shifter.adjustFormula(ptgs, sheetIndex)) {
+            shiftedFmla = FormulaRenderer.toFormulaString(fpb, ptgs);
+        }
+        return shiftedFmla;
+    }
+
