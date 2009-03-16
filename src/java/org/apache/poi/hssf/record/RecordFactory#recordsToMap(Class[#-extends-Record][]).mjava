@@ -3,8 +3,8 @@
 	 * @return map of SIDs to short,short,byte[] constructors for Record classes
 	 * most of org.apache.poi.hssf.record.*
 	 */
-	private static Map<Short, Constructor<? extends Record>> recordsToMap(Class<? extends Record> [] records) {
-		Map<Short, Constructor<? extends Record>> result = new HashMap<Short, Constructor<? extends Record>>();
+	private static Map<Short, I_RecordCreator> recordsToMap(Class<? extends Record> [] records) {
+		Map<Short, I_RecordCreator> result = new HashMap<Short, I_RecordCreator>();
 		Set<Class<?>> uniqueRecClasses = new HashSet<Class<?>>(records.length * 3 / 2);
 
 		for (int i = 0; i < records.length; i++) {
@@ -31,11 +31,11 @@
 			}
 			Short key = new Short(sid);
 			if (result.containsKey(key)) {
-				Class<? extends Record> prev = result.get(key).getDeclaringClass();
+				String prevClassName = result.get(key).getRecordClassName();
 				throw new RuntimeException("duplicate record sid 0x" + Integer.toHexString(sid).toUpperCase()
-						+ " for classes (" + recClass.getName() + ") and (" + prev.getName() + ")");
+						+ " for classes (" + recClass.getName() + ") and (" + prevClassName + ")");
 			}
-			result.put(key, constructor);
+			result.put(key, new ReflectionRecordCreator(constructor));
 		}
 		return result;
 	}
