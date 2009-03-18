@@ -1,0 +1,53 @@
+	/**
+	 * Add a thumbnail to the package. This method is provided to make easier
+	 * the addition of a thumbnail in a package. You can do the same work by
+	 * using the traditionnal relationship and part mechanism.
+	 * 
+	 * @param path
+	 *            The full path to the image file.
+	 */
+	public void addThumbnail(String path) throws IOException {
+		// Check parameter
+		if ("".equals(path))
+			throw new IllegalArgumentException("path");
+
+		// Get the filename from the path
+		String filename = path
+				.substring(path.lastIndexOf(File.separatorChar) + 1);
+
+		// Create the thumbnail part name
+		String contentType = ContentTypes
+				.getContentTypeFromFileExtension(filename);
+		PackagePartName thumbnailPartName = null;
+		try {
+			thumbnailPartName = PackagingURIHelper.createPartName("/docProps/"
+					+ filename);
+		} catch (InvalidFormatException e) {
+			try {
+				thumbnailPartName = PackagingURIHelper
+						.createPartName("/docProps/thumbnail"
+								+ path.substring(path.lastIndexOf(".") + 1));
+			} catch (InvalidFormatException e2) {
+				throw new InvalidOperationException(
+						"Can't add a thumbnail file named '" + filename + "'");
+			}
+		}
+
+		// Check if part already exist
+		if (this.getPart(thumbnailPartName) != null)
+			throw new InvalidOperationException(
+					"You already add a thumbnail named '" + filename + "'");
+
+		// Add the thumbnail part to this package.
+		PackagePart thumbnailPart = this.createPart(thumbnailPartName,
+				contentType, false);
+
+		// Add the relationship between the package and the thumbnail part
+		this.addRelationship(thumbnailPartName, TargetMode.INTERNAL,
+				PackageRelationshipTypes.THUMBNAIL);
+
+		// Copy file data to the newly created part
+		StreamHelper.copyStream(new FileInputStream(path), thumbnailPart
+				.getOutputStream());
+	}
+

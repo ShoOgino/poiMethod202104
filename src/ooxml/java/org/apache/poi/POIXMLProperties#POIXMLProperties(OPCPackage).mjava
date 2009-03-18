@@ -1,0 +1,38 @@
+	public POIXMLProperties(OPCPackage docPackage) throws IOException, OpenXML4JException, XmlException {
+		this.pkg = docPackage;
+		
+		// Core properties
+		PackageRelationshipCollection coreRel =
+			pkg.getRelationshipsByType(POIXMLDocument.CORE_PROPERTIES_REL_TYPE);
+		if(coreRel.size() == 1) {
+			core = new CoreProperties( (PackagePropertiesPart)
+					pkg.getPart(coreRel.getRelationship(0)) );
+		} else {
+			throw new IllegalArgumentException("A document must always have core properties defined!");
+		}
+		
+		// Extended properties
+		PackageRelationshipCollection extRel =
+			pkg.getRelationshipsByType(POIXMLDocument.EXTENDED_PROPERTIES_REL_TYPE);
+		if(extRel.size() == 1) {
+			org.openxmlformats.schemas.officeDocument.x2006.extendedProperties.PropertiesDocument props = org.openxmlformats.schemas.officeDocument.x2006.extendedProperties.PropertiesDocument.Factory.parse(
+					pkg.getPart( extRel.getRelationship(0) ).getInputStream()
+			);
+			ext = new ExtendedProperties(props);
+		} else {
+			ext = new ExtendedProperties(org.openxmlformats.schemas.officeDocument.x2006.extendedProperties.PropertiesDocument.Factory.newInstance());
+		}
+		
+		// Custom properties
+		PackageRelationshipCollection custRel =
+			pkg.getRelationshipsByType(POIXMLDocument.CUSTOM_PROPERTIES_REL_TYPE);
+		if(custRel.size() == 1) {
+			org.openxmlformats.schemas.officeDocument.x2006.customProperties.PropertiesDocument props = org.openxmlformats.schemas.officeDocument.x2006.customProperties.PropertiesDocument.Factory.parse(
+					pkg.getPart( custRel.getRelationship(0) ).getInputStream()
+			);
+			cust = new CustomProperties(props);
+		} else {
+			cust = new CustomProperties(org.openxmlformats.schemas.officeDocument.x2006.customProperties.PropertiesDocument.Factory.newInstance());
+		}
+	}
+
