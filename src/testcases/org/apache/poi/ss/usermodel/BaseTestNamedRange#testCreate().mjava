@@ -1,0 +1,55 @@
+    public void testCreate(){
+        // Create a new workbook
+        Workbook wb = getTestDataProvider().createWorkbook();
+        Sheet sheet1 = wb.createSheet("Test1");
+        Sheet sheet2 = wb.createSheet("Testing Named Ranges");
+
+        Name name1 = wb.createName();
+        name1.setNameName("testOne");
+
+        //setting a duplicate name should throw IllegalArgumentException
+        Name name2 = wb.createName();
+        try {
+            name2.setNameName("testOne");
+            fail("expected exception");
+        } catch (IllegalArgumentException e){
+            assertEquals("The workbook already contains this name: testOne", e.getMessage());
+        }
+        //the check for duplicates is case-insensitive
+        try {
+            name2.setNameName("TESTone");
+            fail("expected exception");
+        } catch (IllegalArgumentException e){
+            assertEquals("The workbook already contains this name: TESTone", e.getMessage());
+        }
+
+        name2.setNameName("testTwo");
+
+        String ref1 = "Test1!$A$1:$B$1";
+        name1.setRefersToFormula(ref1);
+        assertEquals(ref1, name1.getRefersToFormula());
+        assertEquals("Test1", name1.getSheetName());
+
+        String ref2 = "'Testing Named Ranges'!$A$1:$B$1";
+        name1.setRefersToFormula(ref2);
+        assertEquals("'Testing Named Ranges'!$A$1:$B$1", name1.getRefersToFormula());
+        assertEquals("Testing Named Ranges", name1.getSheetName());
+
+        assertEquals(-1, name1.getSheetIndex());
+        name1.setSheetIndex(-1);
+        assertEquals(-1, name1.getSheetIndex());
+        try {
+            name1.setSheetIndex(2);
+            fail("should throw IllegalArgumentException");
+        } catch(IllegalArgumentException e){
+            assertEquals("Sheet index (2) is out of range (0..1)", e.getMessage());
+        }
+
+        name1.setSheetIndex(1);
+        assertEquals(1, name1.getSheetIndex());
+
+        //-1 means the name applies to the entire workbook
+        name1.setSheetIndex(-1);
+        assertEquals(-1, name1.getSheetIndex());
+    }
+

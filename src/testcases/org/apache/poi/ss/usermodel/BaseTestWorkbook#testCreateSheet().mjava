@@ -1,0 +1,82 @@
+    public void testCreateSheet() {
+        Workbook wb = getTestDataProvider().createWorkbook();
+        assertEquals(0, wb.getNumberOfSheets());
+
+        //getting a sheet by invalid index or non-existing name
+        assertNull(wb.getSheet("Sheet1"));
+        try {
+            wb.getSheetAt(0);
+            fail("should have thrown exceptiuon due to invalid sheet index");
+        } catch (IllegalArgumentException e) {
+            // expected during successful test
+            ;
+        }
+
+        Sheet sheet0 = wb.createSheet();
+        Sheet sheet1 = wb.createSheet();
+        assertEquals("Sheet0", sheet0.getSheetName());
+        assertEquals("Sheet1", sheet1.getSheetName());
+        assertEquals(2, wb.getNumberOfSheets());
+
+        //fetching sheets by name is case-insensitive
+        Sheet originalSheet = wb.createSheet("Sheet3");
+        Sheet fetchedSheet = wb.getSheet("sheet3");
+        if (fetchedSheet == null) {
+            throw new AssertionFailedError("Identified bug 44892");
+        }
+        assertEquals("Sheet3", fetchedSheet.getSheetName());
+        assertEquals(3, wb.getNumberOfSheets());
+        assertSame(originalSheet, fetchedSheet);
+        try {
+            wb.createSheet("sHeeT3");
+            fail("should have thrown exceptiuon due to duplicate sheet name");
+        } catch (IllegalArgumentException e) {
+            // expected during successful test
+            assertEquals("The workbook already contains a sheet of this name", e.getMessage());
+        }
+
+        //names cannot be blank or contain any of /\*?[]
+        String[] invalidNames = {"", "Sheet/", "Sheet\\",
+                "Sheet?", "Sheet*", "Sheet[", "Sheet]"};
+        for (String sheetName : invalidNames) {
+            try {
+                wb.createSheet(sheetName);
+                fail("should have thrown exceptiuon due to invalid sheet name: " + sheetName);
+            } catch (IllegalArgumentException e) {
+                // expected during successful test
+                ;
+            }
+        }
+        //still have 3 sheets
+        assertEquals(3, wb.getNumberOfSheets());
+
+        //change the name of the 3rd sheet
+        wb.setSheetName(2, "I changed!");
+
+        //try to assign an invalid name to the 2nd sheet
+        try {
+            wb.setSheetName(1, "[I'm invalid]");
+            fail("should have thrown exceptiuon due to invalid sheet name");
+        } catch (IllegalArgumentException e) {
+            ; // expected during successful test
+        }
+
+        //check
+        assertEquals(0, wb.getSheetIndex("sheet0"));
+        assertEquals(1, wb.getSheetIndex("sheet1"));
+        assertEquals(2, wb.getSheetIndex("I changed!"));
+
+        assertSame(sheet0, wb.getSheet("sheet0"));
+        assertSame(sheet1, wb.getSheet("sheet1"));
+        assertSame(originalSheet, wb.getSheet("I changed!"));
+        assertNull(wb.getSheet("unknown"));
+
+        //serialize and read again
+        wb = getTestDataProvider().writeOutAndReadBack(wb);
+        assertEquals(3, wb.getNumberOfSheets());
+        assertEquals(0, wb.getSheetIndex("sheet0"));
+        assertEquals(1, wb.getSheetIndex("sheet1"));
+        assertEquals(2, wb.getSheetIndex("I changed!"));
+
+    }
+

@@ -1,0 +1,41 @@
+    /**
+     * Bug 40296:      HSSFCell.setCellFormula throws
+     *   ClassCastException if cell is created using HSSFRow.createCell(short column, int type)
+     */
+    public void test40296() {
+        Workbook wb = getTestDataProvider().createWorkbook();
+        Sheet workSheet = wb.createSheet("Sheet1");
+        Cell cell;
+        Row row = workSheet.createRow(0);
+
+        cell = row.createCell(0, Cell.CELL_TYPE_NUMERIC);
+        cell.setCellValue(1.0);
+        assertEquals(Cell.CELL_TYPE_NUMERIC, cell.getCellType());
+        assertEquals(1.0, cell.getNumericCellValue());
+
+        cell = row.createCell(1, Cell.CELL_TYPE_NUMERIC);
+        cell.setCellValue(2.0);
+        assertEquals(Cell.CELL_TYPE_NUMERIC, cell.getCellType());
+        assertEquals(2.0, cell.getNumericCellValue());
+
+        cell = row.createCell(2, Cell.CELL_TYPE_FORMULA);
+        cell.setCellFormula("SUM(A1:B1)");
+        assertEquals(Cell.CELL_TYPE_FORMULA, cell.getCellType());
+        assertEquals("SUM(A1:B1)", cell.getCellFormula());
+
+        //serialize and check again
+        wb = getTestDataProvider().writeOutAndReadBack(wb);
+        row = wb.getSheetAt(0).getRow(0);
+        cell = row.getCell(0);
+        assertEquals(Cell.CELL_TYPE_NUMERIC, cell.getCellType());
+        assertEquals(1.0, cell.getNumericCellValue());
+
+        cell = row.getCell(1);
+        assertEquals(Cell.CELL_TYPE_NUMERIC, cell.getCellType());
+        assertEquals(2.0, cell.getNumericCellValue());
+
+        cell = row.getCell(2);
+        assertEquals(Cell.CELL_TYPE_FORMULA, cell.getCellType());
+        assertEquals("SUM(A1:B1)", cell.getCellFormula());
+    }
+

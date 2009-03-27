@@ -1,0 +1,29 @@
+    public void testCloneSheet() {
+        Workbook workbook = getTestDataProvider().createWorkbook();
+        CreationHelper factory = workbook.getCreationHelper();
+        Sheet sheet = workbook.createSheet("Test Clone");
+        Row row = sheet.createRow(0);
+        Cell cell = row.createCell(0);
+        Cell cell2 = row.createCell(1);
+        cell.setCellValue(factory.createRichTextString("clone_test"));
+        cell2.setCellFormula("SIN(1)");
+
+        Sheet clonedSheet = workbook.cloneSheet(0);
+        Row clonedRow = clonedSheet.getRow(0);
+
+        //Check for a good clone
+        assertEquals(clonedRow.getCell(0).getRichStringCellValue().getString(), "clone_test");
+
+        //Check that the cells are not somehow linked
+        cell.setCellValue(factory.createRichTextString("Difference Check"));
+        cell2.setCellFormula("cos(2)");
+        if ("Difference Check".equals(clonedRow.getCell(0).getRichStringCellValue().getString())) {
+            fail("string cell not properly cloned");
+        }
+        if ("COS(2)".equals(clonedRow.getCell(1).getCellFormula())) {
+            fail("formula cell not properly cloned");
+        }
+        assertEquals(clonedRow.getCell(0).getRichStringCellValue().getString(), "clone_test");
+        assertEquals(clonedRow.getCell(1).getCellFormula(), "SIN(1)");
+    }
+
