@@ -1,0 +1,69 @@
+    /**
+     * Test that fonts get added properly
+     *
+     * @see org.apache.poi.hssf.usermodel.TestBugs#test45338()
+     */
+    public void test45338() {
+        Workbook wb = getTestDataProvider().createWorkbook();
+        int num0 = wb.getNumberOfFonts();
+
+        Sheet s = wb.createSheet();
+        s.createRow(0);
+        s.createRow(1);
+        s.getRow(0).createCell(0);
+        s.getRow(1).createCell(0);
+
+        //default font
+        Font f1 = wb.getFontAt((short)0);
+        assertEquals(Font.BOLDWEIGHT_NORMAL, f1.getBoldweight());
+
+        // Check that asking for the same font
+        //  multiple times gives you the same thing.
+        // Otherwise, our tests wouldn't work!
+        assertSame(wb.getFontAt((short)0), wb.getFontAt((short)0));
+
+        // Look for a new font we have
+        //  yet to add
+        assertNull(
+            wb.findFont(
+                Font.BOLDWEIGHT_BOLD, (short)123, (short)(22*20),
+                "Thingy", false, true, (short)2, (byte)2
+            )
+        );
+
+        Font nf = wb.createFont();
+        short nfIdx = nf.getIndex();
+        assertEquals(num0 + 1, wb.getNumberOfFonts());
+
+        assertSame(nf, wb.getFontAt(nfIdx));
+
+        nf.setBoldweight(Font.BOLDWEIGHT_BOLD);
+        nf.setColor((short)123);
+        nf.setFontHeightInPoints((short)22);
+        nf.setFontName("Thingy");
+        nf.setItalic(false);
+        nf.setStrikeout(true);
+        nf.setTypeOffset((short)2);
+        nf.setUnderline((byte)2);
+
+        assertEquals(num0 + 1, wb.getNumberOfFonts());
+        assertEquals(nf, wb.getFontAt(nfIdx));
+
+        assertEquals(wb.getFontAt(nfIdx), wb.getFontAt(nfIdx));
+        assertTrue(wb.getFontAt((short)0) != wb.getFontAt(nfIdx));
+
+        // Find it now
+        assertNotNull(
+            wb.findFont(
+                Font.BOLDWEIGHT_BOLD, (short)123, (short)(22*20),
+                "Thingy", false, true, (short)2, (byte)2
+            )
+        );
+        assertSame(nf,
+               wb.findFont(
+                   Font.BOLDWEIGHT_BOLD, (short)123, (short)(22*20),
+                   "Thingy", false, true, (short)2, (byte)2
+               )
+        );
+    }
+
