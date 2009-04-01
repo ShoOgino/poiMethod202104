@@ -1,0 +1,49 @@
+	public void testRangeUsingOffsetFunc_bug46948() {
+		HSSFWorkbook wb = new HSSFWorkbook();
+		HSSFRow row = wb.createSheet("Sheet1").createRow(0);
+		HSSFCell cellA1 = row.createCell(0);
+		HSSFCell cellB1 = row.createCell(1);
+		row.createCell(2).setCellValue(5.0); // C1
+		row.createCell(3).setCellValue(7.0); // D1
+		row.createCell(4).setCellValue(9.0); // E1
+
+
+		try {
+			cellA1.setCellFormula("SUM(C1:OFFSET(C1,0,B1))");
+		} catch (RuntimeException e) {
+			// TODO fix formula parser to handle ':' as a proper operator
+			if (!e.getClass().getName().startsWith(FormulaParser.class.getName())) {
+				throw e;
+			}
+			// FormulaParseException is expected until the parser is fixed up
+			// Poke the formula in directly:
+			pokeInOffsetFormula(cellA1);
+		}
+
+
+		cellB1.setCellValue(1.0); // range will be C1:D1
+
+		HSSFFormulaEvaluator fe = new HSSFFormulaEvaluator(wb);
+		CellValue cv;
+		try {
+			cv = fe.evaluate(cellA1);
+		} catch (IllegalArgumentException e) {
+			if (e.getMessage().equals("Unexpected ref arg class (org.apache.poi.ss.formula.LazyAreaEval)")) {
+				throw new AssertionFailedError("Identified bug 46948");
+			}
+			throw e;
+		}
+
+		assertEquals(12.0, cv.getNumberValue(), 0.0);
+
+		cellB1.setCellValue(2.0); // range will be C1:E1
+		fe.notifyUpdateCell(cellB1);
+		cv = fe.evaluate(cellA1);
+		assertEquals(21.0, cv.getNumberValue(), 0.0);
+
+		cellB1.setCellValue(0.0); // range will be C1:C1
+		fe.notifyUpdateCell(cellB1);
+		cv = fe.evaluate(cellA1);
+		assertEquals(5.0, cv.getNumberValue(), 0.0);
+	}
+
