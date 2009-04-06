@@ -1,0 +1,33 @@
+    /**
+     * Bugzilla attachment 23444 (from bug 46973) has a NAME record with the following encoding: 
+     * <pre>
+     * 00000000 | 18 00 17 00 00 00 00 08 00 00 00 00 00 00 00 00 | ................
+     * 00000010 | 00 00 00 55 50 53 53 74 61 74 65                | ...UPSState
+     * </pre>     
+     * 
+     * This caused trouble for anything that requires {@link HSSFName#getRefersToFormula()}
+     * It is easy enough to re-create the the same data (by not setting the formula). Excel
+     * seems to gracefully remove this uninitialized name record.  It would be nice if POI
+     * could do the same, but that would involve adjusting subsequent name indexes across 
+     * all formulas. <p/>
+     * 
+     * For the moment, POI has been made to behave more sensibly with uninitialised name 
+     * records.
+     */
+    public final void testUninitialisedNameGetRefersToFormula_bug46973() {
+        Workbook wb = getTestDataProvider().createWorkbook();
+        Name n = wb.createName();
+        n.setNameName("UPSState");
+        String formula;
+        try {
+            formula = n.getRefersToFormula();
+        } catch (IllegalArgumentException e) {
+            if (e.getMessage().equals("ptgs must not be null")) {
+                throw new AssertionFailedError("Identified bug 46973");
+            }
+            throw e;
+        }
+        assertNull(formula);
+        assertFalse(n.isDeleted()); // according to exact definition of isDeleted()
+    }
+
