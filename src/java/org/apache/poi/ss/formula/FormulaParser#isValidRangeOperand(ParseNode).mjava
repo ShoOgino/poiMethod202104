@@ -1,0 +1,40 @@
+	/**
+	 * @return <code>false</code> if sub-expression represented the specified ParseNode definitely
+	 * cannot appear on either side of the range (':') operator
+	 */
+	private static boolean isValidRangeOperand(ParseNode a) {
+		Ptg tkn = a.getToken();
+		// Note - order is important for these instance-of checks
+		if (tkn instanceof OperandPtg) {
+			// notably cell refs and area refs
+			return true;
+		}
+
+		// next 2 are special cases of OperationPtg
+		if (tkn instanceof AbstractFunctionPtg) {
+			AbstractFunctionPtg afp = (AbstractFunctionPtg) tkn;
+			byte returnClass = afp.getDefaultOperandClass();
+			return Ptg.CLASS_REF == returnClass;
+		}
+		if (tkn instanceof ValueOperatorPtg) {
+			return false;
+		}
+		if (tkn instanceof OperationPtg) {
+			return true;
+		}
+
+		// one special case of ControlPtg
+		if (tkn instanceof ParenthesisPtg) {
+			// parenthesis Ptg should have only one child
+			return isValidRangeOperand(a.getChildren()[0]);
+		}
+
+		// one special case of ScalarConstantPtg
+		if (tkn == ErrPtg.REF_INVALID) {
+			return true;
+		}
+
+		// All other ControlPtgs and ScalarConstantPtgs cannot be used with ':'
+		return false;
+	}
+

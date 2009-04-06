@@ -1,0 +1,25 @@
+	private ParseNode parseRangeExpression() {
+		ParseNode result = parseRangeable();
+		boolean hasRange = false;
+		while (look == ':') {
+			int pos = _pointer;
+			GetChar();
+			ParseNode nextPart = parseRangeable();
+			// Note - no range simplification here. An expr like "A1:B2:C3:D4:E5" should be
+			// grouped into area ref pairs like: "(A1:B2):(C3:D4):E5"
+			// Furthermore, Excel doesn't seem to simplify
+			// expressions like "Sheet1!A1:Sheet1:B2" into "Sheet1!A1:B2"
+
+			checkValidRangeOperand("LHS", pos, result);
+			checkValidRangeOperand("RHS", pos, nextPart);
+
+			ParseNode[] children = { result, nextPart, };
+			result = new ParseNode(RangePtg.instance, children);
+			hasRange = true;
+		}
+		if (hasRange) {
+			return augmentWithMemPtg(result);
+		}
+		return result;
+	}
+

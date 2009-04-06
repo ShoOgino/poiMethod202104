@@ -1,0 +1,37 @@
+	/**
+	 * From OOO doc: "Whenever one operand of the reference subexpression is a function,
+	 *  a defined name, a 3D reference, or an external reference (and no error occurs),
+	 *  a tMemFunc token is used"
+	 *
+	 */
+	private static boolean needsMemFunc(ParseNode root) {
+		Ptg token = root.getToken();
+		if (token instanceof AbstractFunctionPtg) {
+			return true;
+		}
+		if (token instanceof ExternSheetReferenceToken) { // 3D refs
+			return true;
+		}
+		if (token instanceof NamePtg || token instanceof NameXPtg) { // 3D refs
+			return true;
+		}
+
+		if (token instanceof OperationPtg || token instanceof ParenthesisPtg) {
+			// expect RangePtg, but perhaps also UnionPtg, IntersectionPtg etc
+			for(ParseNode child : root.getChildren()) {
+				if (needsMemFunc(child)) {
+					return true;
+				}
+			}
+			return false;
+		}
+		if (token instanceof OperandPtg) {
+			return false;
+		}
+		if (token instanceof OperationPtg) {
+			return true;
+		}
+
+		return false;
+	}
+

@@ -1,0 +1,47 @@
+	/**
+	 * Checks that the area-ref and explicit range operators get the right associativity
+	 * and that the {@link MemFuncPtg} / {@link MemAreaPtg} is added correctly
+	 */
+	public void testComplexExplicitRangeEncodings() {
+
+		Ptg[] ptgs;
+		ptgs = parseFormula("SUM(OFFSET(A1,0,0):B2:C3:D4:E5:OFFSET(F6,1,1):G7)");
+		confirmTokenClasses(ptgs, new Class[] {
+			// AttrPtg.class, // [volatile ] // POI doesn't do this yet (Apr 2009)
+			MemFuncPtg.class, // len 57
+			RefPtg.class, // [A1]
+			IntPtg.class, // [0]
+			IntPtg.class, // [0]
+			FuncVarPtg.class, // [OFFSET nArgs=3]
+			AreaPtg.class, // [B2:C3]
+			RangePtg.class,
+			AreaPtg.class, // [D4:E5]
+			RangePtg.class,
+			RefPtg.class, // [F6]
+			IntPtg.class, // [1]
+			IntPtg.class, // [1]
+			FuncVarPtg.class, // [OFFSET nArgs=3]
+			RangePtg.class,
+			RefPtg.class, // [G7]
+			RangePtg.class,
+			AttrPtg.class, // [sum ]
+		});
+
+		MemFuncPtg mf = (MemFuncPtg)ptgs[0];
+		assertEquals(57, mf.getLenRefSubexpression());
+		assertEquals("D4:E5", ((AreaPtgBase)ptgs[7]).toFormulaString());
+		assertTrue(((AttrPtg)ptgs[16]).isSum());
+
+		ptgs = parseFormula("SUM(A1:B2:C3:D4)");
+		confirmTokenClasses(ptgs, new Class[] {
+			// AttrPtg.class, // [volatile ] // POI doesn't do this yet (Apr 2009)
+				MemAreaPtg.class, // len 19
+				AreaPtg.class, // [A1:B2]
+				AreaPtg.class, // [C3:D4]
+				RangePtg.class,
+				AttrPtg.class, // [sum ]
+		});
+		MemAreaPtg ma = (MemAreaPtg)ptgs[0];
+		assertEquals(19, ma.getLenRefSubexpression());
+	}
+

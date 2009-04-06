@@ -1,0 +1,64 @@
+	/**
+	 * Note - caller should reset {@link #_pointer} upon <code>null</code> result
+	 * @param iden identifier prefix (if unquoted, it is terminated at first dot)
+	 * @return The sheet name as an identifier <code>null</code> if '!' is not found in the right place
+	 */
+	private SheetIdentifier parseSheetName() {
+
+		String bookName;
+		if (look == '[') {
+			StringBuilder sb = new StringBuilder();
+			GetChar();
+			while (look != ']') {
+				sb.append(look);
+				GetChar();
+			}
+			GetChar();
+			bookName = sb.toString();
+		} else {
+			bookName = null;
+		}
+
+		if (look == '\'') {
+			StringBuffer sb = new StringBuffer();
+
+			Match('\'');
+			boolean done = look == '\'';
+			while(!done) {
+				sb.append(look);
+				GetChar();
+				if(look == '\'')
+				{
+					Match('\'');
+					done = look != '\'';
+				}
+			}
+
+			Identifier iden = new Identifier(sb.toString(), true);
+			// quoted identifier - can't concatenate anything more
+			SkipWhite();
+			if (look == '!') {
+				GetChar();
+				return new SheetIdentifier(bookName, iden);
+			}
+			return null;
+		}
+
+		// unquoted sheet names must start with underscore or a letter
+		if (look =='_' || Character.isLetter(look)) {
+			StringBuilder sb = new StringBuilder();
+			// can concatenate idens with dots
+			while (isUnquotedSheetNameChar(look)) {
+				sb.append(look);
+				GetChar();
+			}
+			SkipWhite();
+			if (look == '!') {
+				GetChar();
+				return new SheetIdentifier(bookName, new Identifier(sb.toString(), false));
+			}
+			return null;
+		}
+		return null;
+	}
+

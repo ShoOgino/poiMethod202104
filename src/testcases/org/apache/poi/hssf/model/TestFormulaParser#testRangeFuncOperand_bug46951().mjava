@@ -1,0 +1,24 @@
+	public void testRangeFuncOperand_bug46951() {
+		HSSFWorkbook wb = new HSSFWorkbook();
+		Ptg[] ptgs;
+		try {
+			ptgs = HSSFFormulaParser.parse("SUM(C1:OFFSET(C1,0,B1))", wb);
+		} catch (RuntimeException e) {
+			if (e.getMessage().equals("Specified named range 'OFFSET' does not exist in the current workbook.")) {
+				throw new AssertionFailedError("Identified bug 46951");
+			}
+			throw e;
+		}
+		confirmTokenClasses(ptgs, new Class[] {
+			MemFuncPtg.class, // [len=23]
+			RefPtg.class, // [C1]
+			RefPtg.class, // [C1]
+			IntPtg.class, // [0]
+			RefPtg.class, // [B1]
+			FuncVarPtg.class, // [OFFSET nArgs=3]
+			RangePtg.class, //
+			AttrPtg.class, // [sum ]
+		});
+		
+	}
+

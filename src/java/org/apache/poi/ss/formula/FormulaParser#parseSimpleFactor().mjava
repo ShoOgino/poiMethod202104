@@ -1,34 +1,36 @@
-    /**
-     * factors (without ^ or % )
-     */
-    private ParseNode parseSimpleFactor() {
-        SkipWhite();
-        switch(look) {
-            case '#':
-                return new ParseNode(ErrPtg.valueOf(parseErrorLiteral()));
-            case '-':
-                Match('-');
-                return new ParseNode(UnaryMinusPtg.instance, powerFactor());
-            case '+':
-                Match('+');
-                return new ParseNode(UnaryPlusPtg.instance, powerFactor());
-            case '(':
-                Match('(');
-                ParseNode inside = comparisonExpression();
-                Match(')');
-                return new ParseNode(ParenthesisPtg.instance, inside);
-            case '"':
-                return new ParseNode(new StringPtg(parseStringLiteral()));
-            case '{':
-                Match('{');
-                ParseNode arrayNode = parseArray();
-                Match('}');
-                return arrayNode;
-        }
-        if (IsAlpha(look) || look == '\'' || look == '['){
-            return parseFunctionReferenceOrName();
-        }
-        // else - assume number
-        return new ParseNode(parseNumber());
-    }
+	/**
+	 * factors (without ^ or % )
+	 */
+	private ParseNode parseSimpleFactor() {
+		SkipWhite();
+		switch(look) {
+			case '#':
+				return new ParseNode(ErrPtg.valueOf(parseErrorLiteral()));
+			case '-':
+				Match('-');
+				return new ParseNode(UnaryMinusPtg.instance, powerFactor());
+			case '+':
+				Match('+');
+				return new ParseNode(UnaryPlusPtg.instance, powerFactor());
+			case '(':
+				Match('(');
+				ParseNode inside = comparisonExpression();
+				Match(')');
+				return new ParseNode(ParenthesisPtg.instance, inside);
+			case '"':
+				return new ParseNode(new StringPtg(parseStringLiteral()));
+			case '{':
+				Match('{');
+				ParseNode arrayNode = parseArray();
+				Match('}');
+				return arrayNode;
+		}
+		if (IsAlpha(look) || Character.isDigit(look) || look == '\'' || look == '['){
+			return parseRangeExpression();
+		}
+		if (look == '.') {
+			return new ParseNode(parseNumber());
+		}
+		throw expected("cell ref or constant literal");
+	}
 

@@ -1,0 +1,58 @@
+	/**
+	 * Parses out a potential LHS or RHS of a ':' intended to produce a plain AreaRef.  Normally these are
+	 * proper cell references but they could also be row or column refs like "$AC" or "10"
+	 * @return <code>null</code> (and leaves {@link #_pointer} unchanged if a proper range part does not parse out
+	 */
+	private SimpleRangePart parseSimpleRangePart() {
+		int ptr = _pointer-1; // TODO avoid StringIndexOutOfBounds
+		boolean hasDigits = false;
+		boolean hasLetters = false;
+		while (ptr < _formulaLength) {
+			char ch = _formulaString.charAt(ptr);
+			if (Character.isDigit(ch)) {
+				hasDigits = true;
+			} else if (Character.isLetter(ch)) {
+				hasLetters = true;
+			} else if (ch =='$') {
+				//
+			} else {
+				break;
+			}
+			ptr++;
+		}
+		if (ptr <= _pointer-1) {
+			return null;
+		}
+		String rep = _formulaString.substring(_pointer-1, ptr);
+		if (!CELL_REF_PATTERN.matcher(rep).matches()) {
+			return null;
+		}
+		// Check range bounds against grid max
+		if (hasLetters && hasDigits) {
+			if (!isValidCellReference(rep)) {
+				return null;
+			}
+		} else if (hasLetters) {
+			if (!CellReference.isColumnWithnRange(rep.replace("$", ""))) {
+				return null;
+			}
+		} else if (hasDigits) {
+			int i;
+			try {
+				i = Integer.parseInt(rep.replace("$", ""));
+			} catch (NumberFormatException e) {
+				return null;
+			}
+			if (i<1 || i>65536) {
+				return null;
+			}
+		} else {
+			// just dollars ? can this happen?
+			return null;
+		}
+
+
+		resetPointer(ptr+1); // stepping forward
+		return new SimpleRangePart(rep, hasLetters, hasDigits);
+	}
+
