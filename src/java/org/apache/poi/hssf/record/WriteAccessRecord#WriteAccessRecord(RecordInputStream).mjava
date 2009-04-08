@@ -8,21 +8,33 @@
 
 		int nChars = in.readUShort();
 		int is16BitFlag = in.readUByte();
-		int expectedPadSize = DATA_SIZE - 3;
-		if ((is16BitFlag & 0x01) == 0x00) {
-			field_1_username = StringUtil.readCompressedUnicode(in, nChars);
-			expectedPadSize -= nChars;
-		} else {
-			field_1_username = StringUtil.readUnicodeLE(in, nChars);
-			expectedPadSize -= nChars * 2;
+		if (nChars > DATA_SIZE || (is16BitFlag & 0xFE) != 0) {
+			// String header looks wrong (probably missing)
+			// OOO doc says this is optional anyway.
+			// reconstruct data
+			byte[] data = new byte[3 + in.remaining()];
+			LittleEndian.putUShort(data, 0, nChars);
+			LittleEndian.putByte(data, 2, is16BitFlag);
+			in.readFully(data, 3, data.length-3);
+			String rawValue = new String(data);
+			setUsername(rawValue.trim());
+			return;
 		}
-		padding = new byte[expectedPadSize];
+
+		String rawText;
+		if ((is16BitFlag & 0x01) == 0x00) {
+			rawText = StringUtil.readCompressedUnicode(in, nChars);
+		} else {
+			rawText = StringUtil.readUnicodeLE(in, nChars);
+		}
+		field_1_username = rawText.trim();
+
+		// consume padding
 		int padSize = in.remaining();
-		in.readFully(padding, 0, padSize);
-		if (padSize < expectedPadSize) {
-			// this occurs in a couple of test examples: "42564.xls",
-			// "bug_42794.xls"
-			Arrays.fill(padding, padSize, expectedPadSize, PAD_CHAR);
+		while (padSize > 0) {
+			// in some cases this seems to be garbage (non spaces)
+			in.readUByte();
+			padSize--;
 		}
 	}
 

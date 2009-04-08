@@ -1,0 +1,37 @@
+	public void testMissingStringHeader_bug47001a() {
+		/*
+		 * Data taken from offset 0x0224 in
+		 * attachment 23468 from bugzilla 47001
+		 */
+		byte[] data = HexRead.readFromString(""
+				+ "5C 00 70 00 "
+				+ "4A 61 76 61 20 45 78 63 65 6C 20 41 50 49 20 76 "
+				+ "32 2E 36 2E 34"
+				+                "20 20 20 20 20 20 20 20 20 20 20 "
+				+ "20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 "
+				+ HEX_SIXTYFOUR_SPACES);
+
+		RecordInputStream in = TestcaseRecordInputStream.create(data);
+
+		WriteAccessRecord rec;
+		try {
+			rec = new WriteAccessRecord(in);
+		} catch (RecordFormatException e) {
+			if (e.getMessage().equals("Not enough data (0) to read requested (1) bytes")) {
+				throw new AssertionFailedError("Identified bug 47001a");
+			}
+			throw e;
+		}
+		assertEquals("Java Excel API v2.6.4", rec.getUsername());
+		
+		
+		byte[] expectedEncoding = HexRead.readFromString(""
+				+ "15 00 00 4A 61 76 61 20 45 78 63 65 6C 20 41 50 "
+				+ "49 20 76 32 2E 36 2E 34"
+				+                         "20 20 20 20 20 20 20 20 "
+				+ "20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 20 "
+				+ HEX_SIXTYFOUR_SPACES);
+		
+		TestcaseRecordInputStream.confirmRecordEncoding(WriteAccessRecord.sid, expectedEncoding, rec.serialize());
+	}
+
