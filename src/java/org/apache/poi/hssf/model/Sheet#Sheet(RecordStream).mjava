@@ -3,19 +3,16 @@
         RowRecordsAggregate rra = null;
 
         records            = new ArrayList<RecordBase>(128);
-        // TODO - take chart streams off into separate java objects
-        int       bofEofNestingLevel = 1;  // nesting level can only get to 2 (when charts are present)
         int dimsloc = -1;
 
-        if (rs.peekNextSid() == BOFRecord.sid) {
-            BOFRecord bof = (BOFRecord) rs.getNext();
-            if (bof.getType() != BOFRecord.TYPE_WORKSHEET) {
-                // TODO - fix junit tests throw new RuntimeException("Bad BOF record type");
-            }
-            records.add(bof);
-        } else {
+        if (rs.peekNextSid() != BOFRecord.sid) {
             throw new RuntimeException("BOF record expected");
         }
+        BOFRecord bof = (BOFRecord) rs.getNext();
+        if (bof.getType() != BOFRecord.TYPE_WORKSHEET) {
+            // TODO - fix junit tests throw new RuntimeException("Bad BOF record type");
+        }
+        records.add(bof);
         while (rs.hasNext()) {
             int recSid = rs.peekNextSid();
 
@@ -36,7 +33,7 @@
                 continue;
             }
 
-            if (RecordOrderer.isRowBlockRecord(recSid) && bofEofNestingLevel == 1 ) {
+            if (RecordOrderer.isRowBlockRecord(recSid)) {
                 //only add the aggregate once
                 if (rra != null) {
                     throw new RuntimeException("row/cell records found in the wrong place");
@@ -56,13 +53,7 @@
                     records.add(psb);
                     continue;
                 }
-                if (bofEofNestingLevel == 2) {
-                    psb = new PageSettingsBlock(rs);
-                    // It's normal for a chart to have its own PageSettingsBlock
-                    // Fall through and add psb here, because chart records
-                    // are stored loose among the sheet records.
-                    // this latest psb does not clash with _psBlock
-                } else if (windowTwo != null) {
+                if (windowTwo != null) {
                     // probably 'Custom View Settings' sub-stream which is found between
                     // USERSVIEWBEGIN(01AA) and USERSVIEWEND(01AB)
                     // TODO - create UsersViewAggregate to hold these sub-streams, and simplify this code a bit
@@ -100,6 +91,17 @@
                 _mergedCellsTable.read(rs);
                 continue;
             }
+            
+            if (recSid == BOFRecord.sid) {
+                ChartSubstreamRecordAggregate chartAgg = new ChartSubstreamRecordAggregate(rs);
+                if (false) {
+                    // TODO - would like to keep the chart aggregate packed, but one unit test needs attention
+                    records.add(chartAgg);
+                } else {
+                    spillAggregate(chartAgg, records);
+                }
+                continue;
+            }
 
             Record rec = rs.getNext();
             if ( recSid == IndexRecord.sid ) {
@@ -115,28 +117,12 @@
                 continue;
             }
 
-            if (recSid == BOFRecord.sid)
-            {
-                bofEofNestingLevel++;
-                if (log.check( POILogger.DEBUG ))
-                    log.log(POILogger.DEBUG, "Hit BOF record. Nesting increased to " + bofEofNestingLevel);
-                BOFRecord bof = (BOFRecord)rec;
-                // TODO - extract chart sub-stream into record aggregate
-                if (bof.getType() != BOFRecord.TYPE_CHART) {
-                    throw new RecordFormatException("Bad BOF record type: " + bof.getType());
-                }
+            if (recSid == EOFRecord.sid) {
+                records.add(rec);
+                break;
             }
-            else if (recSid == EOFRecord.sid)
-            {
-                --bofEofNestingLevel;
-                if (log.check( POILogger.DEBUG ))
-                    log.log(POILogger.DEBUG, "Hit EOF record. Nesting decreased to " + bofEofNestingLevel);
-                if (bofEofNestingLevel == 0) {
-                    records.add(rec);
-                    break;
-                }
-            }
-            else if (recSid == DimensionsRecord.sid)
+
+            if (recSid == DimensionsRecord.sid)
             {
                 // Make a columns aggregate if one hasn't ready been created.
                 if (_columnInfos == null)
