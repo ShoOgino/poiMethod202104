@@ -1,0 +1,25 @@
+	public CustomViewSettingsRecordAggregate(RecordStream rs) {
+		_begin = rs.getNext();
+		if (_begin.getSid() != UnknownRecord.USERSVIEWBEGIN_01AA) {
+			throw new IllegalStateException("Bad begin record");
+		}
+		List<RecordBase> temp = new ArrayList<RecordBase>();
+		while (rs.peekNextSid() != UnknownRecord.USERSVIEWEND_01AB) {
+			if (PageSettingsBlock.isComponentRecord(rs.peekNextSid())) {
+				if (_psBlock != null) {
+					throw new IllegalStateException(
+							"Found more than one PageSettingsBlock in custom view settings sub-stream");
+				}
+				_psBlock = new PageSettingsBlock(rs);
+				temp.add(_psBlock);
+				continue;
+			}
+			temp.add(rs.getNext());
+		}
+		_recs = temp;
+		_end = rs.getNext(); // no need to save EOF in field
+		if (_end.getSid() != UnknownRecord.USERSVIEWEND_01AB) {
+			throw new IllegalStateException("Bad custom view settings end record");
+		}
+	}
+
