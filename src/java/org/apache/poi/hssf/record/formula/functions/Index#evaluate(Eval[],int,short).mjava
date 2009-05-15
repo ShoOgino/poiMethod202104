@@ -1,4 +1,3 @@
-	// TODO - javadoc for interface method
 	public Eval evaluate(Eval[] args, int srcCellRow, short srcCellCol) {
 		int nArgs = args.length;
 		if(nArgs < 2) {
@@ -11,39 +10,39 @@
 			firstArg = ((RefEval)firstArg).offset(0, 0, 0, 0);
 		}
 		if(!(firstArg instanceof AreaEval)) {
-			
+
 			// else the other variation of this function takes an array as the first argument
 			// it seems like interface 'ArrayEval' does not even exist yet
-			
+
 			throw new RuntimeException("Incomplete code - cannot handle first arg of type ("
 					+ firstArg.getClass().getName() + ")");
 		}
 		AreaEval reference = (AreaEval) firstArg;
-		
+
 		int rowIx = 0;
 		int columnIx = 0;
-		int areaIx = 0;
-		try {	
+		boolean colArgWasPassed = false;
+		try {
 			switch(nArgs) {
 				case 4:
-					areaIx = convertIndexArgToZeroBase(args[3], srcCellRow, srcCellCol);
 					throw new RuntimeException("Incomplete code" +
 							" - don't know how to support the 'area_num' parameter yet)");
 					// Excel expression might look like this "INDEX( (A1:B4, C3:D6, D2:E5 ), 1, 2, 3)
 					// In this example, the 3rd area would be used i.e. D2:E5, and the overall result would be E2
 					// Token array might be encoded like this: MemAreaPtg, AreaPtg, AreaPtg, UnionPtg, UnionPtg, ParenthesesPtg
 					// The formula parser doesn't seem to support this yet. Not sure if the evaluator does either
-					
+
 				case 3:
-					columnIx = convertIndexArgToZeroBase(args[2], srcCellRow, srcCellCol);
+					columnIx = resolveIndexArg(args[2], srcCellRow, srcCellCol);
+					colArgWasPassed = true;
 				case 2:
-					rowIx = convertIndexArgToZeroBase(args[1], srcCellRow, srcCellCol);
+					rowIx = resolveIndexArg(args[1], srcCellRow, srcCellCol);
 					break;
 				default:
 					// too many arguments
 					return ErrorEval.VALUE_INVALID;
 			}
-			return getValueFromArea(reference, rowIx, columnIx, nArgs);
+			return getValueFromArea(reference, rowIx, columnIx, colArgWasPassed, srcCellRow, srcCellCol);
 		} catch (EvaluationException e) {
 			return e.getErrorEval();
 		}
