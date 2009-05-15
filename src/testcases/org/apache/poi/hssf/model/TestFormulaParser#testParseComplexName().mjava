@@ -1,0 +1,31 @@
+	/**
+	 * In bug 47078, POI had trouble evaluating a defined name flagged as 'complex'.
+	 * POI should also be able to parse such defined names.
+	 */
+	public void testParseComplexName() {
+
+		// Mock up a spreadsheet to match the critical details of the sample
+		HSSFWorkbook wb = new HSSFWorkbook();
+		wb.createSheet("Sheet1");
+		HSSFName definedName = wb.createName();
+		definedName.setNameName("foo");
+		definedName.setRefersToFormula("Sheet1!B2");
+
+		// Set the complex flag - POI doesn't usually manipulate this flag
+		NameRecord nameRec = TestHSSFName.getNameRecord(definedName);
+		nameRec.setOptionFlag((short)0x10); // 0x10 -> complex
+
+		Ptg[] result;
+		try {
+			result = HSSFFormulaParser.parse("1+foo", wb);
+		} catch (RuntimeException e) {
+			FormulaParserTestHelper.confirmParseException(e);
+			if (e.getMessage().equals("Specified name 'foo' is not a range as expected.")) {
+				throw new AssertionFailedError("Identified bug 47078c");
+			}
+			throw e;
+		}
+		assertNotNull("Ptg array should not be null", result);
+		confirmTokenClasses(result, new Class[] { IntPtg.class, NamePtg.class, AddPtg.class,});
+	}
+
