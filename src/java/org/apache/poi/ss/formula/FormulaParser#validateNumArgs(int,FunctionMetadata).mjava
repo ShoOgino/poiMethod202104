@@ -9,14 +9,20 @@
 			msg += " but got " + numArgs + ".";
 			throw new FormulaParseException(msg);
 		}
-        //the maximum number of arguments depends on the Excel version
-        int maxArgs = fm.getMaxParams();
-        if( maxArgs == FunctionMetadataRegistry.FUNCTION_MAX_PARAMS) {
-            //_book can be omitted by test cases
-            if(_book != null) maxArgs = _book.getSpreadsheetVersion().getMaxFunctionArgs();
-        }
+		//the maximum number of arguments depends on the Excel version
+		int maxArgs;
+		if (fm.hasUnlimitedVarags()) {
+			if(_book != null) {
+				maxArgs = _book.getSpreadsheetVersion().getMaxFunctionArgs();
+			} else {
+				//_book can be omitted by test cases
+				maxArgs = fm.getMaxParams(); // just use BIFF8 
+			}
+		} else {
+			maxArgs = fm.getMaxParams();
+		}
 
-        if(numArgs > maxArgs) {
+		if(numArgs > maxArgs) {
 			String msg = "Too many arguments to function '" + fm.getName() + "'. ";
 			if(fm.hasFixedArgsLength()) {
 				msg += "Expected " + maxArgs;
