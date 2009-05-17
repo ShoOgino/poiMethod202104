@@ -1,7 +1,29 @@
 	/**
 	 * @return <code>true</code> if the specified name is a valid cell reference
 	 */
-	private static boolean isValidCellReference(String str) {
-		return CellReference.classifyCellReference(str) == NameType.CELL;
+	private boolean isValidCellReference(String str) {
+        //check range bounds against grid max
+        boolean result = CellReference.classifyCellReference(str, _ssVersion) == NameType.CELL;
+
+        if(result){
+            /**
+             * Check if the argument is a function. Certain names can be either a cell reference or a function name
+             * depending on the contenxt. Compare the following examples in Excel 2007:
+             * (a) LOG10(100) + 1
+             * (b) LOG10 + 1
+             * In (a) LOG10 is a name of a built-in function. In (b) LOG10 is a cell reference
+             */
+            boolean isFunc = FunctionMetadataRegistry.getFunctionByName(str.toUpperCase()) != null;
+            if(isFunc){
+                int savePointer = _pointer;
+                resetPointer(_pointer + str.length());
+                SkipWhite();
+                // open bracket indicates that the argument is a function,
+                // the returning value should be false, i.e. "not a valid cell reference"
+                result = look != '(';
+                resetPointer(savePointer);
+            }
+        }
+        return result;
 	}
 

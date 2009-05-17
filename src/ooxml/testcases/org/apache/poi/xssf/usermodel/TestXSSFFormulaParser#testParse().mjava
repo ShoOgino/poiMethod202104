@@ -1,0 +1,47 @@
+    public void testParse() {
+        XSSFWorkbook wb = new XSSFWorkbook();
+        XSSFEvaluationWorkbook fpb = XSSFEvaluationWorkbook.create(wb);
+        String fmla;
+        Ptg[] ptgs;
+
+        fmla = "ABC10";
+        ptgs = FormulaParser.parse(fmla, fpb, FormulaType.CELL);
+        assertEquals(1, ptgs.length);
+        assertTrue("",(ptgs[0] instanceof RefPtg));
+
+        fmla = "A500000";
+        ptgs = FormulaParser.parse(fmla, fpb, FormulaType.CELL);
+        assertEquals(1, ptgs.length);
+        assertTrue("",(ptgs[0] instanceof RefPtg));
+
+        fmla = "ABC500000";
+        ptgs = FormulaParser.parse(fmla, fpb, FormulaType.CELL);
+        assertEquals(1, ptgs.length);
+        assertTrue("",(ptgs[0] instanceof RefPtg));
+
+        //highest allowed rows and column (XFD and 0x100000)
+        fmla = "XFD1048576";
+        ptgs = FormulaParser.parse(fmla, fpb, FormulaType.CELL);
+        assertEquals(1, ptgs.length);
+        assertTrue("",(ptgs[0] instanceof RefPtg));
+
+
+        //column greater than XFD
+        fmla = "XFE10";
+        try {
+            ptgs = FormulaParser.parse(fmla, fpb, FormulaType.CELL);
+            fail("expected exception");
+        } catch (Exception e){
+            assertEquals("Specified named range 'XFE10' does not exist in the current workbook.", e.getMessage());
+        }
+
+        //row greater than 0x100000
+        fmla = "XFD1048577";
+        try {
+            ptgs = FormulaParser.parse(fmla, fpb, FormulaType.CELL);
+            fail("expected exception");
+        } catch (Exception e){
+            assertEquals("Specified named range 'XFD1048577' does not exist in the current workbook.", e.getMessage());
+        }
+    }
+
