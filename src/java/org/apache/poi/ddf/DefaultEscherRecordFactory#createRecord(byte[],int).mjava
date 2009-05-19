@@ -6,14 +6,13 @@
      * @param offset The starting offset into the byte array
      * @return The generated escher record
      */
-    public EscherRecord createRecord( byte[] data, int offset )
-    {
+    public EscherRecord createRecord(byte[] data, int offset) {
         EscherRecord.EscherRecordHeader header = EscherRecord.EscherRecordHeader.readHeader( data, offset );
 
-		// Options of 0x000F means container record
-		// However, EscherTextboxRecord are containers of records for the
-		//  host application, not of other Escher records, so treat them
-		//  differently
+        // Options of 0x000F means container record
+        // However, EscherTextboxRecord are containers of records for the
+        //  host application, not of other Escher records, so treat them
+        //  differently
         if ( ( header.getOptions() & (short) 0x000F ) == (short) 0x000F
              && header.getRecordId() != EscherTextboxRecord.RECORD_ID ) {
             EscherContainerRecord r = new EscherContainerRecord();
@@ -21,8 +20,9 @@
             r.setOptions( header.getOptions() );
             return r;
         }
-        else if ( header.getRecordId() >= EscherBlipRecord.RECORD_ID_START && header.getRecordId() <= EscherBlipRecord.RECORD_ID_END )
-        {
+
+        if (header.getRecordId() >= EscherBlipRecord.RECORD_ID_START
+                && header.getRecordId() <= EscherBlipRecord.RECORD_ID_END) {
             EscherBlipRecord r;
             if (header.getRecordId() == EscherBitmapBlip.RECORD_ID_DIB ||
                     header.getRecordId() == EscherBitmapBlip.RECORD_ID_JPEG ||
@@ -35,33 +35,26 @@
                     header.getRecordId() == EscherMetafileBlip.RECORD_ID_PICT)
             {
                 r = new EscherMetafileBlip();
-            }
-            else
-            {
+            } else {
                 r = new EscherBlipRecord();
             }
             r.setRecordId( header.getRecordId() );
             r.setOptions( header.getOptions() );
             return r;
         }
-        else
-        {
-            Constructor recordConstructor = (Constructor) recordsMap.get( new Short( header.getRecordId() ) );
-            EscherRecord escherRecord = null;
-            if ( recordConstructor != null )
-            {
-                try
-                {
-                    escherRecord = (EscherRecord) recordConstructor.newInstance( new Object[]{} );
-                    escherRecord.setRecordId( header.getRecordId() );
-                    escherRecord.setOptions( header.getOptions() );
-                }
-                catch ( Exception e )
-                {
-                    escherRecord = null;
-                }
-            }
-            return escherRecord == null ? new UnknownEscherRecord() : escherRecord;
+
+        Constructor<? extends EscherRecord> recordConstructor = recordsMap.get(new Short(header.getRecordId()));
+        EscherRecord escherRecord = null;
+        if (recordConstructor == null) {
+            return new UnknownEscherRecord();
         }
+        try {
+            escherRecord = recordConstructor.newInstance(new Object[] {});
+        } catch (Exception e) {
+            return new UnknownEscherRecord();
+        }
+        escherRecord.setRecordId(header.getRecordId());
+        escherRecord.setOptions(header.getOptions());
+        return escherRecord;
     }
 
