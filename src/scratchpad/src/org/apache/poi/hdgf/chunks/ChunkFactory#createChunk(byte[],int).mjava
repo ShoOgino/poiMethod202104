@@ -5,25 +5,25 @@
 	 */
 	public Chunk createChunk(byte[] data, int offset) {
 		// Create the header
-		ChunkHeader header = 
+		ChunkHeader header =
 			ChunkHeader.createChunkHeader(version, data, offset);
 		// Sanity check
 		if(header.length < 0) {
 			throw new IllegalArgumentException("Found a chunk with a negative length, which isn't allowed");
 		}
-		
+
 		// How far up to look
 		int endOfDataPos = offset + header.getLength() + header.getSizeInBytes();
-		
+
 		// Check we have enough data, and tweak the header size
 		//  as required
 		if(endOfDataPos > data.length) {
 			logger.log(POILogger.WARN,
 				"Header called for " + header.getLength() +" bytes, but that would take us passed the end of the data!");
-			
+
 			endOfDataPos = data.length;
 			header.length = data.length - offset - header.getSizeInBytes();
-			
+
 			if(header.hasTrailer()) {
 				header.length -= 8;
 				endOfDataPos  -= 8;
@@ -33,7 +33,7 @@
 				endOfDataPos  -= 4;
 			}
 		}
-		
+
 
 		// Create the trailer and separator, if required
 		ChunkTrailer trailer = null;
@@ -60,16 +60,16 @@
 		byte[] contents = new byte[header.getLength()];
 		System.arraycopy(data, offset+header.getSizeInBytes(), contents, 0, contents.length);
 		Chunk chunk = new Chunk(header, trailer, separator, contents);
-		
+
 		// Feed in the stuff from  chunks_parse_cmds.tbl
 		CommandDefinition[] defs = (CommandDefinition[])
 			chunkCommandDefinitions.get(new Integer(header.getType()));
 		if(defs == null) defs = new CommandDefinition[0];
 		chunk.commandDefinitions = defs;
-		
+
 		// Now get the chunk to process its commands
 		chunk.processCommands();
-		
+
 		// All done
 		return chunk;
 	}
