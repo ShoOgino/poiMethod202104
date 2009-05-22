@@ -1,0 +1,24 @@
+    /**
+     * Bugzilla 47250 suggests that the unicode options byte should be present even when the name
+     * length is zero.  The OOO documentation seems to agree with this and POI had no test data
+     * samples to say otherwise.
+     */
+    public void testEmptyName_bug47250() {
+        byte[] emptyNameData = HexRead.readFromString(
+                "C8 00 00 00 FF 7F 90 01 00 00 00 00 00 00 "
+                + "00" // zero length
+                + "00" // unicode options byte
+                );
+
+        RecordInputStream in = TestcaseRecordInputStream.create(SID, emptyNameData);
+        FontRecord fr = new FontRecord(in);
+        if (in.available() == 1) {
+            throw new AssertionFailedError("Identified bug 47250");
+        }
+        assertEquals(0, in.available());
+
+        assertEquals(0, fr.getFontName().length());
+        byte[] recordBytes = fr.serialize();
+        TestcaseRecordInputStream.confirmRecordEncoding(SID, emptyNameData, recordBytes);
+    }
+
