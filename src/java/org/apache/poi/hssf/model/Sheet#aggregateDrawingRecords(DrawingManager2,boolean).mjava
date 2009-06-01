@@ -7,12 +7,10 @@
      * @param drawingManager The DrawingManager2 for our workbook
      * @param createIfMissing Should one be created if missing?
      */
-    public int aggregateDrawingRecords(DrawingManager2 drawingManager, boolean createIfMissing)
-    {
+    public int aggregateDrawingRecords(DrawingManager2 drawingManager, boolean createIfMissing) {
         int loc = findFirstRecordLocBySid(DrawingRecord.sid);
         boolean noDrawingRecordsFound = (loc == -1);
-        if (noDrawingRecordsFound)
-        {
+        if (noDrawingRecordsFound) {
             if(!createIfMissing) {
                 // None found, and not allowed to add in
                 return -1;
@@ -20,34 +18,28 @@
 
             EscherAggregate aggregate = new EscherAggregate( drawingManager );
             loc = findFirstRecordLocBySid(EscherAggregate.sid);
-            if (loc == -1)
-            {
+            if (loc == -1) {
                 loc = findFirstRecordLocBySid( WindowTwoRecord.sid );
-            }
-            else
-            {
+            } else {
                 getRecords().remove(loc);
             }
             getRecords().add( loc, aggregate );
             return loc;
         }
-        else
+        List<RecordBase> records = getRecords();
+        EscherAggregate r = EscherAggregate.createAggregate( records, loc, drawingManager );
+        int startloc = loc;
+        while ( loc + 1 < records.size()
+                && records.get( loc ) instanceof DrawingRecord
+                && records.get( loc + 1 ) instanceof ObjRecord )
         {
-            List<RecordBase> records = getRecords();
-            EscherAggregate r = EscherAggregate.createAggregate( records, loc, drawingManager );
-            int startloc = loc;
-            while ( loc + 1 < records.size()
-                    && records.get( loc ) instanceof DrawingRecord
-                    && records.get( loc + 1 ) instanceof ObjRecord )
-            {
-                loc += 2;
-            }
-            int endloc = loc-1;
-            for(int i = 0; i < (endloc - startloc + 1); i++)
-                records.remove(startloc);
-            records.add(startloc, r);
-
-            return startloc;
+            loc += 2;
         }
+        int endloc = loc-1;
+        for(int i = 0; i < (endloc - startloc + 1); i++)
+            records.remove(startloc);
+        records.add(startloc, r);
+
+        return startloc;
     }
 
