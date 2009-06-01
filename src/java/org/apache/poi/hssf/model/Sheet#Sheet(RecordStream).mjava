@@ -44,7 +44,7 @@
                 records.add(rra); //only add the aggregate once
                 continue;
             }
-            
+
             if (CustomViewSettingsRecordAggregate.isBeginRecord(recSid)) {
                 // This happens three times in test sample file "29982.xls"
                 // Also several times in bugzilla samples 46840-23373 and 46840-23374
@@ -54,28 +54,13 @@
 
             if (PageSettingsBlock.isComponentRecord(recSid)) {
                 if (_psBlock == null) {
-                    // typical case - just one PSB (so far)
+                    // first PSB record encountered - read all of them:
                     _psBlock = new PageSettingsBlock(rs);
                     records.add(_psBlock);
-                    continue;
+                } else {
+                    // one or more PSB records found after some intervening non-PSB records
+                    _psBlock.addLateRecords(rs);
                 }
-                if (recSid == UnknownRecord.HEADER_FOOTER_089C) {
-                    // test samples: SharedFormulaTest.xls, ex44921-21902.xls, ex42570-20305.xls
-                    _psBlock.addLateHeaderFooter(rs.getNext());
-                    continue;
-                }
-                // Some apps write PLS, WSBOOL, <psb> but PLS is part of <psb>
-                // This happens in the test sample file "NoGutsRecords.xls" and "WORKBOOK_in_capitals.xls"
-                // In this case the first PSB is two records back
-                int prevPsbIx = records.size()-2;
-                if (_psBlock != records.get(prevPsbIx) || !(records.get(prevPsbIx+1) instanceof WSBoolRecord)) {
-                    // not quite the expected situation
-                    throw new RuntimeException("two Page Settings Blocks found in the same sheet");
-                }
-                records.remove(prevPsbIx); // WSBOOL will drop down one position.
-                PageSettingsBlock latePsb = new PageSettingsBlock(rs);
-                _psBlock = mergePSBs(_psBlock, latePsb);
-                records.add(_psBlock);
                 continue;
             }
 
@@ -84,7 +69,7 @@
                 _mergedCellsTable.read(rs);
                 continue;
             }
-            
+
             if (recSid == BOFRecord.sid) {
                 ChartSubstreamRecordAggregate chartAgg = new ChartSubstreamRecordAggregate(rs);
                 if (false) {
