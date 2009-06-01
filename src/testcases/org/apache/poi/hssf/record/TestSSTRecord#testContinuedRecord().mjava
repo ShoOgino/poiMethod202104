@@ -1,0 +1,42 @@
+    /**
+     * SST is often split over several {@link ContinueRecord}s
+     */
+    public void testContinuedRecord() {
+        byte[] origData;
+        SSTRecord record;
+        byte[] ser_output;
+
+        origData = concatHexDumps("BigSSTRecord", "BigSSTRecordCR");
+        record = createSSTFromRawData(origData);
+        assertEquals( 1464, record.getNumStrings() );
+        assertEquals( 688, record.getNumUniqueStrings() );
+        assertEquals( 688, record.countStrings() );
+        ser_output = record.serialize();
+        assertTrue(Arrays.equals(origData, ser_output));
+
+        // testing based on new bug report
+        origData = concatHexDumps("BigSSTRecord2", "BigSSTRecord2CR1", "BigSSTRecord2CR2", "BigSSTRecord2CR3",
+                "BigSSTRecord2CR4", "BigSSTRecord2CR5", "BigSSTRecord2CR6", "BigSSTRecord2CR7");
+        record = createSSTFromRawData(origData);
+
+
+        assertEquals( 158642, record.getNumStrings() );
+        assertEquals( 5249, record.getNumUniqueStrings() );
+        assertEquals( 5249, record.countStrings() );
+        ser_output = record.serialize();
+        if (false) { // set true to observe make sure areSameSSTs() is working
+            ser_output[11000] = 'X';
+        }
+
+        SSTRecord rec2 = createSSTFromRawData(ser_output);
+        if (!areSameSSTs(record, rec2)) {
+            throw new AssertionFailedError("large SST re-serialized incorrectly");
+        }
+        if (false) {
+            // TODO - trivial differences in ContinueRecord break locations
+            // Sample data should be checked against what most recent Excel version produces.
+            // maybe tweaks are required in ContinuableRecordOutput
+            assertTrue(Arrays.equals(origData, ser_output));
+        }
+    }
+
