@@ -1,12 +1,12 @@
 	/**
-	 * Used to decide whether a name of the form "[A-Z]*[0-9]*" that appears in a formula can be 
+	 * Used to decide whether a name of the form "[A-Z]*[0-9]*" that appears in a formula can be
 	 * interpreted as a cell reference.  Names of that form can be also used for sheets and/or
-	 * named ranges, and in those circumstances, the question of whether the potential cell 
+	 * named ranges, and in those circumstances, the question of whether the potential cell
 	 * reference is valid (in range) becomes important.
 	 * <p/>
 	 * Note - that the maximum sheet size varies across Excel versions:
 	 * <p/>
-	 * <blockquote><table border="0" cellpadding="1" cellspacing="0" 
+	 * <blockquote><table border="0" cellpadding="1" cellspacing="0"
 	 *                 summary="Notable cases.">
 	 *   <tr><th>Version&nbsp;&nbsp;</th><th>File Format&nbsp;&nbsp;</th>
 	 *   	<th>Last Column&nbsp;&nbsp;</th><th>Last Row</th></tr>
@@ -15,7 +15,7 @@
 	 * </table></blockquote>
 	 * POI currently targets BIFF8 (Excel 97-2003), so the following behaviour can be observed for
 	 * this method:
-	 * <blockquote><table border="0" cellpadding="1" cellspacing="0" 
+	 * <blockquote><table border="0" cellpadding="1" cellspacing="0"
 	 *                 summary="Notable cases.">
 	 *   <tr><th>Input&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>
 	 *       <th>Result&nbsp;</th></tr>
@@ -29,7 +29,7 @@
 	 *   <tr><td>"a", "111"</td><td>true</td></tr>
 	 *   <tr><td>"Sheet", "1"</td><td>false</td></tr>
 	 * </table></blockquote>
-	 * 
+	 *
 	 * @param colStr a string of only letter characters
 	 * @param rowStr a string of only digit characters
 	 * @return <code>true</code> if the row and col parameters are within range of a BIFF8 spreadsheet.
@@ -38,24 +38,17 @@
 		if (!isColumnWithnRange(colStr, ssVersion)) {
 			return false;
 		}
-        String lastRow = String.valueOf(ssVersion.getMaxRows());
-        int lastRowLen = lastRow.length();
 
-        int nDigits = rowStr.length();
-		if(nDigits > lastRowLen) {
-			return false; 
+		int rowNum = Integer.parseInt(rowStr);
+
+		if (rowNum < 0) {
+			throw new IllegalStateException("Invalid rowStr '" + rowStr + "'.");
 		}
-		
-		if(nDigits == lastRowLen) {
-			// ASCII comparison is valid if digit count is same
-			if(rowStr.compareTo(lastRow) > 0) {
-				return false;
-			}
-		} else {
-			// apparent row has less chars than max
-			// no need to check range
+		if (rowNum == 0) {
+			// execution gets here because caller does first pass of discriminating
+			// potential cell references using a simplistic regex pattern.
+			return false;
 		}
-		
-		return true;
+		return rowNum <= ssVersion.getMaxRows();
 	}
 
