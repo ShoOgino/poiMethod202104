@@ -1,0 +1,40 @@
+	/**
+	 * This method attempt to find an already existing CellStyle that matches what you want the
+	 * style to be. If it does not find the style, then it creates a new one. If it does create a
+	 * new one, then it applies the propertyName and propertyValue to the style. This is necessary
+	 * because Excel has an upper limit on the number of Styles that it supports.
+	 *
+	 *@param workbook The workbook that is being worked with.
+	 *@param propertyName The name of the property that is to be changed.
+	 *@param propertyValue The value of the property that is to be changed.
+	 *@param cell The cell that needs it's style changes
+	 */
+	public static void setCellStyleProperty(Cell cell, Workbook workbook, String propertyName,
+			Object propertyValue) {
+		CellStyle originalStyle = cell.getCellStyle();
+		CellStyle newStyle = null;
+		Map<String, Object> values = getFormatProperties(originalStyle);
+		values.put(propertyName, propertyValue);
+
+		// index seems like what index the cellstyle is in the list of styles for a workbook.
+		// not good to compare on!
+		short numberCellStyles = workbook.getNumCellStyles();
+
+		for (short i = 0; i < numberCellStyles; i++) {
+			CellStyle wbStyle = workbook.getCellStyleAt(i);
+			Map<String, Object> wbStyleMap = getFormatProperties(wbStyle);
+
+			if (wbStyleMap.equals(values)) {
+				newStyle = wbStyle;
+				break;
+			}
+		}
+
+		if (newStyle == null) {
+			newStyle = workbook.createCellStyle();
+			setFormatProperties(newStyle, workbook, values);
+		}
+
+		cell.setCellStyle(newStyle);
+	}
+
