@@ -1,49 +1,49 @@
-    /**
-     * Tests that when using a slow input stream, which
-     *  won't return a full block at a time, we don't
-     *  incorrectly think that there's not enough data
-     */
-    public void testSlowInputStream() throws Exception {
-        // Get the logger to be used
-        DummyPOILogger logger = new DummyPOILogger();
-        Field fld = RawDataBlock.class.getDeclaredField("log");
-        fld.setAccessible(true);
-        fld.set(null, logger);
-        assertEquals(0, logger.logged.size());
-        
-        // Test for various ok data sizes
-        for (int k = 1; k < 512; k++) {
-            byte[] data = new byte[ 512 ];
-            for (int j = 0; j < data.length; j++) {
-                data[j] = (byte) j;
-            }
-            
-            // Shouldn't complain, as there is enough data,
-            //  even if it dribbles through
-            RawDataBlock block = 
-            	new RawDataBlock(new SlowInputStream(data, k));
-            assertFalse(block.eof());
-        }
-        
-        // But if there wasn't enough data available, will
-        //  complain
-        for (int k = 1; k < 512; k++) {
-            byte[] data = new byte[ 511 ];
-            for (int j = 0; j < data.length; j++) {
-                data[j] = (byte) j;
-            }
-            
-            logger.reset();
-            assertEquals(0, logger.logged.size());
-            
-            // Should complain, as there isn't enough data
-            RawDataBlock block = 
-            	new RawDataBlock(new SlowInputStream(data, k));
-            assertNotNull(block);
-            assertEquals(
-            		"Warning on " + k + " byte short block",
-            		1, logger.logged.size()
-            );
-        }
-    }
+	/**
+	 * Tests that when using a slow input stream, which
+	 *  won't return a full block at a time, we don't
+	 *  incorrectly think that there's not enough data
+	 */
+	public void testSlowInputStream() throws Exception {
+		// Get the logger to be used
+		DummyPOILogger logger = new DummyPOILogger();
+		Field fld = RawDataBlock.class.getDeclaredField("log");
+		fld.setAccessible(true);
+		fld.set(null, logger);
+		assertEquals(0, logger.logged.size());
+
+		// Test for various ok data sizes
+		for (int k = 1; k < 512; k++) {
+			byte[] data = new byte[ 512 ];
+			for (int j = 0; j < data.length; j++) {
+				data[j] = (byte) j;
+			}
+
+			// Shouldn't complain, as there is enough data,
+			//  even if it dribbles through
+			RawDataBlock block =
+				new RawDataBlock(new SlowInputStream(data, k));
+			assertFalse(block.eof());
+		}
+
+		// But if there wasn't enough data available, will
+		//  complain
+		for (int k = 1; k < 512; k++) {
+			byte[] data = new byte[ 511 ];
+			for (int j = 0; j < data.length; j++) {
+				data[j] = (byte) j;
+			}
+
+			logger.reset();
+			assertEquals(0, logger.logged.size());
+
+			// Should complain, as there isn't enough data
+			RawDataBlock block =
+				new RawDataBlock(new SlowInputStream(data, k));
+			assertNotNull(block);
+			assertEquals(
+					"Warning on " + k + " byte short block",
+					1, logger.logged.size()
+			);
+		}
+	}
 
