@@ -1,0 +1,23 @@
+    /**
+     * {@link PasswordRecord} belongs with the rest of the Worksheet Protection Block
+     * (which should be before {@link DimensionsRecord}).
+     */
+    public void testProtectSheetRecordOrder_bug47363a() {
+        HSSFWorkbook wb = new HSSFWorkbook();
+        HSSFSheet s = wb.createSheet();
+        s.protectSheet("secret");
+        RecordCollector rc = new RecordCollector();
+        s.getSheet().visitContainedRecords(rc, 0);
+        Record[] recs = rc.getRecords();
+        int nRecs = recs.length;
+        if (recs[nRecs-2] instanceof PasswordRecord && recs[nRecs-5] instanceof DimensionsRecord) {
+           throw new AssertionFailedError("Identified bug 47363a - PASSWORD after DIMENSION");
+        }
+        // Check that protection block is together, and before DIMENSION
+        confirmRecordClass(recs, nRecs-4, DimensionsRecord.class);
+        confirmRecordClass(recs, nRecs-9, ProtectRecord.class);
+        confirmRecordClass(recs, nRecs-8, ObjectProtectRecord.class);
+        confirmRecordClass(recs, nRecs-7, ScenarioProtectRecord.class);
+        confirmRecordClass(recs, nRecs-6, PasswordRecord.class);
+    }
+

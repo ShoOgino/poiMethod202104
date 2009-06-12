@@ -1,0 +1,34 @@
+    /**
+     * There should be no problem with adding data validations after sheet protection
+     */
+    public void testDvProtectionOrder_bug47363b() {
+        HSSFWorkbook workbook = new HSSFWorkbook();
+        HSSFSheet sheet = workbook.createSheet("Sheet1");
+        sheet.protectSheet("secret");
+
+        DVConstraint dvc = DVConstraint.createNumericConstraint(DVConstraint.ValidationType.INTEGER,
+                                                DVConstraint.OperatorType.BETWEEN, "10", "100");
+        CellRangeAddressList numericCellAddressList = new CellRangeAddressList(0, 0, 1, 1);
+        HSSFDataValidation dv = new HSSFDataValidation(numericCellAddressList, dvc);
+        try {
+            sheet.addValidationData(dv);
+        } catch (IllegalStateException e) {
+            String expMsg = "Unexpected (org.apache.poi.hssf.record.PasswordRecord) while looking for DV Table insert pos";
+            if (expMsg.equals(e.getMessage())) {
+                throw new AssertionFailedError("Identified bug 47363b");
+            }
+            throw e;
+        }
+        RecordCollector rc;
+        rc = new RecordCollector();
+        sheet.getSheet().visitContainedRecords(rc, 0);
+        int nRecsWithProtection = rc.getRecords().length;
+
+        sheet.protectSheet(null);
+        rc = new RecordCollector();
+        sheet.getSheet().visitContainedRecords(rc, 0);
+        int nRecsWithoutProtection = rc.getRecords().length;
+
+        assertEquals(4, nRecsWithProtection - nRecsWithoutProtection);
+    }
+
