@@ -1,61 +1,47 @@
-    public void testReadingConstructor() throws IOException {
+	public void testReadingConstructor() throws IOException {
 
-        // create a document, minus the header block, and use that to
-        // create a RawDataBlockList. The document will exist entire
-        // of BATBlocks and XBATBlocks
-        //
-        // we will create two XBAT blocks, which will encompass 128
-        // BAT blocks between them, and two extra BAT blocks which
-        // will be in the block array passed to the constructor. This
-        // makes a total of 130 BAT blocks, which will encompass
-        // 16,640 blocks, for a file size of some 8.5 megabytes.
-        //
-        // Naturally, we'll fake that out ...
-        //
-        // map of blocks:
-        // block 0: xbat block 0
-        // block 1: xbat block 1
-        // block 2: bat block 0
-        // block 3: bat block 1
-        // blocks 4-130: bat blocks 2-128, contained in xbat block 0
-        // block 131: bat block 129, contained in xbat block 1
-        // blocks 132-16639: fictitious blocks, faked out. All blocks
-        // whose index is evenly divisible by 256
-        // will be unused
-        LocalRawDataBlockList list = new LocalRawDataBlockList();
+		// create a document, minus the header block, and use that to
+		// create a RawDataBlockList. The document will exist entire
+		// of BATBlocks and XBATBlocks
+		//
+		// we will create two XBAT blocks, which will encompass 128
+		// BAT blocks between them, and two extra BAT blocks which
+		// will be in the block array passed to the constructor. This
+		// makes a total of 130 BAT blocks, which will encompass
+		// 16,640 blocks, for a file size of some 8.5 megabytes.
+		//
+		// Naturally, we'll fake that out ...
+		//
+		// map of blocks:
+		// block 0: xbat block 0
+		// block 1: xbat block 1
+		// block 2: bat block 0
+		// block 3: bat block 1
+		// blocks 4-130: bat blocks 2-128, contained in xbat block 0
+		// block 131: bat block 129, contained in xbat block 1
+		// blocks 132-16639: fictitious blocks, faked out. All blocks
+		// whose index is evenly divisible by 256
+		// will be unused
+		LocalRawDataBlockList list = new LocalRawDataBlockList();
 
-        list.createNewXBATBlock(4, 130, 1);
-        list.createNewXBATBlock(131, 131, -2);
-        for (int j = 0; j < 130; j++)
-        {
-            list.createNewBATBlock(j * 128);
-        }
-        list.fill(132);
-        int[]                      blocks =
-        {
-            2, 3
-        };
-        BlockAllocationTableReader table  =
-            new BlockAllocationTableReader(130, blocks, 2, 0, list);
+		list.createNewXBATBlock(4, 130, 1);
+		list.createNewXBATBlock(131, 131, -2);
+		for (int j = 0; j < 130; j++) {
+			list.createNewBATBlock(j * 128);
+		}
+		list.fill(132);
+		int[] blocks = { 2, 3 };
+		BlockAllocationTableReader table = new BlockAllocationTableReader(130, blocks, 2, 0, list);
 
-        for (int i = 0; i < (130 * 128); i++)
-        {
-            if (i % 256 == 0)
-            {
-                assertTrue("verifying block " + i + " is unused",
-                           !table.isUsed(i));
-            }
-            else if (i % 256 == 255)
-            {
-                assertEquals("Verify end of chain for block " + i,
-                             POIFSConstants.END_OF_CHAIN,
-                             table.getNextBlockIndex(i));
-            }
-            else
-            {
-                assertEquals("Verify next index for block " + i, i + 1,
-                             table.getNextBlockIndex(i));
-            }
-        }
-    }
+		for (int i = 0; i < (130 * 128); i++) {
+			if (i % 256 == 0) {
+				assertTrue("verifying block " + i + " is unused", !table.isUsed(i));
+			} else if (i % 256 == 255) {
+				assertEquals("Verify end of chain for block " + i, POIFSConstants.END_OF_CHAIN,
+						table.getNextBlockIndex(i));
+			} else {
+				assertEquals("Verify next index for block " + i, i + 1, table.getNextBlockIndex(i));
+			}
+		}
+	}
 
