@@ -1,0 +1,49 @@
+    /**
+     * HSSF-specific ways of creating links to a place in workbook.
+     * You can set the target  in two ways:
+     *  link.setTextMark("'Target Sheet-1'!A1"); //HSSF-specific
+     *  or
+     *  link.setAddress("'Target Sheet-1'!A1"); //common between XSSF and HSSF
+     */
+    public void testCreateDocumentLink() throws Exception {
+        HSSFWorkbook wb = getTestDataProvider().createWorkbook();
+
+        //link to a place in this workbook
+        HSSFHyperlink link;
+        HSSFCell cell;
+        HSSFSheet sheet = wb.createSheet("Hyperlinks");
+
+        //create a target sheet and cell
+        HSSFSheet sheet2 = wb.createSheet("Target Sheet");
+        sheet2.createRow(0).createCell(0).setCellValue("Target Cell");
+
+        //cell A1 has a link to 'Target Sheet-1'!A1
+        cell = sheet.createRow(0).createCell(0);
+        cell.setCellValue("Worksheet Link");
+        link = new HSSFHyperlink(HSSFHyperlink.LINK_DOCUMENT);
+        link.setTextMark("'Target Sheet'!A1");
+        cell.setHyperlink(link);
+
+        //cell B1 has a link to cell A1 on the same sheet
+        cell = sheet.createRow(1).createCell(0);
+        cell.setCellValue("Worksheet Link");
+        link = new HSSFHyperlink(HSSFHyperlink.LINK_DOCUMENT);
+        link.setAddress("'Hyperlinks'!A1");
+        cell.setHyperlink(link);
+
+        wb = getTestDataProvider().writeOutAndReadBack(wb);
+        sheet = wb.getSheet("Hyperlinks");
+
+        cell = sheet.getRow(0).getCell(0);
+        link = cell.getHyperlink();
+        assertNotNull(link);
+        assertEquals("'Target Sheet'!A1", link.getTextMark());
+        assertEquals("'Target Sheet'!A1", link.getAddress());
+
+        cell = sheet.getRow(1).getCell(0);
+        link = cell.getHyperlink();
+        assertNotNull(link);
+        assertEquals("'Hyperlinks'!A1", link.getTextMark());
+        assertEquals("'Hyperlinks'!A1", link.getAddress());
+    }
+
