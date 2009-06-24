@@ -1,0 +1,42 @@
+	/**
+	 * Apparently it's OK to have more than one PLS record.
+	 * Attachment 23866 from bug 47415 had a PageSettingsBlock with two PLS records.  This file
+	 * seems to open OK in Excel(2007) but both PLS records are removed (perhaps because the
+	 * specified printers were not available on the testing machine).  Since the example file does
+	 * not upset Excel, POI will preserve multiple PLS records.</p>
+	 *
+	 * As of June 2009, PLS is still uninterpreted by POI
+	 */
+	public void testDuplicatePLS_bug47415() {
+		Record plsA = ur(UnknownRecord.PLS_004D, "BA AD F0 0D");
+		Record plsB = ur(UnknownRecord.PLS_004D, "DE AD BE EF");
+		Record contB1 = new ContinueRecord(HexRead.readFromString("FE ED"));
+		Record contB2 = new ContinueRecord(HexRead.readFromString("FA CE"));
+		Record[] recs = {
+				new HeaderRecord("&LSales Figures"),
+				new FooterRecord("&LInventory"),
+				new HCenterRecord(),
+				new VCenterRecord(),
+				plsA,
+				plsB, contB1, contB2, // make sure continuing PLS is still OK
+		};
+		RecordStream rs = new RecordStream(Arrays.asList(recs), 0);
+		PageSettingsBlock psb;
+		try {
+			psb = new PageSettingsBlock(rs);
+		} catch (RecordFormatException e) {
+			if ("Duplicate PageSettingsBlock record (sid=0x4d)".equals(e.getMessage())) {
+				throw new AssertionFailedError("Identified bug 47415");
+			}
+			throw e;
+		}
+
+		// serialize the PSB to see what records come out
+		RecordCollector rc = new RecordCollector();
+		psb.visitContainedRecords(rc);
+		Record[] outRecs = rc.getRecords();
+
+		// records were assembled in standard order, so this simple check is OK
+		assertTrue(Arrays.equals(recs, outRecs));
+	}
+
