@@ -1,23 +1,23 @@
 	/* package */ static String rawDoubleBitsToText(long pRawBits) {
-		
+
 		long rawBits = pRawBits;
 		boolean isNegative = rawBits < 0; // sign bit is in the same place for long and double
 		if (isNegative) {
 			rawBits &= 0x7FFFFFFFFFFFFFFFL;
 		}
-		
+
 		int biasedExponent = (int) ((rawBits & expMask) >> EXPONENT_SHIFT);
 		if (biasedExponent == 0) {
 			// value is 'denormalised' which means it is less than 2^-1022
 			// excel displays all these numbers as zero, even though calculations work OK
-			return "0";
+			return isNegative ? "-0" : "0";
 		}
-		
-		int exponent = biasedExponent - EXPONENT_BIAS; 
-		
+
+		int exponent = biasedExponent - EXPONENT_BIAS;
+
 		long fracBits = FRAC_ASSUMED_HIGH_BIT | rawBits & FRAC_MASK;
-		
-		
+
+
 		// Start by converting double value to BigDecimal
 		BigDecimal bd;
 		if (biasedExponent == 0x07FF) {
@@ -31,7 +31,7 @@
 			isNegative = false; // except that the sign bit is ignored
 		}
 		bd = convertToBigDecimal(exponent, fracBits);
-		
+
 		return formatBigInteger(isNegative, bd.unscaledValue(), bd.scale());
 	}
 
