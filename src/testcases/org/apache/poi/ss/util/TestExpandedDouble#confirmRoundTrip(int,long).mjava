@@ -1,0 +1,54 @@
+	public static boolean confirmRoundTrip(int i, long rawBitsA) {
+		double a = Double.longBitsToDouble(rawBitsA);
+		if (a == 0.0) {
+			// Can't represent 0.0 or -0.0 with NormalisedDecimal
+			return true;
+		}
+		ExpandedDouble ed1;
+		NormalisedDecimal nd2;
+		ExpandedDouble ed3;
+		try {
+			ed1 = new ExpandedDouble(rawBitsA);
+			nd2 = ed1.normaliseBaseTen();
+			checkNormaliseBaseTenResult(ed1, nd2);
+
+			ed3 = nd2.normaliseBaseTwo();
+		} catch (RuntimeException e) {
+			System.err.println("example[" + i + "] ("
+					+ formatDoubleAsHex(a) + ") exception:");
+			e.printStackTrace();
+			return false;
+		}
+		if (ed3.getBinaryExponent() != ed1.getBinaryExponent()) {
+			System.err.println("example[" + i + "] ("
+					+ formatDoubleAsHex(a) + ") bin exp mismatch");
+			return false;
+		}
+		BigInteger diff = ed3.getSignificand().subtract(ed1.getSignificand()).abs();
+		if (diff.signum() == 0) {
+			return true;
+		}
+		// original quantity only has 53 bits of precision
+		// these quantities may have errors in the 64th bit, which hopefully don't make any difference
+
+		if (diff.bitLength() < 2) {
+			// errors in the 64th bit happen from time to time
+			// this is well below the 53 bits of precision required
+			return true;
+		}
+
+		// but bigger errors are a concern
+		System.out.println("example[" + i + "] ("
+				+ formatDoubleAsHex(a) + ") frac mismatch: " + diff.toString());
+
+		for (int j=-2; j<3; j++) {
+			System.out.println((j<0?"":"+") + j + ": " + getNearby(ed1, j));
+		}
+		for (int j=-2; j<3; j++) {
+			System.out.println((j<0?"":"+") + j + ": " + getNearby(nd2, j));
+		}
+
+
+		return false;
+	}
+

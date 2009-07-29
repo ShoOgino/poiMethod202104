@@ -1,0 +1,26 @@
+	private static BigInteger getNearby(BigInteger significand, int binExp, int offset) {
+		int nExtraBits = 1;
+		int nDec = (int) Math.round(3.0 + (64+nExtraBits) * Math.log10(2.0));
+		BigInteger newFrac = significand.shiftLeft(nExtraBits).add(BigInteger.valueOf(offset));
+
+		int gg = 64 + nExtraBits - binExp - 1;
+
+		BigDecimal bd = new BigDecimal(newFrac);
+		if (gg > 0) {
+			bd = bd.divide(new BigDecimal(BigInteger.ONE.shiftLeft(gg)));
+		} else {
+			BigInteger frac = newFrac;
+			while (frac.bitLength() + binExp < 180) {
+				frac = frac.multiply(BigInteger.TEN);
+			}
+			int binaryExp = binExp - newFrac.bitLength() + frac.bitLength();
+
+			bd = new BigDecimal( frac.shiftRight(frac.bitLength()-binaryExp-1));
+		}
+		int excessPrecision = bd.precision() - nDec;
+		if (excessPrecision > 0) {
+			bd = bd.setScale(bd.scale() - excessPrecision, BigDecimal.ROUND_HALF_UP);
+		}
+		return bd.unscaledValue();
+	}
+

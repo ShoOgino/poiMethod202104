@@ -1,0 +1,29 @@
+	private static void checkNormaliseBaseTenResult(ExpandedDouble orig, NormalisedDecimal result) {
+		String sigDigs = result.getSignificantDecimalDigits();
+		BigInteger frac = orig.getSignificand();
+		while (frac.bitLength() + orig.getBinaryExponent() < 200) {
+			frac = frac.multiply(BIG_POW_10);
+		}
+		int binaryExp = orig.getBinaryExponent() - orig.getSignificand().bitLength();
+
+		String origDigs = frac.shiftLeft(binaryExp+1).toString(10);
+
+		if (!origDigs.startsWith(sigDigs)) {
+			throw new AssertionFailedError("Expected '" + origDigs + "' but got '" + sigDigs + "'.");
+		}
+
+		double dO = Double.parseDouble("0." + origDigs.substring(sigDigs.length()));
+		double d1 = Double.parseDouble(result.getFractionalPart().toPlainString());
+		BigInteger subDigsO = BigInteger.valueOf((int) (dO * 32768 + 0.5));
+		BigInteger subDigsB = BigInteger.valueOf((int) (d1 * 32768 + 0.5));
+
+		if (subDigsO.equals(subDigsB)) {
+			return;
+		}
+		BigInteger diff = subDigsB.subtract(subDigsO).abs();
+		if (diff.intValue() > 100) {
+			// 100/32768 ~= 0.003
+			throw new AssertionFailedError("minor mistake");
+		}
+	}
+

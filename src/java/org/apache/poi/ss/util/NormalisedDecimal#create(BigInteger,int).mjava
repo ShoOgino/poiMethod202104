@@ -1,0 +1,48 @@
+	public static NormalisedDecimal create(BigInteger frac, int binaryExponent) {
+		// estimate pow2&pow10 first, perform optional mulShift, then normalize
+		int pow10;
+		if (binaryExponent > 49 || binaryExponent < 46) {
+
+			// working with ints (left shifted 20) instead of doubles
+			// x = 14.5 - binaryExponent * log10(2);
+			int x = (29 << 19) - binaryExponent * LOG_BASE_10_OF_2_TIMES_2_POW_20;
+			x += C_2_POW_19; // round
+			pow10 = -(x >> 20);
+		} else {
+			pow10 = 0;
+		}
+		MutableFPNumber cc = new MutableFPNumber(frac, binaryExponent);
+		if (pow10 != 0) {
+			cc.multiplyByPowerOfTen(-pow10);
+		}
+
+		switch (cc.get64BitNormalisedExponent()) {
+			case 46:
+				if (cc.isAboveMinRep()) {
+					break;
+				}
+			case 44:
+			case 45:
+				cc.multiplyByPowerOfTen(1);
+				pow10--;
+				break;
+			case 47:
+			case 48:
+				break;
+			case 49:
+				if (cc.isBelowMaxRep()) {
+					break;
+				}
+			case 50:
+				cc.multiplyByPowerOfTen(-1);
+				pow10++;
+				break;
+
+			default:
+				throw new IllegalStateException("Bad binary exp " + cc.get64BitNormalisedExponent() + ".");
+		}
+		cc.normalise64bit();
+
+		return cc.createNormalisedDecimal(pow10);
+	}
+

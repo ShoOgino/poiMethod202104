@@ -5,33 +5,33 @@
 		if (isNegative) {
 			rawBits &= 0x7FFFFFFFFFFFFFFFL;
 		}
-
-		int biasedExponent = (int) ((rawBits & expMask) >> EXPONENT_SHIFT);
-		if (biasedExponent == 0) {
+		if (rawBits == 0) {
+			return isNegative ? "-0" : "0";
+		}
+		ExpandedDouble ed = new ExpandedDouble(rawBits);
+		if (ed.getBinaryExponent() < -1022) {
 			// value is 'denormalised' which means it is less than 2^-1022
 			// excel displays all these numbers as zero, even though calculations work OK
 			return isNegative ? "-0" : "0";
 		}
-
-		int exponent = biasedExponent - EXPONENT_BIAS;
-
-		long fracBits = FRAC_ASSUMED_HIGH_BIT | rawBits & FRAC_MASK;
-
-
-		// Start by converting double value to BigDecimal
-		BigDecimal bd;
-		if (biasedExponent == 0x07FF) {
+		if (ed.getBinaryExponent() == 1024) {
 			// Special number NaN /Infinity
+			// Normally one would not create HybridDecimal objects from these values
+			// except in these cases Excel really tries to render them as if they were normal numbers
 			if(rawBits == EXCEL_NAN_BITS) {
 				return "3.484840871308E+308";
 			}
 			// This is where excel really gets it wrong
-			// Special numbers like Infinity and Nan are interpreted according to
+			// Special numbers like Infinity and NaN are interpreted according to
 			// the standard rules below.
 			isNegative = false; // except that the sign bit is ignored
 		}
-		bd = convertToBigDecimal(exponent, fracBits);
-
-		return formatBigInteger(isNegative, bd.unscaledValue(), bd.scale());
+		NormalisedDecimal nd = ed.normaliseBaseTen();
+		StringBuilder sb = new StringBuilder(MAX_TEXT_LEN+1);
+		if (isNegative) {
+			sb.append('-');
+		}
+		convertToText(sb, nd);
+		return sb.toString();
 	}
 

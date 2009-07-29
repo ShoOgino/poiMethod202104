@@ -1,0 +1,33 @@
+	/**
+	 * Fills a spreadsheet row with one comparison example. The two numeric values are written to
+	 * columns C and D. Columns (F, G and H) respectively get formulas ("v0<v1", "v0=v1", "v0>v1"),
+	 * which will be evaluated by Excel. Column D gets the expected comparison result. Column I
+	 * gets a formula to check that Excel's comparison results match that predicted in column D.
+	 *
+	 * @param v0 the first value to be compared
+	 * @param v1 the second value to be compared
+	 * @param expRes expected comparison result (-1, 0, or +1)
+	 */
+	static void writeDataRow(HSSFSheet sheet, int rowIx, double v0, double v1, int expRes) {
+		HSSFRow row = sheet.createRow(rowIx);
+
+		int rowNum = rowIx + 1;
+
+
+		row.createCell(0).setCellValue(formatDoubleAsHex(v0));
+		row.createCell(1).setCellValue(formatDoubleAsHex(v1));
+		row.createCell(2).setCellValue(v0);
+		row.createCell(3).setCellValue(v1);
+		row.createCell(4).setCellValue(expRes < 0 ? "LT" : expRes > 0 ? "GT" : "EQ");
+		row.createCell(5).setCellFormula("C" + rowNum + "<" + "D" + rowNum);
+		row.createCell(6).setCellFormula("C" + rowNum + "=" + "D" + rowNum);
+		row.createCell(7).setCellFormula("C" + rowNum + ">" + "D" + rowNum);
+		// TODO - bug elsewhere in POI - something wrong with encoding of NOT() function
+		String frm = "if(or(" +
+			"and(E#='LT', F#      , G#=FALSE, H#=FALSE)," +
+			"and(E#='EQ', F#=FALSE, G#      , H#=FALSE)," +
+			"and(E#='GT', F#=FALSE, G#=FALSE, H#      )" +
+			"), 'OK', 'error')"	;
+		row.createCell(8).setCellFormula(frm.replaceAll("#", String.valueOf(rowNum)).replace('\'', '"'));
+	}
+
