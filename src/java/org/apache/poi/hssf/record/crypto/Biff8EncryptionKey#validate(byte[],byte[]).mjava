@@ -1,0 +1,27 @@
+	/**
+	 * @return <code>true</code> if the keyDigest is compatible with the specified saltData and saltHash
+	 */
+	public boolean validate(byte[] saltData, byte[] saltHash) {
+		check16Bytes(saltData, "saltData");
+		check16Bytes(saltHash, "saltHash");
+
+		// validation uses the RC4 for block zero
+		RC4 rc4 = createRC4(0);
+		byte[] saltDataPrime = saltData.clone();
+		rc4.encrypt(saltDataPrime);
+
+		byte[] saltHashPrime = saltHash.clone();
+		rc4.encrypt(saltHashPrime);
+
+		MessageDigest md5;
+		try {
+			md5 = MessageDigest.getInstance("MD5");
+		} catch (NoSuchAlgorithmException e) {
+			throw new RuntimeException(e);
+		}
+		md5.update(saltDataPrime);
+		byte[] finalSaltResult = md5.digest();
+
+		return Arrays.equals(saltHashPrime, finalSaltResult);
+	}
+

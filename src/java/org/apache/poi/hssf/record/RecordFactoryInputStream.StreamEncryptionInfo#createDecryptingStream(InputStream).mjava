@@ -1,0 +1,16 @@
+		public RecordInputStream createDecryptingStream(InputStream original) {
+			FilePassRecord fpr = _filePassRec;
+			String userPassword = Biff8EncryptionKey.getCurrentUserPassword();
+
+			Biff8EncryptionKey key;
+			if (userPassword == null) {
+				key = Biff8EncryptionKey.create(fpr.getDocId());
+			} else {
+				key = Biff8EncryptionKey.create(userPassword, fpr.getDocId());
+			}
+			if (!key.validate(fpr.getSaltData(), fpr.getSaltHash())) {
+				throw new RecordFormatException("Password/docId do not correspond to saltData/saltHash");
+			}
+			return new RecordInputStream(original, key, _initialRecordsSize);
+		}
+

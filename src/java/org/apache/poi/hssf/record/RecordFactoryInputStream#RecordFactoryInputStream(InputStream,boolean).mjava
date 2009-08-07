@@ -3,9 +3,24 @@
 	 * {@link ContinueRecord}s should be skipped (this is sometimes useful in event based
 	 * processing).
 	 */
-	public RecordFactoryInputStream(RecordInputStream inp, boolean shouldIncludeContinueRecords) {
-		_recStream = inp;
+	public RecordFactoryInputStream(InputStream in, boolean shouldIncludeContinueRecords) {
+		RecordInputStream rs = new RecordInputStream(in);
+		List<Record> records = new ArrayList<Record>();
+		StreamEncryptionInfo sei = new StreamEncryptionInfo(rs, records);
+		if (sei.hasEncryption()) {
+			rs = sei.createDecryptingStream(in);
+		} else {
+			// typical case - non-encrypted stream
+		}
+
+		if (!records.isEmpty()) {
+			_unreadRecordBuffer = new Record[records.size()];
+			records.toArray(_unreadRecordBuffer);
+			_unreadRecordIndex =0;
+		}
+		_recStream = rs;
 		_shouldIncludeContinueRecords = shouldIncludeContinueRecords;
+		_lastRecord = sei.getLastRecord();
 
 		/*
 		* How to recognise end of stream?
@@ -24,7 +39,7 @@
 		* record might follow any EOF record.  So we also need to keep track of the bof/eof
 		* nesting level.
 		*/
-		_bofDepth=0;
+		_bofDepth = sei.hasBOFRecord() ? 1 : 0;
 		_lastRecordWasEOFLevelZero = false;
 	}
 

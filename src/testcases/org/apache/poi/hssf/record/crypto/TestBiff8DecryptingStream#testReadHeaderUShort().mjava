@@ -1,0 +1,29 @@
+	/**
+	 * Checks that the BIFF header fields (sid, size) get read without applying decryption,
+	 * and that the RC4 stream stays aligned during these calls
+	 */
+	public void testReadHeaderUShort() {
+		StreamTester st = createStreamTester(0x50, "BA AD F0 0D 00", 0x96C66829);
+
+		st.rollForward(0x0004, 0x03FF);
+
+		Biff8DecryptingStream bds = st.getBDS();
+		int hval = bds.readDataSize();   // unencrypted
+		int nextInt = bds.readInt();
+		if (nextInt == 0x8F534029) {
+			throw new AssertionFailedError(
+					"Indentified bug in key alignment after call to readHeaderUShort()");
+		}
+		assertEquals(0x16885243, nextInt);
+		if (hval == 0x283E) {
+			throw new AssertionFailedError("readHeaderUShort() incorrectly decrypted result");
+		}
+		assertEquals(0x504F, hval);
+
+		// confirm next key change
+		st.rollForward(0x0405, 0x07FC);
+		st.confirmInt(0x76CC1223);
+		st.confirmInt(0x4842D83E);
+		st.assertNoErrors();
+	}
+

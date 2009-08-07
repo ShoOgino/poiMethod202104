@@ -1,0 +1,36 @@
+	public void xor(byte[] buf, int pOffset, int pLen) {
+		int nLeftInBlock;
+		nLeftInBlock = _nextRC4BlockStart - _streamPos;
+		if (pLen <= nLeftInBlock) {
+			// simple case - this read does not cross key blocks
+			_rc4.encrypt(buf, pOffset, pLen);
+			_streamPos += pLen;
+			return;
+		}
+
+		int offset = pOffset;
+		int len = pLen;
+
+		// start by using the rest of the current block
+		if (len > nLeftInBlock) {
+			if (nLeftInBlock > 0) {
+				_rc4.encrypt(buf, offset, nLeftInBlock);
+				_streamPos += nLeftInBlock;
+				offset += nLeftInBlock;
+				len -= nLeftInBlock;
+			}
+			rekeyForNextBlock();
+		}
+		// all full blocks following
+		while (len > RC4_REKEYING_INTERVAL) {
+			_rc4.encrypt(buf, offset, RC4_REKEYING_INTERVAL);
+			_streamPos += RC4_REKEYING_INTERVAL;
+			offset += RC4_REKEYING_INTERVAL;
+			len -= RC4_REKEYING_INTERVAL;
+			rekeyForNextBlock();
+		}
+		// finish with incomplete block
+		_rc4.encrypt(buf, offset, len);
+		_streamPos += len;
+	}
+

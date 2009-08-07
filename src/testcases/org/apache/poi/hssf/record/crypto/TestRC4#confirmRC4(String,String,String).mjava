@@ -1,0 +1,31 @@
+	private static void confirmRC4(String k, String origText, String expEncrHex) {
+		byte[] actEncr = origText.getBytes();
+		new RC4(k.getBytes()).encrypt(actEncr);
+		byte[] expEncr = HexRead.readFromString(expEncrHex);
+
+		if (!Arrays.equals(expEncr, actEncr)) {
+			throw new ComparisonFailure("Data mismatch", HexDump.toHex(expEncr), HexDump.toHex(actEncr));
+		}
+
+
+		Cipher cipher;
+		try {
+			cipher = Cipher.getInstance("RC4");
+		} catch (GeneralSecurityException e) {
+			throw new RuntimeException(e);
+		}
+		String k2 = k+k; // Sun has minimum of 5 bytes for key
+		SecretKeySpec skeySpec = new SecretKeySpec(k2.getBytes(), "RC4");
+
+		try {
+			cipher.init(Cipher.DECRYPT_MODE, skeySpec);
+		} catch (InvalidKeyException e) {
+			throw new RuntimeException(e);
+		}
+		byte[] origData = origText.getBytes();
+		byte[] altEncr = cipher.update(origData);
+		if (!Arrays.equals(expEncr, altEncr)) {
+			throw new RuntimeException("Mismatch from jdk provider");
+		}
+	}
+
