@@ -1,23 +1,41 @@
-    /**
-     * Returns the next (complete) record from the
-     * stream, or null if there are no more.
-     */
-    public Record nextRecord() {
-        Record r = null;
+	/**
+	 * Returns the next (complete) record from the
+	 * stream, or null if there are no more.
+	 */
+	public Record nextRecord() {
+		Record r;
+		r = getNextMultipleNumberRecord();
+		if (r != null) {
+			// found a NumberRecord (expanded from a recent MULRK record)
+			return r;
+		}
+		while (true) {
+			if (!_recStream.hasNextRecord()) {
+				// recStream is exhausted;
+	    		return null;
+			}
 
-        // Loop until we get something
-        while (r == null && !complete) {
-            // Are there any bonus records that we need to
-            //  return?
-            r = getBonusRecord();
+			// step underlying RecordInputStream to the next record
+			_recStream.nextRecord();
 
-            // If not, ask for the next real record
-            if (r == null) {
-                r = getNextRecord();
-            }
-        }
+			if (_lastRecordWasEOFLevelZero) {
+				// Potential place for ending the workbook stream
+				// Check that the next record is not BOFRecord(0x0809)
+				// Normally the input stream contains only zero padding after the last EOFRecord,
+				// but bug 46987 suggests that the padding may be garbage.
+				// This code relies on the padding bytes not starting with BOFRecord.sid
+				if (_recStream.getSid() != BOFRecord.sid) {
+					return null;
+				}
+				// else - another sheet substream starting here
+			}
 
-        // All done
-        return r;
-    }
+			r = readNextRecord();
+			if (r == null) {
+				// some record types may get skipped (e.g. DBCellRecord and ContinueRecord)
+				continue;
+			}
+			return r;
+		}
+	}
 

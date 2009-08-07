@@ -1,0 +1,88 @@
+	/**
+	 * @return the next available record, or <code>null</code> if
+	 * this pass didn't return a record that's
+	 * suitable for returning (eg was a continue record).
+	 */
+	private Record readNextRecord() {
+
+		Record record = RecordFactory.createSingleRecord(_recStream);
+		_lastRecordWasEOFLevelZero = false;
+
+		if (record instanceof BOFRecord) {
+			_bofDepth++;
+			return record;
+		}
+
+		if (record instanceof EOFRecord) {
+			_bofDepth--;
+			if (_bofDepth < 1) {
+				_lastRecordWasEOFLevelZero = true;
+			}
+
+			return record;
+		}
+
+		if (record instanceof DBCellRecord) {
+			// Not needed by POI.  Regenerated from scratch by POI when spreadsheet is written
+			return null;
+		}
+
+		if (record instanceof RKRecord) {
+			return RecordFactory.convertToNumberRecord((RKRecord) record);
+		}
+
+		if (record instanceof MulRKRecord) {
+			NumberRecord[] records = RecordFactory.convertRKRecords((MulRKRecord) record);
+
+			_multipleNumberRecords = records;
+			_multipleNumberRecordIndex = 1;
+			return records[0];
+		}
+
+		if (record.getSid() == DrawingGroupRecord.sid
+				&& _lastRecord instanceof DrawingGroupRecord) {
+			DrawingGroupRecord lastDGRecord = (DrawingGroupRecord) _lastRecord;
+			lastDGRecord.join((AbstractEscherHolderRecord) record);
+			return null;
+		}
+		if (record.getSid() == ContinueRecord.sid) {
+			ContinueRecord contRec = (ContinueRecord) record;
+
+			if (_lastRecord instanceof ObjRecord || _lastRecord instanceof TextObjectRecord) {
+				// Drawing records have a very strange continue behaviour.
+				//There can actually be OBJ records mixed between the continues.
+				_lastDrawingRecord.processContinueRecord(contRec.getData());
+				//we must remember the position of the continue record.
+				//in the serialization procedure the original structure of records must be preserved
+				if (_shouldIncludeContinueRecords) {
+					return record;
+				}
+				return null;
+			}
+			if (_lastRecord instanceof DrawingGroupRecord) {
+				((DrawingGroupRecord) _lastRecord).processContinueRecord(contRec.getData());
+				return null;
+			}
+			if (_lastRecord instanceof DrawingRecord) {
+				((DrawingRecord) _lastRecord).processContinueRecord(contRec.getData());
+				return null;
+			}
+			if (_lastRecord instanceof UnknownRecord) {
+				//Gracefully handle records that we don't know about,
+				//that happen to be continued
+				return record;
+			}
+			if (_lastRecord instanceof EOFRecord) {
+				// This is really odd, but excel still sometimes
+				//  outputs a file like this all the same
+				return record;
+			}
+			throw new RecordFormatException("Unhandled Continue Record");
+		}
+		_lastRecord = record;
+		if (record instanceof DrawingRecord) {
+			_lastDrawingRecord = (DrawingRecord) record;
+		}
+		return record;
+	}
+

@@ -1,34 +1,31 @@
-     /**
+	/**
 	 * Processes a DocumentInputStream into essentially Record events.
 	 *
 	 * @see org.apache.poi.poifs.filesystem.POIFSFileSystem#createDocumentInputStream(String)
-	 * @param req       an Instance of HSSFRequest which has your registered listeners
-	 * @param in        a DocumentInputStream obtained from POIFS's POIFSFileSystem object
-	 * @return 			numeric user-specified result code.
+	 * @param req an Instance of HSSFRequest which has your registered listeners
+	 * @param in  a DocumentInputStream obtained from POIFS's POIFSFileSystem object
+	 * @return    numeric user-specified result code.
 	 */
-
 	protected short genericProcessEvents(HSSFRequest req, RecordInputStream in)
-		throws IOException, HSSFUserException
-	{
-		boolean going = true;
+		throws HSSFUserException {
 		short userCode = 0;
-		Record r = null;
-		
+
 		// Create a new RecordStream and use that
-		RecordFactoryInputStream recordStream = new RecordFactoryInputStream(in);
-		
+		RecordFactoryInputStream recordStream = new RecordFactoryInputStream(in, false);
+
 		// Process each record as they come in
-		while(going) {
-			r = recordStream.nextRecord();
-			if(r != null) {
-				userCode = req.processRecord(r);
-				if (userCode != 0) break;
-			} else {
-				going = false;
+		while(true) {
+			Record r = recordStream.nextRecord();
+			if(r == null) {
+				break;
+			}
+			userCode = req.processRecord(r);
+			if (userCode != 0) {
+				break;
 			}
 		}
-		
+
 		// All done, return our last code
 		return userCode;
-    }
+	}
 

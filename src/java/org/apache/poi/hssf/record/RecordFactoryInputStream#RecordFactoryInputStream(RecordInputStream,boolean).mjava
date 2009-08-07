@@ -1,0 +1,30 @@
+	/**
+	 * @param shouldIncludeContinueRecords caller can pass <code>false</code> if loose
+	 * {@link ContinueRecord}s should be skipped (this is sometimes useful in event based
+	 * processing).
+	 */
+	public RecordFactoryInputStream(RecordInputStream inp, boolean shouldIncludeContinueRecords) {
+		_recStream = inp;
+		_shouldIncludeContinueRecords = shouldIncludeContinueRecords;
+
+		/*
+		* How to recognise end of stream?
+		* In the best case, the underlying input stream (in) ends just after the last EOF record
+		* Usually however, the stream is padded with an arbitrary byte count.  Excel and most apps
+		* reliably use zeros for padding and if this were always the case, this code could just
+		* skip all the (zero sized) records with sid==0.  However, bug 46987 shows a file with
+		* non-zero padding that is read OK by Excel (Excel also fixes the padding).
+		*
+		* So to properly detect the workbook end of stream, this code has to identify the last
+		* EOF record.  This is not so easy because the worbook bof+eof pair do not bracket the
+		* whole stream.  The worksheets follow the workbook, but it is not easy to tell how many
+		* sheet sub-streams should be present.  Hence we are looking for an EOF record that is not
+		* immediately followed by a BOF record.  One extra complication is that bof+eof sub-
+		* streams can be nested within worksheet streams and it's not clear in these cases what
+		* record might follow any EOF record.  So we also need to keep track of the bof/eof
+		* nesting level.
+		*/
+		_bofDepth=0;
+		_lastRecordWasEOFLevelZero = false;
+	}
+
