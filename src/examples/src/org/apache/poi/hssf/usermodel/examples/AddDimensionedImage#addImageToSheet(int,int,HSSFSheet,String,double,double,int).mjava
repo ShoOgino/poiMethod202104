@@ -1,0 +1,98 @@
+    /**
+     * Add an image to a worksheet.
+     *
+     * @param colNumber A primitive int that contains the index number of a
+     *                  column on the worksheet; POI column indices are zero
+     *                  based. Together with the rowNumber parameter's value,
+     *                  this parameter identifies a cell on the worksheet. The
+     *                  image's top left hand corner will be aligned with the
+     *                  top left hand corner of this cell.
+     * @param rowNumber A primtive int that contains the index number of a row
+     *                  on the worksheet; POI row indices are zero based.
+     *                  Together with the rowNumber parameter's value, this
+     *                  parameter identifies a cell on the worksheet. The
+     *                  image's top left hand corner will be aligned with the
+     *                  top left hand corner of this cell.
+     * @param sheet A reference to the sheet that contains the cell identified
+     *              by the two parameters above.
+     * @param imageFile A String that encapsulates the name of and path to
+     *                  the image that is to be 'inserted into' the sheet.
+     * @param reqImageWidthMM A primitive double that contains the required
+     *                        width of the image in millimetres.
+     * @param reqImageHeightMM A primitive double that contains the required
+     *                         height of the image in millimetres.
+     * @param resizeBehaviour A primitive int whose value will determine how
+     *                        the code should react if the image is larger than
+     *                        the cell referenced by the colNumber and
+     *                        rowNumber parameters. Four constants are provided
+     *                        to determine what should happen;
+     *                          AddDimensionedImage.EXPAND_ROW
+     *                          AddDimensionedImage.EXPAND_COLUMN
+     *                          AddDimensionedImage.EXPAND_ROW_AND_COLUMN
+     *                          AddDimensionedImage.OVERLAY_ROW_AND_COLUMN
+     * @throws java.io.FileNotFoundException If the file containing the image
+     *                                       cannot be located.
+     * @throws java.io.IOException If a problem occurs whilst reading the file
+     *                             of image data.
+     * @throws java.lang.IllegalArgumentException If an invalid value is passed
+     *                                            to the resizeBehaviour
+     *                                            parameter.
+     */
+    private void addImageToSheet(int colNumber, int rowNumber, HSSFSheet sheet,
+            String imageFile, double reqImageWidthMM, double reqImageHeightMM,
+            int resizeBehaviour) throws FileNotFoundException, IOException,
+                                                     IllegalArgumentException  {
+        HSSFRow row = null;
+        HSSFClientAnchor anchor = null;
+        HSSFPatriarch patriarch = null;
+        ClientAnchorDetail rowClientAnchorDetail = null;
+        ClientAnchorDetail colClientAnchorDetail = null;
+
+        // Validate the resizeBehaviour parameter.
+        if((resizeBehaviour != AddDimensionedImage.EXPAND_COLUMN) &&
+           (resizeBehaviour != AddDimensionedImage.EXPAND_ROW) &&
+           (resizeBehaviour != AddDimensionedImage.EXPAND_ROW_AND_COLUMN) &&
+           (resizeBehaviour != AddDimensionedImage.OVERLAY_ROW_AND_COLUMN)) {
+            throw new IllegalArgumentException("Invalid value passed to the " +
+                    "resizeBehaviour parameter of AddDimensionedImage.addImageToSheet()");
+        }
+
+        // Call methods to calculate how the image and sheet should be
+        // manipulated to accomodate the image; columns and then rows.
+        colClientAnchorDetail = this.fitImageToColumns(sheet, colNumber,
+                reqImageWidthMM, resizeBehaviour);
+        rowClientAnchorDetail = this.fitImageToRows(sheet, rowNumber,
+                reqImageHeightMM, resizeBehaviour);
+
+        // Having determined if and how to resize the rows, columns and/or the
+        // image, create the HSSFClientAnchor object to position the image on
+        // the worksheet. Note how the two ClientAnchorDetail records are
+        // interrogated to recover the row/column co-ordinates and any insets.
+        // The first two parameters are not used currently but could be if the
+        // need arose to extend the functionality of this code by adding the
+        // ability to specify that a clear 'border' be placed around the image.
+        anchor = new HSSFClientAnchor(0,
+                                      0,
+                                      colClientAnchorDetail.getInset(),
+                                      rowClientAnchorDetail.getInset(),
+                                      (short)colClientAnchorDetail.getFromIndex(),
+                                      rowClientAnchorDetail.getFromIndex(),
+                                      (short)colClientAnchorDetail.getToIndex(),
+                                      rowClientAnchorDetail.getToIndex());
+
+        // For now, set the anchor type to do not move or resize the
+        // image as the size of the row/column is adjusted. This could easilly
+        // become another parameter passed to the method.
+        anchor.setAnchorType(HSSFClientAnchor.DONT_MOVE_AND_RESIZE);
+        
+        // Now, add the picture to the workbook. Note that the type is assumed
+        // to be a JPEG/JPG, this could easily (and should) be parameterised
+        // however.
+        int index = sheet.getWorkbook().addPicture(this.imageToBytes(imageFile),
+                    HSSFWorkbook.PICTURE_TYPE_JPEG);
+
+        // Get the drawing patriarch and create the picture.
+        patriarch = sheet.createDrawingPatriarch();
+        patriarch.createPicture(anchor, index);
+    }
+
