@@ -1,26 +1,18 @@
     /**
      * Verifies that a custom palette can be created, saved, and reloaded
      */
-    public void testCustomPalette() throws IOException
-    {
+    public void testCustomPalette() {
         //reading sample xls
         HSSFWorkbook book = HSSFTestDataSamples.openSampleWorkbook("Simple.xls");
-        
+
         //creating custom palette
         HSSFPalette palette = book.getCustomPalette();
         palette.setColorAtIndex((short) 0x12, (byte) 101, (byte) 230, (byte) 100);
         palette.setColorAtIndex((short) 0x3b, (byte) 0, (byte) 255, (byte) 52);
-        
+
         //writing to disk; reading in and verifying palette
-        File temp = TempFile.createTempFile("testCustomPalette", ".xls");
-        FileOutputStream fos = new FileOutputStream(temp);
-        book.write(fos);
-        fos.close();
-        
-        FileInputStream fis = new FileInputStream(temp);
-        book = new HSSFWorkbook(fis);
-        fis.close();
-        
+        book = HSSFTestDataSamples.writeOutAndReadBack(book);
+
         palette = book.getCustomPalette();
         HSSFColor color = palette.getColor(HSSFColor.CORAL.index);  //unmodified
         assertNotNull("Unexpected null in custom palette (unmodified index)", color);
@@ -30,7 +22,7 @@
         assertEquals(msg, expectedRGB[0], actualRGB[0]);
         assertEquals(msg, expectedRGB[1], actualRGB[1]);
         assertEquals(msg, expectedRGB[2], actualRGB[2]);
-        
+
         color = palette.getColor((short) 0x12);
         assertNotNull("Unexpected null in custom palette (modified)", color);
         actualRGB = color.getTriplet();
