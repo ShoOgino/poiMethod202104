@@ -20,35 +20,25 @@
         {
             throw new IOException("The text piece table is corrupted");
         }
-        else
-        {
-            //parse out the text pieces
-            int pieceTableSize = LittleEndian.getInt(_tableBuffer, ++pos);
-            pos += 4;
-            int pieces = (pieceTableSize - 4) / 12;
-            for (int x = 0; x < pieces; x++)
-            {
-                int filePos = LittleEndian.getInt(_tableBuffer, pos + ((pieces + 1) * 4) + (x * 8) + 2);
-                boolean unicode = false;
-                if ((filePos & 0x40000000) == 0)
-                {
-                    unicode = true;
-                }
-                else
-                {
-                    unicode = false;
-                    filePos &= ~(0x40000000);//gives me FC in doc stream
-                    filePos /= 2;
-                }
-                int totLength = LittleEndian.getInt(_tableBuffer, pos + (x + 1) * 4) -
-                                LittleEndian.getInt(_tableBuffer, pos + (x * 4));
-
-                TextPiece piece = new TextPiece(filePos, totLength, unicode);
-                _listener.text(piece);
-
+        //parse out the text pieces
+        int pieceTableSize = LittleEndian.getInt(_tableBuffer, ++pos);
+        pos += 4;
+        int pieces = (pieceTableSize - 4) / 12;
+        for (int x = 0; x < pieces; x++) {
+            int filePos = LittleEndian.getInt(_tableBuffer, pos + ((pieces + 1) * 4) + (x * 8) + 2);
+            boolean unicode = false;
+            if ((filePos & 0x40000000) == 0) {
+                unicode = true;
+            } else {
+                unicode = false;
+                filePos &= ~(0x40000000);//gives me FC in doc stream
+                filePos /= 2;
             }
+            int totLength = LittleEndian.getInt(_tableBuffer, pos + (x + 1) * 4) -
+                    LittleEndian.getInt(_tableBuffer, pos + (x * 4));
 
+            TextPiece piece = new TextPiece(filePos, totLength, unicode);
+            _listener.text(piece);
         }
-
     }
 

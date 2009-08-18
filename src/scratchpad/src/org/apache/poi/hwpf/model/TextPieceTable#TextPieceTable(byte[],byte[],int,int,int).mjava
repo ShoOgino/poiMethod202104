@@ -1,69 +1,63 @@
-  public TextPieceTable(byte[] documentStream, byte[] tableStream, int offset,
-                        int size, int fcMin)
-    throws UnsupportedEncodingException
-  {
-    // get our plex of PieceDescriptors
-    PlexOfCps pieceTable = new PlexOfCps(tableStream, offset, size, PieceDescriptor.getSizeInBytes());
+	public TextPieceTable(byte[] documentStream, byte[] tableStream, int offset, int size, int fcMin) {
+		// get our plex of PieceDescriptors
+		PlexOfCps pieceTable = new PlexOfCps(tableStream, offset, size, PieceDescriptor
+				.getSizeInBytes());
 
-    int length = pieceTable.length();
-    PieceDescriptor[] pieces = new PieceDescriptor[length];
+		int length = pieceTable.length();
+		PieceDescriptor[] pieces = new PieceDescriptor[length];
 
-    // iterate through piece descriptors raw bytes and create
-    // PieceDescriptor objects
-    for (int x = 0; x < length; x++)
-    {
-      GenericPropertyNode node = pieceTable.getProperty(x);
-      pieces[x] = new PieceDescriptor(node.getBytes(), 0);
-    }
+		// iterate through piece descriptors raw bytes and create
+		// PieceDescriptor objects
+		for (int x = 0; x < length; x++) {
+			GenericPropertyNode node = pieceTable.getProperty(x);
+			pieces[x] = new PieceDescriptor(node.getBytes(), 0);
+		}
 
+		// Figure out the cp of the earliest text piece
+		// Note that text pieces don't have to be stored in order!
+		_cpMin = pieces[0].getFilePosition() - fcMin;
+		for (int x = 0; x < pieces.length; x++) {
+			int start = pieces[x].getFilePosition() - fcMin;
+			if (start < _cpMin) {
+				_cpMin = start;
+			}
+		}
 
-    // Figure out the cp of the earliest text piece
-    // Note that text pieces don't have to be stored in order!
-    _cpMin = pieces[0].getFilePosition() - fcMin;
-    for (int x = 0; x < pieces.length; x++) {
-    	int start = pieces[x].getFilePosition() - fcMin;
-    	if(start < _cpMin) {
-    		_cpMin = start;
-    	}
-    }
+		// using the PieceDescriptors, build our list of TextPieces.
+		for (int x = 0; x < pieces.length; x++) {
+			int start = pieces[x].getFilePosition();
+			PropertyNode node = pieceTable.getProperty(x);
 
+			// Grab the start and end, which are in characters
+			int nodeStartChars = node.getStart();
+			int nodeEndChars = node.getEnd();
 
-    // using the PieceDescriptors, build our list of TextPieces.
-    for (int x = 0; x < pieces.length; x++)
-    {
-      int start = pieces[x].getFilePosition();
-      PropertyNode node = pieceTable.getProperty(x);
+			// What's the relationship between bytes and characters?
+			boolean unicode = pieces[x].isUnicode();
+			int multiple = 1;
+			if (unicode) {
+				multiple = 2;
+			}
 
-      // Grab the start and end, which are in characters
-      int nodeStartChars = node.getStart();
-      int nodeEndChars = node.getEnd();
+			// Figure out the length, in bytes and chars
+			int textSizeChars = (nodeEndChars - nodeStartChars);
+			int textSizeBytes = textSizeChars * multiple;
 
-      // What's the relationship between bytes and characters?
-      boolean unicode = pieces[x].isUnicode();
-      int multiple = 1;
-      if (unicode) {
-        multiple = 2;
-      }
+			// Grab the data that makes up the piece
+			byte[] buf = new byte[textSizeBytes];
+			System.arraycopy(documentStream, start, buf, 0, textSizeBytes);
 
-      // Figure out the length, in bytes and chars
-      int textSizeChars = (nodeEndChars - nodeStartChars);
-      int textSizeBytes = textSizeChars * multiple;
+			// And now build the piece
+			_textPieces.add(new TextPiece(nodeStartChars, nodeEndChars, buf, pieces[x], node
+					.getStart()));
+		}
 
-      // Grab the data that makes up the piece
-      byte[] buf = new byte[textSizeBytes];
-      System.arraycopy(documentStream, start, buf, 0, textSizeBytes);
-
-      // And now build the piece
-      _textPieces.add(new TextPiece(nodeStartChars, nodeEndChars, buf, pieces[x], node.getStart()));
-    }
-
-    // In the interest of our sanity, now sort the text pieces
-    //  into order, if they're not already
-    TextPiece[] tp = (TextPiece[])
-    	_textPieces.toArray(new TextPiece[_textPieces.size()]);
-    Arrays.sort(tp);
-    for(int i=0; i<tp.length; i++) {
-    	_textPieces.set(i, tp[i]);
-    }
-  }
+		// In the interest of our sanity, now sort the text pieces
+		// into order, if they're not already
+		TextPiece[] tp = (TextPiece[]) _textPieces.toArray(new TextPiece[_textPieces.size()]);
+		Arrays.sort(tp);
+		for (int i = 0; i < tp.length; i++) {
+			_textPieces.set(i, tp[i]);
+		}
+	}
 
