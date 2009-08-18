@@ -8,23 +8,19 @@
 		// For now, we don't care about different ranges, as it
 		//  doesn't seem that .docx properly supports that
 		//  feature of the file format yet
+		this.doc = doc;
 		CTSectPr sectPr = doc.getDocument().getBody().getSectPr();
 		for(int i=0; i<sectPr.sizeOfHeaderReferenceArray(); i++) {
 			// Get the header
 			CTHdrFtrRef ref = sectPr.getHeaderReferenceArray(i);
 			PackagePart hdrPart = doc.getPartById(ref.getId());
-			XWPFHeader hdr = new XWPFHeader(
-					HdrDocument.Factory.parse(hdrPart.getInputStream()).getHdr()
-			);
+			HdrDocument hdrDoc = HdrDocument.Factory.parse(hdrPart.getInputStream());
+			CTHdrFtr hdrFtr = hdrDoc.getHdr();
+			XWPFHeader hdr = new XWPFHeader(hdrFtr);
 
 			// Assign it
-			if(ref.getType() == STHdrFtr.FIRST) {
-				firstPageHeader = hdr;
-			} else if(ref.getType() == STHdrFtr.EVEN) {
-				evenPageHeader = hdr;
-			} else {
-				defaultHeader = hdr;
-			}
+			Enum type = ref.getType();
+			assignHeader(hdr, type);
 		}
 		for(int i=0; i<sectPr.sizeOfFooterReferenceArray(); i++) {
 			// Get the footer
@@ -35,13 +31,8 @@
 			);
 
 			// Assign it
-			if(ref.getType() == STHdrFtr.FIRST) {
-				firstPageFooter = ftr;
-			} else if(ref.getType() == STHdrFtr.EVEN) {
-				evenPageFooter = ftr;
-			} else {
-				defaultFooter = ftr;
-			}
+			Enum type = ref.getType();
+			assignFooter(ftr, type);
 		}
 	}
 
