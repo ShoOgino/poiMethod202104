@@ -1,0 +1,37 @@
+    /**
+     *
+     * @param classPathTest test file to check if the resources are avaiable from the classpath
+     */
+    private void initialise(String classPathTest) {
+        String dataDirName = System.getProperty(_testDataDir);
+        if (dataDirName == null) {
+            // check to see if we can just get the resources from the classpath
+            InputStream is = openClasspathResource(classPathTest);
+            if (is != null) {
+                try {
+                    is.close(); // be nice
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                _sampleDataIsAvaliableOnClassPath = true;
+                return;
+            }
+
+            throw new RuntimeException("Must set system property '"
+                    + _testDataDir + "' before running tests");
+        }
+        File dataDir = new File(dataDirName);
+        if (!dataDir.exists()) {
+            throw new RuntimeException("Data dir '" + dataDirName
+                    + "' specified by system property '" + _testDataDir
+                    + "' does not exist");
+        }
+        // convert to canonical file, to make any subsequent error messages
+        // clearer.
+        try {
+            _resolvedDataDir = dataDir.getCanonicalFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+

@@ -1,0 +1,45 @@
+    /**
+     * Opens a sample file from the test data directory
+     *
+     * @param  sampleFileName the file to open
+     * @return an open <tt>InputStream</tt> for the specified sample file
+     */
+    public InputStream openResourceAsStream(String sampleFileName) {
+
+        if (_sampleDataIsAvaliableOnClassPath) {
+            InputStream result = sampleFileName == null ? null :
+                    openClasspathResource(sampleFileName);
+            if(result == null) {
+                throw new RuntimeException("specified test sample file '" + sampleFileName
+                        + "' not found on the classpath");
+            }
+            // wrap to avoid temp warning method about auto-closing input stream
+            return new NonSeekableInputStream(result);
+        }
+        if (_resolvedDataDir == null) {
+            throw new RuntimeException("Must set system property '"
+                    + _testDataDir
+                    + "' properly before running tests");
+        }
+
+        File f = new File(_resolvedDataDir, sampleFileName);
+        if (!f.exists()) {
+            throw new RuntimeException("Sample file '" + sampleFileName
+                    + "' not found in data dir '" + _resolvedDataDir.getAbsolutePath() + "'");
+        }
+        try {
+            if(!sampleFileName.equals(f.getCanonicalFile().getName())){
+                throw new RuntimeException("File name is case-sensitive: requested '" + sampleFileName
+                        + "' but actual file is '" + f.getCanonicalFile().getName() + "'");
+            }
+        } catch (IOException e){
+            throw new RuntimeException(e);
+        }
+
+        try {
+            return new FileInputStream(f);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
