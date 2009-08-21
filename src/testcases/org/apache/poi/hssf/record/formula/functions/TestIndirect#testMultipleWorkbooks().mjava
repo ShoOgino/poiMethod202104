@@ -1,0 +1,21 @@
+	public void testMultipleWorkbooks() {
+		HSSFWorkbook wbA = createWBA();
+		HSSFCell cellA = wbA.getSheetAt(0).createRow(10).createCell(0);
+		HSSFFormulaEvaluator feA = new HSSFFormulaEvaluator(wbA);
+
+		HSSFWorkbook wbB = createWBB();
+		HSSFCell cellB = wbB.getSheetAt(0).createRow(10).createCell(0);
+		HSSFFormulaEvaluator feB = new HSSFFormulaEvaluator(wbB);
+
+		String[] workbookNames = { "MyBook", "Figures for January", };
+		HSSFFormulaEvaluator[] evaluators = { feA, feB, };
+		HSSFFormulaEvaluator.setupEnvironment(workbookNames, evaluators);
+
+		confirm(feB, cellB, "INDIRECT(\"'[Figures for January]## Look here!'!A1\")", 42); // same wb
+		confirm(feA, cellA, "INDIRECT(\"'[Figures for January]## Look here!'!A1\")", 42); // across workbooks
+
+		// 2 level recursion
+		confirm(feB, cellB, "INDIRECT(\"[MyBook]Sheet2!A1\")", 50); // set up (and check) first level
+		confirm(feA, cellA, "INDIRECT(\"'[Figures for January]Sheet1'!A11\")", 50); // points to cellB
+	}
+

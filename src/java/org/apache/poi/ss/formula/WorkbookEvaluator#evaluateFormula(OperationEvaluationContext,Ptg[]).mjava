@@ -1,5 +1,5 @@
 	// visibility raised for testing
-	/* package */ ValueEval evaluateFormula(int sheetIndex, int srcRowNum, int srcColNum, Ptg[] ptgs, EvaluationTracker tracker) {
+	/* package */ ValueEval evaluateFormula(OperationEvaluationContext ec, Ptg[] ptgs) {
 
 		Stack<ValueEval> stack = new Stack<ValueEval>();
 		for (int i = 0, iSize = ptgs.length; i < iSize; i++) {
@@ -42,12 +42,12 @@
 					ops[j] = p;
 				}
 //				logDebug("invoke " + operation + " (nAgs=" + numops + ")");
-				opResult = invokeOperation(operation, ops, _workbook, sheetIndex, srcRowNum, srcColNum);
+				opResult = operation.evaluate(ops, ec);
 				if (opResult == MissingArgEval.instance) {
 					opResult = BlankEval.INSTANCE;
 				}
 			} else {
-				opResult = getEvalForPtg(ptg, sheetIndex, tracker);
+				opResult = getEvalForPtg(ptg, ec);
 			}
 			if (opResult == null) {
 				throw new RuntimeException("Evaluation result must not be null");
@@ -60,7 +60,7 @@
 		if (!stack.isEmpty()) {
 			throw new IllegalStateException("evaluation stack not empty");
 		}
-		value = dereferenceValue(value, srcRowNum, srcColNum);
+		value = dereferenceValue(value, ec.getRowIndex(), ec.getColumnIndex());
 		if (value == BlankEval.INSTANCE) {
 			// Note Excel behaviour here. A blank final final value is converted to zero.
 			return NumberEval.ZERO;

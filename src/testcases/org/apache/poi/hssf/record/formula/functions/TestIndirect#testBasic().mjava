@@ -1,0 +1,52 @@
+	public void testBasic() {
+
+		HSSFWorkbook wbA = createWBA();
+		HSSFCell c = wbA.getSheetAt(0).createRow(5).createCell(2);
+		HSSFFormulaEvaluator feA = new HSSFFormulaEvaluator(wbA);
+
+		// non-error cases
+		confirm(feA, c, "INDIRECT(\"C2\")", 23);
+		confirm(feA, c, "INDIRECT(\"$C2\")", 23);
+		confirm(feA, c, "INDIRECT(\"C$2\")", 23);
+		confirm(feA, c, "SUM(INDIRECT(\"Sheet2!B1:C3\"))", 351); // area ref
+		confirm(feA, c, "SUM(INDIRECT(\"Sheet2! B1 : C3 \"))", 351); // spaces in area ref
+		confirm(feA, c, "SUM(INDIRECT(\"'John''s sales'!A1:C1\"))", 93); // special chars in sheet name
+		confirm(feA, c, "INDIRECT(\"'Sheet1'!B3\")", 32); // redundant sheet name quotes
+		confirm(feA, c, "INDIRECT(\"sHeet1!B3\")", 32); // case-insensitive sheet name
+		confirm(feA, c, "INDIRECT(\" D3 \")", 34); // spaces around cell ref
+		confirm(feA, c, "INDIRECT(\"Sheet1! D3 \")", 34); // spaces around cell ref
+		confirm(feA, c, "INDIRECT(\"A1\", TRUE)", 11); // explicit arg1. only TRUE supported so far
+
+		confirm(feA, c, "INDIRECT(\"A1:G1\")", 13); // de-reference area ref (note formula is in C4)
+
+
+		// simple error propagation:
+
+		// arg0 is evaluated to text first
+		confirm(feA, c, "INDIRECT(#DIV/0!)", EE.DIV_ZERO);
+		confirm(feA, c, "INDIRECT(#DIV/0!)", EE.DIV_ZERO);
+		confirm(feA, c, "INDIRECT(#NAME?, \"x\")", EE.NAME_INVALID);
+		confirm(feA, c, "INDIRECT(#NUM!, #N/A)", EE.NUM_ERROR);
+
+		// arg1 is evaluated to boolean before arg0 is decoded
+		confirm(feA, c, "INDIRECT(\"garbage\", #N/A)", EE.NA);
+		confirm(feA, c, "INDIRECT(\"garbage\", \"\")", EE.VALUE_INVALID); // empty string is not valid boolean
+		confirm(feA, c, "INDIRECT(\"garbage\", \"flase\")", EE.VALUE_INVALID); // must be "TRUE" or "FALSE"
+
+
+		// spaces around sheet name (with or without quotes makes no difference)
+		confirm(feA, c, "INDIRECT(\"'Sheet1 '!D3\")", EE.REF_INVALID);
+		confirm(feA, c, "INDIRECT(\" Sheet1!D3\")", EE.REF_INVALID);
+		confirm(feA, c, "INDIRECT(\"'Sheet1' !D3\")", EE.REF_INVALID);
+
+
+		confirm(feA, c, "SUM(INDIRECT(\"'John's sales'!A1:C1\"))", EE.REF_INVALID); // bad quote escaping
+		confirm(feA, c, "INDIRECT(\"[Book1]Sheet1!A1\")", EE.REF_INVALID); // unknown external workbook
+		confirm(feA, c, "INDIRECT(\"Sheet3!A1\")", EE.REF_INVALID); // unknown sheet
+		if (false) { // TODO - support evaluation of defined names
+			confirm(feA, c, "INDIRECT(\"Sheet1!IW1\")", EE.REF_INVALID); // bad column
+			confirm(feA, c, "INDIRECT(\"Sheet1!A65537\")", EE.REF_INVALID); // bad row
+		}
+		confirm(feA, c, "INDIRECT(\"Sheet1!A 1\")", EE.REF_INVALID); // space in cell ref
+	}
+

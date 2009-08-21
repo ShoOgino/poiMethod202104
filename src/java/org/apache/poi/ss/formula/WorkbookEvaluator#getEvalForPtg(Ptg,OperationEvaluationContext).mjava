@@ -4,7 +4,7 @@
 	 * StringPtg, BoolPtg <br/>special Note: OperationPtg subtypes cannot be
 	 * passed here!
 	 */
-	private ValueEval getEvalForPtg(Ptg ptg, int sheetIndex, EvaluationTracker tracker) {
+	private ValueEval getEvalForPtg(Ptg ptg, OperationEvaluationContext ec) {
 		//  consider converting all these (ptg instanceof XxxPtg) expressions to (ptg.getClass() == XxxPtg.class)
 
 		if (ptg instanceof NamePtg) {
@@ -15,7 +15,7 @@
 				return new NameEval(nameRecord.getNameText());
 			}
 			if (nameRecord.hasFormula()) {
-				return evaluateNameFormula(nameRecord.getNameDefinition(), sheetIndex, tracker);
+				return evaluateNameFormula(nameRecord.getNameDefinition(), ec);
 			}
 
 			throw new RuntimeException("Don't now how to evalate name '" + nameRecord.getNameText() + "'");
@@ -48,15 +48,15 @@
 		}
 		if (ptg instanceof Ref3DPtg) {
 			Ref3DPtg refPtg = (Ref3DPtg) ptg;
-			SheetRefEvaluator sre = createExternSheetRefEvaluator(tracker, refPtg);
+			SheetRefEvaluator sre = ec.createExternSheetRefEvaluator(refPtg);
 			return new LazyRefEval(refPtg, sre);
 		}
 		if (ptg instanceof Area3DPtg) {
 			Area3DPtg aptg = (Area3DPtg) ptg;
-			SheetRefEvaluator sre = createExternSheetRefEvaluator(tracker, aptg);
+			SheetRefEvaluator sre = ec.createExternSheetRefEvaluator(aptg);
 			return new LazyAreaEval(aptg, sre);
 		}
-		SheetRefEvaluator sre = new SheetRefEvaluator(this, tracker, _workbook, sheetIndex);
+		SheetRefEvaluator sre = ec.getRefEvaluatorForCurrentSheet();
 		if (ptg instanceof RefPtg) {
 			return new LazyRefEval(((RefPtg) ptg), sre);
 		}
