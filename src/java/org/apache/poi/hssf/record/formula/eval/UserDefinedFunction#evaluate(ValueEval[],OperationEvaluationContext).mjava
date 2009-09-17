@@ -1,19 +1,22 @@
 	public ValueEval evaluate(ValueEval[] args, OperationEvaluationContext ec) {
-		EvaluationWorkbook workbook = ec.getWorkbook();
 		int nIncomingArgs = args.length;
 		if(nIncomingArgs < 1) {
 			throw new RuntimeException("function name argument missing");
 		}
 
 		ValueEval nameArg = args[0];
-		FreeRefFunction targetFunc;
+		String functionName;
 		if (nameArg instanceof NameEval) {
-			targetFunc = findInternalUserDefinedFunction(workbook, (NameEval) nameArg);
+			functionName = ((NameEval) nameArg).getFunctionName();
 		} else if (nameArg instanceof NameXEval) {
-			targetFunc = findExternalUserDefinedFunction(workbook, (NameXEval) nameArg);
+			functionName = ec.getWorkbook().resolveNameXText(((NameXEval) nameArg).getPtg());
 		} else {
 			throw new RuntimeException("First argument should be a NameEval, but got ("
 					+ nameArg.getClass().getName() + ")");
+		}
+		FreeRefFunction targetFunc = ec.findUserDefinedFunction(functionName);
+		if (targetFunc == null) {
+			throw new NotImplementedException(functionName);
 		}
 		int nOutGoingArgs = nIncomingArgs -1;
 		ValueEval[] outGoingArgs = new ValueEval[nOutGoingArgs];

@@ -1,28 +1,28 @@
-    /**
-     * Checks that an external function can get invoked from the formula
-     * evaluator.
-     * 
-     * @throws IOException
-     * 
-     */
-    public void testInvoke() {
-        HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook("testNames.xls");
-        HSSFSheet sheet = wb.getSheetAt(0);
+	/**
+	 * Checks that an external function can get invoked from the formula
+	 * evaluator.
+	 */
+	public void testInvoke() {
+		HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook("testNames.xls");
+		HSSFSheet sheet = wb.getSheetAt(0);
 
-        registerMyFunc(wb);
-        createExampleToolPack();
+		/**
+		 * register the two test UDFs in a UDF finder, to be passed to the evaluator
+		 */
+		UDFFinder udff1 = new DefaultUDFFinder(new String[] { "myFunc", },
+				new FreeRefFunction[] { new MyFunc(), });
+		UDFFinder udff2 = new DefaultUDFFinder(new String[] { "myFunc2", },
+				new FreeRefFunction[] { new MyFunc2(), });
+		UDFFinder udff = new AggregatingUDFFinder(udff1, udff2);
 
-        HSSFRow row = sheet.getRow(0);
-        HSSFCell myFuncCell = row.getCell(1); //=myFunc("_")
 
-        HSSFCell myFunc2Cell = row.getCell(2); //=myFunc2("_")
+		HSSFRow row = sheet.getRow(0);
+		HSSFCell myFuncCell = row.getCell(1); // =myFunc("_")
 
-        HSSFFormulaEvaluator fe = new HSSFFormulaEvaluator(wb);
-        try {
-            assertEquals("_abc", fe.evaluate(myFuncCell).getStringValue());
-            assertEquals("_abc2", fe.evaluate(myFunc2Cell).getStringValue());
-        } catch (Exception e) {
-            assertFalse(true);
-        }
-    }
+		HSSFCell myFunc2Cell = row.getCell(2); // =myFunc2("_")
+
+		HSSFFormulaEvaluator fe = HSSFFormulaEvaluator.create(wb, null, udff);
+		assertEquals("_abc", fe.evaluate(myFuncCell).getStringValue());
+		assertEquals("_abc2", fe.evaluate(myFunc2Cell).getStringValue());
+	}
 
