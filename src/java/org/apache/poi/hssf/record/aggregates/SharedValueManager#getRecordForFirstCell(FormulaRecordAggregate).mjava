@@ -1,0 +1,57 @@
+	/**
+	 * Gets the {@link SharedValueRecordBase} record if it should be encoded immediately after the
+	 * formula record contained in the specified {@link FormulaRecordAggregate} agg.  Note - the
+	 * shared value record always appears after the first formula record in the group.  For arrays
+	 * and tables the first formula is always the in the top left cell.  However, since shared
+	 * formula groups can be sparse and/or overlap, the first formula may not actually be in the
+	 * top left cell.
+	 *
+	 * @return the SHRFMLA, TABLE or ARRAY record for the formula cell, if it is the first cell of
+	 * a table or array region. <code>null</code> if the formula cell is not shared/array/table,
+	 * or if the specified formula is not the the first in the group.
+	 */
+	public SharedValueRecordBase getRecordForFirstCell(FormulaRecordAggregate agg) {
+		CellReference firstCell = agg.getFormulaRecord().getFormula().getExpReference();
+		// perhaps this could be optimised by consulting the (somewhat unreliable) isShared flag
+		// and/or distinguishing between tExp and tTbl.
+		if (firstCell == null) {
+			// not a shared/array/table formula
+			return null;
+		}
+
+
+		int row = firstCell.getRow();
+		int column = firstCell.getCol();
+		if (agg.getRow() != row || agg.getColumn() != column) {
+			// not the first formula cell in the group
+			return null;
+		}
+		SharedFormulaGroup[] groups = getGroups();
+		for (int i = 0; i < groups.length; i++) {
+			// note - logic for finding correct shared formula group is slightly
+			// more complicated since the first cell
+			SharedFormulaGroup sfg = groups[i];
+			if (sfg.isFirstCell(row, column)) {
+				return sfg.getSFR();
+			}
+		}
+
+		// Since arrays and tables cannot be sparse (all cells in range participate)
+		// The first cell will be the top left in the range.  So we can match the
+		// ARRAY/TABLE record directly.
+
+		for (int i = 0; i < _tableRecords.length; i++) {
+			TableRecord tr = _tableRecords[i];
+			if (tr.isFirstCell(row, column)) {
+				return tr;
+			}
+		}
+		for (int i = 0; i < _arrayRecords.length; i++) {
+			ArrayRecord ar = _arrayRecords[i];
+			if (ar.isFirstCell(row, column)) {
+				return ar;
+			}
+		}
+		return null;
+	}
+
