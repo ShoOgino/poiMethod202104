@@ -1,0 +1,32 @@
+    public void testFormulaString() {
+        XSSFWorkbook wb = new XSSFWorkbook();
+        XSSFCell cell = wb.createSheet().createRow(0).createCell(0);
+        CTCell ctCell = cell.getCTCell(); //low-level bean holding cell's xml
+
+        cell.setCellFormula("A2");
+        assertEquals(XSSFCell.CELL_TYPE_FORMULA, cell.getCellType());
+        //the value is not set and cell's type='N' which means blank
+        assertEquals(STCellType.N, ctCell.getT());
+
+        //set cached formula value
+        cell.setCellValue("t='str'");
+        //we are still of 'formula' type
+        assertEquals(XSSFCell.CELL_TYPE_FORMULA, cell.getCellType());
+        //cached formula value is set and cell's type='STR'
+        assertEquals(STCellType.STR, ctCell.getT());
+        assertEquals("t='str'", cell.getStringCellValue());
+
+        //now remove the formula, the cached formula result remains
+        cell.setCellFormula(null);
+        assertEquals(XSSFCell.CELL_TYPE_STRING, cell.getCellType());
+        assertEquals(STCellType.STR, ctCell.getT());
+        //the line below failed prior to fix of Bug #47889
+        assertEquals("t='str'", cell.getStringCellValue());
+
+        //revert to a blank cell
+        cell.setCellValue((String)null);
+        assertEquals(XSSFCell.CELL_TYPE_BLANK, cell.getCellType());
+        assertEquals(STCellType.N, ctCell.getT());
+        assertEquals("", cell.getStringCellValue());
+    }
+
