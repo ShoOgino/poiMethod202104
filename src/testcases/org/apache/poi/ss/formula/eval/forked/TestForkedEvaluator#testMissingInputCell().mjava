@@ -1,0 +1,36 @@
+	/**
+	 * As of Sep 2009, the Forked evaluator can update values from existing cells (this is because
+	 * the underlying 'master' cell is used as a key into the calculation cache.  Prior to the fix
+	 * for this bug, an attempt to update a missing cell would result in NPE.  This junit tests for
+	 * a more meaningful error message.<br/>
+	 *
+	 * An alternate solution might involve allowing empty cells to be created as necessary.  That
+	 * was considered less desirable because so far, the underlying 'master' workbook is strictly
+	 * <i>read-only</i> with respect to the ForkedEvaluator.
+	 */
+	public void testMissingInputCell() {
+		HSSFWorkbook wb = createWorkbook();
+
+		ForkedEvaluator fe = ForkedEvaluator.create(wb, null, null);
+
+		// attempt update input at cell A2 (which is missing)
+		try {
+			fe.updateCell("Inputs", 1, 0, new NumberEval(4.0));
+			throw new AssertionFailedError(
+					"Expected exception to be thrown due to missing input cell");
+		} catch (NullPointerException e) {
+			StackTraceElement[] stes = e.getStackTrace();
+			if (stes[0].getMethodName().equals("getIdentityKey")) {
+				throw new AssertionFailedError("Identified bug with update of missing input cell");
+			}
+			throw e;
+		} catch (UnsupportedOperationException e) {
+			if (e.getMessage().equals(
+					"Underlying cell 'A2' is missing in master sheet.")) {
+				// expected during successful test
+			} else {
+				throw e;
+			}
+		}
+	}
+
