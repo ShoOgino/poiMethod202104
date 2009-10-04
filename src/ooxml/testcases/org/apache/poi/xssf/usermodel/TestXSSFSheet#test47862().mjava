@@ -1,0 +1,56 @@
+    /**
+     * Setting width of a column included in a column span
+     */
+    public void test47862() {
+        XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("47862.xlsx");
+        XSSFSheet sheet = wb.getSheetAt(0);
+        CTCols cols = sheet.getCTWorksheet().getColsArray(0);
+        //<cols>
+        //  <col min="1" max="5" width="15.77734375" customWidth="1"/>
+        //</cols>
+
+        //a span of columns [1,5]
+        assertEquals(1, cols.sizeOfColArray());
+        CTCol col = cols.getColArray(0);
+        assertEquals(1, col.getMin());
+        assertEquals(5, col.getMax());
+        double swidth = 15.77734375; //width of columns in the span
+        assertEquals(swidth, col.getWidth());
+
+        for (int i = 0; i < 5; i++) {
+            assertEquals((int)(swidth*256), sheet.getColumnWidth(i));
+        }
+
+        int[] cw = new int[]{10, 15, 20, 25, 30};
+        for (int i = 0; i < 5; i++) {
+            sheet.setColumnWidth(i, cw[i]*256);
+        }
+
+        //the check below failed prior to fix of Bug #47862
+        ColumnHelper.sortColumns(cols);
+        //<cols>
+        //  <col min="1" max="1" customWidth="true" width="10.0" />
+        //  <col min="2" max="2" customWidth="true" width="15.0" />
+        //  <col min="3" max="3" customWidth="true" width="20.0" />
+        //  <col min="4" max="4" customWidth="true" width="25.0" />
+        //  <col min="5" max="5" customWidth="true" width="30.0" />
+        //</cols>
+
+        //now the span is splitted into 5 individual columns
+        assertEquals(5, cols.sizeOfColArray());
+        for (int i = 0; i < 5; i++) {
+            assertEquals(cw[i]*256, sheet.getColumnWidth(i));
+            assertEquals((double)cw[i], cols.getColArray(i).getWidth());
+        }
+
+        //serialize and check again 
+        wb = getTestDataProvider().writeOutAndReadBack(wb);
+        sheet = wb.getSheetAt(0);
+        cols = sheet.getCTWorksheet().getColsArray(0);
+        assertEquals(5, cols.sizeOfColArray());
+        for (int i = 0; i < 5; i++) {
+            assertEquals(cw[i]*256, sheet.getColumnWidth(i));
+            assertEquals((double)cw[i], cols.getColArray(i).getWidth());
+        }
+    }
+
