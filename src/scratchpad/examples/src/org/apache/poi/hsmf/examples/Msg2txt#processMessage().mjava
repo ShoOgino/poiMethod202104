@@ -1,0 +1,70 @@
+	/**
+	 * Processes the message.
+	 * 
+	 * @throws IOException if an exception occurs while writing the message out
+	 */
+	public void processMessage() throws IOException {
+		String txtFileName = fileNameStem + ".txt";
+		String attDirName = fileNameStem + "-att";
+		PrintWriter txtOut = null;
+		try {
+			txtOut = new PrintWriter(txtFileName);
+			try {
+				String displayFrom = msg.getDisplayFrom();
+				txtOut.println("From: "+displayFrom);
+			} catch (ChunkNotFoundException e) {
+				// ignore
+			}
+			try {
+				String displayTo = msg.getDisplayTo();
+				txtOut.println("To: "+displayTo);
+			} catch (ChunkNotFoundException e) {
+				// ignore
+			}
+			try {
+				String displayCC = msg.getDisplayCC();
+				txtOut.println("CC: "+displayCC);
+			} catch (ChunkNotFoundException e) {
+				// ignore
+			}
+			try {
+				String displayBCC = msg.getDisplayBCC();
+				txtOut.println("BCC: "+displayBCC);
+			} catch (ChunkNotFoundException e) {
+				// ignore
+			}
+			try {
+				String subject = msg.getSubject();
+				txtOut.println("Subject: "+subject);
+			} catch (ChunkNotFoundException e) {
+				// ignore
+			}
+			try {
+				String body = msg.getTextBody();
+				txtOut.println(body);
+			} catch (ChunkNotFoundException e) {
+				System.err.println("No message body");
+			}
+			Map attachmentMap = msg.getAttachmentFiles();
+			if(attachmentMap.size() > 0) {
+				File d = new File(attDirName);
+				if(d.mkdir()) {
+					for(
+							Iterator ii = attachmentMap.entrySet().iterator();
+							ii.hasNext();
+							) {
+						Map.Entry entry = (Map.Entry)ii.next();
+						processAttachment(d, entry.getKey().toString(),
+								(ByteArrayInputStream)entry.getValue());
+					}
+				} else {
+					System.err.println("Can't create directory "+attDirName);
+				}
+			}
+		} finally {
+			if(txtOut != null) {
+				txtOut.close();
+			}
+		}
+	}
+
