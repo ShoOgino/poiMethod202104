@@ -7,32 +7,26 @@
 	 * @return numeric user-specified result code. If zero continue processing.
 	 * @throws HSSFUserException User exception condition
 	 */
+	protected short processRecord(Record rec) throws HSSFUserException {
+		Object obj = _records.get(Short.valueOf(rec.getSid()));
+		short userCode = 0;
 
-    protected short processRecord(Record rec) throws HSSFUserException
-    {
-        Object obj = records.get(new Short(rec.getSid()));
-        short userCode = 0;
+		if (obj != null) {
+			List listeners = (List) obj;
 
-        if (obj != null)
-        {
-            List listeners = ( List ) obj;
-
-            for (int k = 0; k < listeners.size(); k++)
-            {
-                Object listenObj = listeners.get(k);
-                if (listenObj instanceof AbortableHSSFListener)
-                {
-					AbortableHSSFListener listener = ( AbortableHSSFListener ) listenObj;
-                	userCode = listener.abortableProcessRecord(rec);
-                	if (userCode!=0) break;
-				}
-				else
-				{ 
-					HSSFListener listener = ( HSSFListener ) listenObj;
+			for (int k = 0; k < listeners.size(); k++) {
+				Object listenObj = listeners.get(k);
+				if (listenObj instanceof AbortableHSSFListener) {
+					AbortableHSSFListener listener = (AbortableHSSFListener) listenObj;
+					userCode = listener.abortableProcessRecord(rec);
+					if (userCode != 0)
+						break;
+				} else {
+					HSSFListener listener = (HSSFListener) listenObj;
 					listener.processRecord(rec);
 				}
-            }
-        }
-        return userCode;
-    }
+			}
+		}
+		return userCode;
+	}
 
