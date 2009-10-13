@@ -1,0 +1,28 @@
+    private List<String> getResourceNames(URL url, String contentType) throws IOException, ParserConfigurationException, SAXException, TransformerException {
+        List<String> signatureResourceNames = new LinkedList<String>();
+        if (null == url) {
+            throw new RuntimeException("OOXML URL is null");
+        }
+        InputStream inputStream = url.openStream();
+        ZipInputStream zipInputStream = new ZipInputStream(inputStream);
+        ZipEntry zipEntry;
+        while (null != (zipEntry = zipInputStream.getNextEntry())) {
+            if (false == "[Content_Types].xml".equals(zipEntry.getName())) {
+                continue;
+            }
+            Document contentTypesDocument = loadDocument(zipInputStream);
+            Element nsElement = contentTypesDocument.createElement("ns");
+            nsElement.setAttributeNS(Constants.NamespaceSpecNS, "xmlns:tns", "http://schemas.openxmlformats.org/package/2006/content-types");
+            NodeList nodeList = XPathAPI.selectNodeList(contentTypesDocument, "/tns:Types/tns:Override[@ContentType='" + contentType + "']/@PartName",
+                                            nsElement);
+            for (int nodeIdx = 0; nodeIdx < nodeList.getLength(); nodeIdx++) {
+                String partName = nodeList.item(nodeIdx).getTextContent();
+                LOG.debug("part name: " + partName);
+                partName = partName.substring(1); // remove '/'
+                signatureResourceNames.add(partName);
+            }
+            break;
+        }
+        return signatureResourceNames;
+    }
+

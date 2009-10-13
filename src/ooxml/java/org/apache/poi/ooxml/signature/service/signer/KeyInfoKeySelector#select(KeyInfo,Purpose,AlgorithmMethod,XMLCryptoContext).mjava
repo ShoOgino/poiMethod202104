@@ -1,0 +1,34 @@
+    @Override
+    public KeySelectorResult select(KeyInfo keyInfo, Purpose purpose, AlgorithmMethod method, XMLCryptoContext context) throws KeySelectorException {
+        LOG.debug("select key");
+        if (null == keyInfo) {
+            throw new KeySelectorException("no ds:KeyInfo present");
+        }
+        List<XMLStructure> keyInfoContent = keyInfo.getContent();
+        this.certificate = null;
+        for (XMLStructure keyInfoStructure : keyInfoContent) {
+            if (false == (keyInfoStructure instanceof X509Data)) {
+                continue;
+            }
+            X509Data x509Data = (X509Data) keyInfoStructure;
+            List<Object> x509DataList = x509Data.getContent();
+            for (Object x509DataObject : x509DataList) {
+                if (false == (x509DataObject instanceof X509Certificate)) {
+                    continue;
+                }
+                X509Certificate certificate = (X509Certificate) x509DataObject;
+                LOG.debug("certificate: " + certificate.getSubjectX500Principal());
+                if (null == this.certificate) {
+                    /*
+                     * The first certificate is presumably the signer.
+                     */
+                    this.certificate = certificate;
+                }
+            }
+            if (null != this.certificate) {
+                return this;
+            }
+        }
+        throw new KeySelectorException("No key found!");
+    }
+

@@ -1,0 +1,54 @@
+    public Data transform(Data data, XMLCryptoContext context) throws TransformException {
+        LOG.debug("transform(data,context)");
+        LOG.debug("data java type: " + data.getClass().getName());
+        OctetStreamData octetStreamData = (OctetStreamData) data;
+        LOG.debug("URI: " + octetStreamData.getURI());
+        InputStream octetStream = octetStreamData.getOctetStream();
+        Document relationshipsDocument;
+        try {
+            relationshipsDocument = loadDocument(octetStream);
+        } catch (Exception e) {
+            throw new TransformException(e.getMessage(), e);
+        }
+        try {
+            LOG.debug("relationships document: " + toString(relationshipsDocument));
+        } catch (TransformerException e) {
+            throw new TransformException(e.getMessage(), e);
+        }
+        Element nsElement = relationshipsDocument.createElement("ns");
+        nsElement.setAttributeNS(Constants.NamespaceSpecNS, "xmlns:tns", "http://schemas.openxmlformats.org/package/2006/relationships");
+        Element relationshipsElement = relationshipsDocument.getDocumentElement();
+        NodeList childNodes = relationshipsElement.getChildNodes();
+        for (int nodeIdx = 0; nodeIdx < childNodes.getLength(); nodeIdx++) {
+            Node childNode = childNodes.item(nodeIdx);
+            if (Node.ELEMENT_NODE != childNode.getNodeType()) {
+                LOG.debug("removing node");
+                relationshipsElement.removeChild(childNode);
+                nodeIdx--;
+                continue;
+            }
+            Element childElement = (Element) childNode;
+            String idAttribute = childElement.getAttribute("Id");
+            LOG.debug("Relationship id attribute: " + idAttribute);
+            if (false == this.sourceIds.contains(idAttribute)) {
+                LOG.debug("removing element: " + idAttribute);
+                relationshipsElement.removeChild(childNode);
+                nodeIdx--;
+            }
+            /*
+             * See: ISO/IEC 29500-2:2008(E) - 13.2.4.24 Relationships Transform
+             * Algorithm.
+             */
+            if (null == childElement.getAttributeNode("TargetMode")) {
+                childElement.setAttribute("TargetMode", "Internal");
+            }
+        }
+        LOG.debug("# Relationship elements: " + relationshipsElement.getElementsByTagName("*").getLength());
+        sortRelationshipElements(relationshipsElement);
+        try {
+            return toOctetStreamData(relationshipsDocument);
+        } catch (TransformerException e) {
+            throw new TransformException(e.getMessage(), e);
+        }
+    }
+

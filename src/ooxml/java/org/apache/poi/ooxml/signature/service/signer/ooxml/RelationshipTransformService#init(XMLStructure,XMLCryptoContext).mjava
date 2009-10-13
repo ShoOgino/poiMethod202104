@@ -1,0 +1,32 @@
+    @Override
+    public void init(XMLStructure parent, XMLCryptoContext context) throws InvalidAlgorithmParameterException {
+        LOG.debug("init(parent,context)");
+        LOG.debug("parent java type: " + parent.getClass().getName());
+        DOMStructure domParent = (DOMStructure) parent;
+        Node parentNode = domParent.getNode();
+        try {
+            LOG.debug("parent: " + toString(parentNode));
+        } catch (TransformerException e) {
+            throw new InvalidAlgorithmParameterException();
+        }
+        Element nsElement = parentNode.getOwnerDocument().createElement("ns");
+        nsElement.setAttributeNS(Constants.NamespaceSpecNS, "xmlns:ds", Constants.SignatureSpecNS);
+        nsElement.setAttributeNS(Constants.NamespaceSpecNS, "xmlns:mdssi", "http://schemas.openxmlformats.org/package/2006/digital-signature");
+        NodeList nodeList;
+        try {
+            nodeList = XPathAPI.selectNodeList(parentNode, "mdssi:RelationshipReference/@SourceId", nsElement);
+        } catch (TransformerException e) {
+            LOG.error("transformer exception: " + e.getMessage(), e);
+            throw new InvalidAlgorithmParameterException();
+        }
+        if (0 == nodeList.getLength()) {
+            LOG.warn("no RelationshipReference/@SourceId parameters present");
+        }
+        for (int nodeIdx = 0; nodeIdx < nodeList.getLength(); nodeIdx++) {
+            Node node = nodeList.item(nodeIdx);
+            String sourceId = node.getTextContent();
+            LOG.debug("sourceId: " + sourceId);
+            this.sourceIds.add(sourceId);
+        }
+    }
+

@@ -1,0 +1,40 @@
+    public static List<X509Certificate> getSigners(URL url) throws IOException, ParserConfigurationException, SAXException, TransformerException,
+                                    MarshalException, XMLSignatureException, InvalidFormatException {
+        List<X509Certificate> signers = new LinkedList<X509Certificate>();
+        List<PackagePart> signatureParts = getSignatureParts(url);
+        if (signatureParts.isEmpty()) {
+            LOG.debug("no signature resources");
+        }
+        for (PackagePart signaturePart : signatureParts) {
+            Document signatureDocument = loadDocument(signaturePart);
+            if (null == signatureDocument) {
+                continue;
+            }
+
+            NodeList signatureNodeList = signatureDocument.getElementsByTagNameNS(XMLSignature.XMLNS, "Signature");
+            if (0 == signatureNodeList.getLength()) {
+                return null;
+            }
+            Node signatureNode = signatureNodeList.item(0);
+
+            KeyInfoKeySelector keySelector = new KeyInfoKeySelector();
+            DOMValidateContext domValidateContext = new DOMValidateContext(keySelector, signatureNode);
+            domValidateContext.setProperty("org.jcp.xml.dsig.validateManifests", Boolean.TRUE);
+            OOXMLURIDereferencer dereferencer = new OOXMLURIDereferencer(url);
+            domValidateContext.setURIDereferencer(dereferencer);
+
+            XMLSignatureFactory xmlSignatureFactory = XMLSignatureFactory.getInstance();
+            XMLSignature xmlSignature = xmlSignatureFactory.unmarshalXMLSignature(domValidateContext);
+            boolean validity = xmlSignature.validate(domValidateContext);
+
+            if (false == validity) {
+                continue;
+            }
+            // TODO: check what has been signed.
+
+            X509Certificate signer = keySelector.getCertificate();
+            signers.add(signer);
+        }
+        return signers;
+    }
+

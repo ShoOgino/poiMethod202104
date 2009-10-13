@@ -1,0 +1,63 @@
+    @Override
+    protected void postSign(Element signatureElement, List<X509Certificate> signingCertificateChain) {
+        // TODO: implement as SignatureAspect
+        LOG.debug("postSign: adding ds:KeyInfo");
+        /*
+         * Make sure we insert right after the ds:SignatureValue element.
+         */
+        Node nextSibling;
+        NodeList objectNodeList = signatureElement.getElementsByTagNameNS("http://www.w3.org/2000/09/xmldsig#", "Object");
+        if (0 == objectNodeList.getLength()) {
+            nextSibling = null;
+        } else {
+            nextSibling = objectNodeList.item(0);
+        }
+        /*
+         * Add a ds:KeyInfo entry.
+         */
+        KeyInfoFactory keyInfoFactory = KeyInfoFactory.getInstance();
+        List<Object> x509DataObjects = new LinkedList<Object>();
+
+        X509Certificate signingCertificate = signingCertificateChain.get(0);
+        KeyValue keyValue;
+        try {
+            keyValue = keyInfoFactory.newKeyValue(signingCertificate.getPublicKey());
+        } catch (KeyException e) {
+            throw new RuntimeException("key exception: " + e.getMessage(), e);
+        }
+
+        for (X509Certificate certificate : signingCertificateChain) {
+            x509DataObjects.add(certificate);
+        }
+        X509Data x509Data = keyInfoFactory.newX509Data(x509DataObjects);
+        List<Object> keyInfoContent = new LinkedList<Object>();
+        keyInfoContent.add(keyValue);
+        keyInfoContent.add(x509Data);
+        KeyInfo keyInfo = keyInfoFactory.newKeyInfo(keyInfoContent);
+        DOMKeyInfo domKeyInfo = (DOMKeyInfo) keyInfo;
+        Key key = new Key() {
+            private static final long serialVersionUID = 1L;
+
+            public String getAlgorithm() {
+                return null;
+            }
+
+            public byte[] getEncoded() {
+                return null;
+            }
+
+            public String getFormat() {
+                return null;
+            }
+        };
+        XMLSignContext xmlSignContext = new DOMSignContext(key, signatureElement);
+        DOMCryptoContext domCryptoContext = (DOMCryptoContext) xmlSignContext;
+        String dsPrefix = null;
+        // String dsPrefix = "ds";
+        try {
+            domKeyInfo.marshal(signatureElement, nextSibling, dsPrefix, domCryptoContext);
+        } catch (MarshalException e) {
+            throw new RuntimeException("marshall error: " + e.getMessage(), e);
+        }
+    }
+
