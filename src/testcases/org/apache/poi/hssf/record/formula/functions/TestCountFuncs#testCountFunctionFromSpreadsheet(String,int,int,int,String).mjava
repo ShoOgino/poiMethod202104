@@ -1,0 +1,29 @@
+	private static void testCountFunctionFromSpreadsheet(String FILE_NAME, int START_ROW_IX, int COL_IX_ACTUAL, int COL_IX_EXPECTED, String functionName) {
+
+		int failureCount = 0;
+		HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook(FILE_NAME);
+		HSSFSheet sheet = wb.getSheetAt(0);
+		HSSFFormulaEvaluator fe = new HSSFFormulaEvaluator(wb);
+		int maxRow = sheet.getLastRowNum();
+		for (int rowIx=START_ROW_IX; rowIx<maxRow; rowIx++) {
+			HSSFRow row = sheet.getRow(rowIx);
+			if(row == null) {
+				continue;
+			}
+			HSSFCell cell = row.getCell(COL_IX_ACTUAL);
+			CellValue cv = fe.evaluate(cell);
+			double actualValue = cv.getNumberValue();
+			double expectedValue = row.getCell(COL_IX_EXPECTED).getNumericCellValue();
+			if (actualValue != expectedValue) {
+				System.err.println("Problem with test case on row " + (rowIx+1) + " "
+						+ "Expected = (" + expectedValue + ") Actual=(" + actualValue + ") ");
+				failureCount++;
+			}
+		}
+
+		if (failureCount > 0) {
+			throw new AssertionFailedError(failureCount + " " + functionName
+					+ " evaluations failed. See stderr for more details");
+		}
+	}
+
