@@ -1,0 +1,177 @@
+    /**
+     * Method main
+     *
+     * Given 1 argument takes that as the filename, inputs it and dumps the
+     * cell values/types out to sys.out
+     *
+     * given 2 arguments where the second argument is the word "write" and the
+     * first is the filename - writes out a sample (test) spreadsheet (see
+     * public HSSF(String filename, boolean write)).
+     *
+     * given 2 arguments where the first is an input filename and the second
+     * an output filename (not write), attempts to fully read in the
+     * spreadsheet and fully write it out.
+     *
+     * given 3 arguments where the first is an input filename and the second an
+     * output filename (not write) and the third is "modify1", attempts to read in the
+     * spreadsheet, deletes rows 0-24, 74-99.  Changes cell at row 39, col 3 to
+     * "MODIFIED CELL" then writes it out.  Hence this is "modify test 1".  If you
+     * take the output from the write test, you'll have a valid scenario.
+     *
+     * @param args
+     *
+     */
+
+    public static void main(String [] args)
+    {
+        if (args.length < 2)
+        {
+
+            try
+            {
+                HSSF hssf = new HSSF(args[ 0 ]);
+
+                System.out.println("Data dump:\n");
+                HSSFWorkbook wb = hssf.hssfworkbook;
+
+                for (int k = 0; k < wb.getNumberOfSheets(); k++)
+                {
+                    HSSFSheet sheet = wb.getSheetAt(k);
+                    int       rows  = sheet.getPhysicalNumberOfRows();
+                    System.out.println("Sheet " + k + " \""
+                                       + wb.getSheetName(k) + "\" has "
+                                       + rows + " row(s).");
+                    for (int r = 0; r < rows; r++)
+                    {
+                        HSSFRow row   = sheet.getRow(r);
+                        int     cells = (row != null) ? row.getPhysicalNumberOfCells() : 0;
+                        if (row != null) {
+                          System.out.println("\nROW " + row.getRowNum()
+                                             + " has " + cells + " cell(s).");
+                        }
+                        for (int c = 0; c < cells; c++)
+                        {
+                            HSSFCell cell  = row.getCell(c);
+                            String   value = null;
+
+                            switch (cell.getCellType())
+                            {
+
+                                case HSSFCell.CELL_TYPE_FORMULA :
+                                    value = "FORMULA value="
+                                    + cell.getCellFormula();
+                                    break;
+
+                                case HSSFCell.CELL_TYPE_NUMERIC :
+                                    value = "NUMERIC value="
+                                            + cell.getNumericCellValue();
+                                    break;
+
+                                case HSSFCell.CELL_TYPE_STRING :
+                                    value = "STRING value="
+                                            + cell.getStringCellValue();
+                                    break;
+
+                                default :
+                            }
+                            System.out.println("CELL col="
+                                               + cell.getCellNum()
+                                               + " VALUE=" + value);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        }
+        else if (args.length == 2)
+        {
+            if (args[ 1 ].toLowerCase().equals("write"))
+            {
+                System.out.println("Write mode");
+                try
+                {
+                    long time = System.currentTimeMillis();
+                    HSSF hssf = new HSSF(args[ 0 ], true);
+
+                    System.out
+                        .println("" + (System.currentTimeMillis() - time)
+                                 + " ms generation time");
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                }
+            }
+            else
+            {
+                System.out.println("readwrite test");
+                try
+                {
+                    HSSF             hssf   = new HSSF(args[ 0 ]);
+
+                    // HSSFStream       hssfstream = hssf.hssfstream;
+                    HSSFWorkbook     wb     = hssf.hssfworkbook;
+                    FileOutputStream stream = new FileOutputStream(args[ 1 ]);
+
+                    // HSSFCell cell = new HSSFCell();
+                    // cell.setCellNum((short)3);
+                    // cell.setCellType(HSSFCell.CELL_TYPE_NUMERIC);
+                    // cell.setCellValue(-8009.999);
+                    // hssfstream.modifyCell(cell,0,(short)6);
+                    wb.write(stream);
+                    stream.close();
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                }
+            }
+        }
+        else if ((args.length == 3)
+                 && args[ 2 ].toLowerCase().equals("modify1"))
+        {
+            try   // delete row 0-24, row 74 - 99 && change cell 3 on row 39 to string "MODIFIED CELL!!"
+            {
+                HSSF             hssf   = new HSSF(args[ 0 ]);
+
+                // HSSFStream       hssfstream = hssf.hssfstream;
+                HSSFWorkbook     wb     = hssf.hssfworkbook;
+                FileOutputStream stream = new FileOutputStream(args[ 1 ]);
+                HSSFSheet        sheet  = wb.getSheetAt(0);
+
+                for (int k = 0; k < 25; k++)
+                {
+                    HSSFRow row = sheet.getRow(k);
+
+                    sheet.removeRow(row);
+                }
+                for (int k = 74; k < 100; k++)
+                {
+                    HSSFRow row = sheet.getRow(k);
+
+                    sheet.removeRow(row);
+                }
+                HSSFRow  row  = sheet.getRow(39);
+                HSSFCell cell = row.getCell(3);
+
+                cell.setCellType(HSSFCell.CELL_TYPE_STRING);
+                cell.setCellValue("MODIFIED CELL!!!!!");
+
+                // HSSFCell cell = new HSSFCell();
+                // cell.setCellNum((short)3);
+                // cell.setCellType(HSSFCell.CELL_TYPE_NUMERIC);
+                // cell.setCellValue(-8009.999);
+                // hssfstream.modifyCell(cell,0,(short)6);
+                wb.write(stream);
+                stream.close();
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
+        }
+    }
+
