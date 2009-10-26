@@ -1,10 +1,10 @@
     /**
      * Imports an XML into the XLSX using the Custom XML mapping defined
-     * 
+     *
      * @param xmlInputString the XML to import
      * @throws SAXException if error occurs during XML parsing
      * @throws XPathExpressionException if error occurs during XML navigation
-     * @throws ParserConfigurationException if there are problems with XML parser configuration 
+     * @throws ParserConfigurationException if there are problems with XML parser configuration
      * @throws IOException  if there are problems reading the input string
      */
     public void importFromXML(String xmlInputString) throws SAXException, XPathExpressionException, ParserConfigurationException, IOException {
@@ -15,9 +15,9 @@
 
         Document doc = builder.parse(new InputSource(new StringReader(xmlInputString.trim())));
 
-        List<XSSFSingleXmlCell> singleXmlCells = map.getRelatedSingleXMLCell();
+        List<XSSFSingleXmlCell> singleXmlCells = _map.getRelatedSingleXMLCell();
 
-        List<Table> tables = map.getRelatedTables();
+        List<Table> tables = _map.getRelatedTables();
 
         XPathFactory xpathFactory = XPathFactory.newInstance();
         XPath xpath = xpathFactory.newXPath();
@@ -25,25 +25,7 @@
         // Setting namespace context to XPath
         // Assuming that the namespace prefix in the mapping xpath is the
         // same as the one used in the document
-        final PrefixResolver resolver = new PrefixResolverDefault(doc.getDocumentElement());
-
-        NamespaceContext ctx = new NamespaceContext() {
-
-            public String getNamespaceURI(String prefix) {
-                return resolver.getNamespaceForPrefix(prefix);
-            }
-
-            // Dummy implementation - not used!
-            public Iterator getPrefixes(String val) {
-                return null;
-            }
-
-            // Dummy implemenation - not used!
-            public String getPrefix(String uri) {
-                return null;
-            }
-        };
-        xpath.setNamespaceContext(ctx);
+        xpath.setNamespaceContext(new DefaultNamespaceContext(doc));
 
         for (XSSFSingleXmlCell singleXmlCell : singleXmlCells) {
 
@@ -96,12 +78,8 @@
                     logger.log(POILogger.DEBUG, "Setting '" + value + "' to cell " + cell.getColumnIndex() + "-" + cell.getRowIndex() + " in sheet "
                                                     + table.getXSSFSheet().getSheetName());
                     cell.setCellValue(value.trim());
-
                 }
-
             }
-
         }
-
     }
 
