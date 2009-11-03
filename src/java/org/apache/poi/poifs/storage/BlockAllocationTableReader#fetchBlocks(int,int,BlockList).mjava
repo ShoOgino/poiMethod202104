@@ -10,11 +10,8 @@
      *
      * @exception IOException if there is a problem acquiring the blocks
      */
-    ListManagedBlock [] fetchBlocks(final int startBlock,
-                                    final int headerPropertiesStartBlock,
-                                    final BlockList blockList)
-        throws IOException
-    {
+    ListManagedBlock[] fetchBlocks(int startBlock, int headerPropertiesStartBlock,
+            BlockList blockList) throws IOException {
         List<ListManagedBlock> blocks = new ArrayList<ListManagedBlock>();
         int  currentBlock = startBlock;
         boolean firstPass = true;
@@ -25,28 +22,28 @@
         // Sometimes we have data, header, end
         // For those cases, stop at the header, not the end
         while (currentBlock != POIFSConstants.END_OF_CHAIN) {
-        	try {
-        		// Grab the data at the current block offset
-        		dataBlock = blockList.remove(currentBlock);
-        		blocks.add(dataBlock);
-        		// Now figure out which block we go to next
+            try {
+                // Grab the data at the current block offset
+                dataBlock = blockList.remove(currentBlock);
+                blocks.add(dataBlock);
+                // Now figure out which block we go to next
                 currentBlock = _entries.get(currentBlock);
                 firstPass = false;
-        	} catch(IOException e) {
-        		if(currentBlock == headerPropertiesStartBlock) {
-        			// Special case where things are in the wrong order
-        			System.err.println("Warning, header block comes after data blocks in POIFS block listing");
-        			currentBlock = POIFSConstants.END_OF_CHAIN;
-        		} else if(currentBlock == 0 && firstPass) {
-        			// Special case where the termination isn't done right
-        			//  on an empty set
-        			System.err.println("Warning, incorrectly terminated empty data blocks in POIFS block listing (should end at -2, ended at 0)");
-        			currentBlock = POIFSConstants.END_OF_CHAIN;
-        		} else {
-        			// Ripple up
-        			throw e;
-        		}
-        	}
+            } catch(IOException e) {
+                if(currentBlock == headerPropertiesStartBlock) {
+                    // Special case where things are in the wrong order
+                    System.err.println("Warning, header block comes after data blocks in POIFS block listing");
+                    currentBlock = POIFSConstants.END_OF_CHAIN;
+                } else if(currentBlock == 0 && firstPass) {
+                    // Special case where the termination isn't done right
+                    //  on an empty set
+                    System.err.println("Warning, incorrectly terminated empty data blocks in POIFS block listing (should end at -2, ended at 0)");
+                    currentBlock = POIFSConstants.END_OF_CHAIN;
+                } else {
+                    // Ripple up
+                    throw e;
+                }
+            }
         }
 
         return blocks.toArray(new ListManagedBlock[blocks.size()]);
