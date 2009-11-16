@@ -1,0 +1,67 @@
+    void build() throws IOException{
+
+        List<String> lst = new ArrayList<String>();
+        //collect unit tests
+        System.out.println("Collecting unit tests");
+        collectTests(_testDir, _testDir, lst, ".+?\\.Test.+?\\.class$");
+
+        TestSuite suite = new TestSuite();
+        for (String arg : lst) {
+            //ignore inner classes defined in tests
+            if (arg.indexOf('$') != -1) continue;
+
+            String cls = arg.replace(".class", "");
+            try {
+                Class test = Class.forName(cls);
+                suite.addTestSuite(test);
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        //run tests
+        System.out.println("Running tests");
+        TestRunner.run(suite);
+
+        //see what classes from the ooxml-schemas.jar are loaded
+        System.out.println("Copying classes");
+        Map<String, Class<?>> classes = getLoadedClasses(_ooxmlJar.getName());
+        for (Class<?> cls : classes.values()) {
+            String className = cls.getName();
+            String classRef = className.replace('.', '/') + ".class";
+            File destFile = new File(_destDest, classRef);
+            //System.out.println(classRef + "  -->  " + destFile);
+            copyFile(cls.getResourceAsStream('/' + classRef), destFile);
+
+            if(cls.isInterface()){
+                //always copy Factory that accompanies every ooxml schema object
+                String factoryClass = className + "$Factory";
+                if(!classes.containsKey(factoryClass)){
+                    try {
+                        Class fc = Class.forName(factoryClass);
+                        className = fc.getName();
+                        classRef = className.replace('.', '/') + ".class";
+                        destFile = new File(_destDest, classRef);
+                        //System.out.println(classRef + "  -->  " + destFile);
+                        copyFile(fc.getResourceAsStream('/' + classRef), destFile);
+                    } catch(ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
+        //finally copy the compiled .xsb files
+        System.out.println("Copying .xsb resources");
+        JarFile jar = new  JarFile(_ooxmlJar);
+        for(Enumeration<JarEntry> e = jar.entries(); e.hasMoreElements(); ){
+            JarEntry je = e.nextElement();
+            if(je.getName().matches("schemaorg_apache_xmlbeans/system/\\w+/\\w+\\.xsb")){
+                File destFile = new File(_destDest, je.getName());
+                //System.out.println(je.getName() + "  -->  " + destFile);
+                copyFile(jar.getInputStream(je), destFile);
+            }
+        }
+        jar.close();
+    }
+
