@@ -1,0 +1,41 @@
+	public void testCreateNewPropertiesOnExistingFile() throws IOException {
+		POIDocument doc = new HSSFWorkbook();
+		
+		// New document won't have them
+		assertNull(doc.getSummaryInformation());
+		assertNull(doc.getDocumentSummaryInformation());
+
+		// Write out and back in again, no change
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		doc.write(baos);
+		ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+		doc = new HSSFWorkbook(bais);
+		
+		assertNull(doc.getSummaryInformation());
+		assertNull(doc.getDocumentSummaryInformation());
+		
+		// Create, and change
+		doc.createInformationProperties();
+		doc.getSummaryInformation().setAuthor("POI Testing");
+		doc.getDocumentSummaryInformation().setCompany("ASF");
+		
+		// Save and re-load
+		baos = new ByteArrayOutputStream();
+		doc.write(baos);
+		bais = new ByteArrayInputStream(baos.toByteArray());
+		doc = new HSSFWorkbook(bais);
+		
+		// Check
+		assertNotNull(doc.getSummaryInformation());
+		assertNotNull(doc.getDocumentSummaryInformation());
+		assertEquals("POI Testing", doc.getSummaryInformation().getAuthor());
+		assertEquals("ASF", doc.getDocumentSummaryInformation().getCompany());
+		
+		// Asking to re-create will make no difference now
+		doc.createInformationProperties();
+		assertNotNull(doc.getSummaryInformation());
+		assertNotNull(doc.getDocumentSummaryInformation());
+		assertEquals("POI Testing", doc.getSummaryInformation().getAuthor());
+		assertEquals("ASF", doc.getDocumentSummaryInformation().getCompany());
+	}
+
