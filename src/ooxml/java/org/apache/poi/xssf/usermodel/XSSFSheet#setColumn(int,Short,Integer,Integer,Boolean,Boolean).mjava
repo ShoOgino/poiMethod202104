@@ -1,85 +1,85 @@
     private void setColumn(int targetColumnIx, Short xfIndex, Integer style,
-    		Integer level, Boolean hidden, Boolean collapsed) {
-    	CTCols cols = worksheet.getColsArray(0);
-    	CTCol ci = null;
-    	int k = 0;
-    	for (k = 0; k < cols.sizeOfColArray(); k++) {
-    		CTCol tci = cols.getColArray(k);
-    		if (tci.getMin() >= targetColumnIx
-    				&& tci.getMax() <= targetColumnIx) {
-    			ci = tci;
-    			break;
-    		}
-    		if (tci.getMin() > targetColumnIx) {
-    			// call column infos after k are for later columns
-    			break; // exit now so k will be the correct insert pos
-    		}
-    	}
+            Integer level, Boolean hidden, Boolean collapsed) {
+        CTCols cols = worksheet.getColsArray(0);
+        CTCol ci = null;
+        int k = 0;
+        for (k = 0; k < cols.sizeOfColArray(); k++) {
+            CTCol tci = cols.getColArray(k);
+            if (tci.getMin() >= targetColumnIx
+                    && tci.getMax() <= targetColumnIx) {
+                ci = tci;
+                break;
+            }
+            if (tci.getMin() > targetColumnIx) {
+                // call column infos after k are for later columns
+                break; // exit now so k will be the correct insert pos
+            }
+        }
 
-    	if (ci == null) {
-    		// okay so there ISN'T a column info record that covers this column
-    		// so lets create one!
-    		CTCol nci = CTCol.Factory.newInstance();
-    		nci.setMin(targetColumnIx);
-    		nci.setMax(targetColumnIx);
-    		unsetCollapsed(collapsed, nci);
-    		this.columnHelper.addCleanColIntoCols(cols, nci);
-    		return;
-    	}
+        if (ci == null) {
+            // okay so there ISN'T a column info record that covers this column
+            // so lets create one!
+            CTCol nci = CTCol.Factory.newInstance();
+            nci.setMin(targetColumnIx);
+            nci.setMax(targetColumnIx);
+            unsetCollapsed(collapsed, nci);
+            this.columnHelper.addCleanColIntoCols(cols, nci);
+            return;
+        }
 
-    	boolean styleChanged = style != null
-    	&& ci.getStyle() != style;
-    	boolean levelChanged = level != null
-    	&& ci.getOutlineLevel() != level;
-    	boolean hiddenChanged = hidden != null
-    	&& ci.getHidden() != hidden;
-    	boolean collapsedChanged = collapsed != null
-    	&& ci.getCollapsed() != collapsed;
-    	boolean columnChanged = levelChanged || hiddenChanged
-    	|| collapsedChanged || styleChanged;
-    	if (!columnChanged) {
-    		// do nothing...nothing changed.
-    		return;
-    	}
+        boolean styleChanged = style != null
+        && ci.getStyle() != style;
+        boolean levelChanged = level != null
+        && ci.getOutlineLevel() != level;
+        boolean hiddenChanged = hidden != null
+        && ci.getHidden() != hidden;
+        boolean collapsedChanged = collapsed != null
+        && ci.getCollapsed() != collapsed;
+        boolean columnChanged = levelChanged || hiddenChanged
+        || collapsedChanged || styleChanged;
+        if (!columnChanged) {
+            // do nothing...nothing changed.
+            return;
+        }
 
-    	if (ci.getMin() == targetColumnIx && ci.getMax() == targetColumnIx) {
-    		// ColumnInfo ci for a single column, the target column
-    		unsetCollapsed(collapsed, ci);
-    		return;
-    	}
+        if (ci.getMin() == targetColumnIx && ci.getMax() == targetColumnIx) {
+            // ColumnInfo ci for a single column, the target column
+            unsetCollapsed(collapsed, ci);
+            return;
+        }
 
-    	if (ci.getMin() == targetColumnIx || ci.getMax() == targetColumnIx) {
-    		// The target column is at either end of the multi-column ColumnInfo
-    		// ci
-    		// we'll just divide the info and create a new one
-    		if (ci.getMin() == targetColumnIx) {
-    			ci.setMin(targetColumnIx + 1);
-    		} else {
-    			ci.setMax(targetColumnIx - 1);
-    			k++; // adjust insert pos to insert after
-    		}
-    		CTCol nci = columnHelper.cloneCol(cols, ci);
-    		nci.setMin(targetColumnIx);
-    		unsetCollapsed(collapsed, nci);
-    		this.columnHelper.addCleanColIntoCols(cols, nci);
+        if (ci.getMin() == targetColumnIx || ci.getMax() == targetColumnIx) {
+            // The target column is at either end of the multi-column ColumnInfo
+            // ci
+            // we'll just divide the info and create a new one
+            if (ci.getMin() == targetColumnIx) {
+                ci.setMin(targetColumnIx + 1);
+            } else {
+                ci.setMax(targetColumnIx - 1);
+                k++; // adjust insert pos to insert after
+            }
+            CTCol nci = columnHelper.cloneCol(cols, ci);
+            nci.setMin(targetColumnIx);
+            unsetCollapsed(collapsed, nci);
+            this.columnHelper.addCleanColIntoCols(cols, nci);
 
-    	} else {
-    		// split to 3 records
-    		CTCol ciStart = ci;
-    		CTCol ciMid = columnHelper.cloneCol(cols, ci);
-    		CTCol ciEnd = columnHelper.cloneCol(cols, ci);
-    		int lastcolumn = (int) ci.getMax();
+        } else {
+            // split to 3 records
+            CTCol ciStart = ci;
+            CTCol ciMid = columnHelper.cloneCol(cols, ci);
+            CTCol ciEnd = columnHelper.cloneCol(cols, ci);
+            int lastcolumn = (int) ci.getMax();
 
-    		ciStart.setMax(targetColumnIx - 1);
+            ciStart.setMax(targetColumnIx - 1);
 
-    		ciMid.setMin(targetColumnIx);
-    		ciMid.setMax(targetColumnIx);
-    		unsetCollapsed(collapsed, ciMid);
-    		this.columnHelper.addCleanColIntoCols(cols, ciMid);
+            ciMid.setMin(targetColumnIx);
+            ciMid.setMax(targetColumnIx);
+            unsetCollapsed(collapsed, ciMid);
+            this.columnHelper.addCleanColIntoCols(cols, ciMid);
 
-    		ciEnd.setMin(targetColumnIx + 1);
-    		ciEnd.setMax(lastcolumn);
-    		this.columnHelper.addCleanColIntoCols(cols, ciEnd);
-    	}
+            ciEnd.setMin(targetColumnIx + 1);
+            ciEnd.setMax(lastcolumn);
+            this.columnHelper.addCleanColIntoCols(cols, ciEnd);
+        }
     }
 
