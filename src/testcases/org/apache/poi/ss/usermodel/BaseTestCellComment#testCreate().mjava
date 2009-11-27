@@ -1,0 +1,71 @@
+    public final void testCreate() throws Exception {
+        String cellText = "Hello, World";
+        String commentText = "We can set comments in POI";
+        String commentAuthor = "Apache Software Foundation";
+        int cellRow = 3;
+        int cellColumn = 1;
+
+        Workbook wb = getTestDataProvider().createWorkbook();
+        CreationHelper factory = wb.getCreationHelper();
+
+        Sheet sheet = wb.createSheet();
+        assertNull(sheet.getCellComment(cellRow, cellColumn));
+
+        Cell cell = sheet.createRow(cellRow).createCell(cellColumn);
+        cell.setCellValue(factory.createRichTextString(cellText));
+        assertNull(cell.getCellComment());
+        assertNull(sheet.getCellComment(cellRow, cellColumn));
+
+        Drawing patr = sheet.createDrawingPatriarch();
+        ClientAnchor anchor = factory.createClientAnchor();
+        anchor.setCol1(2);
+        anchor.setCol2(5);
+        anchor.setRow1(1);
+        anchor.setRow2(2);
+        Comment comment = patr.createCellComment(anchor);
+        assertFalse(comment.isVisible());
+        comment.setVisible(true);
+        assertTrue(comment.isVisible());
+        RichTextString string1 = factory.createRichTextString(commentText);
+        comment.setString(string1);
+        comment.setAuthor(commentAuthor);
+        cell.setCellComment(comment);
+        assertNotNull(cell.getCellComment());
+        assertNotNull(sheet.getCellComment(cellRow, cellColumn));
+
+        //verify our settings
+        assertEquals(commentAuthor, comment.getAuthor());
+        assertEquals(commentText, comment.getString().getString());
+        assertEquals(cellRow, comment.getRow());
+        assertEquals(cellColumn, comment.getColumn());
+
+        wb = getTestDataProvider().writeOutAndReadBack(wb);
+        sheet = wb.getSheetAt(0);
+        cell = sheet.getRow(cellRow).getCell(cellColumn);
+        comment = cell.getCellComment();
+
+        assertNotNull(comment);
+        assertEquals(commentAuthor, comment.getAuthor());
+        assertEquals(commentText, comment.getString().getString());
+        assertEquals(cellRow, comment.getRow());
+        assertEquals(cellColumn, comment.getColumn());
+        assertTrue(comment.isVisible());
+
+        // Change slightly, and re-test
+        comment.setString(factory.createRichTextString("New Comment Text"));
+        comment.setVisible(false);
+
+        wb = getTestDataProvider().writeOutAndReadBack(wb);
+
+        sheet = wb.getSheetAt(0);
+        cell = sheet.getRow(cellRow).getCell(cellColumn);
+        comment = cell.getCellComment();
+
+        assertNotNull(comment);
+        assertEquals(commentAuthor, comment.getAuthor());
+        assertEquals("New Comment Text", comment.getString().getString());
+        assertEquals(cellRow, comment.getRow());
+        assertEquals(cellColumn, comment.getColumn());
+        assertFalse(comment.isVisible());
+    }
+

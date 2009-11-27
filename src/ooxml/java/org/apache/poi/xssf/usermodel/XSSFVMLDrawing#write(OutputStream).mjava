@@ -1,0 +1,31 @@
+    protected void write(OutputStream out) throws IOException {
+        XmlObject rootObject = XmlObject.Factory.newInstance();
+        XmlCursor rootCursor = rootObject.newCursor();
+        rootCursor.toNextToken();
+        rootCursor.beginElement("xml");
+
+        for(int i=0; i < _items.size(); i++){
+            XmlCursor xc = _items.get(i).newCursor();
+            rootCursor.beginElement(_qnames.get(i));
+            while(xc.toNextToken() == XmlCursor.TokenType.ATTR) {
+                Node anode = xc.getDomNode();
+                rootCursor.insertAttributeWithValue(anode.getLocalName(), anode.getNamespaceURI(), anode.getNodeValue());
+            }
+            xc.toStartDoc();
+            xc.copyXmlContents(rootCursor);
+            rootCursor.toNextToken();
+            xc.dispose();
+        }
+        rootCursor.dispose();
+
+        XmlOptions xmlOptions = new XmlOptions(DEFAULT_XML_OPTIONS);
+        xmlOptions.setSavePrettyPrint();
+        HashMap<String, String> map = new HashMap<String, String>();
+        map.put("urn:schemas-microsoft-com:vml", "v");
+        map.put("urn:schemas-microsoft-com:office:office", "o");
+        map.put("urn:schemas-microsoft-com:office:excel", "x");
+        xmlOptions.setSaveSuggestedPrefixes(map);
+
+        rootObject.save(out, xmlOptions);
+    }
+

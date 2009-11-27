@@ -1,0 +1,55 @@
+    public void testNew() throws Exception {
+        XSSFVMLDrawing vml = new XSSFVMLDrawing();
+        List<XmlObject> items = vml.getItems();
+        assertEquals(2, items.size());
+        assertTrue(items.get(0) instanceof CTShapeLayout);
+        CTShapeLayout layout = (CTShapeLayout)items.get(0);
+        assertEquals(STExt.EDIT, layout.getExt());
+        assertEquals(STExt.EDIT, layout.getIdmap().getExt());
+        assertEquals("1", layout.getIdmap().getData());
+    
+        assertTrue(items.get(1) instanceof CTShapetype);
+        CTShapetype type = (CTShapetype)items.get(1);
+        assertEquals("21600,21600", type.getCoordsize());
+        assertEquals(202.0f, type.getSpt());
+        assertEquals("m,l,21600r21600,l21600,xe", type.getPath2());
+        assertEquals("_xssf_cell_comment", type.getId());
+        assertEquals(STTrueFalse.T, type.getPathArray(0).getGradientshapeok());
+        assertEquals(STConnectType.RECT, type.getPathArray(0).getConnecttype());
+
+        CTShape shape = vml.newCommentShape();
+        assertEquals(3, items.size());
+        assertSame(items.get(2),  shape);
+        assertEquals("#_xssf_cell_comment", shape.getType());
+        assertEquals("position:absolute; visibility:hidden", shape.getStyle());
+        assertEquals("#ffffe1", shape.getFillcolor());
+        assertEquals(STInsetMode.AUTO, shape.getInsetmode());
+        assertEquals("#ffffe1", shape.getFillArray(0).getColor());
+        CTShadow shadow = shape.getShadowArray(0);
+        assertEquals(STTrueFalse.T, shadow.getOn());
+        assertEquals("black", shadow.getColor());
+        assertEquals(STTrueFalse.T, shadow.getObscured());
+        assertEquals(STConnectType.NONE, shape.getPathArray(0).getConnecttype());
+        assertEquals("mso-direction-alt:auto", shape.getTextboxArray(0).getStyle());
+        CTClientData cldata = shape.getClientDataArray(0);
+        assertEquals(STObjectType.NOTE, cldata.getObjectType());
+        assertEquals(1, cldata.sizeOfMoveWithCellsArray());
+        assertEquals(1, cldata.sizeOfSizeWithCellsArray());
+        assertEquals("1, 15, 0, 2, 3, 15, 3, 16", cldata.getAnchorArray(0));
+        assertEquals("False", cldata.getAutoFillArray(0).toString());
+        assertEquals(0, cldata.getRowArray(0).intValue());
+        assertEquals(0, cldata.getColumnArray(0).intValue());
+
+        //serialize and read again
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        vml.write(out);
+
+        XSSFVMLDrawing vml2 = new XSSFVMLDrawing();
+        vml2.read(new ByteArrayInputStream(out.toByteArray()));
+        List<XmlObject> items2 = vml2.getItems();
+        assertEquals(3, items2.size());
+        assertTrue(items2.get(0) instanceof CTShapeLayout);
+        assertTrue(items2.get(1) instanceof CTShapetype);
+        assertTrue(items2.get(2) instanceof CTShape);
+    }
+
