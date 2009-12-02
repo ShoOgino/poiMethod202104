@@ -19,20 +19,24 @@
 			subrecords = null;
 			return;
 		}
-		if (subRecordData.length % 2 != 0) {
+
+        //YK: files produced by OO violate the condition below
+        /*
+        if (subRecordData.length % 2 != 0) {
 			String msg = "Unexpected length of subRecordData : " + HexDump.toHex(subRecordData);
 			throw new RecordFormatException(msg);
 		}
-
-//		System.out.println(HexDump.toHex(subRecordData));
+        */
 
 		subrecords = new ArrayList<SubRecord>();
 		ByteArrayInputStream bais = new ByteArrayInputStream(subRecordData);
 		LittleEndianInputStream subRecStream = new LittleEndianInputStream(bais);
-		while (true) {
-			SubRecord subRecord = SubRecord.createSubRecord(subRecStream);
+		CommonObjectDataSubRecord cmo = (CommonObjectDataSubRecord)SubRecord.createSubRecord(subRecStream, 0);
+        subrecords.add(cmo);
+        while (true) {
+			SubRecord subRecord = SubRecord.createSubRecord(subRecStream, cmo.getObjectType());
 			subrecords.add(subRecord);
-			if (subRecord instanceof EndSubRecord) {
+			if (subRecord.isTerminating()) {
 				break;
 			}
 		}
@@ -48,7 +52,8 @@
 				}
 				_isPaddedToQuadByteMultiple = false;
 			}
-		} else {
+
+        } else {
 			_isPaddedToQuadByteMultiple = false;
 		}
 		_uninterpretedData = null;

@@ -1,0 +1,65 @@
+    /**
+     * @param in the stream to read data from
+     * @param cbFContinued the seconf short in the record header
+     * @param cmoOt the containing Obj's {@link CommonObjectDataSubRecord#field_1_objectType}
+     */
+    public LbsDataSubRecord(LittleEndianInput in, int cbFContinued, int cmoOt) {
+        _cbFContinued = cbFContinued;
+
+        int encodedTokenLen = in.readUShort();
+        if (encodedTokenLen > 0) {
+            int formulaSize = in.readUShort();
+            _unknownPreFormulaInt = in.readInt();
+
+            Ptg[] ptgs = Ptg.readTokens(formulaSize, in);
+            if (ptgs.length != 1) {
+                throw new RecordFormatException("Read " + ptgs.length
+                        + " tokens but expected exactly 1");
+            }
+            _linkPtg = ptgs[0];
+            switch (encodedTokenLen - formulaSize - 6) {
+                case 1:
+                    _unknownPostFormulaByte = in.readByte();
+                    break;
+                case 0:
+                    _unknownPostFormulaByte = null;
+                    break;
+                default:
+                    throw new RecordFormatException("Unexpected leftover bytes");
+            }
+        }
+
+        _cLines = in.readUShort();
+        _iSel = in.readUShort();
+        _flags = in.readUShort();
+        _idEdit = in.readUShort();
+
+        // From [MS-XLS].pdf 2.5.147 FtLbsData:
+        // This field MUST exist if and only if the containing Obj?s cmo.ot is equal to 0x14.
+        if(cmoOt == 0x14) {
+            _dropData = new LbsDropData(in);
+        }
+
+        // From [MS-XLS].pdf 2.5.147 FtLbsData:
+        // This array MUST exist if and only if the fValidPlex flag (0x2) is set
+        if((_flags & 0x2) != 0) {
+            _rgLines = new String[_cLines];
+            for(int i=0; i < _cLines; i++) {
+                _rgLines[i] = StringUtil.readUnicodeString(in);
+            }
+        }
+
+        // bits 5-6 in the _flags specify the type
+        // of selection behavior this list control is expected to support
+
+        // From [MS-XLS].pdf 2.5.147 FtLbsData:
+        // This array MUST exist if and only if the wListType field is not equal to 0.
+        if(((_flags >> 4) & 0x2) != 0) {
+            _bsels = new boolean[_cLines];
+            for(int i=0; i < _cLines; i++) {
+                _bsels[i] = in.readByte() == 1;
+            }
+        }
+
+    }
+

@@ -1,0 +1,38 @@
+    /**
+     * test data was taken from the file attached to Bugzilla 45778
+     */
+    public void test_45778(){
+        byte[] data = HexRead.readFromString(
+                                "15, 00, 12, 00, 14, 00, 01, 00, 01, 00, " +
+                                "01, 21, 00, 00, 3C, 13, F4, 03, 00, 00, " +
+                                "00, 00, 0C, 00, 14, 00, 00, 00, 00, 00, " +
+                                "00, 00, 00, 00, 00, 00, 01, 00, 08, 00, 00, " +
+                                "00, 10, 00, 00, 00, " +
+                                 "13, 00, EE, 1F, " +
+                                 "00, 00, " +
+                                 "08, 00, " +  //number of items
+                                 "08, 00, " + //selected item
+                                 "01, 03, " + //flags
+                                 "00, 00, " + //objId
+                                 //LbsDropData
+                                 "0A, 00, " + //flags
+                                 "14, 00, " + //the number of lines to be displayed in the dropdown
+                                 "6C, 00, " + //the smallest width in pixels allowed for the dropdown window
+                                 "00, 00, " +  //num chars
+                                 "00, 00");
+        RecordInputStream in = TestcaseRecordInputStream.create(ObjRecord.sid, data);
+        // check read OK
+        ObjRecord record = new ObjRecord(in);
+
+        SubRecord sr = record.getSubRecords().get(2);
+        assertTrue(sr instanceof LbsDataSubRecord);
+        LbsDataSubRecord lbs = (LbsDataSubRecord)sr;
+        assertEquals(8, lbs.getNumberOfItems());
+        assertNull(lbs.getFormula());
+
+        // check that it re-serializes to the same data
+        byte[] ser = record.serialize();
+        TestcaseRecordInputStream.confirmRecordEncoding(ObjRecord.sid, data, ser);
+
+    }
+

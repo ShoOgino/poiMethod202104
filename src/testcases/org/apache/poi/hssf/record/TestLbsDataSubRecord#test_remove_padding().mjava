@@ -1,0 +1,37 @@
+    /**
+     * Test data produced by OpenOffice 3.1 by opening  and saving 47701.xls
+     * There are 5 padding bytes that are removed by POI
+     */
+    public void test_remove_padding(){
+        byte[] data = HexRead.readFromString(
+                        "5D, 00, 4C, 00, " +
+                        "15, 00, 12, 00, 12, 00, 01, 00, 11, 00, " +
+                        "00, 00, 00, 00, 00, 00, 00, 00, 00, 00, " +
+                        "00, 00, 0C, 00, 14, 00, 00, 00, 00, 00, " +
+                        "00, 00, 00, 00, 00, 00, 01, 00, 09, 00, " +
+                        "00, 00, 0F, 00, 01, 00, " +
+                        "13, 00, 1B, 00, " +
+                        "10, 00, " + //next 16 bytes is a ptg aray
+                        "09, 00, 00, 00, 00, 00, 25, 09, 00, 0C, 00, 07, 00, 07, 00, 00, " +
+                        "01, 00, " + //num lines
+                        "00, 00, " + //selected
+                         "08, 00, " +
+                         "00, 00, " +
+                         "00, 00, 00, 00, 00"); //padding bytes
+
+        RecordInputStream in = TestcaseRecordInputStream.create(data);
+        // check read OK
+        ObjRecord record = new ObjRecord(in);
+        // check that it re-serializes to the same data
+        byte[] ser = record.serialize();
+
+        assertEquals(data.length-5, ser.length);
+        for(int i=0; i < ser.length; i++) assertEquals(data[i],ser[i]);
+
+        //check we can read the trimmed record
+        RecordInputStream in2 = TestcaseRecordInputStream.create(ser);
+        ObjRecord record2 = new ObjRecord(in2);
+        byte[] ser2 = record2.serialize();
+        assertTrue(Arrays.equals(ser, ser2));
+    }
+
