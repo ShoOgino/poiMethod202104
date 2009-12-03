@@ -11,13 +11,32 @@
                 XSSFRichTextString rt = new XSSFRichTextString(_sharedStringSource.getEntryAt(sstIndex));
                 return rt.getString();
             case CELL_TYPE_NUMERIC:
-                return String.valueOf(Double.parseDouble(_cell.getV()));
             case CELL_TYPE_ERROR:
-                   return _cell.getV();
+                return _cell.getV();
             case CELL_TYPE_FORMULA:
                 // should really evaluate, but HSSFCell can't call HSSFFormulaEvaluator
-                return "";
+                // just use cached formula result instead
+                break;
+            default:
+                throw new IllegalStateException("Unexpected cell type (" + cellType + ")");
         }
-        throw new RuntimeException("Unexpected cell type (" + cellType + ")");
+        cellType = getBaseCellType(false);
+        String textValue = _cell.getV();
+        switch (cellType) {
+            case CELL_TYPE_BOOLEAN:
+                if (TRUE_AS_STRING.equals(textValue)) {
+                    return "TRUE";
+                }
+                if (FALSE_AS_STRING.equals(textValue)) {
+                    return "FALSE";
+                }
+                throw new IllegalStateException("Unexpected boolean cached formula value '"
+                    + textValue + "'.");
+            case CELL_TYPE_STRING:
+            case CELL_TYPE_NUMERIC:
+            case CELL_TYPE_ERROR:
+                return textValue;
+        }
+        throw new IllegalStateException("Unexpected formula result type (" + cellType + ")");
     }
 
