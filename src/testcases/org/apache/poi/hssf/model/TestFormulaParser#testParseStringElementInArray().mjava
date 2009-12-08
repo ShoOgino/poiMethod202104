@@ -1,0 +1,28 @@
+	public void testParseStringElementInArray() {
+		Ptg[] ptgs;
+		ptgs = parseFormula("MAX({\"5\"},3)");
+		confirmTokenClasses(ptgs, ArrayPtg.class, IntPtg.class, FuncVarPtg.class);
+		Object element = ((ArrayPtg)ptgs[0]).getTokenArrayValues()[0][0];
+		if (element instanceof UnicodeString) {
+			// this would cause ClassCastException below
+			throw new AssertionFailedError("Wrong encoding of array element value");
+		}
+		assertEquals(String.class, element.getClass());
+
+		// make sure the formula encodes OK
+		int encSize = Ptg.getEncodedSize(ptgs);
+		byte[] data = new byte[encSize];
+		Ptg.serializePtgs(ptgs, data, 0);
+		byte[] expData = HexRead.readFromString(
+				"20 00 00 00 00 00 00 00 " // tArray
+				+ "1E 03 00 "      // tInt(3)
+				+ "42 02 07 00 "   // tFuncVar(MAX) 2-arg
+				+ "00 00 00 "      // Array data: 1 col, 1 row
+				+ "02 01 00 00 35" // elem (type=string, len=1, "5")
+		);
+		assertTrue(Arrays.equals(expData, data));
+		int initSize = Ptg.getEncodedSizeWithoutArrayData(ptgs);
+		Ptg[] ptgs2 = Ptg.readTokens(initSize, new LittleEndianByteArrayInputStream(data));
+		confirmTokenClasses(ptgs2, ArrayPtg.class, IntPtg.class, FuncVarPtg.class);
+	}
+
