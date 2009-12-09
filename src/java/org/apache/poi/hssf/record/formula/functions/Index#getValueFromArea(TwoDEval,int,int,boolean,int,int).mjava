@@ -5,7 +5,7 @@
 	 *            <code>true</code>.  This parameter is needed because error codes are slightly
 	 *            different when only 2 args are passed.
 	 */
-	private static ValueEval getValueFromArea(AreaEval ae, int pRowIx, int pColumnIx,
+	private static ValueEval getValueFromArea(TwoDEval ae, int pRowIx, int pColumnIx,
 			boolean colArgWasPassed, int srcRowIx, int srcColIx) throws EvaluationException {
 		boolean rowArgWasEmpty = pRowIx == 0;
 		boolean colArgWasEmpty = pColumnIx == 0;
@@ -33,7 +33,13 @@
 			}
 		} else if (ae.isColumn()) {
 			if (rowArgWasEmpty) {
-				rowIx = srcRowIx - ae.getFirstRow();
+				if (ae instanceof AreaEval) {
+					rowIx = srcRowIx - ((AreaEval) ae).getFirstRow();
+				} else {
+					// TODO - ArrayEval
+					// rowIx = relative row of evaluating cell in its array formula cell group
+					throw new RuntimeException("incomplete code - ");
+				}
 			} else {
 				rowIx = pRowIx-1;
 			}
@@ -52,12 +58,24 @@
 			// Normal case - area ref is 2-D, and both index args were provided
 			// if either arg is missing (or blank) the logic is similar to OperandResolver.getSingleValue()
 			if (rowArgWasEmpty) {
-				rowIx = srcRowIx - ae.getFirstRow();
+				if (ae instanceof AreaEval) {
+					rowIx = srcRowIx - ((AreaEval) ae).getFirstRow();
+				} else {
+					// TODO - ArrayEval
+					// rowIx = relative row of evaluating cell in its array formula cell group
+					throw new RuntimeException("incomplete code - ");
+				}
 			} else {
 				rowIx = pRowIx-1;
 			}
 			if (colArgWasEmpty) {
-				columnIx = srcColIx - ae.getFirstColumn();
+				if (ae instanceof AreaEval) {
+					columnIx = srcColIx - ((AreaEval) ae).getFirstColumn();
+				} else {
+					// TODO - ArrayEval
+					// colIx = relative col of evaluating cell in its array formula cell group
+					throw new RuntimeException("incomplete code - ");
+				}
 			} else {
 				columnIx = pColumnIx-1;
 			}
@@ -73,6 +91,6 @@
 		if (rowIx < 0 || columnIx < 0 || rowIx >= height || columnIx >= width) {
 			throw new EvaluationException(ErrorEval.VALUE_INVALID);
 		}
-		return ae.getRelativeValue(rowIx, columnIx);
+		return ae.getValue(rowIx, columnIx);
 	}
 
