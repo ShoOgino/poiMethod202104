@@ -1,37 +1,29 @@
 	public ExternalNameRecord(RecordInputStream in) {
 		field_1_option_flag = in.readShort();
-		field_2_index       = in.readShort();
-		field_3_not_used    = in.readShort();
-		int nameLength = in.readUByte();
-		int multibyteFlag = in.readUByte();
-		if (multibyteFlag == 0) {
-			field_4_name = in.readCompressedUnicode(nameLength);
-		} else {
-			field_4_name = in.readUnicodeLEString(nameLength);
-		}
-		if(!hasFormula()) {
-			if (!isStdDocumentNameIdentifier() && !isOLELink() && isAutomaticLink()) {
-				// both need to be incremented
-				int nColumns = in.readUByte() + 1;
-				int nRows = in.readShort() + 1;
+		field_2_not_used    = in.readInt();
 
-				int totalCount = nRows * nColumns;
-				_ddeValues = ConstantValueParser.parse(in, totalCount);
-				_nColumns = nColumns;
-				_nRows = nRows;
-			}
-			if(in.remaining() > 0) {
-				throw readFail("Some unread data (is formula present?)");
-			}
-			field_5_name_definition = null;
-			return;
-		}
-		int nBytesRemaining = in.available();
-		if(nBytesRemaining <= 0) {
-			throw readFail("Ran out of record data trying to read formula.");
-		}
-		int formulaLen = in.readUShort();
-		nBytesRemaining -=2;
-		field_5_name_definition = Formula.read(formulaLen, in, nBytesRemaining);
-	}
+        int numChars = in.readUByte();
+        field_4_name = StringUtil.readUnicodeString(in, numChars);
+
+        // the record body can take different forms.
+        // The form is dictated by the values of 3-th and 4-th bits in field_1_option_flag
+        if(!isOLELink() && !isStdDocumentNameIdentifier()){
+            // another switch: the fWantAdvise bit specifies whether the body describes
+            // an external defined name or a DDE data item
+            if(isAutomaticLink()){
+                //body specifies DDE data item
+                int nColumns = in.readUByte() + 1;
+                int nRows = in.readShort() + 1;
+
+                int totalCount = nRows * nColumns;
+                _ddeValues = ConstantValueParser.parse(in, totalCount);
+                _nColumns = nColumns;
+                _nRows = nRows;
+            } else {
+                //body specifies an external defined name
+                int formulaLen = in.readUShort();
+                field_5_name_definition = Formula.read(formulaLen, in);
+            }
+        }
+    }
 
