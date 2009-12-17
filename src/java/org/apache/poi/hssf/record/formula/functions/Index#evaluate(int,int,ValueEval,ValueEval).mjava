@@ -1,11 +1,23 @@
 	public ValueEval evaluate(int srcRowIndex, int srcColumnIndex, ValueEval arg0, ValueEval arg1) {
 		TwoDEval reference = convertFirstArg(arg0);
 
-		boolean colArgWasPassed = false;
 		int columnIx = 0;
 		try {
 			int rowIx = resolveIndexArg(arg1, srcRowIndex, srcColumnIndex);
-			return getValueFromArea(reference, rowIx, columnIx, colArgWasPassed, srcRowIndex, srcColumnIndex);
+			
+			if (!reference.isColumn()) {
+				if (!reference.isRow()) {
+					// always an error with 2-D area refs
+					// Note - the type of error changes if the pRowArg is negative
+					return ErrorEval.REF_INVALID;
+				}
+				// When the two-arg version of INDEX() has been invoked and the reference
+				// is a single column ref, the row arg seems to get used as the column index
+				columnIx = rowIx;
+				rowIx = 0;
+			}
+ 
+			return getValueFromArea(reference, rowIx, columnIx);
 		} catch (EvaluationException e) {
 			return e.getErrorEval();
 		}
