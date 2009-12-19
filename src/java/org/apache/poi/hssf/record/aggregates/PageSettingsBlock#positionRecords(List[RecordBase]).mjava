@@ -1,0 +1,36 @@
+    /**
+     * Some apps can define multiple HeaderFooterRecord records for a sheet.
+     * When saving such a file Excel 2007 re-positiones them according to the followig rules:
+     *  - take a HeaderFooterRecord and read 16-byte GUID at offset 12. If it is zero,
+     *    it means the current sheet and the given HeaderFooterRecord belongs to this PageSettingsBlock
+     *  - If GUID is not zero then search in preceding CustomViewSettingsRecordAggregates.
+     *    Compare first 16 bytes of UserSViewBegin with the HeaderFooterRecord's GUID. If match,
+     *    then append the HeaderFooterRecord to this CustomViewSettingsRecordAggregates
+     *
+     * @param sheetRecords the list of sheet records read so far
+     */
+    public void positionRecords(List<RecordBase> sheetRecords) {
+        // loop through HeaderFooterRecord records having not-empty GUID and match them with
+        // CustomViewSettingsRecordAggregate blocks having UserSViewBegin with the same GUID
+        for (final Iterator<HeaderFooterRecord> it = _sviewHeaderFooters.iterator(); it.hasNext(); ) {
+            final HeaderFooterRecord hf = it.next();
+            for (RecordBase rb : sheetRecords) {
+                if (rb instanceof CustomViewSettingsRecordAggregate) {
+                    final CustomViewSettingsRecordAggregate cv = (CustomViewSettingsRecordAggregate) rb;
+                    cv.visitContainedRecords(new RecordVisitor() {
+                        public void visitRecord(Record r) {
+                            if (r.getSid() == UserSViewBegin.sid) {
+                                byte[] guid1 = ((UserSViewBegin) r).getGuid();
+                                byte[] guid2 = hf.getGuid();
+                                if (Arrays.equals(guid1, guid2)) {
+                                    cv.append(hf);
+                                    it.remove();
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    }
+
