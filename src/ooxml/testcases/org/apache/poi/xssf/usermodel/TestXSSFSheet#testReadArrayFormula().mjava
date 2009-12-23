@@ -1,0 +1,39 @@
+    public void testReadArrayFormula() throws Exception {
+        XSSFCell[] cells;
+
+        XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFSheet sheet1 = workbook.createSheet();
+        cells = sheet1.setArrayFormula("SUM(A1:A3*B1:B3)", CellRangeAddress.valueOf("C4:C6"));
+        assertEquals(3, cells.length);
+
+        cells = sheet1.setArrayFormula("MAX(A1:A3*B1:B3)", CellRangeAddress.valueOf("A4:A6"));
+        assertEquals(3, cells.length);
+
+        XSSFSheet sheet2 = workbook.createSheet();
+        cells = sheet2.setArrayFormula("MIN(A1:A3*B1:B3)", CellRangeAddress.valueOf("D2:D4"));
+        assertEquals(3, cells.length);
+
+        workbook = getTestDataProvider().writeOutAndReadBack(workbook);
+        sheet1 = workbook.getSheetAt(0);
+        for(int rownum=3; rownum <= 5; rownum++) {
+            XSSFCell cell1 = sheet1.getRow(rownum).getCell(2);
+            assertTrue( sheet1.isCellInArrayFormulaContext(cell1));
+            assertTrue( cell1.isPartOfArrayFormulaGroup());
+
+            XSSFCell cell2 = sheet1.getRow(rownum).getCell(0);
+            assertTrue( sheet1.isCellInArrayFormulaContext(cell2));
+            assertTrue( cell2.isPartOfArrayFormulaGroup());
+        }
+
+        sheet2 = workbook.getSheetAt(1);
+        for(int rownum=1; rownum <= 3; rownum++) {
+            XSSFCell cell1 = sheet2.getRow(rownum).getCell(3);
+            assertTrue( sheet2.isCellInArrayFormulaContext(cell1));
+            assertTrue( cell1.isPartOfArrayFormulaGroup());
+        }
+        XSSFCell acnhorCell = sheet2.getRow(1).getCell(3);
+        XSSFCell fmlaCell = sheet2.getRow(2).getCell(3);
+        assertSame(acnhorCell, sheet2.getFirstCellInArrayFormula(fmlaCell));
+        assertSame(acnhorCell, sheet2.getFirstCellInArrayFormula(acnhorCell));
+    }
+
