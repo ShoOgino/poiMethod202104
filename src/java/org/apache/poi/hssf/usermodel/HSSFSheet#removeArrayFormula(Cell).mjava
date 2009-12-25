@@ -1,24 +1,20 @@
-    public HSSFCell[] removeArrayFormula(Cell cell) {
-        ArrayList<HSSFCell> lst = new ArrayList<HSSFCell>();
+    public CellRange<HSSFCell> removeArrayFormula(Cell cell) {
+        if (cell.getSheet() != this) {
+            throw new IllegalArgumentException("Specified cell does not belong to this sheet.");
+        }
         CellValueRecordInterface rec = ((HSSFCell) cell).getCellValueRecord();
         if (!(rec instanceof FormulaRecordAggregate)) {
             String ref = new CellReference(cell).formatAsString();
-            throw new IllegalArgumentException("Cell " + ref + " is not part of an array formula");
+            throw new IllegalArgumentException("Cell " + ref + " is not part of an array formula.");
         }
         FormulaRecordAggregate fra = (FormulaRecordAggregate) rec;
         CellRangeAddress range = fra.removeArrayFormula(cell.getRowIndex(), cell.getColumnIndex());
-        if (range == null) {
-            String ref = new CellReference(cell).formatAsString();
-            throw new IllegalArgumentException("Cell " + ref + " is not part of an array formula");
-        }
+
+        CellRange<HSSFCell> result = getCellRange(range);
         // clear all cells in the range
-        for (int rowIn = range.getFirstRow(); rowIn <= range.getLastRow(); rowIn++) {
-            for (int colIn = range.getFirstColumn(); colIn <= range.getLastColumn(); colIn++) {
-                HSSFCell rCell = getRow(rowIn).getCell(colIn);
-                rCell.setCellType(Cell.CELL_TYPE_BLANK);
-                lst.add(rCell);
-             }
+        for (Cell c : result) {
+            c.setCellType(Cell.CELL_TYPE_BLANK);
         }
-        return lst.toArray(new HSSFCell[lst.size()]);
+        return result;
     }
 

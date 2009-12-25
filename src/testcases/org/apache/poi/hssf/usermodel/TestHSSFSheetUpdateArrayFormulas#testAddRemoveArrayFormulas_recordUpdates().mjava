@@ -1,0 +1,33 @@
+    /**
+     * Makes sure the internal state of HSSFSheet is consistent after removing array formulas
+     */
+    public void testAddRemoveArrayFormulas_recordUpdates() {
+        HSSFWorkbook wb = new HSSFWorkbook();
+        HSSFSheet s = wb.createSheet("Sheet1");
+
+        CellRange<HSSFCell> cr = s.setArrayFormula("123", CellRangeAddress.valueOf("B5:C6"));
+        Record[] recs;
+        int ix;
+        recs = RecordInspector.getRecords(s, 0);
+        ix = findRecordOfType(recs, ArrayRecord.class, 0);
+        confirmRecordClass(recs, ix-1, FormulaRecord.class);
+        confirmRecordClass(recs, ix+1, FormulaRecord.class);
+        confirmRecordClass(recs, ix+2, FormulaRecord.class);
+        confirmRecordClass(recs, ix+3, FormulaRecord.class);
+        // just one array record
+        assertTrue(findRecordOfType(recs, ArrayRecord.class, ix+1) < 0);
+
+        s.removeArrayFormula(cr.getTopLeftCell());
+
+        // Make sure the array formula has been removed properly
+
+        recs = RecordInspector.getRecords(s, 0);
+        assertTrue(findRecordOfType(recs, ArrayRecord.class, 0) < 0);
+        assertTrue(findRecordOfType(recs, FormulaRecord.class, 0) < 0);
+        RowRecordsAggregate rra = s.getSheet().getRowsAggregate();
+        SharedValueManager svm = TestSharedValueManager.extractFromRRA(rra);
+        if (svm.getArrayRecord(4, 1) != null) {
+            throw new AssertionFailedError("Array record was not cleaned up properly.");
+        }
+    }
+

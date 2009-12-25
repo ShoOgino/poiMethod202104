@@ -1,0 +1,26 @@
+    public void testXSSFSetArrayFormula_multiCell() {
+        CellRange<XSSFCell> cells;
+
+        String formula2 = "456";
+        XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFSheet sheet = workbook.createSheet();
+
+        CellRangeAddress range = CellRangeAddress.valueOf("C4:C6");
+        cells = sheet.setArrayFormula(formula2, range);
+        assertEquals(3, cells.size());
+
+        // sheet.setArrayFormula creates rows and cells for the designated range
+        /*
+         * From the spec:
+         * For a multi-cell formula, the c elements for all cells except the top-left
+         * cell in that range shall not have an f element;
+         */
+        // Check that each cell exists and that the formula text is set correctly on the first cell
+        XSSFCell firstCell = cells.getTopLeftCell();
+        confirmArrayFormulaCell(firstCell, "C4", formula2, "C4:C6");
+        confirmArrayFormulaCell(cells.getCell(1, 0), "C5");
+        confirmArrayFormulaCell(cells.getCell(2, 0), "C6");
+
+        assertSame(firstCell, sheet.getFirstCellInArrayFormula(firstCell));
+    }
+

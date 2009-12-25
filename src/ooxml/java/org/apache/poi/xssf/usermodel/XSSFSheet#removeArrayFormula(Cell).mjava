@@ -1,32 +1,18 @@
-    /**
-     * Remove an Array Formula from this sheet.
-     * <p>
-     * All cells contained in the Array Formula range are removed as well
-     * </p>
-     *
-     * @param cell   any cell within Array Formula range
-     * @return the array of affected cells.
-     * @throws IllegalArgumentException if the specified cell is not part of an array formula
-     */
-    public XSSFCell[] removeArrayFormula(Cell cell) {
-        ArrayList<XSSFCell> lst = new ArrayList<XSSFCell>();
+    public CellRange<XSSFCell> removeArrayFormula(Cell cell) {
+        if (cell.getSheet() != this) {
+            throw new IllegalArgumentException("Specified cell does not belong to this sheet.");
+        }
         for (CellRangeAddress range : arrayFormulas) {
             if (range.isInRange(cell.getRowIndex(), cell.getColumnIndex())) {
                 arrayFormulas.remove(range);
-                for (int rowIndex = range.getFirstRow(); rowIndex <= range.getLastRow(); rowIndex++) {
-                    XSSFRow row = getRow(rowIndex);
-                    for (int columnIndex = range.getFirstColumn(); columnIndex <= range.getLastColumn(); columnIndex++) {
-                        XSSFCell arrayFormulaCell = row.getCell(columnIndex);
-                        if (arrayFormulaCell != null) {
-                            arrayFormulaCell.setCellType(Cell.CELL_TYPE_BLANK);
-                            lst.add(arrayFormulaCell);
-                        }
-                    }
+                CellRange<XSSFCell> cr = getCellRange(range);
+                for (XSSFCell c : cr) {
+                    c.setCellType(Cell.CELL_TYPE_BLANK);
                 }
-                return lst.toArray(new XSSFCell[lst.size()]);
+                return cr;
             }
         }
         String ref = ((XSSFCell)cell).getCTCell().getR();
-        throw new IllegalArgumentException("Cell " + ref + " is not part of an array formula");
+        throw new IllegalArgumentException("Cell " + ref + " is not part of an array formula.");
     }
 

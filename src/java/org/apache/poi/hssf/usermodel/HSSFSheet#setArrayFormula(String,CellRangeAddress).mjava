@@ -1,27 +1,13 @@
-    public HSSFCell[] setArrayFormula(String formula, CellRangeAddress range) {
-        HSSFCell[] cells = new HSSFCell[range.getNumberOfCells()];
-        int k = 0;
-
+    public CellRange<HSSFCell> setArrayFormula(String formula, CellRangeAddress range) {
         // make sure the formula parses OK first
         int sheetIndex = _workbook.getSheetIndex(this);
         Ptg[] ptgs = HSSFFormulaParser.parse(formula, _workbook, FormulaType.ARRAY, sheetIndex);
-        int firstRow = range.getFirstRow();
-        int firstColumn = range.getFirstColumn();
-        for (int rowIn = firstRow; rowIn <= range.getLastRow(); rowIn++) {
-            for (int colIn = firstColumn; colIn <= range.getLastColumn(); colIn++) {
-                HSSFRow row = getRow(rowIn);
-                if (row == null) {
-                    row = createRow(rowIn);
-                }
-                HSSFCell cell = row.getCell(colIn);
-                if (cell == null) {
-                    cell = row.createCell(colIn);
-                }
-                cell.setCellArrayFormula(range);
-                cells[k++] = cell;
-            }
+        CellRange<HSSFCell> cells = getCellRange(range);
+
+        for (HSSFCell c : cells) {
+            c.setCellArrayFormula(range);
         }
-        HSSFCell mainArrayFormulaCell = getRow(firstRow).getCell(firstColumn);
+        HSSFCell mainArrayFormulaCell = cells.getTopLeftCell();
         FormulaRecordAggregate agg = (FormulaRecordAggregate)mainArrayFormulaCell.getCellValueRecord();
         agg.setArrayFormula(range, ptgs);
         return cells;
