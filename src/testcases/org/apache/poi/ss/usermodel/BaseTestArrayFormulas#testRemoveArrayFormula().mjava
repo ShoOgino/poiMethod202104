@@ -1,0 +1,35 @@
+    /**
+     * create and remove array formulas
+     */
+    public void testRemoveArrayFormula() {
+        Workbook workbook = getTestDataProvider().createWorkbook();
+        Sheet sheet = workbook.createSheet();
+
+        CellRangeAddress range = new CellRangeAddress(3, 5, 2, 2);
+        assertEquals("C4:C6", range.formatAsString());
+        Cell[] cells = sheet.setArrayFormula("SUM(A1:A3*B1:B3)", range);
+        assertEquals(3, cells.length);
+
+        // remove the formula cells in C4:C6
+        Cell[] dcells = sheet.removeArrayFormula(cells[0]);
+        // removeArrayFormula should return the same cells as setArrayFormula
+        assertTrue(Arrays.equals(cells, dcells));
+
+        for(Cell acell : cells){
+            assertFalse(acell.isPartOfArrayFormulaGroup());
+            assertEquals(Cell.CELL_TYPE_BLANK, acell.getCellType());
+        }
+
+        // cells C4:C6 are not included in array formula,
+        // invocation of sheet.removeArrayFormula on any of them throws IllegalArgumentException
+        for(Cell acell : cells){
+            try {
+                sheet.removeArrayFormula(acell);
+                fail("expected exception");
+            } catch (IllegalArgumentException e){
+                String ref = new CellReference(acell).formatAsString();
+                assertEquals("Cell "+ref+" is not part of an array formula", e.getMessage());
+            }
+        }
+    }
+

@@ -1,0 +1,32 @@
+    /**
+     * Set multi-cell array formula
+     */
+    public void testSetArrayFormula_multiCell() {
+        Workbook workbook = getTestDataProvider().createWorkbook();
+        Sheet sheet = workbook.createSheet();
+
+        // multi-cell formula
+        // rows 3-5 don't exist yet
+        assertNull(sheet.getRow(3));
+        assertNull(sheet.getRow(4));
+        assertNull(sheet.getRow(5));
+
+        CellRangeAddress range = new CellRangeAddress(3, 5, 2, 2);
+        assertEquals("C4:C6", range.formatAsString());
+        Cell[] cells = sheet.setArrayFormula("SUM(A1:A3*B1:B3)", range);
+        assertEquals(3, cells.length);
+
+        // sheet.setArrayFormula creates rows and cells for the designated range
+        assertSame(cells[0], sheet.getRow(3).getCell(2));
+        assertSame(cells[1], sheet.getRow(4).getCell(2));
+        assertSame(cells[2], sheet.getRow(5).getCell(2));
+
+        for(Cell acell : cells){
+            assertTrue(acell.isPartOfArrayFormulaGroup());
+            assertEquals(Cell.CELL_TYPE_FORMULA, acell.getCellType());
+            assertEquals("SUM(A1:A3*B1:B3)", acell.getCellFormula());
+            //retrieve the range and check it is the same
+            assertEquals(range.formatAsString(), acell.getArrayFormulaRange().formatAsString());
+        }
+    }
+
