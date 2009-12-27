@@ -1,14 +1,13 @@
-	/**
-	 * TODO - make this work!
-	 * (Need to have the Internal Workbook capture it or something)
-	 */
-	public void DISABLEDtestReadFeatRecord() throws Exception {
+	public void testReadFeatRecord() throws Exception {
 		HSSFWorkbook hssf = 
 			HSSFTestDataSamples.openSampleWorkbook("46136-NoWarnings.xls");
 		InternalWorkbook wb = HSSFTestHelper.getWorkbookForTest(hssf);
 		
 		FeatRecord fr = null;
 		
+		assertEquals(1, hssf.getNumberOfSheets());
+		
+		// First check it isn't on the Workbook
 		int countFR = 0;
 		int countFRH = 0;
 		for(Record r : wb.getRecords()) {
@@ -22,6 +21,30 @@
 				countFRH++;
 			} else if (r.getSid() == FeatHdrRecord.sid) {
 				fail("FeatHdrRecord SID found but not created correctly!");
+			}
+		}
+		
+		assertEquals(0, countFR);
+		assertEquals(0, countFRH);
+		
+		// Now find it on our sheet
+		HSSFSheet s = hssf.getSheetAt(0);
+		InternalSheet sheet = HSSFTestHelper.getSheetForTest(s);
+		
+		for(RecordBase rb : sheet.getRecords()) {
+			if(rb instanceof Record) {
+				Record r = (Record)rb;
+				if(r instanceof FeatRecord) {
+					fr = (FeatRecord)r;
+					countFR++;
+				} else if (r.getSid() == FeatRecord.sid) {
+					countFR++;
+				}
+				if(r instanceof FeatHdrRecord) {
+					countFRH++;
+				} else if (r.getSid() == FeatHdrRecord.sid) {
+					countFRH++;
+				}
 			}
 		}
 		
