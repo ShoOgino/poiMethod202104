@@ -1,0 +1,41 @@
+    public void testModifyArrayCells_setCellFormula(){
+        Workbook workbook = _testDataProvider.createWorkbook();
+        Sheet sheet = workbook.createSheet();
+
+        CellRange<? extends Cell> srange =
+                sheet.setArrayFormula("SUM(A4:A6,B4:B6)", CellRangeAddress.valueOf("B5"));
+        Cell scell = srange.getTopLeftCell();
+        assertEquals("SUM(A4:A6,B4:B6)", scell.getCellFormula());
+        assertEquals(Cell.CELL_TYPE_FORMULA, scell.getCellType());
+        assertTrue(scell.isPartOfArrayFormulaGroup());
+        scell.setCellFormula("SUM(A4,A6)");
+        //we are now a normal formula cell
+        assertEquals("SUM(A4,A6)", scell.getCellFormula());
+        assertFalse(scell.isPartOfArrayFormulaGroup());
+        assertEquals(Cell.CELL_TYPE_FORMULA, scell.getCellType());
+        //check that setting formula result works
+        assertEquals(0.0, scell.getNumericCellValue());
+        scell.setCellValue(33.0);
+        assertEquals(33.0, scell.getNumericCellValue());
+
+        //multi-cell array formula
+        CellRange<? extends Cell> mrange =
+                sheet.setArrayFormula("A1:A3*B1:B3", CellRangeAddress.valueOf("C1:C3"));
+        for(Cell mcell : mrange){
+            //we cannot set individual formulas for cells included in an array formula
+            try {
+                assertEquals("A1:A3*B1:B3", mcell.getCellFormula());
+                mcell.setCellFormula("A1+A2");
+                fail("expected exception");
+            } catch (IllegalStateException e){
+                CellReference ref = new CellReference(mcell);
+                String msg = "Cell "+ref.formatAsString()+" is part of a multi-cell array formula. You cannot change part of an array.";
+                assertEquals(msg, e.getMessage());
+            }
+            // a failed invocation of Cell.setCellFormula leaves the cell
+            // in the state that it was in prior to the invocation
+            assertEquals("A1:A3*B1:B3", mcell.getCellFormula());
+            assertTrue(mcell.isPartOfArrayFormulaGroup());
+        }
+    }
+

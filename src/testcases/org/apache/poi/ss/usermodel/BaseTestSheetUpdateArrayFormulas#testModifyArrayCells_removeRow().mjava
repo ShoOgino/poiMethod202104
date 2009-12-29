@@ -1,0 +1,43 @@
+    public void testModifyArrayCells_removeRow(){
+        Workbook workbook = _testDataProvider.createWorkbook();
+        Sheet sheet = workbook.createSheet();
+
+        //single-cell array formulas behave just like normal cells
+        CellRangeAddress cra = CellRangeAddress.valueOf("B5");
+        CellRange<? extends Cell> srange =
+                sheet.setArrayFormula("SUM(A4:A6,B4:B6)", cra);
+        Cell scell = srange.getTopLeftCell();
+        assertEquals(Cell.CELL_TYPE_FORMULA, scell.getCellType());
+
+        Row srow = scell.getRow();
+        assertSame(srow, sheet.getRow(cra.getFirstRow()));
+        sheet.removeRow(srow);
+        assertNull(sheet.getRow(cra.getFirstRow()));
+
+        //re-create the removed row and cell
+        scell = sheet.createRow(cra.getFirstRow()).createCell(cra.getFirstColumn());
+        assertEquals(Cell.CELL_TYPE_BLANK, scell.getCellType());
+        assertFalse(scell.isPartOfArrayFormulaGroup());
+
+        //we cannot remove rows with cells included in a multi-cell array formula
+        CellRange<? extends Cell> mrange =
+                sheet.setArrayFormula("A1:A3*B1:B3", CellRangeAddress.valueOf("C1:C3"));
+        for(Cell mcell : mrange){
+            int columnIndex = mcell.getColumnIndex();
+            Row mrow = mcell.getRow();
+            try {
+                sheet.removeRow(mrow);
+                fail("expected exception");
+            } catch (IllegalStateException e){
+                String msg = "Row[rownum="+mrow.getRowNum()+"] contains cell(s) included in a multi-cell array formula. You cannot change part of an array.";
+                assertEquals(msg, e.getMessage());
+            }
+            // a failed invocation of Row.removeCell leaves the row
+            // in the state that it was in prior to the invocation
+            assertSame(mrow, sheet.getRow(mrow.getRowNum()));
+            assertSame(mcell, mrow.getCell(columnIndex));
+            assertTrue(mcell.isPartOfArrayFormulaGroup());
+            assertEquals(Cell.CELL_TYPE_FORMULA, mcell.getCellType());
+        }
+    }
+

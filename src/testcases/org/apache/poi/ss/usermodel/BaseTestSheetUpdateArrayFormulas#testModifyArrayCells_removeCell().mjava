@@ -1,0 +1,42 @@
+    public void testModifyArrayCells_removeCell(){
+        Workbook workbook = _testDataProvider.createWorkbook();
+        Sheet sheet = workbook.createSheet();
+
+        //single-cell array formulas behave just like normal cells
+        CellRangeAddress cra = CellRangeAddress.valueOf("B5");
+        CellRange<? extends Cell> srange =
+                sheet.setArrayFormula("SUM(A4:A6,B4:B6)", cra);
+        Cell scell = srange.getTopLeftCell();
+
+        Row srow = sheet.getRow(cra.getFirstRow());
+        assertSame(srow, scell.getRow());
+        srow.removeCell(scell);
+        assertNull(srow.getCell(cra.getFirstColumn()));
+
+        //re-create the removed cell
+        scell = srow.createCell(cra.getFirstColumn());
+        assertEquals(Cell.CELL_TYPE_BLANK, scell.getCellType());
+        assertFalse(scell.isPartOfArrayFormulaGroup());
+
+        //we cannot remove cells included in a multi-cell array formula
+        CellRange<? extends Cell> mrange =
+                sheet.setArrayFormula("A1:A3*B1:B3", CellRangeAddress.valueOf("C1:C3"));
+        for(Cell mcell : mrange){
+            int columnIndex = mcell.getColumnIndex();
+            Row mrow = mcell.getRow();
+            try {
+                mrow.removeCell(mcell);
+                fail("expected exception");
+            } catch (IllegalStateException e){
+                CellReference ref = new CellReference(mcell);
+                String msg = "Cell "+ref.formatAsString()+" is part of a multi-cell array formula. You cannot change part of an array.";
+                assertEquals(msg, e.getMessage());
+            }
+            // a failed invocation of Row.removeCell leaves the row
+            // in the state that it was in prior to the invocation
+            assertSame(mcell, mrow.getCell(columnIndex));
+            assertTrue(mcell.isPartOfArrayFormulaGroup());
+            assertEquals(Cell.CELL_TYPE_FORMULA, mcell.getCellType());
+        }
+    }
+

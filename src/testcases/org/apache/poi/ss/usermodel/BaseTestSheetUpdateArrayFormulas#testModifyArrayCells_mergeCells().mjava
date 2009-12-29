@@ -1,0 +1,30 @@
+    public void testModifyArrayCells_mergeCells(){
+        Workbook workbook = _testDataProvider.createWorkbook();
+        Sheet sheet = workbook.createSheet();
+        assertEquals(0, sheet.getNumMergedRegions());
+
+        //single-cell array formulas behave just like normal cells
+        CellRange<? extends Cell> srange =
+                sheet.setArrayFormula("SUM(A4:A6,B4:B6)", CellRangeAddress.valueOf("B5"));
+        Cell scell = srange.getTopLeftCell();
+        sheet.addMergedRegion(CellRangeAddress.valueOf("B5:C6"));
+        //we are still an array formula
+        assertEquals(Cell.CELL_TYPE_FORMULA, scell.getCellType());
+        assertTrue(scell.isPartOfArrayFormulaGroup());
+        assertEquals(1, sheet.getNumMergedRegions());
+
+        //we cannot merge cells included in an array formula
+        CellRange<? extends Cell> mrange =
+                sheet.setArrayFormula("A1:A3*B1:B3", CellRangeAddress.valueOf("C1:C3"));
+        CellRangeAddress cra = CellRangeAddress.valueOf("C1:C3");
+        try {
+            sheet.addMergedRegion(cra);
+            fail("expected exception");
+        } catch (IllegalStateException e){
+            String msg = "The range "+cra.formatAsString()+" intersects with a multi-cell array formula. You cannot merge cells of an array.";
+            assertEquals(msg, e.getMessage());
+        }
+        //the number of merged regions remains the same
+        assertEquals(1, sheet.getNumMergedRegions());
+    }
+
