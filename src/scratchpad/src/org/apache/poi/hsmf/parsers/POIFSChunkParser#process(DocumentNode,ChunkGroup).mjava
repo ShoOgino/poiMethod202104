@@ -1,0 +1,44 @@
+   /**
+    * Creates a chunk, and gives it to its parent group 
+    */
+   protected static void process(DocumentNode entry, ChunkGroup grouping) {
+      if(entry.getName().length() < 9) {
+         // Name in the wrong format
+         return;
+      }
+      if(entry.getName().indexOf('_') == -1) {
+         // Name in the wrong format
+         return;
+      }
+      
+      // See if we can get a type for it
+      String ending = entry.getName().substring(entry.getName().length()-4);
+      try {
+         int type = Integer.parseInt(ending, 16);
+         Chunk chunk = null;
+         
+         switch(type) {
+         case Types.BINARY:
+            chunk = new ByteChunk(entry.getName());
+            break;
+         case Types.ASCII_STRING:
+         case Types.UNICODE_STRING:
+            chunk = new StringChunk(entry.getName());
+            break;
+         }
+         
+         if(chunk != null) {
+            try {
+               DocumentInputStream inp = new DocumentInputStream(entry);
+               chunk.readValue(inp);
+               grouping.record(chunk);
+            } catch(IOException e) {
+               System.err.println("Error reading from part " + entry.getName() + " - " + e.toString());
+            }
+         }
+      } catch(NumberFormatException e) {
+         // Name in the wrong format
+         return;
+      }
+   }
+
