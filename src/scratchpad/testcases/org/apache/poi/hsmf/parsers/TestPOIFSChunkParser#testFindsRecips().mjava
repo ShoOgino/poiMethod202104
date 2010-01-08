@@ -1,4 +1,26 @@
    public void testFindsRecips() throws IOException {
+      POIFSFileSystem simple = new POIFSFileSystem(
+            new FileInputStream(samples.getFile("quick.msg"))
+      );
       
+      simple.getRoot().getEntry("__recip_version1.0_#00000000");
+
+      ChunkGroup[] groups = POIFSChunkParser.parse(simple.getRoot());
+      assertEquals(3, groups.length);
+      assertTrue(groups[0] instanceof Chunks);
+      assertTrue(groups[1] instanceof RecipientChunks);
+      assertTrue(groups[2] instanceof NameIdChunks);
+      
+      RecipientChunks recips = (RecipientChunks)groups[1];
+      assertEquals("kevin.roast@alfresco.org", recips.recipientEmailChunk.getValue());
+      
+      String search = new String(recips.recipientSearchChunk.getValue(), "ASCII");
+      assertEquals("CN=KEVIN.ROAST@BEN\0", search.substring(search.length()-19));
+      
+      // Now via MAPIMessage
+      MAPIMessage msg = new MAPIMessage(simple);
+      assertNotNull(msg.getRecipientDetailsChunks());
+      
+      assertEquals("kevin.roast@alfresco.org", msg.getRecipientDetailsChunks().recipientEmailChunk.getValue());
    }
 
