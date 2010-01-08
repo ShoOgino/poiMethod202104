@@ -1,0 +1,32 @@
+   /**
+    * Constructor for reading MSG Files from a certain
+    *  point within a POIFS filesystem
+    * @param in
+    * @throws IOException
+    */
+   public MAPIMessage(DirectoryNode poifsDir, POIFSFileSystem fs) throws IOException {
+      super(poifsDir, fs);
+      
+		// Grab all the chunks
+		ChunkGroup[] chunkGroups = POIFSChunkParser.parse(poifsDir);
+		
+		// Grab interesting bits
+		ArrayList<AttachmentChunks> attachments = new ArrayList<AttachmentChunks>();
+		for(ChunkGroup group : chunkGroups) {
+		   // Should only ever be one of these
+		   if(group instanceof Chunks) {
+		      mainChunks = (Chunks)group;
+		   } else if(group instanceof NameIdChunks) {
+		      nameIdChunks = (NameIdChunks)group;
+		   } else if(group instanceof RecipientChunks) {
+		      recipientChunks = (RecipientChunks)group;
+		   }
+		   
+		   // Add to list(s)
+		   if(group instanceof AttachmentChunks) {
+		      attachments.add((AttachmentChunks)group);
+		   }
+		}
+		attachmentChunks = attachments.toArray(new AttachmentChunks[attachments.size()]);
+	}
+
