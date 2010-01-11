@@ -1,0 +1,43 @@
+    public List<DrawingParagraph> getText() {
+        CTGroupShape gs = data.getSpTree();
+
+        List<DrawingParagraph> out = new ArrayList<DrawingParagraph>();
+
+        CTShape[] shapes = gs.getSpArray();
+        for (int i = 0; i < shapes.length; i++) {
+            CTTextBody ctTextBody = shapes[i].getTxBody();
+            if (ctTextBody==null) {
+                continue;
+            }
+
+            DrawingTextBody textBody = new DrawingTextBody(ctTextBody);
+
+            out.addAll(Arrays.asList(textBody.getParagraphs()));
+        }
+
+        CTGraphicalObjectFrame[] graphicFrames = gs.getGraphicFrameArray();
+        for (CTGraphicalObjectFrame frame: graphicFrames) {
+            CTGraphicalObjectData data = frame.getGraphic().getGraphicData();
+            XmlCursor c = data.newCursor();
+            c.selectPath("./*");
+
+            while (c.toNextSelection()) {
+                XmlObject o = c.getObject();
+
+                if (o instanceof CTTable) {
+                    DrawingTable table = new DrawingTable((CTTable) o);
+
+                    for (DrawingTableRow row : table.getRows()) {
+                        for (DrawingTableCell cell : row.getCells()) {
+                            DrawingTextBody textBody = cell.getTextBody();
+
+                            out.addAll(Arrays.asList(textBody.getParagraphs()));
+                        }
+                    }
+                }
+            }
+        }
+
+        return out;
+    }
+
