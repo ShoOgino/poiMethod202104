@@ -5,20 +5,33 @@
       MAPIMessage msg = (MAPIMessage)document;
       StringBuffer s = new StringBuffer();
       
+      StringsIterator emails;
+      try {
+         emails = new StringsIterator(
+               msg.getRecipientEmailAddressList()
+         );
+      } catch(ChunkNotFoundException e) {
+         emails = new StringsIterator(new String[0]);
+      }
+      
       try {
          s.append("From: " + msg.getDisplayFrom() + "\n");
       } catch(ChunkNotFoundException e) {}
+      
+      // For To, CC and BCC, try to match the names
+      //  up with their email addresses. Relies on the
+      //  Recipient Chunks being in the same order as
+      //  people in To + CC + BCC.
       try {
-         s.append("To: " + msg.getDisplayTo() + "\n");
+         handleEmails(s, "To", msg.getDisplayTo(), emails);
       } catch(ChunkNotFoundException e) {}
       try {
-         if(msg.getDisplayCC().length() > 0)
-            s.append("CC: " + msg.getDisplayCC() + "\n");
+         handleEmails(s, "CC", msg.getDisplayCC(), emails);
       } catch(ChunkNotFoundException e) {}
       try {
-         if(msg.getDisplayBCC().length() > 0)
-            s.append("BCC: " + msg.getDisplayBCC() + "\n");
+         handleEmails(s, "BCC", msg.getDisplayBCC(), emails);
       } catch(ChunkNotFoundException e) {}
+      
       try {
          SimpleDateFormat f = new SimpleDateFormat("E, d MMM yyyy HH:mm:ss");
          s.append("Date: " + f.format(msg.getMessageDate().getTime()) + "\n");

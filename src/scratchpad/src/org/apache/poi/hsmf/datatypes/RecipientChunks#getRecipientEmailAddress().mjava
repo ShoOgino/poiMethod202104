@@ -4,10 +4,26 @@
     *  delivery type.
     */
    public String getRecipientEmailAddress() {
-      if(recipientEmailChunk != null) {
-         return recipientEmailChunk.getValue();
+      // If we have this, it really has the email 
+      if(recipientSMTPChunk != null) {
+         return recipientSMTPChunk.getValue();
       }
-      // Probably in the name field
+      
+      // This might be a real email, or might be
+      //  in CN=... format
+      if(recipientEmailChunk != null) {
+         String email = recipientEmailChunk.getValue();
+         int cne = email.indexOf("/CN="); 
+         if(cne == -1) {
+            // Normal smtp address
+            return email;
+         } else {
+            // /O=..../CN=em@ail
+            return email.substring(cne+4);
+         }
+      }
+      
+      // Might be in the name field, check there
       if(recipientNameChunk != null) {
          String name = recipientNameChunk.getValue();
          if(name.indexOf('@') > -1) {
@@ -18,13 +34,16 @@
             return name;
          }
       }
-      // Check the search chunk
+      
+      // Check the search chunk, see if it's 
+      //  encoded as a SMTP destination in there.
       if(recipientSearchChunk != null) {
          String search = recipientSearchChunk.getAs7bitString();
          if(search.indexOf("SMTP:") != -1) {
             return search.substring(search.indexOf("SMTP:") + 5);
          }
       }
+      
       // Can't find it
       return null;
    }
