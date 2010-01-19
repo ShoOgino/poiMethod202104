@@ -1,3 +1,8 @@
+    /**
+     * Serialises out the String. There are special rules
+     *  about where we can and can't split onto
+     *  Continue records.
+     */
     public void serialize(ContinuableRecordOutput out) {
         int numberOfRichTextRuns = 0;
         int extendedDataSize = 0;
@@ -5,9 +10,11 @@
             numberOfRichTextRuns = field_4_format_runs.size();
         }
         if (isExtendedText() && field_5_ext_rst != null) {
-            extendedDataSize = field_5_ext_rst.length;
+            extendedDataSize = 4 + field_5_ext_rst.getDataSize();
         }
-
+       
+        // Serialise the bulk of the String
+        // The writeString handles tricky continue stuff for us
         out.writeString(field_3_string, numberOfRichTextRuns, extendedDataSize);
 
         if (numberOfRichTextRuns > 0) {
@@ -17,25 +24,13 @@
               if (out.getAvailableSpace() < 4) {
                   out.writeContinue();
               }
-                FormatRun r = field_4_format_runs.get(i);
-                r.serialize(out);
+              FormatRun r = field_4_format_runs.get(i);
+              r.serialize(out);
           }
         }
 
         if (extendedDataSize > 0) {
-            // OK ExtRst is actually not documented, so i am going to hope
-            // that we can actually continue on byte boundaries
-
-            int extPos = 0;
-            while (true) {
-                int nBytesToWrite = Math.min(extendedDataSize - extPos, out.getAvailableSpace());
-                out.write(field_5_ext_rst, extPos, nBytesToWrite);
-                extPos += nBytesToWrite;
-                if (extPos >= extendedDataSize) {
-                    break;
-                }
-                out.writeContinue();
-            }
+           field_5_ext_rst.serialize(out);
         }
     }
 

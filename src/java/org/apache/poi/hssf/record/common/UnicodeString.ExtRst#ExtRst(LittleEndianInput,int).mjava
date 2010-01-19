@@ -1,0 +1,63 @@
+       protected ExtRst(LittleEndianInput in, int expectedLength) {
+          reserved = in.readShort();
+          
+          // Old style detection (Reserved = 0xFF)
+          if(reserved == -1) {
+             populateEmpty();
+             return;
+          }
+          
+          // Spot corrupt records
+          if(reserved != 1) {
+             System.err.println("Warning - ExtRst was has wrong magic marker, expecting 1 but found " + reserved + " - ignoring");
+             // Grab all the remaining data, and ignore it
+             for(int i=0; i<expectedLength-2; i++) {
+                in.readByte();
+             }
+             // And make us be empty
+             populateEmpty();
+             return;
+          }
+          
+          // Carry on reading in as normal
+          short stringDataSize = in.readShort();
+          
+          formattingFontIndex = in.readShort();
+          formattingOptions   = in.readShort();
+          
+          // RPHSSub
+          numberOfRuns = in.readUShort();
+          short length1 = in.readShort();
+          // No really. Someone clearly forgot to read
+          //  the docs on their datastructure...
+          short length2 = in.readShort();
+          // And sometimes they write out garbage :(
+          if(length1 == 0 && length2 > 0) {
+             length2 = 0;
+          }
+          if(length1 != length2) {
+             throw new IllegalStateException(
+                   "The two length fields of the Phonetic Text don't agree! " +
+                   length1 + " vs " + length2
+             );
+          }
+          phoneticText = StringUtil.readUnicodeLE(in, length1);
+          
+          int runData = stringDataSize - 4 - 6 - (2*phoneticText.length());
+          int numRuns = (runData / 6);
+          phRuns = new PhRun[numRuns];
+          for(int i=0; i<phRuns.length; i++) {
+             phRuns[i] = new PhRun(in);
+          }
+
+          int extraDataLength = runData - (numRuns*6);
+          if(extraDataLength < 0) {
+             System.err.println("Warning - ExtRst overran by " + (0-extraDataLength) + " bytes");
+             extraDataLength = 0;
+          }
+          extraData = new byte[extraDataLength];
+          for(int i=0; i<extraData.length; i++) {
+             extraData[i] = in.readByte();
+          }
+       }
+

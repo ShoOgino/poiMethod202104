@@ -1,0 +1,66 @@
+    public void testExtRstFromEmpty() throws Exception {
+       ExtRst ext = new ExtRst();
+       
+       assertEquals(0, ext.getNumberOfRuns());
+       assertEquals(0, ext.getFormattingFontIndex());
+       assertEquals(0, ext.getFormattingOptions());
+       assertEquals("", ext.getPhoneticText());
+       assertEquals(0, ext.getPhRuns().length);
+       assertEquals(10, ext.getDataSize()); // Excludes 4 byte header
+       
+       ByteArrayOutputStream baos = new ByteArrayOutputStream();
+       LittleEndianOutputStream out = new LittleEndianOutputStream(baos);
+       ContinuableRecordOutput cout = new ContinuableRecordOutput(out, 0xffff);
+       
+       ext.serialize(cout);
+       cout.writeContinue();
+       
+       byte[] b = baos.toByteArray();
+       assertEquals(20, b.length);
+       
+       // First 4 bytes from the outputstream
+       assertEquals(-1, b[0]);
+       assertEquals(-1, b[1]);
+       assertEquals(14, b[2]);
+       assertEquals(00, b[3]);
+       
+       // Reserved
+       assertEquals(1, b[4]);
+       assertEquals(0, b[5]);
+       // Data size
+       assertEquals(10, b[6]);
+       assertEquals(00, b[7]);
+       // Font*2
+       assertEquals(0, b[8]);
+       assertEquals(0, b[9]);
+       assertEquals(0, b[10]);
+       assertEquals(0, b[11]);
+       // 0 Runs
+       assertEquals(0, b[12]);
+       assertEquals(0, b[13]);
+       // Size=0, *2
+       assertEquals(0, b[14]);
+       assertEquals(0, b[15]);
+       assertEquals(0, b[16]);
+       assertEquals(0, b[17]);
+       
+       // Last 2 bytes from the outputstream
+       assertEquals(ContinueRecord.sid, b[18]);
+       assertEquals(0, b[19]);
+       
+       
+       // Load in again and re-test
+       byte[] data = new byte[14];
+       System.arraycopy(b, 4, data, 0, data.length);
+       LittleEndianInputStream inp = new LittleEndianInputStream(
+             new ByteArrayInputStream(data)
+       );
+       ext = new ExtRst(inp, data.length);
+       
+       assertEquals(0, ext.getNumberOfRuns());
+       assertEquals(0, ext.getFormattingFontIndex());
+       assertEquals(0, ext.getFormattingOptions());
+       assertEquals("", ext.getPhoneticText());
+       assertEquals(0, ext.getPhRuns().length);
+    }
+
