@@ -1,0 +1,84 @@
+    /**
+     * If the image is to overlie more than one rows, calculations need to be
+     * performed to determine how many rows and whether the image will
+     * overlie just a part of one row in order to be presented at the
+     * required size.
+     *
+     * @param sheet The sheet that will 'contain' the image.
+     * @param startingRow A primitive int whose value is the index of the row
+     *                    that contains the cell whose top left hand corner
+     *                    should be aligned with the top left hand corner of
+     *                    the image.
+     * @param reqImageHeightMM A primitive double whose value will indicate the
+     *                         required height of the image in millimetres.
+     * @return An instance of the ClientAnchorDetail class that will contain
+     *         the index number of the row containing the cell whose top
+     *         left hand corner also defines the top left hand corner of the
+     *         image, the index number of the row containing the cell whose top
+     *         left hand corner also defines the bottom right hand corner of
+     *         the image and an inset that determines how far the bottom edge
+     *         can protrude into the next (lower) row - expressed as a specific
+     *         number of co-ordinate positions.
+     */
+    private ClientAnchorDetail calculateRowLocation(Sheet sheet,
+            int startingRow, double reqImageHeightMM) {
+        ClientAnchorDetail clientAnchorDetail = null;
+        Row row = null;
+        double rowHeightMM = 0.0D;
+        double totalRowHeightMM = 0.0D;
+        double overlapMM = 0.0D;
+        double rowCoordinatesPerMM = 0.0D;
+        int toRow = startingRow;
+        int inset = 0;
+
+        // Step through the rows in the sheet and accumulate a total of their
+        // heights.
+        while(totalRowHeightMM < reqImageHeightMM) {
+            row = sheet.getRow(toRow);
+            // Note, if the row does not already exist on the sheet then create
+            // it here.
+            if(row == null) {
+                row = sheet.createRow(toRow);
+            }
+            // Get the row's height in millimetres and add to the running total.
+            rowHeightMM = row.getHeightInPoints() /
+                    ConvertImageUnits.POINTS_PER_MILLIMETRE;
+            totalRowHeightMM += rowHeightMM;
+            toRow++;
+        }
+        // Owing to the way the loop above works, the rowNumber will have been
+        // incremented one row too far. Undo that here.
+        toRow--;
+        // Check to see whether the image should occupy an exact number of
+        // rows. If so, build the ClientAnchorDetail record to point
+        // to those rows and with an inset of the total number of co-ordinate
+        // position in the row.
+        //
+        // To overcome problems that can occur with comparing double values for
+        // equality, cast both to int(s) to truncate the value; VERY crude and
+        // I do not really like it!!
+        if((int)totalRowHeightMM == (int)reqImageHeightMM) {
+            clientAnchorDetail = new ClientAnchorDetail(startingRow, toRow,
+                    ConvertImageUnits.TOTAL_ROW_COORDINATE_POSITIONS);
+        }
+        else {
+            // Calculate how far the image will project into the next row. Note
+            // that the height of the last row assessed is subtracted from the
+            // total height of all rows assessed so far.
+            overlapMM = reqImageHeightMM - (totalRowHeightMM - rowHeightMM);
+
+            // To prevent an exception being thrown when the required width of
+            // the image is very close indeed to the column size.
+            if(overlapMM < 0) {
+                overlapMM = 0.0D;
+            }
+
+            rowCoordinatesPerMM = ConvertImageUnits.TOTAL_ROW_COORDINATE_POSITIONS /
+                    rowHeightMM;
+            inset = (int)(overlapMM * rowCoordinatesPerMM);
+            clientAnchorDetail = new ClientAnchorDetail(startingRow,
+                        toRow, inset);
+        }
+        return(clientAnchorDetail);
+    }
+

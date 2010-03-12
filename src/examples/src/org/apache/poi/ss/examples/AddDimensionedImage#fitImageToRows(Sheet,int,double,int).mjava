@@ -1,0 +1,79 @@
+    /**
+     * Determines whether the sheet's row should be re-sized to accomodate
+     * the image, adjusts the rows height if necessary and creates then
+     * returns a ClientAnchorDetail object that facilitates construction of
+     * a ClientAnchor that will fix the image on the sheet and establish
+     * it's size.
+     *
+     * @param sheet A reference to the sheet that will 'contain' the image.
+     * @param rowNumber A primtive int that contains the index number of a
+     *                  row on the sheet.
+     * @param reqImageHeightMM A primtive double that contains the required
+     *                         height of the image in millimetres
+     * @param resizeBehaviour A primitve int whose value will indicate how the
+     *                        height of the row should be adjusted if the
+     *                        required height of the image is greater than the
+     *                        height of the row.
+     * @return An instance of the ClientAnchorDetail class that will contain
+     *         the index number of the row containing the cell whose top
+     *         left hand corner also defines the top left hand corner of the
+     *         image, the index number of the row containing the cell whose
+     *         top left hand corner also defines the bottom right hand
+     *         corner of the image and an inset that determines how far the
+     *         bottom edge of the image can protrude into the next (lower)
+     *         row - expressed as a specific number of co-ordinate positions.
+     */
+    private ClientAnchorDetail fitImageToRows(Sheet sheet, int rowNumber,
+            double reqImageHeightMM, int resizeBehaviour) {
+        Row row = null;
+        double rowHeightMM = 0.0D;
+        double rowCoordinatesPerMM = 0.0D;
+        int pictureHeightCoordinates = 0;
+        ClientAnchorDetail rowClientAnchorDetail = null;
+
+        // Get the row and it's height
+        row = sheet.getRow(rowNumber);
+        if(row == null) {
+            // Create row if it does not exist.
+            row = sheet.createRow(rowNumber);
+        }
+
+        // Get the row's height in millimetres
+        rowHeightMM = row.getHeightInPoints() / ConvertImageUnits.POINTS_PER_MILLIMETRE;
+
+        // Check that the row's height will accomodate the image at the required
+        // dimensions. If the height of the row is LESS than the required height
+        // of the image, decide how the application should respond - resize the
+        // row or overlay the image across a series of rows.
+        if(rowHeightMM < reqImageHeightMM) {
+            if((resizeBehaviour == AddDimensionedImage.EXPAND_ROW) ||
+               (resizeBehaviour == AddDimensionedImage.EXPAND_ROW_AND_COLUMN)) {
+                row.setHeightInPoints((float)(reqImageHeightMM *
+                        ConvertImageUnits.POINTS_PER_MILLIMETRE));
+                rowHeightMM = reqImageHeightMM;
+                rowCoordinatesPerMM = ConvertImageUnits.TOTAL_ROW_COORDINATE_POSITIONS /
+                    rowHeightMM;
+                pictureHeightCoordinates = (int)(reqImageHeightMM * rowCoordinatesPerMM);
+                rowClientAnchorDetail = new ClientAnchorDetail(rowNumber,
+                        rowNumber, pictureHeightCoordinates);
+            }
+            // If the user has chosen to overlay both rows and columns or just
+            // to expand ONLY the size of the columns, then calculate how to lay
+            // the image out ver one or more rows.
+            else if((resizeBehaviour == AddDimensionedImage.OVERLAY_ROW_AND_COLUMN) ||
+                    (resizeBehaviour == AddDimensionedImage.EXPAND_COLUMN)) {
+                rowClientAnchorDetail = this.calculateRowLocation(sheet,
+                        rowNumber, reqImageHeightMM);
+            }
+        }
+        // Else, if the image is smaller than the space available
+        else {
+            rowCoordinatesPerMM = ConvertImageUnits.TOTAL_ROW_COORDINATE_POSITIONS /
+                    rowHeightMM;
+            pictureHeightCoordinates = (int)(reqImageHeightMM * rowCoordinatesPerMM);
+            rowClientAnchorDetail = new ClientAnchorDetail(rowNumber,
+                        rowNumber, pictureHeightCoordinates);
+        }
+        return(rowClientAnchorDetail);
+    }
+
