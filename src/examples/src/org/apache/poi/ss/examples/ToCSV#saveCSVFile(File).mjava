@@ -1,0 +1,76 @@
+    /**
+     * Called to actually save the data recovered from the Excel workbook
+     * as a CSV file.
+     *
+     * @param file An instance of the File class that encapsulates a handle
+     *             referring to the CSV file.
+     * @throws java.io.FileNotFoundException Thrown if the file cannot be found.
+     * @throws java.io.IOException Thrown to indicate and error occurred in the
+     *                             underylying file system.
+     */
+    private void saveCSVFile(File file)
+                                     throws FileNotFoundException, IOException {
+        FileWriter fw = null;
+        BufferedWriter bw = null;
+        ArrayList<String> line = null;
+        StringBuffer buffer = null;
+        String csvLineElement = null;
+        try {
+
+            System.out.println("Saving the CSV file [" + file.getName() + "]");
+
+            // Open a writer onto the CSV file.
+            fw = new FileWriter(file);
+            bw = new BufferedWriter(fw);
+
+            // Step through the elements of the ArrayList that was used to hold
+            // all of the data recovered from the Excel workbooks' sheets, rows
+            // and cells.
+            for(int i = 0; i < this.csvData.size(); i++) {
+                buffer = new StringBuffer();
+
+                // Get an element from the ArrayList that contains the data for
+                // the workbook. This element will itself be an ArrayList
+                // containing Strings and each String will hold the data recovered
+                // from a single cell. The for() loop is used to recover elements
+                // from this 'row' ArrayList one at a time and to write the Strings
+                // away to a StringBuffer thus assembling a single line for inclusion
+                // in the CSV file. If a row was empty or if it was short, then
+                // the ArrayList that contains it's data will also be shorter than
+                // some of the others. Therefore, it is necessary to check within
+                // the for loop to ensure that the ArrayList contains data to be
+                // processed. If it does, then an element will be recovered and
+                // appended to the StringBuffer.
+                line = this.csvData.get(i);
+                for(int j = 0; j < this.maxRowWidth; j++) {
+                    if(line.size() > j) {
+                        csvLineElement = line.get(j);
+                        if(csvLineElement != null) {
+                            buffer.append(this.escapeEmbeddedCharacters(
+                                    csvLineElement));
+                        }
+                    }
+                    if(j < (this.maxRowWidth - 1)) {
+                        buffer.append(this.separator);
+                    }
+                }
+
+                // Once the line is built, write it away to the CSV file.
+                bw.write(buffer.toString().trim());
+
+                // Condition the inclusion of new line characters so as to
+                // avoid an additional, superfluous, new line at the end of
+                // the file.
+                if(i < (this.csvData.size() - 1)) {
+                    bw.newLine();
+                }
+            }
+        }
+        finally {
+            if(bw != null) {
+                bw.flush();
+                bw.close();
+            }
+        }
+    }
+

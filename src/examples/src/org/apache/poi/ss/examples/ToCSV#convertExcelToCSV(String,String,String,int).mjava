@@ -1,0 +1,121 @@
+    /**
+     * Process the contents of a folder, convert the contents of each Excel
+     * workbook into CSV format and save the resulting file to the specified
+     * folder using the same name as the original workbook with the .xls or
+     * .xlsx extension replaced by .csv
+     *
+     * @param strSource An instance of the String class that encapsulates the
+     *        name of and path to either a folder containing those Excel
+     *        workbook(s) or the name of and path to an individual Excel workbook
+     *        that is/are to be converted.
+     * @param strDestination An instance of the String class encapsulating the name
+     *        of and path to a folder that will contain the resulting CSV files.
+     * @param formattingConvention A primitive int whose value will determine
+     *        whether certain embedded characters should be escaped in accordance
+     *        with Excel's or UNIX formatting conventions. Two constants are
+     *        defined to support this option; ToCSV.EXCEL_STYLE_ESCAPING and
+     *        ToCSV.UNIX_STYLE_ESCAPING
+     * @param separator An instance of the String class encapsulating the
+     *        characters or characters that should be used to separate items
+     *        on a line within the CSV file.
+     * @throws java.io.FileNotFoundException Thrown if any file cannot be located
+     *         on the filesystem during processing.
+     * @throws java.io.IOException Thrown if the filesystem encounters any
+     *         problems during processing.
+     * @throws java.lang.IllegalArgumentException Thrown if the values passed
+     *         to the strSource parameter refers to a file or folder that does not
+     *         exist, if the value passed to the strDestination paramater refers
+     *         to a folder that does not exist,  if the value passed to the
+     *         strDestination parameter does not refer to a folder or if the
+     *         value passed to the formattingConvention parameter is other than
+     *         one of the values defined by the constants ToCSV.EXCEL_STYLE_ESCAPING
+     *         and ToCSV.UNIX_STYLE_ESCAPING.
+     * @throws org.apache.poi.openxml4j.exceptions.InvalidFormatException Thrown
+     *         if the xml markup encounetered whilst parsing a SpreadsheetML
+     *         file (.xlsx) is invalid.
+     */
+    public void convertExcelToCSV(String strSource, String strDestination,
+                                  String separator, int formattingConvention)
+                       throws FileNotFoundException, IOException,
+                              IllegalArgumentException, InvalidFormatException {
+        File source = new File(strSource);
+        File destination = new File(strDestination);
+        File[] filesList = null;
+        String destinationFilename = null;
+
+        // Check that the source file/folder exists.
+        if(!source.exists()) {
+            throw new IllegalArgumentException("The source for the Excel " +
+                    "file(s) cannot be found.");
+        }
+
+        // Ensure thaat the folder the user has chosen to save the CSV files
+        // away into firstly exists and secondly is a folder rather than, for
+        // instance, a data file.
+        if(!destination.exists()) {
+            throw new IllegalArgumentException("The folder/directory for the " +
+                    "converted CSV file(s) does not exist.");
+        }
+        if(!destination.isDirectory()) {
+            throw new IllegalArgumentException("The destination for the CSV " +
+                    "file(s) is not a directory/folder.");
+        }
+
+        // Ensure the value passed to the formattingConvention parameter is
+        // within range.
+        if(formattingConvention != ToCSV.EXCEL_STYLE_ESCAPING &&
+           formattingConvention != ToCSV.UNIX_STYLE_ESCAPING) {
+            throw new IllegalArgumentException("The value passed to the " +
+                    "formattingConvention parameter is out of range.");
+        }
+
+        // Copy the spearator character and formatting convention into local
+        // variables for use in other methods.
+        this.separator = separator;
+        this.formattingConvention = formattingConvention;
+
+        // Check to see if the sourceFolder variable holds a reference to
+        // a file or a folder full of files.
+        if(source.isDirectory()) {
+            // Get a list of all of the Excel spreadsheet files (workbooks) in
+            // the source folder/directory
+            filesList = source.listFiles(new ExcelFilenameFilter());
+        }
+        else {
+            // Assume that it must be a file handle - although there are other
+            // options the code should perhaps check - and store the reference
+            // into the filesList variable.
+            filesList = new File[]{source};
+        }
+
+        // Step through each of the files in the source folder and for each
+        // open the workbook, convert it's contents to CSV format and then
+        // save the resulting file away into the folder specified by the
+        // contents of the destination variable. Note that the name of the
+        // csv file will be created by taking the name of the Excel file,
+        // removing the extension and replacing it with .csv. Note that there
+        // is one drawback with this approach; if the folder holding the files
+        // contains two workbooks whose names match but one is a binary file
+        // (.xls) and the other a SpreadsheetML file (.xlsx), then the names
+        // for both CSV files will be identical and one CSV file will,
+        // therefore, over-write the other.
+        for(File excelFile : filesList) {
+            // Open the workbook
+            this.openWorkbook(excelFile);
+
+            // Convert it's contents into a CSV file
+            this.convertToCSV();
+
+            // Build the name of the csv folder from that of the Excel workbook.
+            // Simply replace the .xls or .xlsx file extension with .csv
+            destinationFilename = excelFile.getName();
+            destinationFilename = destinationFilename.substring(
+                    0, destinationFilename.lastIndexOf(".")) +
+                    ToCSV.CSV_FILE_EXTENSION;
+
+            // Save the CSV file away using the newly constricted file name
+            // and to the specified directory.
+            this.saveCSVFile(new File(destination, destinationFilename));
+        }
+    }
+

@@ -1,0 +1,83 @@
+    /**
+     * Checks to see whether the field - which consists of the formatted
+     * contents of an Excel worksheet cell encapsulated within a String - contains
+     * any embedded characters that must be escaped. The method is able to
+     * comply with either Excel's or UNIX formatting conventions in the
+     * following manner;
+     *
+     * With regard to UNIX conventions, if the field contains any embedded
+     * field separator or EOL characters they will each be escaped by prefixing
+     * a leading backspace character. These are the only changes that have yet
+     * emerged following some research as being required.
+     *
+     * Excel has other embedded character escaping requirements, some that emerged
+     * from empirical testing, other through research. Firstly, with regards to
+     * any embedded speech marks ("), each occurrence should be escaped with
+     * another speech mark and the whole field then surrounded with speech marks.
+     * Thus if a field holds <em>"Hello" he said</em> then it should be modified
+     * to appear as <em>"""Hello"" he said"</em>. Furthermore, if the field
+     * contains either embedded separator or EOL characters, it should also
+     * be surrounded with speech marks. As a result <em>1,400</em> would become
+     * <em>"1,400"</em> assuming that the comma is the required field separator.
+     * This has one consequence in, if a field contains embedded speech marks
+     * and embedded separator characters, checks for both are not required as the
+     * additional set of speech marks that should be placed around ay field
+     * containing embedded speech marks will also account for the embedded
+     * separator.
+     *
+     * It is worth making one further note with regard to embedded EOL
+     * characters. If the data in a worksheet is exported as a CSV file using
+     * Excel itself, then the field will be surounded with speech marks. If the
+     * resulting CSV file is then re-imports into another worksheet, the EOL
+     * character will result in the original simgle field occupying more than
+     * one cell. This same 'feature' is replicated in this classes behaviour.
+     *
+     * @param field An instance of the String class encapsulating the formatted
+     *        contents of a cell on an Excel worksheet.
+     * @return A String that encapsulates the formatted contents of that
+     *         Excel worksheet cell but with any embedded separator, EOL or
+     *         speech mark characters correctly escaped.
+     */
+    private String escapeEmbeddedCharacters(String field) {
+        StringBuffer buffer = null;
+
+        // If the fields contents should be formatted to confrom with Excel's
+        // convention....
+        if(this.formattingConvention == ToCSV.EXCEL_STYLE_ESCAPING) {
+
+            // Firstly, check if there are any speech marks (") in the field. If
+            // so, each occurrence must be escaped with another set of speahmarks
+            // and then the entire field should be enclosed within another
+            // set of speechmarks.
+            if(field.contains("\"")) {
+                buffer = new StringBuffer(field.replaceAll("\"", "\\\"\\\""));
+                buffer.insert(0, "\"");
+                buffer.append("\"");
+            }
+            else {
+                // If the field contains either embedded separator or EOL
+                // characters, then escape the whole field by surrounding it
+                // with speech marks.
+                buffer = new StringBuffer(field);
+                if((buffer.indexOf(this.separator)) > -1 ||
+                         (buffer.indexOf("\n")) > -1) {
+                    buffer.insert(0, "\"");
+                    buffer.append("\"");
+                }
+            }
+            return(buffer.toString().trim());
+        }
+        // The only other formatting convention this class obeys is the UNIX one
+        // where any occurrence of the field separator or EOL character will
+        // be escaped by preceding it with a backslash.
+        else {
+            if(field.contains(this.separator)) {
+                field = field.replaceAll(this.separator, ("\\\\" + this.separator));
+            }
+            if(field.contains("\n")) {
+                field = field.replaceAll("\n", "\\\\\n");
+            }
+            return(field);
+        }
+    }
+
