@@ -1,0 +1,39 @@
+	public static void viewFile(final String filename) throws Exception {
+		InputStream inp = new FileInputStream(filename);
+		
+		// Header
+		HeaderBlockReader header_block_reader = 
+		   new HeaderBlockReader(inp);
+		displayHeader(header_block_reader);
+		
+		// Raw blocks
+      POIFSBigBlockSize bigBlockSize = header_block_reader.getBigBlockSize();
+      RawDataBlockList data_blocks = new RawDataBlockList(inp, bigBlockSize);
+      displayRawBlocksSummary(data_blocks);
+      
+      // Main FAT Table
+      BlockAllocationTableReader batReader =
+         new BlockAllocationTableReader(
+            header_block_reader.getBigBlockSize(),
+            header_block_reader.getBATCount(),
+            header_block_reader.getBATArray(),
+            header_block_reader.getXBATCount(),
+            header_block_reader.getXBATIndex(),
+            data_blocks);
+      displayBATReader(batReader);
+
+      // Properties Table
+      PropertyTable properties =
+         new PropertyTable(
+               header_block_reader.getBigBlockSize(),
+               header_block_reader.getPropertyStart(),
+               data_blocks);
+      
+      // Mini Fat
+      BlockList sbat = 
+         SmallBlockTableReader.getSmallDocumentBlocks(
+               bigBlockSize, data_blocks, properties.getRoot(),
+               header_block_reader.getSBATStart()
+         );
+   }
+
