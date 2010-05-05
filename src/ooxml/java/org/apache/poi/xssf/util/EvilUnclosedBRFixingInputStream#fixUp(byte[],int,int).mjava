@@ -1,0 +1,42 @@
+   private int fixUp(byte[] b, int offset, int read) {
+      // Find places to fix
+      ArrayList<Integer> fixAt = new ArrayList<Integer>();
+      for(int i=offset; i<offset+read-4; i++) {
+         boolean going = true;
+         for(int j=0; j<detect.length && going; j++) {
+            if(b[i+j] != detect[j]) {
+               going = false;
+            }
+         }
+         if(going) {
+            fixAt.add(i);
+         }
+      }
+      
+      if(fixAt.size()==0) {
+         return read;
+      }
+      
+      // Save a bit, if needed to fit
+      int overshoot = offset+read+fixAt.size() - b.length;  
+      if(overshoot > 0) {
+         spare = new byte[overshoot];
+         System.arraycopy(b, b.length-overshoot, spare, 0, overshoot);
+         read -= overshoot;
+      }
+      
+      // Fix them, in reverse order so the
+      //  positions are valid
+      for(int j=fixAt.size()-1; j>=0; j--) {
+         int i = fixAt.get(j); 
+
+         byte[] tmp = new byte[read-i-3];
+         System.arraycopy(b, i+3, tmp, 0, tmp.length);
+         b[i+3] = (byte)'/';
+         System.arraycopy(tmp, 0, b, i+4, tmp.length);
+         // It got one longer
+         read++;
+      }
+      return read;
+   }
+
