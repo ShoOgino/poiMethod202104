@@ -1,0 +1,75 @@
+    private void writeScientific(double value, StringBuffer output,
+            Set<StringMod> mods) {
+
+        StringBuffer result = new StringBuffer();
+        FieldPosition fractionPos = new FieldPosition(
+                DecimalFormat.FRACTION_FIELD);
+        decimalFmt.format(value, result, fractionPos);
+        writeInteger(result, output, integerSpecials, mods, integerCommas);
+        writeFractional(result, output);
+
+        /*
+        * Exponent sign handling is complex.
+        *
+        * In DecimalFormat, you never put the sign in the format, and the sign only
+        * comes out of the format if it is negative.
+        *
+        * In Excel, you always say whether to always show the sign ("e+") or only
+        * show negative signs ("e-").
+        *
+        * Also in Excel, where you put the sign in the format is NOT where it comes
+        * out in the result.  In the format, the sign goes with the "e"; in the
+        * output it goes with the exponent value.  That is, if you say "#e-|#" you
+        * get "1e|-5", not "1e-|5". This makes sense I suppose, but it complicates
+        * things.
+        *
+        * Finally, everything else in this formatting code assumes that the base of
+        * the result is the original format, and that starting from that situation,
+        * the indexes of the original special characters can be used to place the new
+        * characters.  As just described, this is not true for the exponent's sign.
+        * <p/>
+        * So here is how we handle it:
+        *
+        * (1) When parsing the format, remove the sign from after the 'e' and put it
+        * before the first digit of the exponent (where it will be shown).
+        *
+        * (2) Determine the result's sign.
+        *
+        * (3) If it's missing, put the sign into the output to keep the result
+        * lined up with the output. (In the result, "after the 'e'" and "before the
+        * first digit" are the same because the result has no extra chars to be in
+        * the way.)
+        *
+        * (4) In the output, remove the sign if it should not be shown ("e-" was used
+        * and the sign is negative) or set it to the correct value.
+        */
+
+        // (2) Determine the result's sign.
+        int ePos = fractionPos.getEndIndex();
+        int signPos = ePos + 1;
+        char expSignRes = result.charAt(signPos);
+        if (expSignRes != '-') {
+            // not a sign, so it's a digit, and therefore a positive exponent
+            expSignRes = '+';
+            // (3) If it's missing, put the sign into the output to keep the result
+            // lined up with the output.
+            result.insert(signPos, '+');
+        }
+
+        // Now the result lines up like it is supposed to with the specials' indexes
+        ListIterator<Special> it = exponentSpecials.listIterator(1);
+        Special expSign = it.next();
+        char expSignFmt = expSign.ch;
+
+        // (4) In the output, remove the sign if it should not be shown or set it to
+        // the correct value.
+        if (expSignRes == '-' || expSignFmt == '+')
+            mods.add(replaceMod(expSign, true, expSign, true, expSignRes));
+        else
+            mods.add(deleteMod(expSign, true, expSign, true));
+
+        StringBuffer exponentNum = new StringBuffer(result.substring(
+                signPos + 1));
+        writeInteger(exponentNum, output, exponentDigitSpecials, mods, false);
+    }
+

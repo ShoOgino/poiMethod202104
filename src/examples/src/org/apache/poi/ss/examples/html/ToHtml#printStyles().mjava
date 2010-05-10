@@ -1,0 +1,43 @@
+    public void printStyles() {
+        ensureOut();
+
+        // First, copy the base css
+        BufferedReader in = null;
+        try {
+            in = new BufferedReader(new InputStreamReader(
+                    getClass().getResourceAsStream("excelStyle.css")));
+            String line;
+            while ((line = in.readLine()) != null) {
+                out.format("%s%n", line);
+            }
+        } catch (IOException e) {
+            throw new IllegalStateException("Reading standard css", e);
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    //noinspection ThrowFromFinallyBlock
+                    throw new IllegalStateException("Reading standard css", e);
+                }
+            }
+        }
+
+        // now add css for each used style
+        Set<CellStyle> seen = new HashSet<CellStyle>();
+        for (int i = 0; i < wb.getNumberOfSheets(); i++) {
+            Sheet sheet = wb.getSheetAt(i);
+            Iterator<Row> rows = sheet.rowIterator();
+            while (rows.hasNext()) {
+                Row row = rows.next();
+                for (Cell cell : row) {
+                    CellStyle style = cell.getCellStyle();
+                    if (!seen.contains(style)) {
+                        printStyle(style);
+                        seen.add(style);
+                    }
+                }
+            }
+        }
+    }
+

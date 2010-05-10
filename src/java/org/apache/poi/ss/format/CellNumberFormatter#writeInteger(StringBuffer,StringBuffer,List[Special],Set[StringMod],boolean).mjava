@@ -1,0 +1,64 @@
+    private void writeInteger(StringBuffer result, StringBuffer output,
+            List<Special> numSpecials, Set<StringMod> mods,
+            boolean showCommas) {
+
+        int pos = result.indexOf(".") - 1;
+        if (pos < 0) {
+            if (exponent != null && numSpecials == integerSpecials)
+                pos = result.indexOf("E") - 1;
+            else
+                pos = result.length() - 1;
+        }
+
+        int strip;
+        for (strip = 0; strip < pos; strip++) {
+            char resultCh = result.charAt(strip);
+            if (resultCh != '0' && resultCh != ',')
+                break;
+        }
+
+        ListIterator<Special> it = numSpecials.listIterator(numSpecials.size());
+        boolean followWithComma = false;
+        Special lastOutputIntegerDigit = null;
+        int digit = 0;
+        while (it.hasPrevious()) {
+            char resultCh;
+            if (pos >= 0)
+                resultCh = result.charAt(pos);
+            else {
+                // If result is shorter than field, pretend there are leading zeros
+                resultCh = '0';
+            }
+            Special s = it.previous();
+            followWithComma = showCommas && digit > 0 && digit % 3 == 0;
+            boolean zeroStrip = false;
+            if (resultCh != '0' || s.ch == '0' || s.ch == '?' || pos >= strip) {
+                zeroStrip = s.ch == '?' && pos < strip;
+                output.setCharAt(s.pos, (zeroStrip ? ' ' : resultCh));
+                lastOutputIntegerDigit = s;
+            }
+            if (followWithComma) {
+                mods.add(insertMod(s, zeroStrip ? " " : ",", StringMod.AFTER));
+                followWithComma = false;
+            }
+            digit++;
+            --pos;
+        }
+        StringBuffer extraLeadingDigits = new StringBuffer();
+        if (pos >= 0) {
+            // We ran out of places to put digits before we ran out of digits; put this aside so we can add it later
+            ++pos;  // pos was decremented at the end of the loop above when the iterator was at its end
+            extraLeadingDigits = new StringBuffer(result.substring(0, pos));
+            if (showCommas) {
+                while (pos > 0) {
+                    if (digit > 0 && digit % 3 == 0)
+                        extraLeadingDigits.insert(pos, ',');
+                    digit++;
+                    --pos;
+                }
+            }
+            mods.add(insertMod(lastOutputIntegerDigit, extraLeadingDigits,
+                    StringMod.BEFORE));
+        }
+    }
+

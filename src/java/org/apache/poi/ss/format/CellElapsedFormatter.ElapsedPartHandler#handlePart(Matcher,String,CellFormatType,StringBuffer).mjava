@@ -1,0 +1,49 @@
+        public String handlePart(Matcher m, String part, CellFormatType type,
+                StringBuffer desc) {
+
+            int pos = desc.length();
+            char firstCh = part.charAt(0);
+            switch (firstCh) {
+            case '[':
+                if (part.length() < 3)
+                    break;
+                if (topmost != null)
+                    throw new IllegalArgumentException(
+                            "Duplicate '[' times in format");
+                part = part.toLowerCase();
+                int specLen = part.length() - 2;
+                topmost = assignSpec(part.charAt(1), pos, specLen);
+                return part.substring(1, 1 + specLen);
+
+            case 'h':
+            case 'm':
+            case 's':
+            case '0':
+                part = part.toLowerCase();
+                assignSpec(part.charAt(0), pos, part.length());
+                return part;
+
+            case '\n':
+                return "%n";
+
+            case '\"':
+                part = part.substring(1, part.length() - 1);
+                break;
+
+            case '\\':
+                part = part.substring(1);
+                break;
+
+            case '*':
+                if (part.length() > 1)
+                    part = CellFormatPart.expandChar(part);
+                break;
+
+            // An escape we can let it handle because it can't have a '%'
+            case '_':
+                return null;
+            }
+            // Replace ever "%" with a "%%" so we can use printf
+            return PERCENTS.matcher(part).replaceAll("%%");
+        }
+

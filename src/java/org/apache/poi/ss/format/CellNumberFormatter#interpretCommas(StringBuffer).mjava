@@ -1,0 +1,45 @@
+    private void interpretCommas(StringBuffer sb) {
+        // In the integer part, commas at the end are scaling commas; other commas mean to show thousand-grouping commas
+        ListIterator<Special> it = specials.listIterator(integerEnd());
+
+        boolean stillScaling = true;
+        integerCommas = false;
+        while (it.hasPrevious()) {
+            Special s = it.previous();
+            if (s.ch != ',') {
+                stillScaling = false;
+            } else {
+                if (stillScaling) {
+                    scale /= 1000;
+                } else {
+                    integerCommas = true;
+                }
+            }
+        }
+
+        if (decimalPoint != null) {
+            it = specials.listIterator(fractionalEnd());
+            while (it.hasPrevious()) {
+                Special s = it.previous();
+                if (s.ch != ',') {
+                    break;
+                } else {
+                    scale /= 1000;
+                }
+            }
+        }
+
+        // Now strip them out -- we only need their interpretation, not their presence
+        it = specials.listIterator();
+        int removed = 0;
+        while (it.hasNext()) {
+            Special s = it.next();
+            s.pos -= removed;
+            if (s.ch == ',') {
+                removed++;
+                it.remove();
+                sb.deleteCharAt(s.pos);
+            }
+        }
+    }
+

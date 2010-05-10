@@ -1,0 +1,56 @@
+    /**
+     * Returns the type of format.
+     *
+     * @param fdesc The format specification
+     *
+     * @return The type of format.
+     */
+    private CellFormatType formatType(String fdesc) {
+        fdesc = fdesc.trim();
+        if (fdesc.equals("") || fdesc.equalsIgnoreCase("General"))
+            return CellFormatType.GENERAL;
+
+        Matcher m = SPECIFICATION_PAT.matcher(fdesc);
+        boolean couldBeDate = false;
+        boolean seenZero = false;
+        while (m.find()) {
+            String repl = m.group(0);
+            if (repl.length() > 0) {
+                switch (repl.charAt(0)) {
+                case '@':
+                    return CellFormatType.TEXT;
+                case 'd':
+                case 'D':
+                case 'y':
+                case 'Y':
+                    return CellFormatType.DATE;
+                case 'h':
+                case 'H':
+                case 'm':
+                case 'M':
+                case 's':
+                case 'S':
+                    // These can be part of date, or elapsed
+                    couldBeDate = true;
+                    break;
+                case '0':
+                    // This can be part of date, elapsed, or number
+                    seenZero = true;
+                    break;
+                case '[':
+                    return CellFormatType.ELAPSED;
+                case '#':
+                case '?':
+                    return CellFormatType.NUMBER;
+                }
+            }
+        }
+
+        // Nothing definitive was found, so we figure out it deductively
+        if (couldBeDate)
+            return CellFormatType.DATE;
+        if (seenZero)
+            return CellFormatType.NUMBER;
+        return CellFormatType.TEXT;
+    }
+

@@ -1,0 +1,48 @@
+  public SVSheetTable(HSSFSheet sheet) {
+    super(new SVTableModel(sheet));
+    this.sheet = sheet;
+
+    setIntercellSpacing(new Dimension(0, 0));
+    setAutoResizeMode(AUTO_RESIZE_OFF);
+    JTableHeader header = getTableHeader();
+    header.setDefaultRenderer(new HeaderCellRenderer());
+    pendingPaintings = new PendingPaintings(this);
+
+    //Set the columns the correct size
+    TableColumnModel columns = getColumnModel();
+    for (int i = 0; i < columns.getColumnCount(); i++) {
+      TableColumn column = columns.getColumn(i);
+      int width = sheet.getColumnWidth(i);
+      //256 is because the width is in 256ths of a character
+      column.setPreferredWidth(width / 256 * magicCharFactor);
+    }
+
+    Toolkit t = getToolkit();
+    int res = t.getScreenResolution();
+    TableModel model = getModel();
+    for (int i = 0; i < model.getRowCount(); i++) {
+      Row row = sheet.getRow(i - sheet.getFirstRowNum());
+      if (row != null) {
+        short h = row.getHeight();
+        int height = Math.round(Math.max(1, h / (res / 70 * 20) + 3));
+        System.out.printf("%d: %d (%d @ %d)%n", i, height, h, res);
+        setRowHeight(i, height);
+      }
+    }
+
+    addHierarchyListener(new HierarchyListener() {
+      public void hierarchyChanged(HierarchyEvent e) {
+        if ((e.getChangeFlags() & HierarchyEvent.PARENT_CHANGED) != 0) {
+          Container changedParent = e.getChangedParent();
+          if (changedParent instanceof JViewport) {
+            Container grandparent = changedParent.getParent();
+            if (grandparent instanceof JScrollPane) {
+              JScrollPane jScrollPane = (JScrollPane) grandparent;
+              setupScroll(jScrollPane);
+            }
+          }
+        }
+      }
+    });
+  }
+

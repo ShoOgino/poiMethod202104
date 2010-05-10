@@ -1,0 +1,52 @@
+    /**
+     * Creates a new object.
+     *
+     * @param format The format.
+     */
+    private CellFormat(String format) {
+        this.format = format;
+        Matcher m = ONE_PART.matcher(format);
+        List<CellFormatPart> parts = new ArrayList<CellFormatPart>();
+
+        while (m.find()) {
+            try {
+                String valueDesc = m.group();
+
+                // Strip out the semicolon if it's there
+                if (valueDesc.endsWith(";"))
+                    valueDesc = valueDesc.substring(0, valueDesc.length() - 1);
+
+                parts.add(new CellFormatPart(valueDesc));
+            } catch (RuntimeException e) {
+                CellFormatter.logger.log(Level.WARNING,
+                        "Invalid format: " + CellFormatter.quote(m.group()), e);
+                parts.add(null);
+            }
+        }
+
+        switch (parts.size()) {
+        case 1:
+            posNumFmt = zeroNumFmt = negNumFmt = parts.get(0);
+            textFmt = DEFAULT_TEXT_FORMAT;
+            break;
+        case 2:
+            posNumFmt = zeroNumFmt = parts.get(0);
+            negNumFmt = parts.get(1);
+            textFmt = DEFAULT_TEXT_FORMAT;
+            break;
+        case 3:
+            posNumFmt = parts.get(0);
+            zeroNumFmt = parts.get(1);
+            negNumFmt = parts.get(2);
+            textFmt = DEFAULT_TEXT_FORMAT;
+            break;
+        case 4:
+        default:
+            posNumFmt = parts.get(0);
+            zeroNumFmt = parts.get(1);
+            negNumFmt = parts.get(2);
+            textFmt = parts.get(3);
+            break;
+        }
+    }
+

@@ -1,0 +1,126 @@
+    /** {@inheritDoc} */
+    public void formatValue(StringBuffer toAppendTo, Object valueObject) {
+        double value = ((Number) valueObject).doubleValue();
+        value *= scale;
+
+        // the '-' sign goes at the front, always, so we pick it out
+        boolean negative = value < 0;
+        if (negative)
+            value = -value;
+
+        // Split out the fractional part if we need to print a fraction
+        double fractional = 0;
+        if (slash != null) {
+            if (improperFraction) {
+                fractional = value;
+                value = 0;
+            } else {
+                fractional = value % 1.0;
+                //noinspection SillyAssignment
+                value = (long) value;
+            }
+        }
+
+        Set<StringMod> mods = new TreeSet<StringMod>();
+        StringBuffer output = new StringBuffer(desc);
+
+        if (exponent != null) {
+            writeScientific(value, output, mods);
+        } else if (improperFraction) {
+            writeFraction(value, null, fractional, output, mods);
+        } else {
+            StringBuffer result = new StringBuffer();
+            Formatter f = new Formatter(result);
+            f.format(LOCALE, printfFmt, value);
+
+            if (numerator == null) {
+                writeFractional(result, output);
+                writeInteger(result, output, integerSpecials, mods,
+                        integerCommas);
+            } else {
+                writeFraction(value, result, fractional, output, mods);
+            }
+        }
+
+        // Now strip out any remaining '#'s and add any pending text ...
+        ListIterator<Special> it = specials.listIterator();
+        Iterator<StringMod> changes = mods.iterator();
+        StringMod nextChange = (changes.hasNext() ? changes.next() : null);
+        int adjust = 0;
+        BitSet deletedChars = new BitSet(); // records chars already deleted
+        while (it.hasNext()) {
+            Special s = it.next();
+            int adjustedPos = s.pos + adjust;
+            if (!deletedChars.get(s.pos) && output.charAt(adjustedPos) == '#') {
+                output.deleteCharAt(adjustedPos);
+                adjust--;
+                deletedChars.set(s.pos);
+            }
+            while (nextChange != null && s == nextChange.special) {
+                int lenBefore = output.length();
+                int modPos = s.pos + adjust;
+                int posTweak = 0;
+                switch (nextChange.op) {
+                case StringMod.AFTER:
+                    // ignore adding a comma after a deleted char (which was a '#')
+                    if (nextChange.toAdd.equals(",") && deletedChars.get(s.pos))
+                        break;
+                    posTweak = 1;
+                    //noinspection fallthrough
+                case StringMod.BEFORE:
+                    output.insert(modPos + posTweak, nextChange.toAdd);
+                    break;
+
+                case StringMod.REPLACE:
+                    int delPos =
+                            s.pos; // delete starting pos in original coordinates
+                    if (!nextChange.startInclusive) {
+                        delPos++;
+                        modPos++;
+                    }
+
+                    // Skip over anything already deleted
+                    while (deletedChars.get(delPos)) {
+                        delPos++;
+                        modPos++;
+                    }
+
+                    int delEndPos =
+                            nextChange.end.pos; // delete end point in original
+                    if (nextChange.endInclusive)
+                        delEndPos++;
+
+                    int modEndPos =
+                            delEndPos + adjust; // delete end point in current
+
+                    if (modPos < modEndPos) {
+                        if (nextChange.toAdd == "")
+                            output.delete(modPos, modEndPos);
+                        else {
+                            char fillCh = nextChange.toAdd.charAt(0);
+                            for (int i = modPos; i < modEndPos; i++)
+                                output.setCharAt(i, fillCh);
+                        }
+                        deletedChars.set(delPos, delEndPos);
+                    }
+                    break;
+
+                default:
+                    throw new IllegalStateException(
+                            "Unknown op: " + nextChange.op);
+                }
+                adjust += output.length() - lenBefore;
+
+                if (changes.hasNext())
+                    nextChange = changes.next();
+                else
+                    nextChange = null;
+            }
+        }
+
+        // Finally, add it to the string
+        if (negative)
+            toAppendTo.append('-');
+        toAppendTo.append(output);
+    }
+

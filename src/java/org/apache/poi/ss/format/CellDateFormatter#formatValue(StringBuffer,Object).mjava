@@ -1,0 +1,53 @@
+    /** {@inheritDoc} */
+    public void formatValue(StringBuffer toAppendTo, Object value) {
+        if (value == null)
+            value = 0.0;
+        if (value instanceof Number) {
+            Number num = (Number) value;
+            double v = num.doubleValue();
+            if (v == 0.0)
+                value = EXCEL_EPOCH_DATE;
+            else
+                value = new Date((long) (EXCEL_EPOCH_TIME + v));
+        }
+
+        AttributedCharacterIterator it = dateFmt.formatToCharacterIterator(
+                value);
+        boolean doneAm = false;
+        boolean doneMillis = false;
+
+        it.first();
+        for (char ch = it.first();
+             ch != CharacterIterator.DONE;
+             ch = it.next()) {
+            if (it.getAttribute(DateFormat.Field.MILLISECOND) != null) {
+                if (!doneMillis) {
+                    Date dateObj = (Date) value;
+                    int pos = toAppendTo.length();
+                    Formatter formatter = new Formatter(toAppendTo);
+                    long msecs = dateObj.getTime() % 1000;
+                    formatter.format(LOCALE, sFmt, msecs / 1000.0);
+                    toAppendTo.delete(pos, pos + 2);
+                    doneMillis = true;
+                }
+            } else if (it.getAttribute(DateFormat.Field.AM_PM) != null) {
+                if (!doneAm) {
+                    if (showAmPm) {
+                        if (amPmUpper) {
+                            toAppendTo.append(Character.toUpperCase(ch));
+                            if (showM)
+                                toAppendTo.append('M');
+                        } else {
+                            toAppendTo.append(Character.toLowerCase(ch));
+                            if (showM)
+                                toAppendTo.append('m');
+                        }
+                    }
+                    doneAm = true;
+                }
+            } else {
+                toAppendTo.append(ch);
+            }
+        }
+    }
+

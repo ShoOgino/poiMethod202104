@@ -1,0 +1,60 @@
+        public String handlePart(Matcher m, String part, CellFormatType type,
+                StringBuffer desc) {
+            int pos = desc.length();
+            char firstCh = part.charAt(0);
+            switch (firstCh) {
+            case 'e':
+            case 'E':
+                // See comment in writeScientific -- exponent handling is complex.
+                // (1) When parsing the format, remove the sign from after the 'e' and
+                // put it before the first digit of the exponent.
+                if (exponent == null && specials.size() > 0) {
+                    specials.add(exponent = new Special('.', pos));
+                    insertSignForExponent = part.charAt(1);
+                    return part.substring(0, 1);
+                }
+                break;
+
+            case '0':
+            case '?':
+            case '#':
+                if (insertSignForExponent != '\0') {
+                    specials.add(new Special(insertSignForExponent, pos));
+                    desc.append(insertSignForExponent);
+                    insertSignForExponent = '\0';
+                    pos++;
+                }
+                for (int i = 0; i < part.length(); i++) {
+                    char ch = part.charAt(i);
+                    specials.add(new Special(ch, pos + i));
+                }
+                break;
+
+            case '.':
+                if (decimalPoint == null && specials.size() > 0)
+                    specials.add(decimalPoint = new Special('.', pos));
+                break;
+
+            case '/':
+                //!! This assumes there is a numerator and a denominator, but these are actually optional
+                if (slash == null && specials.size() > 0) {
+                    numerator = previousNumber();
+                    // If the first number in the whole format is the numerator, the
+                    // entire number should be printed as an improper fraction
+                    if (numerator == firstDigit(specials))
+                        improperFraction = true;
+                    specials.add(slash = new Special('.', pos));
+                }
+                break;
+
+            case '%':
+                // don't need to remember because we don't need to do anything with these
+                scale *= 100;
+                break;
+
+            default:
+                return null;
+            }
+            return part;
+        }
+
