@@ -1,0 +1,59 @@
+	/* (non-Javadoc)
+	 * @see org.apache.poi.ss.usermodel.DataValidationHelper#createValidation(org.apache.poi.ss.usermodel.DataValidationConstraint, org.apache.poi.ss.util.CellRangeAddressList)
+	 */
+	public DataValidation createValidation(DataValidationConstraint constraint, CellRangeAddressList cellRangeAddressList) {
+		XSSFDataValidationConstraint dataValidationConstraint = (XSSFDataValidationConstraint)constraint;
+		CTDataValidation newDataValidation = CTDataValidation.Factory.newInstance();
+
+		int validationType = constraint.getValidationType();
+		switch(validationType) {
+			case DataValidationConstraint.ValidationType.LIST:
+		    	newDataValidation.setType(STDataValidationType.LIST);
+				newDataValidation.setFormula1(constraint.getFormula1());				
+		    	break;
+			case DataValidationConstraint.ValidationType.ANY:				
+				newDataValidation.setType(STDataValidationType.NONE);				
+				break;
+			case DataValidationConstraint.ValidationType.TEXT_LENGTH:
+				newDataValidation.setType(STDataValidationType.TEXT_LENGTH);
+				break;				
+			case DataValidationConstraint.ValidationType.DATE:
+				newDataValidation.setType(STDataValidationType.DATE);
+				break;				
+			case DataValidationConstraint.ValidationType.INTEGER:
+				newDataValidation.setType(STDataValidationType.WHOLE);
+				break;				
+			case DataValidationConstraint.ValidationType.DECIMAL:
+				newDataValidation.setType(STDataValidationType.DECIMAL);
+				break;				
+			case DataValidationConstraint.ValidationType.TIME:
+				newDataValidation.setType(STDataValidationType.TIME);
+				break;
+			case DataValidationConstraint.ValidationType.FORMULA:
+				newDataValidation.setType(STDataValidationType.CUSTOM);
+				break;
+			default:
+				newDataValidation.setType(STDataValidationType.NONE);				
+		}
+		
+		if (validationType!=ValidationType.ANY && validationType!=ValidationType.LIST) {
+			newDataValidation.setOperator(XSSFDataValidation.operatorTypeMappings.get(constraint.getOperator()));			
+			if (constraint.getFormula1() != null) {
+				newDataValidation.setFormula1(constraint.getFormula1());
+			}
+			if (constraint.getFormula2() != null) {
+				newDataValidation.setFormula2(constraint.getFormula2());
+			}
+		}
+		
+		CellRangeAddress[] cellRangeAddresses = cellRangeAddressList.getCellRangeAddresses();
+		List<String> sqref = new ArrayList<String>();
+		for (int i = 0; i < cellRangeAddresses.length; i++) {
+			CellRangeAddress cellRangeAddress = cellRangeAddresses[i];
+			sqref.add(cellRangeAddress.formatAsString());
+		}
+		newDataValidation.setSqref(sqref);
+		
+		return new XSSFDataValidation(dataValidationConstraint,cellRangeAddressList,newDataValidation);
+	}
+

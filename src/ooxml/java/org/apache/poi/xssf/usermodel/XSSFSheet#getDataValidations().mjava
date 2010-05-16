@@ -1,0 +1,27 @@
+    public List<XSSFDataValidation> getDataValidations() {
+    	List<XSSFDataValidation> xssfValidations = new ArrayList<XSSFDataValidation>();
+    	CTDataValidations dataValidations = this.worksheet.getDataValidations();
+    	if( dataValidations!=null && dataValidations.getCount() > 0 ) {
+    		CTDataValidation[] dataValidationList = dataValidations.getDataValidationArray();
+    		for (CTDataValidation ctDataValidation : dataValidationList) {
+    			CellRangeAddressList addressList = new CellRangeAddressList();
+    			
+    			@SuppressWarnings("unchecked")
+    			List<String> sqref = ctDataValidation.getSqref();
+    			for (String stRef : sqref) {
+    				String[] regions = stRef.split(" ");
+    				for (int i = 0; i < regions.length; i++) {
+						String[] parts = regions[i].split(":");
+						CellReference begin = new CellReference(parts[0]);
+						CellReference end = parts.length > 1 ? new CellReference(parts[1]) : begin;
+						CellRangeAddress cellRangeAddress = new CellRangeAddress(begin.getRow(), end.getRow(), begin.getCol(), end.getCol());
+						addressList.addCellRangeAddress(cellRangeAddress);
+					}
+				}
+				XSSFDataValidation xssfDataValidation = new XSSFDataValidation(addressList, ctDataValidation);
+				xssfValidations.add(xssfDataValidation);
+			}
+    	}
+    	return xssfValidations;
+    }
+
