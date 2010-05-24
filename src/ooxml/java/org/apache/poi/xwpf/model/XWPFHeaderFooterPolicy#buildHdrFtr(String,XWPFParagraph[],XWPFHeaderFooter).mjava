@@ -1,0 +1,32 @@
+	/**
+	 * MB 24 May 2010. Created this overloaded buildHdrFtr() method because testing demonstrated
+	 * that the XWPFFooter or XWPFHeader object returned by calls to the createHeader(int, XWPFParagraph[])
+	 * and createFooter(int, XWPFParagraph[]) methods or the getXXXXXHeader/Footer methods where
+	 * headers or footers had been added to a document since it had been created/opened, returned
+	 * an object that contained no XWPFParagraph objects even if the header/footer itself did contain
+	 * text. The reason was that this line of code; CTHdrFtr ftr = CTHdrFtr.Factory.newInstance(); 
+	 * created a brand new instance of the CTHDRFtr class which was then populated with data when
+	 * it should have recovered the CTHdrFtr object encapsulated within the XWPFHeaderFooter object
+	 * that had previoulsy been instantiated in the createHeader(int, XWPFParagraph[]) or 
+	 * createFooter(int, XWPFParagraph[]) methods.
+	 */
+	private CTHdrFtr buildHdrFtr(String pStyle, XWPFParagraph[] paragraphs, XWPFHeaderFooter wrapper) {
+		CTHdrFtr ftr = wrapper._getHdrFtr();
+		if (paragraphs != null) {
+			for (int i = 0 ; i < paragraphs.length ; i++) {
+				CTP p = ftr.addNewP();
+				ftr.setPArray(i, paragraphs[i].getCTP());
+			}
+		}
+		else {
+			CTP p = ftr.addNewP();
+			byte[] rsidr = doc.getDocument().getBody().getPArray()[0].getRsidR();
+			byte[] rsidrdefault = doc.getDocument().getBody().getPArray()[0].getRsidRDefault();
+			p.setRsidP(rsidr);
+			p.setRsidRDefault(rsidrdefault);
+			CTPPr pPr = p.addNewPPr();
+			pPr.addNewPStyle().setVal(pStyle);
+		}
+		return ftr;
+	}
+
