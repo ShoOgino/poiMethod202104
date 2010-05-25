@@ -5,13 +5,12 @@
 	 *  these charts yet, as this is very limited support
 	 */
 	public static HSSFChart[] getSheetCharts(HSSFSheet sheet) {
-		List charts = new ArrayList();
+		List<HSSFChart> charts = new ArrayList<HSSFChart>();
 		HSSFChart lastChart = null;
-
+		HSSFSeries lastSeries = null;
 		// Find records of interest
-		List records = sheet.getSheet().getRecords();
-		for(Iterator it = records.iterator(); it.hasNext();) {
-			RecordBase r = (RecordBase)it.next();
+		List<RecordBase> records = sheet.getSheet().getRecords();
+		for(RecordBase r : records) {
 
 			if(r instanceof ChartRecord) {
 				lastChart = new HSSFChart((ChartRecord)r);
@@ -23,6 +22,7 @@
 			if(r instanceof SeriesRecord) {
 				HSSFSeries series = lastChart.new HSSFSeries( (SeriesRecord)r );
 				lastChart.series.add(series);
+				lastSeries = series;
 			}
 			if(r instanceof ChartTitleFormatRecord) {
 				lastChart.chartTitleFormat =
@@ -40,6 +40,13 @@
 				} else {
 					lastChart.chartTitleText = str;
 				}
+			}
+			if(r instanceof LinkedDataRecord) {
+				LinkedDataRecord data = (LinkedDataRecord)r;
+				lastSeries.insertData( data );
+			}
+			if(r instanceof ValueRangeRecord){
+				lastChart.valueRanges.add((ValueRangeRecord)r);
 			}
 		}
 
