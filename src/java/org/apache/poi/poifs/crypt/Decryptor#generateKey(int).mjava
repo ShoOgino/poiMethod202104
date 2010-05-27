@@ -1,0 +1,36 @@
+    private byte[] generateKey(int block) throws NoSuchAlgorithmException {
+        MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
+
+        sha1.update(passwordHash);
+        byte[] blockValue = new byte[4];
+        LittleEndian.putInt(blockValue, block);
+        byte[] finalHash = sha1.digest(blockValue);
+
+        int requiredKeyLength = info.getHeader().getKeySize()/8;
+
+        byte[] buff = new byte[64];
+
+        Arrays.fill(buff, (byte) 0x36);
+
+        for (int i=0; i<finalHash.length; i++) {
+            buff[i] = (byte) (buff[i] ^ finalHash[i]);
+        }
+
+        sha1.reset();
+        byte[] x1 = sha1.digest(buff);
+
+        Arrays.fill(buff, (byte) 0x5c);
+        for (int i=0; i<finalHash.length; i++) {
+            buff[i] = (byte) (buff[i] ^ finalHash[i]);
+        }
+
+        sha1.reset();
+        byte[] x2 = sha1.digest(buff);
+
+        byte[] x3 = new byte[x1.length + x2.length];
+        System.arraycopy(x1, 0, x3, 0, x1.length);
+        System.arraycopy(x2, 0, x3, x1.length, x2.length);
+
+        return Arrays.copyOf(x3, requiredKeyLength);
+    }
+
