@@ -1,7 +1,23 @@
     private Format createFormat(double cellValue, int formatIndex, String sFormat) {
-        // remove color formatting if present
-        String formatStr = sFormat.replaceAll("\\[[a-zA-Z]*\\]", "");
+        String formatStr = sFormat;
+        
+        // Remove colour formatting if present
+        Matcher colourM = colorPattern.matcher(formatStr);
+        while(colourM.find()) {
+           String colour = colourM.group();
+           
+           // Paranoid replacement...
+           int at = formatStr.indexOf(colour);
+           if(at == -1) break;
+           String nFormatStr = formatStr.substring(0,at) +
+              formatStr.substring(at+colour.length()+1);
+           if(nFormatStr.equals(formatStr)) break;
 
+           // Try again in case there's multiple
+           formatStr = nFormatStr;
+           colourM = colorPattern.matcher(formatStr);
+        }
+        
         // try to extract special characters like currency
         Matcher m = specialPatternGroup.matcher(formatStr);
         while(m.find()) {
