@@ -1,0 +1,25 @@
+    /**
+     * Formats the given raw cell value, based on the supplied
+     *  format index and string, according to excel style rules.
+     * @see #formatCellValue(Cell)
+     */
+    public String formatRawCellContents(double value, int formatIndex, String formatString, boolean use1904Windowing) {
+        // Is it a date?
+        if(DateUtil.isADateFormat(formatIndex,formatString) &&
+                DateUtil.isValidExcelDate(value)) {
+            Format dateFormat = getFormat(value, formatIndex, formatString);
+            if(dateFormat instanceof ExcelStyleDateFormatter) {
+               // Hint about the raw excel value
+               ((ExcelStyleDateFormatter)dateFormat).setDateToBeFormatted(value);
+            }
+            Date d = DateUtil.getJavaDate(value, use1904Windowing);
+            return performDateFormatting(d, dateFormat);
+        }
+        // else Number
+        Format numberFormat = getFormat(value, formatIndex, formatString);
+        if (numberFormat == null) {
+            return String.valueOf(value);
+        }
+        return numberFormat.format(new Double(value));
+    }
+
