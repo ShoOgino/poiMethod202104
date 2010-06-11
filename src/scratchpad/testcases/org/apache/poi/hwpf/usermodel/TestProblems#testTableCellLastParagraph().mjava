@@ -1,43 +1,77 @@
-	/**
-	 * Test for TableCell not skipping the last paragraph. Bugs #45062 and
-	 * #44292
-	 */
-	public void testTableCellLastParagraph() {
-		HWPFDocument doc = HWPFTestDataSamples.openSampleFile("Bug44292.doc");
-		Range r = doc.getRange();
-		assertEquals(6, r.numParagraphs());
-		assertEquals(0, r.getStartOffset());
-		assertEquals(87, r.getEndOffset());
+   /**
+    * Test for TableCell not skipping the last paragraph. Bugs #45062 and
+    * #44292
+    */
+   public void testTableCellLastParagraph() {
+      HWPFDocument doc = HWPFTestDataSamples.openSampleFile("Bug44292.doc");
+      Range r = doc.getRange();
+      assertEquals(6, r.numParagraphs());
+      assertEquals(0, r.getStartOffset());
+      assertEquals(87, r.getEndOffset());
 
-		// Paragraph with table
-		Paragraph p = r.getParagraph(0);
-		assertEquals(0, p.getStartOffset());
-		assertEquals(20, p.getEndOffset());
+      // Paragraph with table
+      Paragraph p = r.getParagraph(0);
+      assertEquals(0, p.getStartOffset());
+      assertEquals(20, p.getEndOffset());
 
-		// Get the table
-		Table t = r.getTable(p);
+      // Check a few bits of the table directly
+      assertEquals("One paragraph is ok\7", r.getParagraph(0).text());
+      assertEquals("First para is ok\r", r.getParagraph(1).text());
+      assertEquals("Second paragraph is skipped\7", r.getParagraph(2).text());
+      assertEquals("One paragraph is ok\7", r.getParagraph(3).text());
+      assertEquals("\7", r.getParagraph(4).text());
+      assertEquals("\r", r.getParagraph(5).text());
+      for(int i=0; i<=5; i++) {
+         assertFalse(r.getParagraph(i).usesUnicode());
+      }
 
-		// get the only row
-		assertEquals(1, t.numRows());
-		TableRow row = t.getRow(0);
 
-		// get the first cell
-		TableCell cell = row.getCell(0);
-		// First cell should have one paragraph
-		assertEquals(1, cell.numParagraphs());
-		assertEquals("One paragraph is ok\7", cell.getParagraph(0).text());
+      // Get the table
+      Table t = r.getTable(p);
 
-		// get the second
-		cell = row.getCell(1);
-		// Second cell should be detected as having two paragraphs
-		assertEquals(2, cell.numParagraphs());
-		assertEquals("First para is ok\r", cell.getParagraph(0).text());
-		assertEquals("Second paragraph is skipped\7", cell.getParagraph(1).text());
+      // get the only row
+      assertEquals(1, t.numRows());
+      TableRow row = t.getRow(0);
 
-		// get the last cell
-		cell = row.getCell(2);
-		// Last cell should have one paragraph
-		assertEquals(1, cell.numParagraphs());
-		assertEquals("One paragraph is ok\7", cell.getParagraph(0).text());
-	}
+      // sanity check our row
+      assertEquals(5, row.numParagraphs());
+      assertEquals(0, row._parStart);
+      assertEquals(5, row._parEnd);
+      assertEquals(0, row.getStartOffset());
+      assertEquals(87, row.getEndOffset());
+
+
+      // get the first cell
+      TableCell cell = row.getCell(0);
+      // First cell should have one paragraph
+      assertEquals(1, cell.numParagraphs());
+      assertEquals("One paragraph is ok\7", cell.getParagraph(0).text());
+      assertEquals(0, cell._parStart);
+      assertEquals(1, cell._parEnd);
+      assertEquals(0, cell.getStartOffset());
+      assertEquals(20, cell.getEndOffset());
+
+
+      // get the second
+      cell = row.getCell(1);
+      // Second cell should be detected as having two paragraphs
+      assertEquals(2, cell.numParagraphs());
+      assertEquals("First para is ok\r", cell.getParagraph(0).text());
+      assertEquals("Second paragraph is skipped\7", cell.getParagraph(1).text());
+      assertEquals(1, cell._parStart);
+      assertEquals(3, cell._parEnd);
+      assertEquals(20, cell.getStartOffset());
+      assertEquals(65, cell.getEndOffset());
+
+
+      // get the last cell
+      cell = row.getCell(2);
+      // Last cell should have one paragraph
+      assertEquals(1, cell.numParagraphs());
+      assertEquals("One paragraph is ok\7", cell.getParagraph(0).text());
+      assertEquals(3, cell._parStart);
+      assertEquals(4, cell._parEnd);
+      assertEquals(65, cell.getStartOffset());
+      assertEquals(85, cell.getEndOffset());
+   }
 
