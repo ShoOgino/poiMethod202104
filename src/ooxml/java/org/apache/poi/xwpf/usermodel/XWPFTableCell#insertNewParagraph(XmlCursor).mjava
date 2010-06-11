@@ -1,0 +1,39 @@
+    /**
+     * add a new paragraph at position of the cursor
+     * @param cursor
+     * @return
+     */
+    public XWPFParagraph insertNewParagraph(XmlCursor cursor){
+    	if(!isCursorInTableCell(cursor))
+    		return null;
+    		
+		String uri = CTP.type.getName().getNamespaceURI();
+		String localPart = "p";
+		cursor.beginElement(localPart,uri);
+		cursor.toParent();
+		CTP p = (CTP)cursor.getObject();
+		XWPFParagraph newP = new XWPFParagraph(p, this);
+		XmlObject o = null;
+    	while(!(o instanceof CTP)&&(cursor.toPrevSibling())){
+    		o = cursor.getObject();
+    	}
+    	if((!(o instanceof CTP)) || (CTP)o == p){
+    		paragraphs.add(0, newP);
+    	}
+    	else{
+    		int pos = paragraphs.indexOf(getParagraph((CTP)o))+1;
+    		paragraphs.add(pos,newP);
+    	}
+    	int i=0;
+    	cursor.toCursor(p.newCursor());
+		while(cursor.toPrevSibling()){
+			o =cursor.getObject();
+			if(o instanceof CTP || o instanceof CTTbl)
+				i++;
+		}
+		bodyElements.add(i, newP);
+    	cursor.toCursor(p.newCursor());
+    	cursor.toEndToken();
+    	return newP;
+    }
+

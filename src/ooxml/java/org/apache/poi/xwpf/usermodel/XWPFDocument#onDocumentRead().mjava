@@ -4,6 +4,9 @@
         comments = new ArrayList<XWPFComment>();
         paragraphs = new ArrayList<XWPFParagraph>();
         tables= new ArrayList<XWPFTable>();
+        bodyElements = new ArrayList<IBodyElement>();
+        footers = new ArrayList<XWPFFooter>();
+        headers = new ArrayList<XWPFHeader>();
         footnotes = new HashMap<Integer, XWPFFootnote>();
         endnotes = new HashMap<Integer, XWPFFootnote>();
 
@@ -11,27 +14,49 @@
             DocumentDocument doc = DocumentDocument.Factory.parse(getPackagePart().getInputStream());
             ctDocument = doc.getDocument();
 
-            CTBody body = ctDocument.getBody();
-
             initFootnotes();
-
-            // filling paragraph list
-            for (CTP p : body.getPArray())    {
-                paragraphs.add(new XWPFParagraph(p, this));
+           
+            
+            // parse the document with cursor and add
+            // the XmlObject to its lists
+    		XmlCursor cursor = ctDocument.getBody().newCursor();
+            cursor.selectPath("./*");
+            while (cursor.toNextSelection()) {
+                XmlObject o = cursor.getObject();
+                if (o instanceof CTP) {
+                	XWPFParagraph p = new XWPFParagraph((CTP)o, this);
+                	bodyElements.add(p);
+                	paragraphs.add(p);
+                }
+                if (o instanceof CTTbl) {
+                	XWPFTable t = new XWPFTable((CTTbl)o, this);
+                	bodyElements.add(t);
+                	tables.add(t);
+                }
             }
-
-            // Get any tables
-            for(CTTbl table : body.getTblArray()) {
-                tables.add(new XWPFTable(this, table));
-            }
-
+			
             // Sort out headers and footers
 			if (doc.getDocument().getBody().getSectPr() != null)
 				headerFooterPolicy = new XWPFHeaderFooterPolicy(this);
-
+				
+			// Create for each XML-part in the Package a PartClass
             for(POIXMLDocumentPart p : getRelations()){
                 String relation = p.getPackageRelationship().getRelationshipType();
-                if(relation.equals(XWPFRelation.COMMENT.getRelation())){
+                if(relation.equals(XWPFRelation.STYLES.getRelation())){
+                	this.styles = (XWPFStyles) p;
+                }
+                else if(relation.equals(XWPFRelation.NUMBERING.getRelation())){
+                	this.numbering = (XWPFNumbering) p;
+
+                }
+                else if(relation.equals(XWPFRelation.FOOTER.getRelation())){
+                	footers.add((XWPFFooter)p);
+                }
+                else if(relation.equals(XWPFRelation.HEADER.getRelation())){
+                	headers.add((XWPFHeader)p);
+                }
+
+                else if(relation.equals(XWPFRelation.COMMENT.getRelation())){
                     CommentsDocument cmntdoc = CommentsDocument.Factory.parse(p.getPackagePart().getInputStream());
                     for(CTComment ctcomment : cmntdoc.getComments().getCommentArray()) {
                         comments.add(new XWPFComment(ctcomment));
@@ -46,5 +71,7 @@
         } catch (XmlException e) {
             throw new POIXMLException(e);
         }
+        // create for every Graphic-Part in Package a new XWPFGraphic
+        getAllPictures();
     }
 
