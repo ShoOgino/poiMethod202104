@@ -1,0 +1,34 @@
+  public OldSectionTable(byte[] documentStream, int offset,
+                      int size, int fcMin,
+                      TextPieceTable tpt)
+  {
+    PlexOfCps sedPlex = new PlexOfCps(documentStream, offset, size, 12);
+
+    int length = sedPlex.length();
+
+    for (int x = 0; x < length; x++)
+    {
+      GenericPropertyNode node = sedPlex.getProperty(x);
+      SectionDescriptor sed = new SectionDescriptor(node.getBytes(), 0);
+
+      int fileOffset = sed.getFc();
+      int startAt = node.getStart();
+      int endAt = node.getEnd();
+
+      // check for the optimization
+      if (fileOffset == 0xffffffff)
+      {
+        _sections.add(new SEPX(sed, startAt, endAt, tpt, new byte[0]));
+      }
+      else
+      {
+        // The first short at the offset is the size of the grpprl.
+        int sepxSize = LittleEndian.getShort(documentStream, fileOffset);
+        byte[] buf = new byte[sepxSize];
+        fileOffset += LittleEndian.SHORT_SIZE;
+        System.arraycopy(documentStream, fileOffset, buf, 0, buf.length);
+        _sections.add(new SEPX(sed, startAt, endAt, tpt, buf));
+      }
+    }
+  }
+
