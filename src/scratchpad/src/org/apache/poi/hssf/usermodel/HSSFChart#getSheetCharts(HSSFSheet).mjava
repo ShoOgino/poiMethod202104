@@ -13,22 +13,20 @@
 		for(RecordBase r : records) {
 
 			if(r instanceof ChartRecord) {
-				lastChart = new HSSFChart((ChartRecord)r);
+				lastSeries = null;
+				
+				lastChart = new HSSFChart(sheet,(ChartRecord)r);
 				charts.add(lastChart);
-			}
-			if(r instanceof LegendRecord) {
+			} else if(r instanceof LegendRecord) {
 				lastChart.legendRecord = (LegendRecord)r;
-			}
-			if(r instanceof SeriesRecord) {
+			} else if(r instanceof SeriesRecord) {
 				HSSFSeries series = lastChart.new HSSFSeries( (SeriesRecord)r );
 				lastChart.series.add(series);
 				lastSeries = series;
-			}
-			if(r instanceof ChartTitleFormatRecord) {
+			} else if(r instanceof ChartTitleFormatRecord) {
 				lastChart.chartTitleFormat =
 					(ChartTitleFormatRecord)r;
-			}
-			if(r instanceof SeriesTextRecord) {
+			} else if(r instanceof SeriesTextRecord) {
 				// Applies to a series, unless we've seen
 				//  a legend already
 				SeriesTextRecord str = (SeriesTextRecord)r;
@@ -40,13 +38,28 @@
 				} else {
 					lastChart.chartTitleText = str;
 				}
-			}
-			if(r instanceof LinkedDataRecord) {
-				LinkedDataRecord data = (LinkedDataRecord)r;
-				lastSeries.insertData( data );
-			}
-			if(r instanceof ValueRangeRecord){
+			} else if (r instanceof LinkedDataRecord) {
+				LinkedDataRecord linkedDataRecord = (LinkedDataRecord) r;
+				if (lastSeries != null) {
+					lastSeries.insertData(linkedDataRecord);
+				}
+			} else if(r instanceof ValueRangeRecord){
 				lastChart.valueRanges.add((ValueRangeRecord)r);
+			} else if (r instanceof Record) {
+				if (lastChart != null)
+				{
+					Record record = (Record) r;
+					for (HSSFChartType type : HSSFChartType.values()) {
+						if (type == HSSFChartType.Unknown)
+						{
+							continue;
+						}
+						if (record.getSid() == type.getSid()) {
+							lastChart.type = type ;
+							break;
+						}
+					}
+				}
 			}
 		}
 
