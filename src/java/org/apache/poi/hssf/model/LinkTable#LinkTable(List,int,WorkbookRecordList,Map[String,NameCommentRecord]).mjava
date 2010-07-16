@@ -1,4 +1,4 @@
-	public LinkTable(List inputList, int startIndex, WorkbookRecordList workbookRecordList) {
+	public LinkTable(List inputList, int startIndex, WorkbookRecordList workbookRecordList, Map<String, NameCommentRecord> commentRecords) {
 
 		_workbookRecordList = workbookRecordList;
 		RecordStream rs = new RecordStream(inputList, startIndex);
@@ -25,10 +25,21 @@
 		}
 
 		_definedNames = new ArrayList<NameRecord>();
-		// collect zero or more DEFINEDNAMEs id=0x18
-		while(rs.peekNextClass() == NameRecord.class) {
-			NameRecord nr = (NameRecord)rs.getNext();
-			_definedNames.add(nr);
+		// collect zero or more DEFINEDNAMEs id=0x18,
+		//  with their comments if present
+		while(true) {
+		  Class nextClass = rs.peekNextClass();
+		  if (nextClass == NameRecord.class) {
+		    NameRecord nr = (NameRecord)rs.getNext();
+		    _definedNames.add(nr);
+		  }
+		  else if (nextClass == NameCommentRecord.class) {
+		    NameCommentRecord ncr = (NameCommentRecord)rs.getNext();
+		    commentRecords.put(ncr.getNameText(), ncr);
+		  }
+		  else {
+		    break;
+		  }
 		}
 
 		_recordCount = rs.getCountRead();
