@@ -1,0 +1,34 @@
+   /**
+    * Test that we can handle both PDF and MSG attachments
+    */
+   public void testReadMsgAttachments() throws Exception {
+       AttachmentChunks[] attachments = pdfMsgAttachments.getAttachmentFiles();
+       assertEquals(2, attachments.length);
+       
+       AttachmentChunks attachment;
+
+       // Second is a PDF
+       attachment = pdfMsgAttachments.getAttachmentFiles()[1];
+       assertEquals("smbprn~1.pdf", attachment.attachFileName.toString());
+       assertEquals("smbprn.00009008.KdcPjl.pdf", attachment.attachLongFileName.toString());
+       assertEquals(".pdf", attachment.attachExtension.getValue());
+       assertEquals(null, attachment.attachMimeTag);
+       assertEquals(null, attachment.attachmentDirectory);
+       assertEquals(13539, attachment.attachData.getValue().length);
+       
+       // First in a nested message
+       attachment = pdfMsgAttachments.getAttachmentFiles()[0];
+       assertEquals("Test Attachment", attachment.attachFileName.toString());
+       assertEquals(null, attachment.attachLongFileName);
+       assertEquals(null, attachment.attachExtension);
+       assertEquals(null, attachment.attachMimeTag);
+       assertEquals(null, attachment.attachData);
+       assertNotNull(attachment.attachmentDirectory);
+       
+       // Check we can see some bits of it
+       MAPIMessage nested = attachment.attachmentDirectory.getAsEmbededMessage();
+       assertEquals(1, nested.getRecipientNamesList().length);
+       assertEquals("Nick Booth", nested.getRecipientNames());
+       assertEquals("Test Attachment", nested.getConversationTopic());
+   }
+

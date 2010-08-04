@@ -1,7 +1,7 @@
    /**
     * Creates a chunk, and gives it to its parent group 
     */
-   protected static void process(DocumentNode entry, ChunkGroup grouping) {
+   protected static void process(Entry entry, ChunkGroup grouping) {
       String entryName = entry.getName();
       
       if(entryName.length() < 9) {
@@ -40,6 +40,11 @@
             case Types.BINARY:
                chunk = new ByteChunk(namePrefix, chunkId, type);
                break;
+            case Types.DIRECTORY:
+               if(entry instanceof DirectoryNode) {
+                   chunk = new DirectoryChunk((DirectoryNode)entry, namePrefix, chunkId, type);
+               }
+               break;
             case Types.ASCII_STRING:
             case Types.UNICODE_STRING:
                chunk = new StringChunk(namePrefix, chunkId, type);
@@ -48,13 +53,17 @@
          }
          
          if(chunk != null) {
-            try {
-               DocumentInputStream inp = new DocumentInputStream(entry);
-               chunk.readValue(inp);
-               grouping.record(chunk);
-            } catch(IOException e) {
-               System.err.println("Error reading from part " + entry.getName() + " - " + e.toString());
-            }
+             if(entry instanceof DocumentNode) {
+                try {
+                   DocumentInputStream inp = new DocumentInputStream((DocumentNode)entry);
+                   chunk.readValue(inp);
+                   grouping.record(chunk);
+                } catch(IOException e) {
+                   System.err.println("Error reading from part " + entry.getName() + " - " + e.toString());
+                }
+             } else {
+                grouping.record(chunk);
+             }
          }
       } catch(NumberFormatException e) {
          // Name in the wrong format
