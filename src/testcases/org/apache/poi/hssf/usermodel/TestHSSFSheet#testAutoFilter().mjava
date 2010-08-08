@@ -1,0 +1,33 @@
+    public void testAutoFilter(){
+        HSSFWorkbook wb = new HSSFWorkbook();
+        HSSFSheet sh = wb.createSheet();
+        InternalWorkbook iwb = wb.getWorkbook();
+        InternalSheet ish = sh.getSheet();
+
+        assertNull( iwb.getSpecificBuiltinRecord(NameRecord.BUILTIN_FILTER_DB, 1) );
+        assertNull( ish.findFirstRecordBySid(AutoFilterInfoRecord.sid) );
+
+        CellRangeAddress range = CellRangeAddress.valueOf("A1:B10");
+        sh.setAutoFilter(range);
+
+        NameRecord name = iwb.getSpecificBuiltinRecord(NameRecord.BUILTIN_FILTER_DB, 1);
+        assertNotNull( name );
+
+        // The built-in name for auto-filter must consist of a single Area3d Ptg.
+        Ptg[] ptg = name.getNameDefinition();
+        assertEquals("The built-in name for auto-filter must consist of a single Area3d Ptg", 1, ptg.length);
+        assertTrue("The built-in name for auto-filter must consist of a single Area3d Ptg", ptg[0] instanceof Area3DPtg);
+
+        Area3DPtg aref = (Area3DPtg)ptg[0];
+        assertEquals(range.getFirstColumn(), aref.getFirstColumn());
+        assertEquals(range.getFirstRow(), aref.getFirstRow());
+        assertEquals(range.getLastColumn(), aref.getLastColumn());
+        assertEquals(range.getLastRow(), aref.getLastRow());
+
+        // verify  AutoFilterInfoRecord
+        AutoFilterInfoRecord afilter = (AutoFilterInfoRecord)ish.findFirstRecordBySid(AutoFilterInfoRecord.sid);
+        assertNotNull(afilter );
+        assertEquals(2, afilter.getNumEntries()); //filter covers two columns
+
+    }
+
