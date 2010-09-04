@@ -1,0 +1,51 @@
+	protected static boolean equals(
+			TreeMap<String, ByteArrayOutputStream> file1,
+			TreeMap<String, ByteArrayOutputStream> file2) {
+		Set listFile1 = file1.keySet();
+		if (listFile1.size() == file2.keySet().size()) {
+			for (Iterator iter = listFile1.iterator(); iter.hasNext();) {
+				String fileName = (String) iter.next();
+				// extract the contents for both
+				ByteArrayOutputStream contain2 = file2.get(fileName);
+				ByteArrayOutputStream contain1 = file1.get(fileName);
+
+				if (contain2 == null) {
+					// file not found in archive 2
+					Assert.fail(fileName + " not found in 2nd zip");
+					return false;
+				}
+				// no need to check for contain1. The key come from it
+
+				if ((fileName.endsWith(".xml")) || fileName.endsWith(".rels")) {
+					// we have a xml file
+                    // TODO
+                    // YK: the original OpenXML4J version attempted to compare xml using xmlunit (http://xmlunit.sourceforge.net),
+                    // but POI does not depend on this library
+                } else {
+					// not xml, may be an image or other binary format
+					if (contain2.size() != contain1.size()) {
+						// not the same size
+						Assert.fail(fileName
+								+ " does not have the same size in both zip:"
+								+ contain2.size() + "!=" + contain1.size());
+						return false;
+					}
+					byte array1[] = contain1.toByteArray();
+					byte array2[] = contain2.toByteArray();
+					for (int i = 0; i < array1.length; i++) {
+						if (array1[i] != array2[i]) {
+							Assert.fail(fileName + " differ at index:" + i);
+							return false;
+						}
+					}
+				}
+			}
+		} else {
+			// not the same number of files -> cannot be equals
+			Assert.fail("not the same number of files in zip:"
+					+ listFile1.size() + "!=" + file2.keySet().size());
+			return false;
+		}
+		return true;
+	}
+
