@@ -1,0 +1,70 @@
+  /**
+   * Creates an instance and fills the fields based on the data in the given buffer.
+   *
+   * @param data   The buffer containing the Ole10Native record
+   * @param offset The start offset of the record in the buffer
+   * @param plain Specified 'plain' format without filename
+   * @throws Ole10NativeException on invalid or unexcepted data format
+   */
+  public Ole10Native(byte[] data, int offset, boolean plain) throws Ole10NativeException {
+    int ofs = offset;        // current offset, initialized to start
+
+    if (data.length<offset+2) {
+      throw new Ole10NativeException("data is too small");
+    }
+
+    totalSize = LittleEndian.getInt(data, ofs);
+    ofs += LittleEndianConsts.INT_SIZE;
+
+    if (plain) {
+      dataBuffer = new byte[totalSize-4];
+      System.arraycopy(data, 4, dataBuffer, 0, dataBuffer.length);
+      dataSize = totalSize - 4;
+      label = "ole-"+ HexDump.toHex(Arrays.copyOf(dataBuffer, 8));
+      fileName = label;
+      command = label;
+    } else {
+      flags1 = LittleEndian.getShort(data, ofs);
+      ofs += LittleEndianConsts.SHORT_SIZE;
+      int len = getStringLength(data, ofs);
+      label = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
+      ofs += len;
+      len = getStringLength(data, ofs);
+      fileName = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
+      ofs += len;
+      flags2 = LittleEndian.getShort(data, ofs);
+      ofs += LittleEndianConsts.SHORT_SIZE;
+      len = LittleEndian.getUnsignedByte(data, ofs);
+      unknown1 = new byte[len];
+      ofs += len;
+      len = 3;
+      unknown2 = new byte[len];
+      ofs += len;
+      len = getStringLength(data, ofs);
+      command = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
+      ofs += len;
+
+      if (totalSize + LittleEndianConsts.INT_SIZE - ofs > LittleEndianConsts.INT_SIZE) {
+        dataSize = LittleEndian.getInt(data, ofs);
+        ofs += LittleEndianConsts.INT_SIZE;
+
+        if (dataSize > totalSize || dataSize<0) {
+          throw new Ole10NativeException("Invalid Ole10Native");
+        }
+
+        dataBuffer = new byte[dataSize];
+        System.arraycopy(data, ofs, dataBuffer, 0, dataSize);
+        ofs += dataSize;
+
+        if (unknown1.length > 0) {
+          flags3 = LittleEndian.getShort(data, ofs);
+          ofs += LittleEndianConsts.SHORT_SIZE;
+        } else {
+          flags3 = 0;
+        }
+      } else {
+        throw new Ole10NativeException("Invalid Ole10Native");
+      }
+    }
+  }
+
