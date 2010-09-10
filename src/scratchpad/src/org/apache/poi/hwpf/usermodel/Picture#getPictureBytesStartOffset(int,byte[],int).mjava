@@ -1,10 +1,19 @@
   private static int getPictureBytesStartOffset(int dataBlockStartOffset, byte[] _dataStream, int dataBlockSize)
   {
-    final int dataBlockEndOffset = dataBlockSize + dataBlockStartOffset;
     int realPicoffset = dataBlockStartOffset;
-
-    int PICTFBlockSize = LittleEndian.getShort(_dataStream, dataBlockStartOffset +PICT_HEADER_OFFSET);
+    final int dataBlockEndOffset = dataBlockSize + dataBlockStartOffset;
+    
+    // Skip over the PICT block
+    int PICTFBlockSize = LittleEndian.getShort(_dataStream, dataBlockStartOffset +PICT_HEADER_OFFSET); // Should be 68 bytes
+    
+    // Now the PICTF1
     int PICTF1BlockOffset = PICTFBlockSize + PICT_HEADER_OFFSET;
+    short MM_TYPE = LittleEndian.getShort(_dataStream, dataBlockStartOffset + PICT_HEADER_OFFSET + 2);
+    if(MM_TYPE == 0x66) {
+       // Skip the stPicName
+       int cchPicName = LittleEndian.getUnsignedByte(_dataStream, PICTF1BlockOffset);
+       PICTF1BlockOffset += 1 + cchPicName;
+    }
     int PICTF1BlockSize = LittleEndian.getShort(_dataStream, dataBlockStartOffset +PICTF1BlockOffset);
 
     int unknownHeaderOffset = (PICTF1BlockSize + PICTF1BlockOffset) < dataBlockEndOffset ?  (PICTF1BlockSize + PICTF1BlockOffset) : PICTF1BlockOffset;
