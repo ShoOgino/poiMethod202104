@@ -5,5 +5,41 @@
     public XWPFRun(CTR r, XWPFParagraph p) {
         this.run = r;
         this.paragraph = p;
+        
+        // Look for any text in any of our pictures or drawings
+        StringBuffer text = new StringBuffer();
+        List<XmlObject> pictTextObjs = new ArrayList<XmlObject>();
+        pictTextObjs.addAll(r.getPictList());
+        pictTextObjs.addAll(r.getDrawingList());
+        for(XmlObject o : pictTextObjs) {
+           XmlObject[] t = o
+                 .selectPath("declare namespace w='http://schemas.openxmlformats.org/wordprocessingml/2006/main' .//w:t");
+           for (int m = 0; m < t.length; m++) {
+              NodeList kids = t[m].getDomNode().getChildNodes();
+              for (int n = 0; n < kids.getLength(); n++) {
+                 if (kids.item(n) instanceof Text) {
+                    if(text.length() > 0)
+                       text.append("\n");
+                    text.append(kids.item(n).getNodeValue());
+                 }
+              }
+           }
+        }
+        pictureText = text.toString();
+        
+        // Do we have any embedded pictures?
+        // (They're a different CTPicture, under the drawingml namespace)
+        pictures = new ArrayList<XWPFPicture>();
+        for(XmlObject o : pictTextObjs) {
+           XmlObject[] picts = o
+                 .selectPath("declare namespace pic='http://schemas.openxmlformats.org/drawingml/2006/picture' .//pic:pic");
+           for(XmlObject pict : picts) {
+              if(pict instanceof org.openxmlformats.schemas.drawingml.x2006.picture.CTPicture) {
+                 pictures.add(new XWPFPicture(
+                       (org.openxmlformats.schemas.drawingml.x2006.picture.CTPicture)pict, p
+                 ));
+              }
+           }
+        }
     }
 
