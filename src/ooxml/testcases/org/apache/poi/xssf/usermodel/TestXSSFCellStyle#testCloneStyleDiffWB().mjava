@@ -2,6 +2,54 @@
 	 * Cloning one XSSFCellStyle onto Another, different XSSFWorkbooks
 	 */
 	public void testCloneStyleDiffWB() {
-		// TODO
-	}
+       XSSFWorkbook wbOrig = new XSSFWorkbook();
+       assertEquals(1, wbOrig.getNumberOfFonts());
+       assertEquals(0, wbOrig.getStylesSource().getNumberFormats().size());
+       
+       XSSFFont fnt = wbOrig.createFont();
+       fnt.setFontName("TestingFont");
+       assertEquals(2, wbOrig.getNumberOfFonts());
+       assertEquals(0, wbOrig.getStylesSource().getNumberFormats().size());
+       
+       XSSFDataFormat fmt = wbOrig.createDataFormat();
+       fmt.getFormat("MadeUpOne");
+       fmt.getFormat("MadeUpTwo");
+       
+       XSSFCellStyle orig = wbOrig.createCellStyle();
+       orig.setAlignment(HSSFCellStyle.ALIGN_RIGHT);
+       orig.setFont(fnt);
+       orig.setDataFormat(fmt.getFormat("Test##"));
+       
+       assertTrue(XSSFCellStyle.ALIGN_RIGHT == orig.getAlignment());
+       assertTrue(fnt == orig.getFont());
+       assertTrue(fmt.getFormat("Test##") == orig.getDataFormat());
+       
+       assertEquals(2, wbOrig.getNumberOfFonts());
+       assertEquals(3, wbOrig.getStylesSource().getNumberFormats().size());
+       
+       
+       // Now a style on another workbook
+       XSSFWorkbook wbClone = new XSSFWorkbook();
+       assertEquals(1, wbClone.getNumberOfFonts());
+       assertEquals(0, wbClone.getStylesSource().getNumberFormats().size());
+       
+       XSSFDataFormat fmtClone = wbClone.createDataFormat();
+       XSSFCellStyle clone = wbClone.createCellStyle();
+       
+       assertEquals(1, wbClone.getNumberOfFonts());
+       assertEquals(0, wbClone.getStylesSource().getNumberFormats().size());
+       
+       assertFalse(HSSFCellStyle.ALIGN_RIGHT == clone.getAlignment());
+       assertFalse("TestingFont" == clone.getFont().getFontName());
+       
+       clone.cloneStyleFrom(orig);
+       
+       assertEquals(2, wbClone.getNumberOfFonts());
+       assertEquals(1, wbClone.getStylesSource().getNumberFormats().size());
+       
+       assertEquals(HSSFCellStyle.ALIGN_RIGHT, clone.getAlignment());
+       assertEquals("TestingFont", clone.getFont().getFontName());
+       assertEquals(fmtClone.getFormat("Test##"), clone.getDataFormat());
+       assertFalse(fmtClone.getFormat("Test##") == fmt.getFormat("Test##"));
+   }
 
