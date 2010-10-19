@@ -1,6 +1,6 @@
     private Record[] read(byte[] docstream, int usrOffset){
-        ArrayList lst = new ArrayList();
-        HashMap offset2id = new HashMap();
+        ArrayList<Integer> lst = new ArrayList<Integer>();
+        HashMap<Integer,Integer> offset2id = new HashMap<Integer,Integer>();
         while (usrOffset != 0){
             UserEditAtom usr = (UserEditAtom) Record.buildRecordAtOffset(docstream, usrOffset);
             lst.add(Integer.valueOf(usrOffset));
@@ -8,11 +8,9 @@
 
             PersistPtrHolder ptr = (PersistPtrHolder)Record.buildRecordAtOffset(docstream, psrOffset);
             lst.add(Integer.valueOf(psrOffset));
-            Hashtable entries = ptr.getSlideLocationsLookup();
-            for (Iterator it = entries.keySet().iterator(); it.hasNext(); ) {
-                Integer id = (Integer)it.next();
-                Integer offset = (Integer)entries.get(id);
-
+            Hashtable<Integer,Integer> entries = ptr.getSlideLocationsLookup();
+            for(Integer id : entries.keySet()) {
+                Integer offset = entries.get(id);
                 lst.add(offset);
                 offset2id.put(offset, id);
             }
@@ -21,15 +19,15 @@
         }
         //sort found records by offset.
         //(it is not necessary but SlideShow.findMostRecentCoreRecords() expects them sorted)
-        Object a[] = lst.toArray();
+        Integer a[] = lst.toArray(new Integer[lst.size()]);
         Arrays.sort(a);
         Record[] rec = new Record[lst.size()];
         for (int i = 0; i < a.length; i++) {
-            Integer offset = (Integer)a[i];
+            Integer offset = a[i];
             rec[i] = Record.buildRecordAtOffset(docstream, offset.intValue());
             if(rec[i] instanceof PersistRecord) {
                 PersistRecord psr = (PersistRecord)rec[i];
-                Integer id = (Integer)offset2id.get(offset);
+                Integer id = offset2id.get(offset);
                 psr.setPersistId(id.intValue());
             }
         }
