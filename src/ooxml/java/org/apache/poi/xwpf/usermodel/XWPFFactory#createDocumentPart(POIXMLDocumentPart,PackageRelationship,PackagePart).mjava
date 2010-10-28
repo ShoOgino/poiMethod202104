@@ -1,0 +1,22 @@
+    @Override
+    public POIXMLDocumentPart createDocumentPart(POIXMLDocumentPart parent, PackageRelationship rel, PackagePart part){
+        POIXMLRelation descriptor = XWPFRelation.getInstance(rel.getRelationshipType());
+        if(descriptor == null || descriptor.getRelationClass() == null){
+            logger.log(POILogger.DEBUG, "using default POIXMLDocumentPart for " + rel.getRelationshipType());
+            return new POIXMLDocumentPart(part, rel);
+        }
+
+        try {
+            Class<? extends POIXMLDocumentPart> cls = descriptor.getRelationClass();
+            try {
+                Constructor<? extends POIXMLDocumentPart> constructor = cls.getDeclaredConstructor(POIXMLDocumentPart.class, PackagePart.class, PackageRelationship.class);
+                return constructor.newInstance(parent, part, rel);
+            } catch (NoSuchMethodException e) {
+                Constructor<? extends POIXMLDocumentPart> constructor = cls.getDeclaredConstructor(PackagePart.class, PackageRelationship.class);
+                return constructor.newInstance(part, rel);
+            }
+        } catch (Exception e){
+            throw new POIXMLException(e);
+        }
+    }
+
