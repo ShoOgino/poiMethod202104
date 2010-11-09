@@ -1,34 +1,28 @@
-    public static double getColumnWidth(XSSFSheet sheet, int column, boolean useMergedCells){
+    /**
+     * Compute width of a column and return the result
+     *
+     * @param sheet the sheet to calculate
+     * @param column    0-based index of the column
+     * @param useMergedCells    whether to use merged cells
+     * @return  the width in pixels
+     */
+    public static double getColumnWidth(Sheet sheet, int column, boolean useMergedCells){
         AttributedString str;
         TextLayout layout;
-        /**
-         * Excel measures columns in units of 1/256th of a character width
-         * but the docs say nothing about what particular character is used.
-         * '0' looks to be a good choice.
-         */
-        char defaultChar = '0';
 
-        /**
-         * This is the multiple that the font height is scaled by when determining the
-         * boundary of rotated text.
-         */
-        double fontHeightMultiple = 2.0;
+        Workbook wb = sheet.getWorkbook();
+        DataFormatter formatter = new DataFormatter();
+        Font defaultFont = wb.getFontAt((short) 0);
 
-        FontRenderContext frc = new FontRenderContext(null, true, true);
-
-        XSSFWorkbook wb = sheet.getWorkbook();
-        XSSFFont defaultFont = wb.getFontAt((short) 0);
-
-        str = new AttributedString("" + defaultChar);
+        str = new AttributedString(String.valueOf(defaultChar));
         copyAttributes(defaultFont, str, 0, 1);
-        layout = new TextLayout(str.getIterator(), frc);
+        layout = new TextLayout(str.getIterator(), fontRenderContext);
         int defaultCharWidth = (int)layout.getAdvance();
 
         double width = -1;
         rows:
-        for (Iterator it = sheet.rowIterator(); it.hasNext();) {
-            XSSFRow row = (XSSFRow) it.next();
-            XSSFCell cell = row.getCell(column);
+        for (Row row : sheet) {
+            Cell cell = row.getCell(column);
 
             if (cell == null) {
                 continue;
@@ -47,34 +41,28 @@
                 }
             }
 
-            XSSFCellStyle style = cell.getCellStyle();
+            CellStyle style = cell.getCellStyle();
             int cellType = cell.getCellType();
-            if(cellType == XSSFCell.CELL_TYPE_FORMULA) cellType = cell.getCachedFormulaResultType();
-            XSSFFont font = wb.getFontAt(style.getFontIndex());
 
-            if (cellType == XSSFCell.CELL_TYPE_STRING) {
-                XSSFRichTextString rt = cell.getRichStringCellValue();
+            // for formula cells we compute the cell width for the cached formula result
+            if(cellType == Cell.CELL_TYPE_FORMULA) cellType = cell.getCachedFormulaResultType();
+
+            Font font = wb.getFontAt(style.getFontIndex());
+
+            if (cellType == Cell.CELL_TYPE_STRING) {
+                RichTextString rt = cell.getRichStringCellValue();
                 String[] lines = rt.getString().split("\\n");
                 for (int i = 0; i < lines.length; i++) {
                     String txt = lines[i] + defaultChar;
+
                     str = new AttributedString(txt);
                     copyAttributes(font, str, 0, txt.length());
 
                     if (rt.numFormattingRuns() > 0) {
-                        int pos = 0;
-                        for (int j = 0; j < rt.numFormattingRuns(); j++) {
-                            XSSFFont fnt = rt.getFontOfFormattingRun(j);
-                            if (fnt != null) {
-                                int len = rt.getLengthOfFormattingRun(j);
-                                if(len > 0) { //ignore degenerate zero-length runs
-                                    copyAttributes(fnt, str, pos, pos + len);
-                                    pos += len;
-                                }
-                            }
-                        }
+                        // TODO: support rich text fragments
                     }
 
-                    layout = new TextLayout(str.getIterator(), frc);
+                    layout = new TextLayout(str.getIterator(), fontRenderContext);
                     if(style.getRotation() != 0){
                         /*
                          * Transform the text using a scale so that it's height is increased by a multiple of the leading,
@@ -94,31 +82,22 @@
                 }
             } else {
                 String sval = null;
-                if (cellType == XSSFCell.CELL_TYPE_NUMERIC) {
-                    String dfmt = style.getDataFormatString();
-                    String format = dfmt == null ? null : dfmt.replaceAll("\"", "");
-                    double value = cell.getNumericCellValue();
+                if (cellType == Cell.CELL_TYPE_NUMERIC) {
+                    // Try to get it formatted to look the same as excel
                     try {
-                        NumberFormat fmt;
-                        if ("General".equals(format))
-                            sval = "" + value;
-                        else
-                        {
-                            fmt = new DecimalFormat(format);
-                            sval = fmt.format(value);
-                        }
+                        sval = formatter.formatCellValue(cell, dummyEvaluator);
                     } catch (Exception e) {
-                        sval = "" + value;
+                        sval = String.valueOf(cell.getNumericCellValue());
                     }
-                } else if (cellType == XSSFCell.CELL_TYPE_BOOLEAN) {
-                    sval = String.valueOf(cell.getBooleanCellValue());
+                } else if (cellType == Cell.CELL_TYPE_BOOLEAN) {
+                    sval = String.valueOf(cell.getBooleanCellValue()).toUpperCase();
                 }
                 if(sval != null) {
                     String txt = sval + defaultChar;
                     str = new AttributedString(txt);
                     copyAttributes(font, str, 0, txt.length());
 
-                    layout = new TextLayout(str.getIterator(), frc);
+                    layout = new TextLayout(str.getIterator(), fontRenderContext);
                     if(style.getRotation() != 0){
                         /*
                          * Transform the text using a scale so that it's height is increased by a multiple of the leading,
@@ -139,6 +118,6 @@
             }
 
         }
-        return width;
+        return width;        
     }
 

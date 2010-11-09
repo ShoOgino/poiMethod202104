@@ -1,0 +1,64 @@
+    public void testDateCells(){
+        Workbook workbook = _testDataProvider.createWorkbook();
+        Sheet sheet = workbook.createSheet();
+        DataFormat df = workbook.getCreationHelper().createDataFormat();
+
+        CellStyle style1 = workbook.createCellStyle();
+        style1.setDataFormat(df.getFormat("m"));
+
+        CellStyle style3 = workbook.createCellStyle();
+        style3.setDataFormat(df.getFormat("mmm"));
+
+        CellStyle style5 = workbook.createCellStyle(); //rotated text
+        style5.setDataFormat(df.getFormat("mmm/dd/yyyy"));
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(2010, 0, 1); // Jan 1 2010
+
+        Row row = sheet.createRow(0);
+        row.createCell(0).setCellValue(DateUtil.getJavaDate(0));   //default date
+
+        Cell cell1 = row.createCell(1);
+        cell1.setCellValue(calendar);
+        cell1.setCellStyle(style1);
+        row.createCell(2).setCellValue("1"); // column 1 should be sized as '1'
+
+        Cell cell3 = row.createCell(3);
+        cell3.setCellValue(calendar);
+        cell3.setCellStyle(style3);
+        row.createCell(4).setCellValue("Jan");
+
+        Cell cell5 = row.createCell(5);
+        cell5.setCellValue(calendar);
+        cell5.setCellStyle(style5);
+        row.createCell(6).setCellValue("Jan/01/2010");
+
+        Cell cell7 = row.createCell(7);
+        cell7.setCellFormula("DATE(2010,1,1)");
+        cell7.setCellStyle(style3); // should be sized as 'Jan'
+
+        // autosize not-evaluated cells, formula cells are sized as if the result is 0
+        for (int i = 0; i < 8; i++) sheet.autoSizeColumn(i);
+
+        assertEquals(sheet.getColumnWidth(2), sheet.getColumnWidth(1)); // date formatted as 'm'
+        assertTrue(sheet.getColumnWidth(3) > sheet.getColumnWidth(1));  // 'mmm' is wider than 'm'
+        assertEquals(sheet.getColumnWidth(4), sheet.getColumnWidth(3)); // date formatted as 'mmm'
+        assertTrue(sheet.getColumnWidth(5) > sheet.getColumnWidth(3));  // 'mmm/dd/yyyy' is wider than 'mmm'
+        assertEquals(sheet.getColumnWidth(6), sheet.getColumnWidth(5)); // date formatted as 'mmm/dd/yyyy'
+
+        // YK: width of not-evaluated formulas that return data is not determined
+        // POI seems to conevert '0' to Excel date which is the beginng of the Excel's date system
+
+        // evaluate formulas and re-autosize
+        evaluateWorkbook(workbook);
+
+        for (int i = 0; i < 8; i++) sheet.autoSizeColumn(i);
+
+        assertEquals(sheet.getColumnWidth(2), sheet.getColumnWidth(1)); // date formatted as 'm'
+        assertTrue(sheet.getColumnWidth(3) > sheet.getColumnWidth(1));  // 'mmm' is wider than 'm'
+        assertEquals(sheet.getColumnWidth(4), sheet.getColumnWidth(3)); // date formatted as 'mmm'
+        assertTrue(sheet.getColumnWidth(5) > sheet.getColumnWidth(3));  // 'mmm/dd/yyyy' is wider than 'mmm'
+        assertEquals(sheet.getColumnWidth(6), sheet.getColumnWidth(5)); // date formatted as 'mmm/dd/yyyy'
+        assertEquals(sheet.getColumnWidth(4), sheet.getColumnWidth(7)); // date formula formatted as 'mmm'
+    }
+

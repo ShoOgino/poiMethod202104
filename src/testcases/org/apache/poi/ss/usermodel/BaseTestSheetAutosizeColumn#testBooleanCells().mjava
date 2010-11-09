@@ -1,0 +1,27 @@
+    public void testBooleanCells(){
+        Workbook workbook = _testDataProvider.createWorkbook();
+        Sheet sheet = workbook.createSheet();
+
+        Row row = sheet.createRow(0);
+        row.createCell(0).setCellValue(0); // getCachedFormulaResult() returns 0 for not evaluated formula cells
+        row.createCell(1).setCellValue(true);
+        row.createCell(2).setCellValue("TRUE");
+        row.createCell(3).setCellFormula("1 > 0"); // a formula that returns true
+
+        // autosize not-evaluated cells, formula cells are sized as if the result is 0
+        for (int i = 0; i < 4; i++) sheet.autoSizeColumn(i);
+
+        assertTrue(sheet.getColumnWidth(1) > sheet.getColumnWidth(0));  // 'true' is wider than '0'
+        assertEquals(sheet.getColumnWidth(1), sheet.getColumnWidth(2));  // 10 and '10' should be sized equally
+        assertEquals(sheet.getColumnWidth(3), sheet.getColumnWidth(0));  // formula result is unknown, the width is calculated  for '0'
+
+        // evaluate formulas and re-autosize
+        evaluateWorkbook(workbook);
+
+        for (int i = 0; i < 4; i++) sheet.autoSizeColumn(i);
+
+        assertTrue(sheet.getColumnWidth(1) > sheet.getColumnWidth(0));  // 'true' is wider than '0'
+        assertEquals(sheet.getColumnWidth(1), sheet.getColumnWidth(2));  // columns 1, 2 and 3 should have the same width
+        assertEquals(sheet.getColumnWidth(2), sheet.getColumnWidth(3));  // columns 1, 2 and 3 should have the same width
+    }
+
