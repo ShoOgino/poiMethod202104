@@ -1,0 +1,35 @@
+    /**
+     * percent-encode white spaces and characters above 0x80.
+     * <p>
+     *   Examples:
+     *   'Apache POI' --> 'Apache%20POI'
+     *   'Apache\u0410POI' --> 'Apache%04%10POI'
+     *
+     * @param s the string to encode
+     * @return  the encoded string
+     */
+    public static String encode(String s) {
+        int n = s.length();
+        if (n == 0) return s;
+
+        ByteBuffer bb;
+        try {
+            bb = ByteBuffer.wrap(s.getBytes("UTF-8"));
+        } catch (UnsupportedEncodingException e){
+            // should not happen
+            throw new RuntimeException(e);
+        }
+        StringBuilder sb = new StringBuilder();
+        while (bb.hasRemaining()) {
+            int b = bb.get() & 0xff;
+            if (isUnsafe(b)) {
+                sb.append('%');
+                sb.append(hexDigits[(b >> 4) & 0x0F]);
+                sb.append(hexDigits[(b >> 0) & 0x0F]);
+            } else {
+                sb.append((char)b);
+            }
+        }
+        return sb.toString();
+    }
+
