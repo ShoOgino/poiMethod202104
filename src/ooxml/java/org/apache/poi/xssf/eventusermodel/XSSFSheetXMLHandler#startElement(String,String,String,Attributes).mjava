@@ -1,0 +1,59 @@
+   public void startElement(String uri, String localName, String name,
+                            Attributes attributes) throws SAXException {
+
+       if ("inlineStr".equals(name) || "v".equals(name)) {
+           vIsOpen = true;
+           // Clear contents cache
+           value.setLength(0);
+       } else if ("f".equals(name)) {
+          // Clear contents cache
+          formula.setLength(0);
+          
+          // Mark us as being a formula if not already
+          if(nextDataType == xssfDataType.NUMBER) {
+             nextDataType = xssfDataType.FORMULA;
+          }
+          
+          // Decide where to get the formula string from
+          String type = attributes.getValue("t"); 
+          if(type != null && type.equals("shared")) {
+             System.err.println("Warning - shared formulas not yet supported!");
+          } else {
+             fIsOpen = true;
+          }
+       }
+       else if("row".equals(name)) {
+           int rowNum = Integer.parseInt(attributes.getValue("r")) - 1;
+           output.startRow(rowNum);
+       }
+       // c => cell
+       else if ("c".equals(name)) {
+           // Set up defaults.
+           this.nextDataType = xssfDataType.NUMBER;
+           this.formatIndex = -1;
+           this.formatString = null;
+           cellRef = attributes.getValue("r");
+           String cellType = attributes.getValue("t");
+           String cellStyleStr = attributes.getValue("s");
+           if ("b".equals(cellType))
+               nextDataType = xssfDataType.BOOLEAN;
+           else if ("e".equals(cellType))
+               nextDataType = xssfDataType.ERROR;
+           else if ("inlineStr".equals(cellType))
+               nextDataType = xssfDataType.INLINE_STRING;
+           else if ("s".equals(cellType))
+               nextDataType = xssfDataType.SST_STRING;
+           else if ("str".equals(cellType))
+               nextDataType = xssfDataType.FORMULA;
+           else if (cellStyleStr != null) {
+              // Number, but almost certainly with a special style or format
+               int styleIndex = Integer.parseInt(cellStyleStr);
+               XSSFCellStyle style = stylesTable.getStyleAt(styleIndex);
+               this.formatIndex = style.getDataFormat();
+               this.formatString = style.getDataFormatString();
+               if (this.formatString == null)
+                   this.formatString = BuiltinFormats.getBuiltinFormat(this.formatIndex);
+           }
+       }
+   }
+

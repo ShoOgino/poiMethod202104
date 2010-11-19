@@ -1,0 +1,67 @@
+   public void endElement(String uri, String localName, String name)
+           throws SAXException {
+       String thisStr = null;
+
+       // v => contents of a cell
+       if ("v".equals(name)) {
+           vIsOpen = false;
+           
+           // Process the value contents as required, now we have it all
+           switch (nextDataType) {
+               case BOOLEAN:
+                   char first = value.charAt(0);
+                   thisStr = first == '0' ? "FALSE" : "TRUE";
+                   break;
+
+               case ERROR:
+                   thisStr = "ERROR:" + value.toString();
+                   break;
+
+               case FORMULA:
+                   if(formulasNotResults) {
+                      thisStr = formula.toString();
+                   } else {
+                      thisStr = value.toString();
+                   }
+                   break;
+
+               case INLINE_STRING:
+                   // TODO: have seen an example of this, so it's untested.
+                   XSSFRichTextString rtsi = new XSSFRichTextString(value.toString());
+                   thisStr = rtsi.toString();
+                   break;
+
+               case SST_STRING:
+                   String sstIndex = value.toString();
+                   try {
+                       int idx = Integer.parseInt(sstIndex);
+                       XSSFRichTextString rtss = new XSSFRichTextString(sharedStringsTable.getEntryAt(idx));
+                       thisStr = rtss.toString();
+                   }
+                   catch (NumberFormatException ex) {
+                       System.err.println("Failed to parse SST index '" + sstIndex + "': " + ex.toString());
+                   }
+                   break;
+
+               case NUMBER:
+                   String n = value.toString();
+                   if (this.formatString != null)
+                       thisStr = formatter.formatRawCellContents(Double.parseDouble(n), this.formatIndex, this.formatString);
+                   else
+                       thisStr = n;
+                   break;
+
+               default:
+                   thisStr = "(TODO: Unexpected type: " + nextDataType + ")";
+                   break;
+           }
+           
+           // Output
+           output.cell(cellRef, thisStr);
+       } else if ("f".equals(name)) {
+          fIsOpen = false;
+       } else if ("row".equals(name)) {
+          output.endRow();
+       }
+   }
+
