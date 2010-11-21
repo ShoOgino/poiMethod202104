@@ -1,0 +1,30 @@
+	/**
+	 * Applies some conversion rules if the supplied value is not already a number.
+	 * Note - <tt>BlankEval</tt> is converted to {@link NumberEval#ZERO}.
+	 * @param ev must be a {@link NumberEval}, {@link StringEval}, {@link BoolEval} or
+	 * {@link BlankEval}
+	 * @return actual, parsed or interpreted double value (respectively).
+	 * @throws EvaluationException(#VALUE!) only if a StringEval is supplied and cannot be parsed
+	 * as a double (See <tt>parseDouble()</tt> for allowable formats).
+	 * @throws RuntimeException if the supplied parameter is not {@link NumberEval},
+	 * {@link StringEval}, {@link BoolEval} or {@link BlankEval}
+	 */
+	public static double coerceValueToDouble(ValueEval ev) throws EvaluationException {
+
+		if (ev == BlankEval.instance) {
+			return 0.0;
+		}
+		if (ev instanceof NumericValueEval) {
+			// this also handles booleans
+			return ((NumericValueEval)ev).getNumberValue();
+		}
+		if (ev instanceof StringEval) {
+			Double dd = parseDouble(((StringEval) ev).getStringValue());
+			if (dd == null) {
+				throw EvaluationException.invalidValue();
+			}
+			return dd.doubleValue();
+		}
+		throw new RuntimeException("Unexpected arg eval type (" + ev.getClass().getName() + ")");
+	}
+
