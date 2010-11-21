@@ -1,0 +1,36 @@
+	private static ValueEval evaluateIndirect(OperationEvaluationContext ec, String text,
+			boolean isA1style) {
+		// Search backwards for '!' because sheet names can contain '!'
+		int plingPos = text.lastIndexOf('!');
+
+		String workbookName;
+		String sheetName;
+		String refText; // whitespace around this gets trimmed OK
+		if (plingPos < 0) {
+			workbookName = null;
+			sheetName = null;
+			refText = text;
+		} else {
+			String[] parts = parseWorkbookAndSheetName(text.subSequence(0, plingPos));
+			if (parts == null) {
+				return ErrorEval.REF_INVALID;
+			}
+			workbookName = parts[0];
+			sheetName = parts[1];
+			refText = text.substring(plingPos + 1);
+		}
+
+		String refStrPart1;
+		String refStrPart2;
+
+		int colonPos = refText.indexOf(':');
+		if (colonPos < 0) {
+			refStrPart1 = refText.trim();
+			refStrPart2 = null;
+		} else {
+			refStrPart1 = refText.substring(0, colonPos).trim();
+			refStrPart2 = refText.substring(colonPos + 1).trim();
+		}
+		return ec.getDynamicReference(workbookName, sheetName, refStrPart1, refStrPart2, isA1style);
+	}
+

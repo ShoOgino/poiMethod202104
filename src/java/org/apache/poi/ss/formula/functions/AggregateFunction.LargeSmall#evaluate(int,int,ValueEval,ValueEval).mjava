@@ -1,0 +1,33 @@
+		public ValueEval evaluate(int srcRowIndex, int srcColumnIndex, ValueEval arg0,
+				ValueEval arg1) {
+			double dn;
+			try {
+				ValueEval ve1 = OperandResolver.getSingleValue(arg1, srcRowIndex, srcColumnIndex);
+				dn = OperandResolver.coerceValueToDouble(ve1);
+			} catch (EvaluationException e1) {
+				// all errors in the second arg translate to #VALUE!
+				return ErrorEval.VALUE_INVALID;
+			}
+			// weird Excel behaviour on second arg
+			if (dn < 1.0) {
+				// values between 0.0 and 1.0 result in #NUM!
+				return ErrorEval.NUM_ERROR;
+			}
+			// all other values are rounded up to the next integer
+			int k = (int) Math.ceil(dn);
+
+			double result;
+			try {
+				double[] ds = ValueCollector.collectValues(arg0);
+				if (k > ds.length) {
+					return ErrorEval.NUM_ERROR;
+				}
+				result = _isLarge ? StatsLib.kthLargest(ds, k) : StatsLib.kthSmallest(ds, k);
+				NumericFunction.checkValue(result);
+			} catch (EvaluationException e) {
+				return e.getErrorEval();
+			}
+
+			return new NumberEval(result);
+		}
+

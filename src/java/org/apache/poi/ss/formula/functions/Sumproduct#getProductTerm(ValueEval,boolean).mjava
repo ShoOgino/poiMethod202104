@@ -1,0 +1,40 @@
+	/**
+	 * Determines a <code>double</code> value for the specified <code>ValueEval</code>.
+	 * @param isScalarProduct <code>false</code> for SUMPRODUCTs over area refs.
+	 * @throws EvaluationException if <code>ve</code> represents an error value.
+	 * <p/>
+	 * Note - string values and empty cells are interpreted differently depending on
+	 * <code>isScalarProduct</code>.  For scalar products, if any term is blank or a string, the
+	 * error (#VALUE!) is raised.  For area (sum)products, if any term is blank or a string, the
+	 * result is zero.
+	 */
+	private static double getProductTerm(ValueEval ve, boolean isScalarProduct) throws EvaluationException {
+
+		if(ve instanceof BlankEval || ve == null) {
+			// TODO - shouldn't BlankEval.INSTANCE be used always instead of null?
+			// null seems to occur when the blank cell is part of an area ref (but not reliably)
+			if(isScalarProduct) {
+				throw new EvaluationException(ErrorEval.VALUE_INVALID);
+			}
+			return 0;
+		}
+
+		if(ve instanceof ErrorEval) {
+			throw new EvaluationException((ErrorEval)ve);
+		}
+		if(ve instanceof StringEval) {
+			if(isScalarProduct) {
+				throw new EvaluationException(ErrorEval.VALUE_INVALID);
+			}
+			// Note for area SUMPRODUCTs, string values are interpreted as zero
+			// even if they would parse as valid numeric values
+			return 0;
+		}
+		if(ve instanceof NumericValueEval) {
+			NumericValueEval nve = (NumericValueEval) ve;
+			return nve.getNumberValue();
+		}
+		throw new RuntimeException("Unexpected value eval class ("
+				+ ve.getClass().getName() + ")");
+	}
+
