@@ -2,18 +2,26 @@
     * Processes the given sheet
     */
    public void processSheet(
-           SheetTextExtractor sheetExtractor,
+           SheetContentsHandler sheetContentsExtractor,
            StylesTable styles,
            ReadOnlySharedStringsTable strings,
            InputStream sheetInputStream)
            throws IOException, SAXException {
 
+       DataFormatter formatter;
+       if(locale == null) {
+          formatter = new DataFormatter();
+       } else  {
+          formatter = new DataFormatter(locale);
+       }
+      
        InputSource sheetSource = new InputSource(sheetInputStream);
        SAXParserFactory saxFactory = SAXParserFactory.newInstance();
        try {
           SAXParser saxParser = saxFactory.newSAXParser();
           XMLReader sheetParser = saxParser.getXMLReader();
-          ContentHandler handler = new XSSFSheetXMLHandler(styles, strings, sheetExtractor, formulasNotResults);
+          ContentHandler handler = new XSSFSheetXMLHandler(
+                styles, strings, sheetContentsExtractor, formatter, formulasNotResults);
           sheetParser.setContentHandler(handler);
           sheetParser.parse(sheetSource);
        } catch(ParserConfigurationException e) {
