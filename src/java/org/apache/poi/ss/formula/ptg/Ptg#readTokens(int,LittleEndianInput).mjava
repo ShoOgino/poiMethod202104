@@ -1,0 +1,31 @@
+	/**
+	 * Reads <tt>size</tt> bytes of the input stream, to create an array of <tt>Ptg</tt>s.
+	 * Extra data (beyond <tt>size</tt>) may be read if and <tt>ArrayPtg</tt>s are present.
+	 */
+	public static Ptg[] readTokens(int size, LittleEndianInput in) {
+		List<Ptg> temp = new ArrayList<Ptg>(4 + size / 2);
+		int pos = 0;
+		boolean hasArrayPtgs = false;
+		while (pos < size) {
+			Ptg ptg = Ptg.createPtg(in);
+			if (ptg instanceof ArrayPtg.Initial) {
+				hasArrayPtgs = true;
+			}
+			pos += ptg.getSize();
+			temp.add(ptg);
+		}
+		if(pos != size) {
+			throw new RuntimeException("Ptg array size mismatch");
+		}
+		if (hasArrayPtgs) {
+			Ptg[] result = toPtgArray(temp);
+			for (int i=0;i<result.length;i++) {
+				if (result[i] instanceof ArrayPtg.Initial) {
+					result[i] = ((ArrayPtg.Initial) result[i]).finishReading(in);
+				}
+			}
+			return result;
+		}
+		return toPtgArray(temp);
+	}
+
