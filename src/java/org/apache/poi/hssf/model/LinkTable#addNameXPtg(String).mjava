@@ -1,0 +1,62 @@
+    /**
+     * Register an external name in this workbook
+     *
+     * @param name  the name to register
+     * @return a NameXPtg describing this name 
+     */
+    public NameXPtg addNameXPtg(String name) {
+        int extBlockIndex = -1;
+        ExternalBookBlock extBlock = null;
+
+        // find ExternalBlock for Add-In functions and remember its index
+        for (int i = 0; i < _externalBookBlocks.length; i++) {
+            SupBookRecord ebr = _externalBookBlocks[i].getExternalBookRecord();
+            if (ebr.isAddInFunctions()) {
+                extBlock = _externalBookBlocks[i];
+                extBlockIndex = i;
+                break;
+            }
+        }
+        // An ExternalBlock for Add-In functions was not found. Create a new one.
+        if (extBlock == null) {
+            extBlock = new ExternalBookBlock();
+
+            ExternalBookBlock[] tmp = new ExternalBookBlock[_externalBookBlocks.length + 1];
+            System.arraycopy(_externalBookBlocks, 0, tmp, 0, _externalBookBlocks.length);
+            tmp[tmp.length - 1] = extBlock;
+            _externalBookBlocks = tmp;
+
+            extBlockIndex = _externalBookBlocks.length - 1;
+
+            // add the created SupBookRecord before ExternSheetRecord
+            int idx = findFirstRecordLocBySid(ExternSheetRecord.sid);
+            _workbookRecordList.add(idx, extBlock.getExternalBookRecord());
+
+            // register the SupBookRecord in the ExternSheetRecord
+            // -2 means that the scope of this name is Workbook and the reference applies to the entire workbook.
+            _externSheetRecord.addRef(_externalBookBlocks.length - 1, -2, -2);
+        }
+
+        // create a ExternalNameRecord that will describe this name
+        ExternalNameRecord extNameRecord = new ExternalNameRecord();
+        extNameRecord.setText(name);
+        // The docs don't explain why Excel set the formula to #REF!
+        extNameRecord.setParsedExpression(new Ptg[]{ErrPtg.REF_INVALID});
+
+        int nameIndex = extBlock.addExternalName(extNameRecord);
+        int supLinkIndex = 0;
+        // find the posistion of the Add-In SupBookRecord in the workbook stream,
+        // the created ExternalNameRecord will be appended to it
+        for (Iterator iterator = _workbookRecordList.iterator(); iterator.hasNext(); supLinkIndex++) {
+            Record record = (Record) iterator.next();
+            if (record instanceof SupBookRecord) {
+                if (((SupBookRecord) record).isAddInFunctions()) break;
+            }
+        }
+        int numberOfNames = extBlock.getNumberOfNames();
+        // a new name is inserted in the end of the SupBookRecord, after the last name
+        _workbookRecordList.add(supLinkIndex + numberOfNames, extNameRecord);
+        int ix = _externSheetRecord.getRefIxForSheet(extBlockIndex, -2 /* the scope is workbook*/);
+        return new NameXPtg(ix, nameIndex);
+    }
+
