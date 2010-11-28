@@ -1,0 +1,33 @@
+    public void testExternalFunctions() {
+        Workbook wb = _testDataProvider.createWorkbook();
+
+        Sheet sh = wb.createSheet();
+
+        Cell cell1 = sh.createRow(0).createCell(0);
+        cell1.setCellFormula("ISODD(1)+ISEVEN(2)"); // functions from the Excel Analysis Toolpack
+        assertEquals("ISODD(1)+ISEVEN(2)", cell1.getCellFormula());
+
+        Cell cell2 = sh.createRow(1).createCell(0);
+        try {
+            cell2.setCellFormula("MYFUNC(\"B1\")");
+            fail("Should fail because MYFUNC is an unknown function");
+        } catch (FormulaParseException e){
+            ; //expected
+        }
+
+        wb.addToolPack(customToolpack);
+
+        cell2.setCellFormula("MYFUNC(\"B1\")");
+        assertEquals("MYFUNC(\"B1\")", cell2.getCellFormula());
+
+        Cell cell3 = sh.createRow(2).createCell(0);
+        cell3.setCellFormula("MYFUNC2(\"C1\")&\"-\"&A2");  //where A2 is defined above
+        assertEquals("MYFUNC2(\"C1\")&\"-\"&A2", cell3.getCellFormula());
+
+        FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
+        assertEquals(2.0, evaluator.evaluate(cell1).getNumberValue());
+        assertEquals("B1abc", evaluator.evaluate(cell2).getStringValue());
+        assertEquals("C1abc2-B1abc", evaluator.evaluate(cell3).getStringValue());
+
+    }
+
