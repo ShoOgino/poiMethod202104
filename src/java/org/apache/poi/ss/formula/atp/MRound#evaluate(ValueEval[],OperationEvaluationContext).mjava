@@ -1,0 +1,27 @@
+	public ValueEval evaluate(ValueEval[] args, OperationEvaluationContext ec) {
+        double number, multiple, result;
+
+        if (args.length != 2) {
+            return ErrorEval.VALUE_INVALID;
+        }
+
+        try {
+            number = OperandResolver.coerceValueToDouble(OperandResolver.getSingleValue(args[0], ec.getRowIndex(), ec.getColumnIndex()));
+            multiple = OperandResolver.coerceValueToDouble(OperandResolver.getSingleValue(args[1], ec.getRowIndex(), ec.getColumnIndex()));
+
+            if( multiple == 0.0 ) {
+                result = 0.0;
+            } else {
+                if(number*multiple < 0) {
+                    // Returns #NUM! because the number and the multiple have different signs
+                    throw new EvaluationException(ErrorEval.NUM_ERROR);
+                }
+                result = multiple * Math.round( number / multiple );
+            }
+            NumericFunction.checkValue(result);
+            return new NumberEval(result);
+        } catch (EvaluationException e) {
+            return e.getErrorEval();
+        }
+	}
+

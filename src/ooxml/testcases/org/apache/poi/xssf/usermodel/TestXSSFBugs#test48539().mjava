@@ -1,0 +1,36 @@
+    /**
+     * Problem with evaluation formulas due to
+     *  NameXPtgs.
+     * Blows up on:
+     *   IF(B6= (ROUNDUP(B6,0) + ROUNDDOWN(B6,0))/2, MROUND(B6,2),ROUND(B6,0))
+     * 
+     * TODO: delete this test case when MROUND and VAR are implemented
+     */
+    public void test48539() throws Exception {
+       XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("48539.xlsx");
+       assertEquals(3, wb.getNumberOfSheets());
+       
+       // Try each cell individually
+       XSSFFormulaEvaluator eval = new XSSFFormulaEvaluator(wb);
+       for(int i=0; i<wb.getNumberOfSheets(); i++) {
+          Sheet s = wb.getSheetAt(i);
+          for(Row r : s) {
+             for(Cell c : r) {
+                if(c.getCellType() == Cell.CELL_TYPE_FORMULA) {
+                    CellValue cv = eval.evaluate(c);
+                    if(cv.getCellType() == Cell.CELL_TYPE_NUMERIC) {
+                        // assert that the calculated value agrees with
+                        // the cached formula result calculated by Excel
+                        double cachedFormulaResult = c.getNumericCellValue();
+                        double evaluatedFormulaResult = cv.getNumberValue();
+                        assertEquals(c.getCellFormula(), cachedFormulaResult, evaluatedFormulaResult, 1E-7);
+                    }
+                }
+             }
+          }
+       }
+       
+       // Now all of them
+        XSSFFormulaEvaluator.evaluateAllFormulaCells(wb);
+    }
+
