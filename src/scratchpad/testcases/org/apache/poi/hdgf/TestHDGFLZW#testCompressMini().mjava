@@ -1,0 +1,32 @@
+	/**
+	 * Test that we can round-trip a little bit.
+	 * Uses a part short enough that we agree with visio
+	 *  on the best way to compress it
+	 */
+	public void testCompressMini() throws Exception {
+	   // first 11 bytes compressed = 12 bytes uncompressed
+	   byte[] sourceComp = new byte[11];
+	   byte[] sourceDecomp = new byte[12];
+	   System.arraycopy(testTrailerComp, 0, sourceComp, 0, sourceComp.length);
+      System.arraycopy(testTrailerDecomp, 0, sourceDecomp, 0, sourceDecomp.length);
+
+		// Compress it using our engine
+		HDGFLZW lzw = new HDGFLZW();
+		byte[] comp = lzw.compress(new ByteArrayInputStream(sourceDecomp));
+		
+		// Now decompress it again
+		byte[] decomp = lzw.decode(new ByteArrayInputStream(comp));
+
+		// First up, check the round tripping
+		assertEquals(12, decomp.length);
+      for(int i=0; i<decomp.length; i++) {
+         assertEquals("Wrong at " + i, decomp[i], testTrailerDecomp[i]);
+      }
+
+		// Now check the compressed intermediate version
+      assertEquals(11, comp.length);
+      for(int i=0; i<comp.length; i++) {
+         assertEquals("Wrong at " + i, comp[i], testTrailerComp[i]);
+      }
+	}
+

@@ -17,12 +17,17 @@ public void compress(InputStream src, OutputStream res) throws IOException {
 		dataI = src.read();
 		posInp++;
 		if(dataI == -1) { going = false; }
-		dataB = fromInt(dataI);
+		dataB = HDGFLZW.fromInt(dataI);
 
 		// If we've run out of data, output anything that's
 		//  pending then finish
-		if(!going && rawCodeLen > 0) {
-			outputCompressed(res);
+		if(!going) {
+		   if(rawCodeLen > 0) {
+	         outputCompressed(res);
+	         if(maskBitsSet > 0) {
+	            output8Codes(res);
+	         }
+		   }
 			break;
 		}
 
@@ -32,10 +37,10 @@ public void compress(InputStream src, OutputStream res) throws IOException {
 		rawCode[rawCodeLen] = dataB;
 		rawCodeLen++;
 		int rawAt = findRawCodeInBuffer();
-
-		// If we found it and are now at 16 bytes,
+		
+		// If we found it and are now at 18 bytes,
 		//  we need to output our pending code block
-		if(rawCodeLen == 16 && rawAt > -1) {
+		if(rawCodeLen == 18 && rawAt > -1) {
 			outputCompressed(res);
 			rawCodeLen = 0;
 			continue;
