@@ -1,4 +1,4 @@
-	public static POIOLE2TextExtractor createExtractor(DirectoryNode poifsDir, POIFSFileSystem fs) throws IOException {
+	public static POITextExtractor createExtractor(DirectoryNode poifsDir, POIFSFileSystem fs) throws IOException, InvalidFormatException, OpenXML4JException, XmlException {
 		// Look for certain entries in the stream, to figure it
 		//  out from
 		for(Iterator<Entry> entries = poifsDir.getEntries(); entries.hasNext(); ) {
@@ -37,6 +37,12 @@
                 entry.getName().equals("__substg1.0_0037001F")
 			) {
 			   return new OutlookTextExtactor(poifsDir, fs);
+			}
+			if(entry.getName().equals("Package")) {
+			   OPCPackage pkg = OPCPackage.open(
+			         poifsDir.createDocumentInputStream(entry.getName())
+			   );
+			   return createExtractor(pkg);
 			}
 		}
 		throw new IllegalArgumentException("No supported documents found in the OLE2 stream");
