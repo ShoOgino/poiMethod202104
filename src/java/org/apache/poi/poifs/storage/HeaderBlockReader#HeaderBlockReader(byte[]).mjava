@@ -1,0 +1,47 @@
+	private HeaderBlockReader(byte[] data) throws IOException {
+	   this._data = data;
+	   
+		// verify signature
+		long signature = LittleEndian.getLong(_data, _signature_offset);
+
+		if (signature != _signature) {
+			// Is it one of the usual suspects?
+			byte[] OOXML_FILE_HEADER = POIFSConstants.OOXML_FILE_HEADER;
+			if(_data[0] == OOXML_FILE_HEADER[0] &&
+				_data[1] == OOXML_FILE_HEADER[1] &&
+				_data[2] == OOXML_FILE_HEADER[2] &&
+				_data[3] == OOXML_FILE_HEADER[3]) {
+				throw new OfficeXmlFileException("The supplied data appears to be in the Office 2007+ XML. You are calling the part of POI that deals with OLE2 Office Documents. You need to call a different part of POI to process this data (eg XSSF instead of HSSF)");
+			}
+			if ((signature & 0xFF8FFFFFFFFFFFFFL) == 0x0010000200040009L) {
+				// BIFF2 raw stream starts with BOF (sid=0x0009, size=0x0004, data=0x00t0)
+				throw new IllegalArgumentException("The supplied data appears to be in BIFF2 format.  "
+						+ "POI only supports BIFF8 format");
+			}
+
+			// Give a generic error
+			throw new IOException("Invalid header signature; read "
+				                  + longToHex(signature) + ", expected "
+				                  + longToHex(_signature));
+		}
+
+
+		// Figure out our block size
+		switch (_data[30]) {
+			case 12:
+				bigBlockSize = POIFSConstants.LARGER_BIG_BLOCK_SIZE_DETAILS; break;
+			case  9:
+				bigBlockSize = POIFSConstants.SMALLER_BIG_BLOCK_SIZE_DETAILS; break;
+			default:
+				throw new IOException("Unsupported blocksize  (2^"
+						+ _data[30] + "). Expected 2^9 or 2^12.");
+		}
+
+		_bat_count      = getInt(_bat_count_offset, _data);
+		_property_start = getInt(_property_start_offset, _data);
+		_sbat_start     = getInt(_sbat_start_offset, _data);
+		_sbat_count     = getInt(_sbat_block_count_offset, _data);
+		_xbat_start     = getInt(_xbat_start_offset, _data);
+		_xbat_count     = getInt(_xbat_count_offset, _data);
+	}
+
