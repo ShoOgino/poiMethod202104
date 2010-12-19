@@ -7,17 +7,22 @@
        // Grab the block size
        bigBlockSize = _header.getBigBlockSize();
        
+       // Each block should only ever be used by one of the
+       //  FAT, XFAT or Property Table. Ensure it does
+       ChainLoopDetector loopDetector = new ChainLoopDetector();
+       
        // Read the FAT blocks
-       for(int fatAT : _header.getBATArray()) {
-          ByteBuffer fatData = getBlockAt(fatAT);
+       for(int fatAt : _header.getBATArray()) {
+          loopDetector.claim(fatAt);
+          ByteBuffer fatData = getBlockAt(fatAt);
           _blocks.add(BATBlock.createBATBlock(bigBlockSize, fatData));
        }
        
        // Now read the XFAT blocks
-// TODO Corrupt / Loop checking       
        BATBlock xfat; 
        int nextAt = _header.getXBATIndex();
        for(int i=0; i<_header.getXBATCount(); i++) {
+          loopDetector.claim(nextAt);
           ByteBuffer fatData = getBlockAt(nextAt);
           xfat = BATBlock.createBATBlock(bigBlockSize, fatData);
           nextAt = xfat.getValueAt(bigBlockSize.getNextXBATChainOffset());
@@ -28,6 +33,5 @@
        // We're now able to load steams
        // Use this to read in the properties
        // TODO
-// TODO With loop checking
     }
 
