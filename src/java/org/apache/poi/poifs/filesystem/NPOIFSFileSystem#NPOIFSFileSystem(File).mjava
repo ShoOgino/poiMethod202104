@@ -1,0 +1,28 @@
+    /**
+     * Creates a POIFSFileSystem from a <tt>File</tt>. This uses less memory than
+     *  creating from an <tt>InputStream</tt>
+     *  
+     * @param file the File from which to read the data
+     *
+     * @exception IOException on errors reading, or on invalid data
+     */
+    public NPOIFSFileSystem(File file)
+         throws IOException
+    {
+       this();
+       
+       // Open the underlying channel
+       FileChannel channel = (new RandomAccessFile(file, "r")).getChannel();
+       
+       // Get the header
+       ByteBuffer headerBuffer = ByteBuffer.allocate(POIFSConstants.SMALLER_BIG_BLOCK_SIZE);
+       IOUtils.readFully(channel, headerBuffer);
+       
+       // Have the header processed
+       _header = new HeaderBlock(headerBuffer);
+       
+       // Now process the various entries
+       _data = new FileBackedDataSource(channel);
+       readCoreContents();
+    }
+

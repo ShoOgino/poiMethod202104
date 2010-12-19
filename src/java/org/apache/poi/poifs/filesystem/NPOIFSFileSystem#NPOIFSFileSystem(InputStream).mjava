@@ -1,0 +1,71 @@
+    /**
+     * Create a POIFSFileSystem from an <tt>InputStream</tt>.  Normally the stream is read until
+     * EOF.  The stream is always closed.<p/>
+     *
+     * Some streams are usable after reaching EOF (typically those that return <code>true</code>
+     * for <tt>markSupported()</tt>).  In the unlikely case that the caller has such a stream
+     * <i>and</i> needs to use it after this constructor completes, a work around is to wrap the
+     * stream in order to trap the <tt>close()</tt> call.  A convenience method (
+     * <tt>createNonClosingInputStream()</tt>) has been provided for this purpose:
+     * <pre>
+     * InputStream wrappedStream = POIFSFileSystem.createNonClosingInputStream(is);
+     * HSSFWorkbook wb = new HSSFWorkbook(wrappedStream);
+     * is.reset();
+     * doSomethingElse(is);
+     * </pre>
+     * Note also the special case of <tt>ByteArrayInputStream</tt> for which the <tt>close()</tt>
+     * method does nothing.
+     * <pre>
+     * ByteArrayInputStream bais = ...
+     * HSSFWorkbook wb = new HSSFWorkbook(bais); // calls bais.close() !
+     * bais.reset(); // no problem
+     * doSomethingElse(bais);
+     * </pre>
+     *
+     * @param stream the InputStream from which to read the data
+     *
+     * @exception IOException on errors reading, or on invalid data
+     */
+
+    public NPOIFSFileSystem(InputStream stream)
+        throws IOException
+    {
+        this();
+        
+        ReadableByteChannel channel = null;
+        boolean success = false;
+        
+        try {
+           // Turn our InputStream into something NIO based
+           channel = Channels.newChannel(stream);
+           
+           // Get the header
+           ByteBuffer headerBuffer = ByteBuffer.allocate(POIFSConstants.SMALLER_BIG_BLOCK_SIZE);
+           IOUtils.readFully(channel, headerBuffer);
+           
+           // Have the header processed
+           _header = new HeaderBlock(headerBuffer);
+   
+           // We need to buffer the whole file into memory when
+           //  working with an InputStream. Do so now
+           int maxSize = _header.getBATCount() * 
+                 _header.getBigBlockSize().getBATEntriesPerBlock() *
+                 _header.getBigBlockSize().getBigBlockSize();
+           ByteBuffer data = ByteBuffer.allocate(maxSize);
+           data.put(headerBuffer);
+           IOUtils.readFully(channel, data);
+           success = true;
+           
+           // Turn it into a DataSource
+           _data = new ByteArrayBackedDataSource(data.array(), data.position());
+        } finally {
+           // As per the constructor contract, always close the stream
+           if(channel != null)
+              channel.close();
+           closeInputStream(stream, success);
+        }
+        
+        // Now process the various entries
+        readCoreContents();
+    }
+
