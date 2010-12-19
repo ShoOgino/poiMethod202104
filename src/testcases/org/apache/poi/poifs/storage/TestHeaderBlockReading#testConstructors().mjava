@@ -1,16 +1,8 @@
-	/**
-	 * Test creating a HeaderBlockWriter
-	 */
 	public void testConstructors() throws IOException {
-		HeaderBlockWriter block = new HeaderBlockWriter(POIFSConstants.SMALLER_BIG_BLOCK_SIZE_DETAILS);
-		ByteArrayOutputStream output = new ByteArrayOutputStream(512);
-
-		block.writeBlocks(output);
-		byte[] copy = output.toByteArray();
-		String[] expected = {
+		String[] hexData = {
 			"D0 CF 11 E0 A1 B1 1A E1 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 3B 00 03 00 FE FF 09 00",
 			"06 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 FE FF FF FF 00 00 00 00 00 10 00 00 FE FF FF FF",
-			"00 00 00 00 FE FF FF FF 00 00 00 00 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF",
+			"01 00 00 00 FE FF FF FF 00 00 00 00 FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF",
 			"FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF",
 			"FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF",
 			"FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF",
@@ -25,15 +17,36 @@
 			"FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF",
 			"FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF",
 		};
+		byte[] content = RawDataUtil.decode(hexData);
+		HeaderBlock block = new HeaderBlock(new ByteArrayInputStream(content));
 
-		confirmEqual(expected, copy);
+		assertEquals(-2, block.getPropertyStart());
 
-		// verify we can read a 'good' HeaderBlockWriter (also test
-		// getPropertyStart)
-		block.setPropertyStart(0x87654321);
-		output = new ByteArrayOutputStream(512);
-		block.writeBlocks(output);
-		assertEquals(0x87654321, new HeaderBlockReader(new ByteArrayInputStream(output
-				.toByteArray())).getPropertyStart());
+		// verify we can't read a short block
+		byte[] shortblock = new byte[511];
+
+		System.arraycopy(content, 0, shortblock, 0, 511);
+		try {
+			block = new HeaderBlock(new ByteArrayInputStream(shortblock));
+			fail("Should have caught IOException reading a short block");
+		} catch (IOException ignored) {
+
+			// as expected
+		}
+
+		// try various forms of corruption
+		for (int index = 0; index < 8; index++) {
+			content[index] = (byte) (content[index] - 1);
+			try {
+				block = new HeaderBlock(new ByteArrayInputStream(content));
+				fail("Should have caught IOException corrupting byte " + index);
+			} catch (IOException ignored) {
+
+				// as expected
+			}
+
+			// restore byte value
+			content[index] = (byte) (content[index] + 1);
+		}
 	}
 

@@ -1,4 +1,4 @@
-	private HeaderBlockReader(byte[] data) throws IOException {
+	private HeaderBlock(byte[] data) throws IOException {
 	   this._data = data;
 	   
 		// verify signature
@@ -27,21 +27,27 @@
 
 
 		// Figure out our block size
-		switch (_data[30]) {
-			case 12:
-				bigBlockSize = POIFSConstants.LARGER_BIG_BLOCK_SIZE_DETAILS; break;
-			case  9:
-				bigBlockSize = POIFSConstants.SMALLER_BIG_BLOCK_SIZE_DETAILS; break;
-			default:
-				throw new IOException("Unsupported blocksize  (2^"
-						+ _data[30] + "). Expected 2^9 or 2^12.");
+		if (_data[30] == 12) {
+			this.bigBlockSize = POIFSConstants.LARGER_BIG_BLOCK_SIZE_DETAILS;
+		} else if(_data[30] == 9) {
+			this.bigBlockSize = POIFSConstants.SMALLER_BIG_BLOCK_SIZE_DETAILS;
+		} else {
+		   throw new IOException("Unsupported blocksize  (2^"+ _data[30] + "). Expected 2^9 or 2^12.");
 		}
 
-		_bat_count      = getInt(_bat_count_offset, _data);
-		_property_start = getInt(_property_start_offset, _data);
-		_sbat_start     = getInt(_sbat_start_offset, _data);
-		_sbat_count     = getInt(_sbat_block_count_offset, _data);
-		_xbat_start     = getInt(_xbat_start_offset, _data);
-		_xbat_count     = getInt(_xbat_count_offset, _data);
+	   // Setup the fields to read and write the counts and starts
+      _bat_count      = new IntegerField(_bat_count_offset, data).get();
+      _property_start = new IntegerField(_property_start_offset,_data).get();
+      _sbat_start = new IntegerField(_sbat_start_offset, _data).get();
+      _sbat_count = new IntegerField(_sbat_block_count_offset, _data).get();
+      _xbat_start = new IntegerField(_xbat_start_offset, _data).get();
+      _xbat_count = new IntegerField(_xbat_count_offset, _data).get();
+      
+      // Sanity check values
+      if(_bat_count > _max_bats_in_header) {
+         _logger.log(POILogger.WARN, "Too many BAT blocks listed in header, found " 
+                     + _bat_count + " but the maximum is " + _max_bats_in_header);
+         _bat_count = _max_bats_in_header;
+      }
 	}
 
