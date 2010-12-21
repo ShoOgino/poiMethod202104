@@ -11,13 +11,14 @@
     * 5) Loop until we've done all 8 bits, then read in the next
     *     flag byte
     */
-   public void decode(InputStream src, OutputStream res) throws IOException {
+   public void decompress(InputStream src, OutputStream res) throws IOException {
       // We use 12 bit codes:
       // * 0-255 are real bytes
       // * 256-4095 are the substring codes
       // Java handily initialises our buffer / dictionary
       //  to all zeros
       byte[] buffer = new byte[4096];
+      populateDictionary(buffer);
 
       // How far through the output we've got
       // (This is normally used &4095, so it nicely wraps)
@@ -48,7 +49,8 @@
          for(mask = 1; mask < 256 ; mask <<= 1) {
             // Is this a new code (un-compressed), or
             //  the use of existing codes (compressed)?
-            if( (flag & mask) > 0 ) {
+            boolean isMaskSet = (flag & mask) > 0;
+            if( isMaskSet && !maskMeansCompressed ) {
                // Retrieve the un-compressed code
                if( (dataI = src.read()) != -1) {
                   // Save the byte into the dictionary
@@ -71,13 +73,8 @@
                len = (dataIPt2 & 15) + 3;
                pntr = (dataIPt2 & 240)*16 + dataIPt1;
 
-               // If the pointer happens to be passed the end
-               //  of our buffer, then wrap around
-               if(pntr > 4078) {
-                  pntr = pntr - 4078;
-               } else {
-                  pntr = pntr + 18;
-               }
+               // Adjust the pointer as needed
+               pntr = adjustDictionaryOffset(pntr);
 
                // Loop over the codes, outputting what they correspond to
                for(int i=0; i<len; i++) {
