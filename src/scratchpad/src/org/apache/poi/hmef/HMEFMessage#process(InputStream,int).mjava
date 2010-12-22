@@ -1,0 +1,29 @@
+   private void process(InputStream inp, int lastLevel) throws IOException {
+      // Fetch the level
+      int level = inp.read();
+      if(level == Attribute.LEVEL_END_OF_FILE) {
+         return;
+      }
+    
+      // Build the attribute
+      Attribute attr = new Attribute(inp);
+      
+      // Decide what to attach it to, based on the levels and IDs
+      if(level == Attribute.LEVEL_MESSAGE) {
+         messageAttributes.add(attr);
+      } else if(level == Attribute.LEVEL_ATTACHMENT) {
+         // Previous attachment or a new one?
+         if(attachments.size() == 0 || attr.getId() == Attribute.ID_ATTACHRENDERDATA) {
+            attachments.add(new Attachment());
+         }
+         
+         // Save the attribute for it
+         attachments.get(attachments.size()-1).addAttribute(attr);
+      } else {
+         throw new IllegalStateException("Unhandled level " + level);
+      }
+      
+      // Handle the next one down
+      process(inp, level);
+   }
+
