@@ -1,0 +1,42 @@
+   /**
+    * Updates the contents of the stream to the new
+    *  set of bytes.
+    * Note - if this is property based, you'll still
+    *  need to 
+    */
+   public void updateContents(byte[] contents) throws IOException {
+      // How many blocks are we going to need?
+      int blocks = (int)Math.ceil(contents.length / filesystem.getBigBlockSize());
+      
+      // Start writing
+      int prevBlock = POIFSConstants.END_OF_CHAIN;
+      int nextBlock = startBlock;
+      for(int i=0; i<blocks; i++) {
+         int thisBlock = nextBlock;
+         
+         // Allocate a block if needed, otherwise figure
+         //  out what the next block will be
+         if(thisBlock == POIFSConstants.END_OF_CHAIN) {
+            thisBlock = filesystem.getFreeBlock();
+            nextBlock = POIFSConstants.END_OF_CHAIN;
+            
+            // Mark the previous block as carrying on
+            if(prevBlock != POIFSConstants.END_OF_CHAIN) {
+               filesystem.setNextBlock(prevBlock, thisBlock);
+            }
+         } else {
+            nextBlock = filesystem.getNextBlock(thisBlock);
+         }
+         
+         // Write it
+         ByteBuffer buffer = filesystem.getBlockAt(thisBlock);
+         buffer.put(contents, i*filesystem.getBigBlockSize(), filesystem.getBigBlockSize());
+         
+         // Update pointers
+         prevBlock = thisBlock;
+      }
+      
+      // Mark the end of the stream
+      filesystem.setNextBlock(nextBlock, POIFSConstants.END_OF_CHAIN);
+   }
+
