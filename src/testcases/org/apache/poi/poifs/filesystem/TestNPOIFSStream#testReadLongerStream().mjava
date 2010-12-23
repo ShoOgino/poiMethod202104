@@ -1,0 +1,54 @@
+   /**
+    * Read a stream with many blocks 
+    */
+   public void testReadLongerStream() throws Exception {
+      NPOIFSFileSystem fs = new NPOIFSFileSystem(_inst.getFile("BlockSize512.zvi"));
+      
+      ByteBuffer b0 = null;
+      ByteBuffer b1 = null;
+      ByteBuffer b22 = null;
+      
+      // The stream at 0 has 23 blocks in it
+      NPOIFSStream stream = new NPOIFSStream(fs, 0);
+      Iterator<ByteBuffer> i = stream.getBlockIterator();
+      int count = 0;
+      while(i.hasNext()) {
+         ByteBuffer b = i.next();
+         if(count == 0) {
+            b0 = b;
+         }
+         if(count == 1) {
+            b1 = b;
+         }
+         if(count == 22) {
+            b22 = b;
+         }
+         
+         count++;
+      }
+      assertEquals(23, count);
+      
+      // Check the contents
+      //  1st block is at 0
+      assertEquals((byte)0x9e, b0.get());
+      assertEquals((byte)0x75, b0.get());
+      assertEquals((byte)0x97, b0.get());
+      assertEquals((byte)0xf6, b0.get());
+            
+      //  2nd block is at 1
+      assertEquals((byte)0x86, b1.get());
+      assertEquals((byte)0x09, b1.get());
+      assertEquals((byte)0x22, b1.get());
+      assertEquals((byte)0xfb, b1.get());
+      
+      //  last block is at 89
+      assertEquals((byte)0xfe, b22.get());
+      assertEquals((byte)0xff, b22.get());
+      assertEquals((byte)0x00, b22.get());
+      assertEquals((byte)0x00, b22.get());
+      assertEquals((byte)0x05, b22.get());
+      assertEquals((byte)0x01, b22.get());
+      assertEquals((byte)0x02, b22.get());
+      assertEquals((byte)0x00, b22.get());
+   }
+

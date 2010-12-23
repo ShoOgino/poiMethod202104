@@ -8,11 +8,16 @@
       // How many blocks are we going to need?
       int blocks = (int)Math.ceil(contents.length / filesystem.getBigBlockSize());
       
+      // Make sure we don't encounter a loop whilst overwriting
+      //  the existing blocks
+      ChainLoopDetector loopDetector = filesystem.new ChainLoopDetector();
+      
       // Start writing
       int prevBlock = POIFSConstants.END_OF_CHAIN;
       int nextBlock = startBlock;
       for(int i=0; i<blocks; i++) {
          int thisBlock = nextBlock;
+         loopDetector.claim(thisBlock);
          
          // Allocate a block if needed, otherwise figure
          //  out what the next block will be
@@ -35,6 +40,9 @@
          // Update pointers
          prevBlock = thisBlock;
       }
+      
+      // If we're overwriting, free any remaining blocks
+      // TODO
       
       // Mark the end of the stream
       filesystem.setNextBlock(nextBlock, POIFSConstants.END_OF_CHAIN);
