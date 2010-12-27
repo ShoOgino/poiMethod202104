@@ -3,8 +3,37 @@
     *  to be freed
     */
    public void testReplaceStreamWithLess() throws Exception {
-      NPOIFSFileSystem fs = new NPOIFSFileSystem(_inst.getFile("BlockSize512.zvi"));
+      NPOIFSFileSystem fs = new NPOIFSFileSystem(_inst.openResourceAsStream("BlockSize512.zvi"));
       
-      // TODO
+      byte[] data = new byte[512];
+      for(int i=0; i<data.length; i++) {
+         data[i] = (byte)(i%256);
+      }
+      
+      // 97 -> 98 -> end
+      assertEquals(98, fs.getNextBlock(97));
+      assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(98));
+      
+      // Create a 2 block stream, will become a 1 block one
+      NPOIFSStream stream = new NPOIFSStream(fs, 97);
+      stream.updateContents(data);
+      
+      // 97 should now be the end, and 98 free
+      assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(97));
+      assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(98));
+      
+      // Check the reading of blocks
+      Iterator<ByteBuffer> it = stream.getBlockIterator();
+      assertEquals(true, it.hasNext());
+      ByteBuffer b = it.next();
+      assertEquals(false, it.hasNext());
+      
+      // Now check the contents
+      data = new byte[512];
+      b.get(data);
+      for(int i=0; i<data.length; i++) {
+         byte exp = (byte)(i%256);
+         assertEquals(exp, data[i]);
+      }
    }
 

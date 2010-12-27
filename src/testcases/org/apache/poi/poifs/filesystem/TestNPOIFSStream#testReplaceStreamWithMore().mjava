@@ -2,8 +2,43 @@
     * Writes more data than before, new blocks will be needed
     */
    public void testReplaceStreamWithMore() throws Exception {
-      NPOIFSFileSystem fs = new NPOIFSFileSystem(_inst.getFile("BlockSize512.zvi"));
+      NPOIFSFileSystem fs = new NPOIFSFileSystem(_inst.openResourceAsStream("BlockSize512.zvi"));
       
-      // TODO
+      byte[] data = new byte[512*3];
+      for(int i=0; i<data.length; i++) {
+         data[i] = (byte)(i%256);
+      }
+      
+      // 97 -> 98 -> end
+      assertEquals(98, fs.getNextBlock(97));
+      assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(98));
+      
+      // 100 is our first free one
+      assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(99));
+      assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(100));
+      
+      // Create a 2 block stream, will become a 3 block one
+      NPOIFSStream stream = new NPOIFSStream(fs, 97);
+      stream.updateContents(data);
+      
+      // 97 -> 98 -> 100 -> end
+      assertEquals(98, fs.getNextBlock(97));
+      assertEquals(100, fs.getNextBlock(98));
+      assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(100));
+      
+      // Check the reading of blocks
+      Iterator<ByteBuffer> it = stream.getBlockIterator();
+      int count = 0;
+      while(it.hasNext()) {
+         ByteBuffer b = it.next();
+         data = new byte[512];
+         b.get(data);
+         for(int i=0; i<data.length; i++) {
+            byte exp = (byte)(i%256);
+            assertEquals(exp, data[i]);
+         }
+         count++;
+      }
+      assertEquals(3, count);
    }
 

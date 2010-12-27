@@ -2,6 +2,32 @@
     * Craft a nasty file with a loop, and ensure we don't get stuck
     */
    public void testWriteFailsOnLoop() throws Exception {
-      // TODO
+      NPOIFSFileSystem fs = new NPOIFSFileSystem(_inst.getFile("BlockSize512.zvi"));
+      
+      // Hack the FAT so that it goes 0->1->2->0
+      fs.setNextBlock(0, 1);
+      fs.setNextBlock(1, 2);
+      fs.setNextBlock(2, 0);
+      
+      // Try to write a large amount, should fail on the write
+      byte[] data = new byte[512*4];
+      NPOIFSStream stream = new NPOIFSStream(fs, 0);
+      try {
+         stream.updateContents(data);
+         fail("Loop should have been detected but wasn't!");
+      } catch(IllegalStateException e) {}
+      
+      // Now reset, and try on a small bit
+      // Should fail during the freeing set
+      fs.setNextBlock(0, 1);
+      fs.setNextBlock(1, 2);
+      fs.setNextBlock(2, 0);
+      
+      data = new byte[512];
+      stream = new NPOIFSStream(fs, 0);
+      try {
+         stream.updateContents(data);
+         fail("Loop should have been detected but wasn't!");
+      } catch(IllegalStateException e) {}
    }
 
