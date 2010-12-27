@@ -1,0 +1,29 @@
+   /**
+    * Ask for free blocks where there are some already
+    *  to be had from the SFAT
+    */
+   public void testGetFreeBlockWithSpare() throws Exception {
+      NPOIFSFileSystem fs = new NPOIFSFileSystem(_inst.getFile("BlockSize512.zvi"));
+      NPOIFSMiniStore ministore = fs.getMiniStore();
+      
+      // Our 2nd SBAT block has spares
+      assertEquals(false, ministore.getBATBlockAndIndex(0).getBlock().hasFreeSectors());
+      assertEquals(true,  ministore.getBATBlockAndIndex(128).getBlock().hasFreeSectors());
+      
+      // First free one at 181
+      assertEquals(POIFSConstants.UNUSED_BLOCK, ministore.getNextBlock(181));
+      assertEquals(POIFSConstants.UNUSED_BLOCK, ministore.getNextBlock(182));
+      assertEquals(POIFSConstants.UNUSED_BLOCK, ministore.getNextBlock(183));
+      assertEquals(POIFSConstants.UNUSED_BLOCK, ministore.getNextBlock(184));
+      
+      // Ask, will get 181
+      assertEquals(181, ministore.getFreeBlock());
+      
+      // Ask again, will still get 181 as not written to
+      assertEquals(181, ministore.getFreeBlock());
+      
+      // Allocate it, then ask again
+      ministore.setNextBlock(181, POIFSConstants.END_OF_CHAIN);
+      assertEquals(182, ministore.getFreeBlock());
+   }
+

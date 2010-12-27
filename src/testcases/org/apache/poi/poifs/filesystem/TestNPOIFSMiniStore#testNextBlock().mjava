@@ -1,0 +1,74 @@
+   /**
+    * Check that for a given mini block, we can correctly figure
+    *  out what the next one is
+    */
+   public void testNextBlock() throws Exception {
+      // It's the same on 512 byte and 4096 byte block files!
+      NPOIFSFileSystem fsA = new NPOIFSFileSystem(_inst.getFile("BlockSize512.zvi"));
+      NPOIFSFileSystem fsB = new NPOIFSFileSystem(_inst.openResourceAsStream("BlockSize512.zvi"));
+      NPOIFSFileSystem fsC = new NPOIFSFileSystem(_inst.getFile("BlockSize4096.zvi"));
+      NPOIFSFileSystem fsD = new NPOIFSFileSystem(_inst.openResourceAsStream("BlockSize4096.zvi"));
+      for(NPOIFSFileSystem fs : new NPOIFSFileSystem[] {fsA,fsB,fsC,fsD}) {
+         NPOIFSMiniStore ministore = fs.getMiniStore();
+         
+         // 0 -> 51 is one stream
+         for(int i=0; i<50; i++) {
+            assertEquals(i+1, ministore.getNextBlock(i));
+         }
+         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(50));
+         
+         // 51 -> 103 is the next
+         for(int i=51; i<103; i++) {
+            assertEquals(i+1, ministore.getNextBlock(i));
+         }
+         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(103));
+         
+         // Then there are 3 one block ones
+         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(104));
+         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(105));
+         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(106));
+         
+         // 107 -> 154 is the next
+         for(int i=107; i<154; i++) {
+            assertEquals(i+1, ministore.getNextBlock(i));
+         }
+         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(154));
+
+         // 155 -> 160 is the next
+         for(int i=155; i<160; i++) {
+            assertEquals(i+1, ministore.getNextBlock(i));
+         }
+         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(160));
+         
+         // 161 -> 166 is the next
+         for(int i=161; i<166; i++) {
+            assertEquals(i+1, ministore.getNextBlock(i));
+         }
+         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(166));
+         
+         // 167 -> 172 is the next
+         for(int i=167; i<172; i++) {
+            assertEquals(i+1, ministore.getNextBlock(i));
+         }
+         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(172));
+         
+         // Now some short ones
+         assertEquals(174                        , ministore.getNextBlock(173));
+         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(174));
+         
+         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(175));
+         
+         assertEquals(177                        , ministore.getNextBlock(176));
+         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(177));
+         
+         assertEquals(179                        , ministore.getNextBlock(178));
+         assertEquals(180                        , ministore.getNextBlock(179));
+         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(180));
+         
+         // 181 onwards is free
+         for(int i=181; i<fs.getBigBlockSizeDetails().getBATEntriesPerBlock(); i++) {
+            assertEquals(POIFSConstants.UNUSED_BLOCK, ministore.getNextBlock(i));
+         }
+      }
+   }
+

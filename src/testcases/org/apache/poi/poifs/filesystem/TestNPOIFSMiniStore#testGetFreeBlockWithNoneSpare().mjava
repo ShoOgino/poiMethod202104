@@ -1,0 +1,42 @@
+   /**
+    * Ask for free blocks where no free ones exist, and so the
+    *  stream needs to be extended and another SBAT added
+    */
+   public void testGetFreeBlockWithNoneSpare() throws Exception {
+      NPOIFSFileSystem fs = new NPOIFSFileSystem(_inst.openResourceAsStream("BlockSize512.zvi"));
+      NPOIFSMiniStore ministore = fs.getMiniStore();
+      
+      // We've spare ones from 181 to 255
+      for(int i=181; i<256; i++) {
+         assertEquals(POIFSConstants.UNUSED_BLOCK, ministore.getNextBlock(i));
+      }
+      
+      // Check our SBAT free stuff is correct
+      assertEquals(false, ministore.getBATBlockAndIndex(0).getBlock().hasFreeSectors());
+      assertEquals(true,  ministore.getBATBlockAndIndex(128).getBlock().hasFreeSectors());
+      
+      // Allocate all the spare ones
+      for(int i=181; i<256; i++) {
+         ministore.setNextBlock(i, POIFSConstants.END_OF_CHAIN);
+      }
+      
+      // SBAT are now full, but there's only the two
+      assertEquals(false, ministore.getBATBlockAndIndex(0).getBlock().hasFreeSectors());
+      assertEquals(false, ministore.getBATBlockAndIndex(128).getBlock().hasFreeSectors());
+      try {
+         assertEquals(false, ministore.getBATBlockAndIndex(256).getBlock().hasFreeSectors());
+         fail("Should only be two SBATs");
+      } catch(IndexOutOfBoundsException e) {}
+      
+      // Now ask for a free one, will need to extend the SBAT chain
+      assertEquals(256, ministore.getFreeBlock());
+      
+      assertEquals(false, ministore.getBATBlockAndIndex(0).getBlock().hasFreeSectors());
+      assertEquals(false, ministore.getBATBlockAndIndex(128).getBlock().hasFreeSectors());
+      assertEquals(true, ministore.getBATBlockAndIndex(256).getBlock().hasFreeSectors());
+      assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(254)); // 2nd SBAT 
+      assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(255)); // 2nd SBAT
+      assertEquals(POIFSConstants.UNUSED_BLOCK, ministore.getNextBlock(256)); // 3rd SBAT
+      assertEquals(POIFSConstants.UNUSED_BLOCK, ministore.getNextBlock(257)); // 3rd SBAT
+   }
+
