@@ -1,0 +1,71 @@
+    /**
+     * Finds a free block, and returns its offset.
+     * This method will extend the file if needed, and if doing
+     *  so, allocate new FAT blocks to address the extra space.
+     */
+    protected int getFreeBlock() throws IOException {
+       int sectorsPerSBAT = _filesystem.getBigBlockSizeDetails().getBATEntriesPerBlock();
+       
+       // First up, do we have any spare ones?
+       int offset = 0;
+       for(int i=0; i<_sbat_blocks.size(); i++) {
+          // Check this one
+          BATBlock sbat = _sbat_blocks.get(i);
+          if(sbat.hasFreeSectors()) {
+             // Claim one of them and return it
+             for(int j=0; j<sectorsPerSBAT; j++) {
+                int sbatValue = sbat.getValueAt(j);
+                if(sbatValue == POIFSConstants.UNUSED_BLOCK) {
+                   // Bingo
+                   return offset + j;
+                }
+             }
+          }
+          
+          // Move onto the next SBAT
+          offset += sectorsPerSBAT;
+       }
+       
+       // If we get here, then there aren't any
+       //  free sectors in any of the SBATs
+       // So, we need to extend the chain and add another
+       
+       // Create a new BATBlock
+       BATBlock newSBAT = BATBlock.createEmptyBATBlock(_filesystem.getBigBlockSizeDetails(), false);
+       int batForSBAT = _filesystem.getFreeBlock();
+       newSBAT.setOurBlockIndex(batForSBAT);
+       
+       // Are we the first SBAT?
+       if(_header.getSBATCount() == 0) {
+          _header.setSBATStart(batForSBAT);
+          _header.setSBATBlockCount(1);
+       } else {
+          // Find the end of the SBAT stream, and add the sbat in there
+          ChainLoopDetector loopDetector = _filesystem.getChainLoopDetector();
+          int batOffset = _header.getSBATStart();
+          while(true) {
+             loopDetector.claim(batOffset);
+             int nextBat = _filesystem.getNextBlock(batOffset);
+             if(nextBat == POIFSConstants.END_OF_CHAIN) {
+                break;
+             }
+             batOffset = nextBat;
+          }
+          
+          // Add it in at the end
+          _filesystem.setNextBlock(batOffset, batForSBAT);
+          
+          // And update the count
+          _header.setSBATBlockCount(
+                _header.getSBATCount() + 1
+          );
+       }
+       
+       // Finish allocating
+       _filesystem.setNextBlock(batForSBAT, POIFSConstants.END_OF_CHAIN);
+       _sbat_blocks.add(newSBAT);
+       
+       // Return our first spot
+       return offset;
+    }
+

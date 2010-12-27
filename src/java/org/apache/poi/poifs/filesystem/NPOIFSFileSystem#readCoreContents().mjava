@@ -9,7 +9,7 @@
        
        // Each block should only ever be used by one of the
        //  FAT, XFAT or Property Table. Ensure it does
-       ChainLoopDetector loopDetector = new ChainLoopDetector();
+       ChainLoopDetector loopDetector = getChainLoopDetector();
        
        // Read the FAT blocks
        for(int fatAt : _header.getBATArray()) {
@@ -36,5 +36,19 @@
        // We're now able to load steams
        // Use this to read in the properties
        _property_table = new NPropertyTable(_header, this);
+       
+       // Finally read the Small Stream FAT (SBAT) blocks
+       BATBlock sfat;
+       List<BATBlock> sbats = new ArrayList<BATBlock>();
+       _mini_store     = new NPOIFSMiniStore(this, _property_table.getRoot(), sbats, _header);
+       nextAt = _header.getSBATStart();
+       for(int i=0; i<_header.getSBATCount(); i++) {
+          loopDetector.claim(nextAt);
+          ByteBuffer fatData = getBlockAt(nextAt);
+          sfat = BATBlock.createBATBlock(bigBlockSize, fatData);
+          sfat.setOurBlockIndex(nextAt);
+          sbats.add(sfat);
+          nextAt = getNextBlock(nextAt);  
+       }
     }
 

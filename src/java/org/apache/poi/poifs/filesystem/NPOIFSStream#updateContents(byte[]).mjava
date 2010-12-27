@@ -6,50 +6,55 @@
     */
    public void updateContents(byte[] contents) throws IOException {
       // How many blocks are we going to need?
-      int blocks = (int)Math.ceil(contents.length / filesystem.getBigBlockSize());
+      int blockSize = blockStore.getBlockStoreBlockSize();
+      int blocks = (int)Math.ceil(contents.length / blockSize);
       
       // Make sure we don't encounter a loop whilst overwriting
       //  the existing blocks
-      ChainLoopDetector loopDetector = filesystem.new ChainLoopDetector();
+      ChainLoopDetector loopDetector = blockStore.getChainLoopDetector();
       
       // Start writing
       int prevBlock = POIFSConstants.END_OF_CHAIN;
       int nextBlock = startBlock;
       for(int i=0; i<blocks; i++) {
          int thisBlock = nextBlock;
-         loopDetector.claim(thisBlock);
          
          // Allocate a block if needed, otherwise figure
          //  out what the next block will be
          if(thisBlock == POIFSConstants.END_OF_CHAIN) {
-            thisBlock = filesystem.getFreeBlock();
+            thisBlock = blockStore.getFreeBlock();
+            loopDetector.claim(thisBlock);
+            
+            // We're on the end of the chain
             nextBlock = POIFSConstants.END_OF_CHAIN;
             
-            // Mark the previous block as carrying on
+            // Mark the previous block as carrying on to us if needed
             if(prevBlock != POIFSConstants.END_OF_CHAIN) {
-               filesystem.setNextBlock(prevBlock, thisBlock);
+               blockStore.setNextBlock(prevBlock, thisBlock);
             }
          } else {
-            nextBlock = filesystem.getNextBlock(thisBlock);
+            loopDetector.claim(thisBlock);
+            nextBlock = blockStore.getNextBlock(thisBlock);
          }
          
          // Write it
-         ByteBuffer buffer = filesystem.getBlockAt(thisBlock);
-         buffer.put(contents, i*filesystem.getBigBlockSize(), filesystem.getBigBlockSize());
+         ByteBuffer buffer = blockStore.createBlockIfNeeded(thisBlock);
+         buffer.put(contents, i*blockSize, blockSize);
          
          // Update pointers
          prevBlock = thisBlock;
       }
+      int lastBlock = prevBlock;
       
       // If we're overwriting, free any remaining blocks
       while(nextBlock != POIFSConstants.END_OF_CHAIN) {
          int thisBlock = nextBlock;
          loopDetector.claim(thisBlock);
-         nextBlock = filesystem.getNextBlock(thisBlock);
-         filesystem.setNextBlock(thisBlock, POIFSConstants.UNUSED_BLOCK);
+         nextBlock = blockStore.getNextBlock(thisBlock);
+         blockStore.setNextBlock(thisBlock, POIFSConstants.UNUSED_BLOCK);
       }
       
       // Mark the end of the stream
-      filesystem.setNextBlock(nextBlock, POIFSConstants.END_OF_CHAIN);
+      blockStore.setNextBlock(lastBlock, POIFSConstants.END_OF_CHAIN);
    }
 
