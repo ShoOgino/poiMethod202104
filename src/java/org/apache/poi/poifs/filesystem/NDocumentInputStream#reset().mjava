@@ -1,0 +1,39 @@
+	/**
+	 * Repositions this stream to the position at the time the mark() method was
+	 * last called on this input stream. If mark() has not been called this
+	 * method repositions the stream to its beginning.
+	 */
+	public void reset() {
+	   // Special case for reset to the start
+	   if(_marked_offset == 0 && _marked_offset_count == 0) {
+	      _current_block_count = _marked_offset_count;
+	      _current_offset = _marked_offset;
+	      _data = _document.getBlockIterator();
+	      _buffer = null;
+	      return;
+	   }
+	   
+		// Start again, then wind on to the required block
+		_data = _document.getBlockIterator();
+		_current_offset = 0;
+		for(int i=0; i<_marked_offset_count; i++) {
+		   _buffer = _data.next();
+		   _current_offset += _buffer.remaining();
+		}
+		
+      _current_block_count = _marked_offset_count;
+      
+      // Do we need to position within it?
+      if(_current_offset != _marked_offset) {
+   		// Grab the right block
+         _buffer = _data.next();
+         _current_block_count++;
+         
+   		// Skip to the right place in it
+   		_buffer.position(_marked_offset - _current_offset);
+      }
+
+      // All done
+      _current_offset = _marked_offset;
+	}
+
