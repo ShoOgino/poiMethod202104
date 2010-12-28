@@ -4,8 +4,37 @@
     *  to support this
     */
    public void testWriteNewStreamExtraFATs() throws Exception {
-      NPOIFSFileSystem fs = new NPOIFSFileSystem(_inst.getFile("BlockSize512.zvi"));
+      NPOIFSFileSystem fs = new NPOIFSFileSystem(_inst.openResourceAsStream("BlockSize512.zvi"));
       
-      // TODO
+      // Allocate almost all the blocks
+      assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(99));
+      assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(100));
+      assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(127));
+      for(int i=100; i<127; i++) {
+         fs.setNextBlock(i, POIFSConstants.END_OF_CHAIN);
+      }
+      assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(127));
+      assertEquals(true, fs.getBATBlockAndIndex(0).getBlock().hasFreeSectors());
+
+      
+      // Write a 3 block stream
+      byte[] data = new byte[512*3];
+      for(int i=0; i<data.length; i++) {
+         data[i] = (byte)(i%256);
+      }
+      NPOIFSStream stream = new NPOIFSStream(fs);
+      stream.updateContents(data);
+      
+      // Check we got another BAT
+      assertEquals(false, fs.getBATBlockAndIndex(0).getBlock().hasFreeSectors());
+      assertEquals(true,  fs.getBATBlockAndIndex(128).getBlock().hasFreeSectors());
+      
+      // the BAT will be in the first spot of the new block
+      assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(126));
+      assertEquals(129,                         fs.getNextBlock(127));
+      assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(128));
+      assertEquals(130,                         fs.getNextBlock(129));
+      assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(130));
+      assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(131));
    }
 
