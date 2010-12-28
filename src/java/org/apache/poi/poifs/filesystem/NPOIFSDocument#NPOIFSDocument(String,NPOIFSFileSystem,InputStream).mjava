@@ -1,0 +1,41 @@
+   /**
+    * Constructor for a new Document
+    *
+    * @param name the name of the POIFSDocument
+    * @param stream the InputStream we read data from
+    */
+   public NPOIFSDocument(String name, NPOIFSFileSystem filesystem, InputStream stream) 
+      throws IOException 
+   {
+      this._filesystem = filesystem;
+
+      // Buffer the contents into memory. This is a bit icky...
+      // TODO Replace with a buffer up to the mini stream size, then streaming write
+      byte[] contents;
+      if(stream instanceof ByteArrayInputStream) {
+         ByteArrayInputStream bais = (ByteArrayInputStream)stream;
+         contents = new byte[bais.available()];
+         bais.read(contents);
+      } else {
+         ByteArrayOutputStream baos = new ByteArrayOutputStream();
+         IOUtils.copy(stream, baos);
+         contents = baos.toByteArray();
+      }
+
+      // Do we need to store as a mini stream or a full one?
+      if(contents.length <= POIFSConstants.BIG_BLOCK_MINIMUM_DOCUMENT_SIZE) {
+         _stream = new NPOIFSStream(filesystem.getMiniStore());
+         _block_size = _filesystem.getMiniStore().getBlockStoreBlockSize();
+      } else {
+         _stream = new NPOIFSStream(filesystem);
+         _block_size = _filesystem.getBlockStoreBlockSize();
+      }
+
+      // Store it
+      _stream.updateContents(contents);
+
+      // And build the property for it
+      this._property = new DocumentProperty(name, contents.length);
+      _property.setStartBlock(_stream.getStartBlock());     
+   }
+
