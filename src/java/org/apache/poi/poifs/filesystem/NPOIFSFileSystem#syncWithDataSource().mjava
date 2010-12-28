@@ -1,0 +1,25 @@
+    /**
+     * Has our in-memory objects write their state
+     *  to their backing blocks 
+     */
+    private void syncWithDataSource() throws IOException
+    {
+       // HeaderBlock
+       HeaderBlockWriter hbw = new HeaderBlockWriter(_header);
+       hbw.writeBlock( getBlockAt(0) );
+       
+       // BATs
+       for(BATBlock bat : _bat_blocks) {
+          ByteBuffer block = getBlockAt(bat.getOurBlockIndex());
+          BlockAllocationTableWriter.writeBlock(bat, block);
+       }
+       
+       // SBATs
+       _mini_store.syncWithDataSource();
+       
+       // Properties
+       _property_table.write(
+             new NPOIFSStream(this, _header.getPropertyStart())
+       );
+    }
+
