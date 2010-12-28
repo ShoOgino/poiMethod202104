@@ -32,6 +32,13 @@
             if(prevBlock != POIFSConstants.END_OF_CHAIN) {
                blockStore.setNextBlock(prevBlock, thisBlock);
             }
+            blockStore.setNextBlock(thisBlock, POIFSConstants.END_OF_CHAIN);
+            
+            // If we've just written the first block on a 
+            //  new stream, save the start block offset
+            if(this.startBlock == POIFSConstants.END_OF_CHAIN) {
+               this.startBlock = thisBlock;
+            }
          } else {
             loopDetector.claim(thisBlock);
             nextBlock = blockStore.getNextBlock(thisBlock);
@@ -47,12 +54,8 @@
       int lastBlock = prevBlock;
       
       // If we're overwriting, free any remaining blocks
-      while(nextBlock != POIFSConstants.END_OF_CHAIN) {
-         int thisBlock = nextBlock;
-         loopDetector.claim(thisBlock);
-         nextBlock = blockStore.getNextBlock(thisBlock);
-         blockStore.setNextBlock(thisBlock, POIFSConstants.UNUSED_BLOCK);
-      }
+      NPOIFSStream toFree = new NPOIFSStream(blockStore, nextBlock);
+      toFree.free(loopDetector);
       
       // Mark the end of the stream
       blockStore.setNextBlock(lastBlock, POIFSConstants.END_OF_CHAIN);
