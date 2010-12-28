@@ -1,0 +1,43 @@
+    private DirectoryNode(final DirectoryProperty property,
+                          final DirectoryNode parent)
+    {
+        super(property, parent);
+        if (parent == null)
+        {
+            _path = new POIFSDocumentPath();
+        }
+        else
+        {
+            _path = new POIFSDocumentPath(parent._path, new String[]
+            {
+                property.getName()
+            });
+        }
+        _byname     = new HashMap<String, Entry>();
+        _entries    = new ArrayList<Entry>();
+        Iterator<Property> iter = property.getChildren();
+
+        while (iter.hasNext())
+        {
+            Property child     = iter.next();
+            Entry    childNode = null;
+
+            if (child.isDirectory())
+            {
+                DirectoryProperty childDir = (DirectoryProperty) child;
+                if(_ofilesystem != null) {
+                   childNode = new DirectoryNode(childDir, _ofilesystem, this);
+                } else {
+                   childNode = new DirectoryNode(childDir, _nfilesystem, this);
+                }
+            }
+            else
+            {
+                childNode = new DocumentNode(( DocumentProperty ) child,
+                                             this);
+            }
+            _entries.add(childNode);
+            _byname.put(childNode.getName(), childNode);
+        }
+    }
+
