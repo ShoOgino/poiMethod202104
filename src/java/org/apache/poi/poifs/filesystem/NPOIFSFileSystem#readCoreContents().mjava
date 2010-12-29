@@ -13,14 +13,10 @@
        
        // Read the FAT blocks
        for(int fatAt : _header.getBATArray()) {
-          loopDetector.claim(fatAt);
-          ByteBuffer fatData = getBlockAt(fatAt);
-          BATBlock bat = BATBlock.createBATBlock(bigBlockSize, fatData);
-          bat.setOurBlockIndex(fatAt);
-          _bat_blocks.add(bat);
+          readBAT(fatAt, loopDetector);
        }
        
-       // Now read the XFAT blocks
+       // Now read the XFAT blocks, and the FATs within them
        BATBlock xfat; 
        int nextAt = _header.getXBATIndex();
        for(int i=0; i<_header.getXBATCount(); i++) {
@@ -29,8 +25,13 @@
           xfat = BATBlock.createBATBlock(bigBlockSize, fatData);
           xfat.setOurBlockIndex(nextAt);
           nextAt = xfat.getValueAt(bigBlockSize.getXBATEntriesPerBlock());
+          _xbat_blocks.add(xfat);
           
-          _bat_blocks.add(xfat);
+          for(int j=0; j<bigBlockSize.getXBATEntriesPerBlock(); j++) {
+             int fatAt = xfat.getValueAt(j);
+             if(fatAt == POIFSConstants.UNUSED_BLOCK) break;
+             readBAT(fatAt, loopDetector);
+          }
        }
        
        // We're now able to load steams
