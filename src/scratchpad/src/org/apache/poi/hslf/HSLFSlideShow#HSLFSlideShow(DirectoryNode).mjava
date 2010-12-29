@@ -1,0 +1,37 @@
+	/**
+	 * Constructs a Powerpoint document from a specific point in a
+	 *  POIFS Filesystem. Parses the document and places all the
+	 *  important stuff into data structures.
+	 *
+	 * @param dir the POIFS directory to read from
+	 * @throws IOException if there is a problem while parsing the document.
+	 */
+	public HSLFSlideShow(DirectoryNode dir) throws IOException
+	{
+		super(dir);
+
+		// First up, grab the "Current User" stream
+		// We need this before we can detect Encrypted Documents
+		readCurrentUserStream();
+
+		// Next up, grab the data that makes up the
+		//  PowerPoint stream
+		readPowerPointStream();
+
+		// Check to see if we have an encrypted document,
+		//  bailing out if we do
+		boolean encrypted = EncryptedSlideShow.checkIfEncrypted(this);
+		if(encrypted) {
+			throw new EncryptedPowerPointFileException("Encrypted PowerPoint files are not supported");
+		}
+
+		// Now, build records based on the PowerPoint stream
+		buildRecords();
+
+		// Look for any other streams
+		readOtherStreams();
+
+		// Look for Picture Streams:
+		readPictures();
+	}
+
