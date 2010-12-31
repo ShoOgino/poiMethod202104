@@ -1,0 +1,24 @@
+    private NPOIFSFileSystem(FileChannel channel, boolean closeChannelOnError)
+         throws IOException
+    {
+       this();
+
+       try {
+          // Get the header
+          ByteBuffer headerBuffer = ByteBuffer.allocate(POIFSConstants.SMALLER_BIG_BLOCK_SIZE);
+          IOUtils.readFully(channel, headerBuffer);
+          
+          // Have the header processed
+          _header = new HeaderBlock(headerBuffer);
+          
+          // Now process the various entries
+          _data = new FileBackedDataSource(channel);
+          readCoreContents();
+       } catch(IOException e) {
+          if(closeChannelOnError) {
+             channel.close();
+          }
+          throw e;
+       }
+    }
+
