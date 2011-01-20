@@ -6,7 +6,7 @@
 	 * @return index of format.
 	 */
 	public short getFormat(String pFormat) {
-
+	   // Normalise the format string
 		String format;
 		if (pFormat.toUpperCase().equals("TEXT")) {
 			format = "@";
@@ -14,30 +14,30 @@
 			format = pFormat;
 		}
 
+		// Merge in the built in formats if we haven't already
 		if (!_movedBuiltins) {
 			for (int i=0; i<_builtinFormats.length; i++) {
-				if (_formats.size() < i + 1) {
-					_formats.setSize(i + 1);
+			   ensureFormatsSize(i);
+				if (_formats.get(i) == null) {
+				   _formats.set(i, _builtinFormats[i]);
+				} else {
+				   // The workbook overrides this default format
 				}
-				_formats.set(i, _builtinFormats[i]);
 			}
 			_movedBuiltins = true;
 		}
-		ListIterator<String> i;
-		i = _formats.listIterator();
-		int ind;
-		while (i.hasNext()) {
-			ind = i.nextIndex();
-			if (format.equals(i.next())) {
-				return (short) ind;
-			}
+		
+		// See if we can find it
+		for(int i=0; i<_formats.size(); i++) {
+		   if(format.equals(_formats.get(i))) {
+		      return (short)i;
+		   }
 		}
 
-		ind = _workbook.getFormat(format, true);
-		if (_formats.size() <= ind)
-			_formats.setSize(ind + 1);
-		_formats.set(ind, format);
-
-		return (short) ind;
+		// We can't find it, so add it as a new one
+		short index = _workbook.getFormat(format, true);
+		ensureFormatsSize(index);
+		_formats.set(index, format);
+		return index;
 	}
 
