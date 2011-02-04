@@ -1,7 +1,29 @@
    private int fixUp(byte[] b, int offset, int read) {
+      // Do we have any potential overhanging ones?
+      for(int i=0; i<detect.length-1; i++) {
+         int base = offset+read-1-i;
+         if(base < 0) continue;
+            
+         boolean going = true;
+         for(int j=0; j<=i && going; j++) {
+            if(b[base+j] == detect[j]) {
+               // Matches
+            } else {
+               going = false;
+            }
+         }
+         if(going) {
+            // There could be a <br> handing over the end, eg <br|
+            addToSpare(b, base, i+1, true);
+            read -= 1;
+            read -= i;
+            break;
+         }
+      }
+      
       // Find places to fix
       ArrayList<Integer> fixAt = new ArrayList<Integer>();
-      for(int i=offset; i<offset+read-4; i++) {
+      for(int i=offset; i<=offset+read-detect.length; i++) {
          boolean going = true;
          for(int j=0; j<detect.length && going; j++) {
             if(b[i+j] != detect[j]) {
@@ -17,18 +39,37 @@
          return read;
       }
       
-      // Save a bit, if needed to fit
-      int overshoot = offset+read+fixAt.size() - b.length;  
+      // If there isn't space in the buffer to contain
+      //  all the fixes, then save the overshoot for next time
+      int needed = offset+read+fixAt.size();
+      int overshoot = needed - b.length;  
       if(overshoot > 0) {
-         spare = new byte[overshoot];
-         System.arraycopy(b, b.length-overshoot, spare, 0, overshoot);
+         // Make sure we don't loose part of a <br>!
+         int fixes = 0;
+         for(int at : fixAt) {
+            if(at > offset+read-detect.length-overshoot-fixes) {
+               overshoot = needed - at - 1 - fixes;
+               break;
+            }
+            fixes++;
+         }
+
+         addToSpare(b, offset+read-overshoot, overshoot, false);
          read -= overshoot;
       }
       
       // Fix them, in reverse order so the
       //  positions are valid
       for(int j=fixAt.size()-1; j>=0; j--) {
-         int i = fixAt.get(j); 
+         int i = fixAt.get(j);
+         if(i >= read+offset) {
+            // This one has moved into the overshoot
+            continue;
+         }
+         if(i > read-3) {
+            // This one has moved into the overshoot
+            continue;
+         }
 
          byte[] tmp = new byte[read-i-3];
          System.arraycopy(b, i+3, tmp, 0, tmp.length);

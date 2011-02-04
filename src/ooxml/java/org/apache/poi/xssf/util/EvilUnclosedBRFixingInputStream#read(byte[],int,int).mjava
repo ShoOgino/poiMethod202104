@@ -1,15 +1,25 @@
    @Override
    public int read(byte[] b, int off, int len) throws IOException {
-      if(spare != null) {
-         // This is risky, but spare is normally only a byte or two...
-         System.arraycopy(spare, 0, b, off, spare.length);
-         int ret = spare.length;
-         spare = null;
-         return ret;
+      // Grab any data left from last time
+      int readA = readFromSpare(b, off, len);
+
+      // Now read from the stream 
+      int readB = source.read(b, off+readA, len-readA);
+      
+      // Figure out how much we've done
+      int read;
+      if(readB == -1 || readB == 0) {
+         read = readA; 
+      } else {
+         read = readA + readB;
       }
       
-      int read = source.read(b, off, len);
-      read = fixUp(b, off, read);
+      // Fix up our data
+      if(read > 0) {
+         read = fixUp(b, off, read);
+      }
+      
+      // All done
       return read;
    }
 
