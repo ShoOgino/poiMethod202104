@@ -1,0 +1,90 @@
+	public void execute() throws BuildException {
+	    
+	    Iterator<Task> taskIt = testTasks.iterator() ;
+
+	    int testCount = evaluators.size() ;
+	    int failureCount = 0 ;
+	        
+	    // roll over all sub task elements in one loop.  This allows the
+	    // ordering of the sub elements to be considered. 
+	    while( taskIt.hasNext() ) {
+	        Task task = taskIt.next() ;
+	        
+	       // log( task.getClass().getName(), Project.MSG_INFO ) ;
+	        
+	        if( task instanceof ExcelAntSet ) {
+	            ExcelAntSet set = (ExcelAntSet) task ;
+	            set.setWorkbookUtil(workbookUtil)  ;
+	            set.execute() ;
+	        }
+	        
+	        if( task instanceof ExcelAntHandlerTask ) {
+	            ExcelAntHandlerTask handler = (ExcelAntHandlerTask)task ;
+	            handler.setEAWorkbookUtil(workbookUtil ) ;
+	            handler.execute() ;
+	        }
+	        
+	        if (task instanceof ExcelAntEvaluateCell ) {
+	            ExcelAntEvaluateCell eval = (ExcelAntEvaluateCell)task ;
+	            eval.setWorkbookUtil( workbookUtil ) ;
+	            
+	            if( globalPrecision > 0 ) {
+	                log( "setting globalPrecision to " + globalPrecision + " in the evaluator", Project.MSG_VERBOSE ) ;
+	                eval.setGlobalPrecision( globalPrecision ) ;
+	            }
+
+	            try {
+	                eval.execute() ;
+	                ExcelAntEvaluationResult result = eval.getResult() ;
+	                if( result.didTestPass() && 
+	                        result.evaluationCompleteWithError() == false ) {
+	                    if( showSuccessDetails == true ) {
+	                        log("Succeeded when evaluating " + 
+	                         result.getCellName() + ".  It evaluated to " + 
+                             result.getReturnValue() + " when the value of " + 
+                             eval.getExpectedValue() + " with precision of " + 
+                             eval.getPrecision(), Project.MSG_INFO ) ;
+	                    }
+	                } else {
+	                    if( showFailureDetail == true ) {
+	                        failureMessages.add( "\tFailed to evaluate cell " + 
+	                         result.getCellName() + ".  It evaluated to " + 
+	                         result.getReturnValue() + " when the value of " + 
+	                         eval.getExpectedValue() + " with precision of " + 
+	                         eval.getPrecision() + " was expected." ) ;
+
+	                    }
+	                    passed = false ;
+	                    failureCount++ ;
+	                    
+	                    if( eval.requiredToPass() == true ) {
+	                        throw new BuildException( "\tFailed to evaluate cell " + 
+	                                result.getCellName() + ".  It evaluated to " + 
+	                                result.getReturnValue() + " when the value of " + 
+	                                eval.getExpectedValue() + " with precision of " + 
+	                                eval.getPrecision() + " was expected." ) ;
+	                    }
+	                }
+	            } catch( NullPointerException npe ) {
+	                // this means the cell reference in the test is bad.
+	                log( "Cell assignment " + eval.getCell() + " in test " + getName() + 
+	                      " appears to point to an empy cell.  Please check the " +
+	                      " reference in the ant script.", Project.MSG_ERR ) ;
+	            }
+	        }
+	    }
+ 
+		if( passed == false ) {
+			log( "Test named " + name + " failed because " + failureCount + 
+					 " of " + testCount + " evaluations failed to " + 
+					 "evaluate correctly.", 
+					 Project.MSG_ERR ) ;
+			if( showFailureDetail == true && failureMessages.size() > 0 ) {
+				Iterator<String> failures = failureMessages.iterator() ;
+				while( failures.hasNext() ) {
+					log( failures.next(), Project.MSG_ERR ) ;
+				}
+			}
+		}
+	}
+

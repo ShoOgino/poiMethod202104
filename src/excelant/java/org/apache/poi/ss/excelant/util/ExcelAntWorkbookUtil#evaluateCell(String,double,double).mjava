@@ -1,0 +1,55 @@
+    /**
+     * Uses a String in standard Excel format (SheetName!CellId) to locate a
+     * cell and evaluate it.
+     * 
+     * @param cellName
+     * @param expectedValue
+     * @param precision
+     */
+    public ExcelAntEvaluationResult evaluateCell(String cellName, double expectedValue,
+            double precision) {
+
+        ExcelAntEvaluationResult evalResults = null;
+
+        Cell cell = getCell(cellName);
+
+        FormulaEvaluator evaluator = getEvaluator( excelFileName );
+
+
+        CellValue resultOfEval = evaluator.evaluate(cell);
+
+        if (resultOfEval.getErrorValue() == 0) {
+            // the evaluation did not encounter errors
+            double result = resultOfEval.getNumberValue();
+            double delta = Math.abs(result - expectedValue);
+            if (delta > precision) {
+                evalResults = new ExcelAntEvaluationResult(false, false,
+                        resultOfEval.getNumberValue(),
+                        "Results was out of range based on precision " + " of "
+                                + precision + ".  Delta was actually " + delta, delta, cellName );
+            } else {
+                evalResults = new ExcelAntEvaluationResult(false, true,
+                        resultOfEval.getNumberValue(),
+                        "Evaluation passed without error within in range.", delta, cellName );
+            }
+        } else {
+            String errorMeaning = null ;
+            try {
+                errorMeaning = ErrorConstants.getText( resultOfEval
+                        .getErrorValue() ) ;
+            } catch( IllegalArgumentException iae ) {
+                errorMeaning =  "unknown error code: " + 
+                                Byte.toString( resultOfEval.getErrorValue() ) ; 
+            }
+            
+            evalResults = new ExcelAntEvaluationResult(false, false,
+                    resultOfEval.getNumberValue(),
+                    "Evaluation failed due to an evaluation error of "
+                            + resultOfEval.getErrorValue()
+                            + " which is "
+                            + errorMeaning, 0, cellName );
+        }
+
+        return evalResults;
+    }
+

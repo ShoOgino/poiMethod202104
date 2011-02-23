@@ -1,0 +1,73 @@
+	public void execute() throws BuildException {
+        checkClassPath();
+
+		int totalCount = 0 ;
+		int successCount = 0 ;
+		
+		StringBuffer versionBffr = new StringBuffer() ;
+		versionBffr.append(  "ExcelAnt version " ) ;
+		versionBffr.append( VERSION ) ;
+		versionBffr.append( " Copyright 2011" ) ;
+		SimpleDateFormat sdf = new SimpleDateFormat( "yyyy" ) ;
+		double currYear = Double.parseDouble( sdf.format( new Date() ) );
+		if( currYear > 2011 ) {
+		    versionBffr.append( "-" ) ;
+		    versionBffr.append( currYear ) ;
+		}
+		log( versionBffr.toString(), Project.MSG_INFO ) ;
+		
+		log( "Using input file: " + excelFileName, Project.MSG_INFO ) ;
+		
+		Workbook targetWorkbook = loadWorkbook() ;
+		if( targetWorkbook == null ) {
+			log( "Unable to load " + excelFileName + 
+					            ".  Verify the file exists and can be read.",
+					            Project.MSG_ERR ) ;
+			return ;
+		}
+		if( tests != null && tests.size() > 0 ) {
+			
+			Iterator<ExcelAntTest> testsIt = tests.iterator() ;
+			while( testsIt.hasNext() ) {
+				ExcelAntTest test = testsIt.next();
+				
+				log( "executing test: " + test.getName(), Project.MSG_DEBUG ) ;
+		
+				workbookUtil = ExcelAntWorkbookUtilFactory.getInstance( excelFileName ) ;
+				
+				if( functions != null ) {
+					Iterator<ExcelAntUserDefinedFunction> functionsIt = functions.iterator() ;
+					while( functionsIt.hasNext() ) {
+						ExcelAntUserDefinedFunction eaUdf = functionsIt.next() ;
+						try {
+							workbookUtil.addFunction(eaUdf.getFunctionAlias(), eaUdf.getClassName() ) ;
+						} catch ( Exception e) {
+							throw new BuildException( e.getMessage(), e ); 
+ 						}
+					}
+				}
+				test.setWorkbookUtil( workbookUtil ) ;
+				
+				if( precision != null && precision.getValue() > 0 ) {
+					log( "setting precision for the test " + test.getName(), Project.MSG_VERBOSE ) ; 
+					test.setPrecision( precision.getValue() ) ;
+				}
+				
+				test.execute() ;
+				
+				if( test.didTestPass() ) {
+					successCount++ ;
+				} else {
+					if( failOnError == true ) {
+						throw new BuildException( "Test " + test.getName() + " failed." ) ;
+					}
+				}
+				totalCount++ ;
+				
+				workbookUtil = null ;
+			}
+			log( successCount + "/" + totalCount + " tests passed.", Project.MSG_INFO ) ;
+			workbookUtil = null ;
+		}
+	}
+
