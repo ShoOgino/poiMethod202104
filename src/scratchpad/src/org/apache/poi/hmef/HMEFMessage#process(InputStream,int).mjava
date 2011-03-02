@@ -6,11 +6,16 @@
       }
     
       // Build the attribute
-      TNEFAttribute attr = new TNEFAttribute(inp);
+      TNEFAttribute attr = TNEFAttribute.create(inp);
       
       // Decide what to attach it to, based on the levels and IDs
       if(level == TNEFProperty.LEVEL_MESSAGE) {
          messageAttributes.add(attr);
+         
+         if(attr instanceof TNEFMAPIAttribute) {
+            TNEFMAPIAttribute tnefMAPI = (TNEFMAPIAttribute)attr;
+            mapiAttributes.addAll( tnefMAPI.getMAPIAttributes() );
+         }
       } else if(level == TNEFProperty.LEVEL_ATTACHMENT) {
          // Previous attachment or a new one?
          if(attachments.size() == 0 || attr.getProperty() == TNEFProperty.ID_ATTACHRENDERDATA) {
@@ -18,7 +23,8 @@
          }
          
          // Save the attribute for it
-         attachments.get(attachments.size()-1).addAttribute(attr);
+         Attachment attach = attachments.get(attachments.size()-1);
+         attach.addAttribute(attr);
       } else {
          throw new IllegalStateException("Unhandled level " + level);
       }
