@@ -1,0 +1,30 @@
+   /**
+    * Constructs a single new date attribute from the id, type,
+    *  and the contents of the stream
+    */
+   protected TNEFDateAttribute(int id, int type, InputStream inp) throws IOException {
+      super(id, type, inp);
+      
+      byte[] data = getData();
+      if(data.length == 8) {
+         // The value is a 64 bit Windows Filetime
+         this.data = Util.filetimeToDate(
+               LittleEndian.getLong(getData(), 0)
+         );
+      } else if(data.length == 14) {
+         // It's the 7 date fields. We think it's in UTC...
+         Calendar c = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+         c.set(Calendar.YEAR, LittleEndian.getUShort(data, 0));
+         c.set(Calendar.MONTH, LittleEndian.getUShort(data, 2) - 1); // Java months are 0 based!
+         c.set(Calendar.DAY_OF_MONTH, LittleEndian.getUShort(data, 4));
+         c.set(Calendar.HOUR_OF_DAY, LittleEndian.getUShort(data, 6));
+         c.set(Calendar.MINUTE, LittleEndian.getUShort(data, 8));
+         c.set(Calendar.SECOND, LittleEndian.getUShort(data, 10));
+         // The 7th field is day of week, which we don't require
+         c.set(Calendar.MILLISECOND, 0); // Not set in the file
+         this.data = c.getTime();
+      } else {
+         throw new IllegalArgumentException("Invalid date, found " + data.length + " bytes");
+      }
+   }
+
