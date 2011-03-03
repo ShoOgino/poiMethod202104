@@ -1,0 +1,68 @@
+   /**
+    * Test various general ones
+    */
+   public void testBasics() throws Exception {
+      // Try constructing two attributes
+      byte[] data = new byte[] {
+            // Level one, id 36867, type 6
+            0x01,    0x03, (byte)0x90,   0x06, 0x00,
+            // Length 24
+            0x24, 0x00, 0x00, 0x00,
+            
+            // Three attributes
+            0x03, 0x00, 0x00, 0x00,
+            // AlternateRecipientAllowed = 01 00
+            0x0B, 0x00, 0x02, 0x00,
+            0x01, 0x00, 0x00, 0x00,
+            // Priority = 00 00 00 00
+            0x03, 0x00, 0x26, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+            // ConversationTopic = Test
+            0x1E, 0x00, 0x70, 0x00,
+            0x01, 0x00, 0x00, 0x00,
+            0x04, 0x00, 0x00, 0x00,
+            (byte)'T', (byte)'e',
+            (byte)'s', (byte)'t',
+            // Checksum (may be wrong...)
+            0x01, 0x00
+      };
+      ByteArrayInputStream bais = new ByteArrayInputStream(data);
+      
+      // Create it
+      int level = bais.read();
+      assertEquals(1, level);
+      TNEFAttribute attr = TNEFAttribute.create(bais);
+      
+      // Check it
+      assertNotNull(attr);
+      assertEquals(TNEFMAPIAttribute.class, attr.getClass());
+      
+      TNEFMAPIAttribute mapi = (TNEFMAPIAttribute)attr;
+      assertEquals(3, mapi.getMAPIAttributes().size());
+      
+      assertEquals(
+            MAPIProperty.ALTERNATE_RECIPIENT_ALLOWED, 
+            mapi.getMAPIAttributes().get(0).getProperty()
+      );
+      assertEquals(1, LittleEndian.getUShort(
+               mapi.getMAPIAttributes().get(0).getData()
+      ));
+      
+      assertEquals(
+            MAPIProperty.PRIORITY, 
+            mapi.getMAPIAttributes().get(1).getProperty()
+      );
+      assertEquals(0, LittleEndian.getUShort(
+               mapi.getMAPIAttributes().get(1).getData()
+      ));
+      
+      assertEquals(
+            MAPIProperty.CONVERSATION_TOPIC, 
+            mapi.getMAPIAttributes().get(2).getProperty()
+      );
+      assertEquals(
+            "Test",
+            ((MAPIStringAttribute)mapi.getMAPIAttributes().get(2)).getDataString()
+      );
+   }
+
