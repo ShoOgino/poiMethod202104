@@ -1,0 +1,60 @@
+    /**
+     * Update sheet name in all formulas and named ranges.
+     * Called from {@link XSSFWorkbook#setSheetName(int, String)}
+     * <p/>
+     * <p>
+     * The idea is to parse every formula and render it back to string
+     * with the updated sheet name. The FormulaParsingWorkbook passed to the formula parser
+     * is constructed from the old workbook (sheet name is not yet updated) and
+     * the FormulaRenderingWorkbook passed to FormulaRenderer#toFormulaString is a custom implementation that
+     * returns the new sheet name.
+     * </p>
+     *
+     * @param sheetIndex the 0-based index of the sheet being changed
+     * @param name       the new sheet name
+     */
+    public void updateSheetName(final int sheetIndex, final String name) {
+
+        /**
+         * An instance of FormulaRenderingWorkbook that returns
+         */
+        FormulaRenderingWorkbook frwb = new FormulaRenderingWorkbook() {
+
+            public ExternalSheet getExternalSheet(int externSheetIndex) {
+                return _fpwb.getExternalSheet(externSheetIndex);
+            }
+
+            public String getSheetNameByExternSheet(int externSheetIndex) {
+                if (externSheetIndex == sheetIndex) return name;
+                else return _fpwb.getSheetNameByExternSheet(externSheetIndex);
+            }
+
+            public String resolveNameXText(NameXPtg nameXPtg) {
+                return _fpwb.resolveNameXText(nameXPtg);
+            }
+
+            public String getNameText(NamePtg namePtg) {
+                return _fpwb.getNameText(namePtg);
+            }
+        };
+
+        // update named ranges
+        for (int i = 0; i < _wb.getNumberOfNames(); i++) {
+            XSSFName nm = _wb.getNameAt(i);
+            if (nm.getSheetIndex() == -1 || nm.getSheetIndex() == sheetIndex) {
+                updateName(nm, frwb);
+            }
+        }
+
+        // update formulas
+        for (Sheet sh : _wb) {
+            for (Row row : sh) {
+                for (Cell cell : row) {
+                    if (cell.getCellType() == Cell.CELL_TYPE_FORMULA) {
+                        updateFormula((XSSFCell) cell, frwb);
+                    }
+                }
+            }
+        }
+    }
+
