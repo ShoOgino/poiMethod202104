@@ -1,24 +1,39 @@
-    private Format getFormat(double cellValue, int formatIndex, String formatStr) {
-       // Excel supports positive/negative/zero, but java
-       // doesn't, so we need to do it specially
-       if(formatStr.indexOf(';') != formatStr.lastIndexOf(';')) {
-          int lastAt = formatStr.lastIndexOf(';');
-          String zeroFormat = formatStr.substring(lastAt+1);
-          String normalFormat = formatStr.substring(0,lastAt);
-          if(cellValue == 0.0) {
-             formatStr = zeroFormat;
-          } else {
-             formatStr = normalFormat;
-          }
+    private Format getFormat(double cellValue, int formatIndex, String formatStrIn) {
+        String formatStr = formatStrIn;
+        // Excel supports positive/negative/zero, but java
+        // doesn't, so we need to do it specially
+        final int firstAt = formatStr.indexOf(';');
+        final int lastAt = formatStr.lastIndexOf(';');
+        // p and p;n are ok by default. p;n;z and p;n;z;s need to be fixed.
+        if (firstAt != -1 && firstAt != lastAt) {
+            final int secondAt = formatStr.indexOf(';', firstAt + 1);
+            if (secondAt == lastAt) { // p;n;z
+                if (cellValue == 0.0) {
+                    formatStr = formatStr.substring(lastAt + 1);
+                } else {
+                    formatStr = formatStr.substring(0, lastAt);
+                }
+            } else {
+                if (cellValue == 0.0) { // p;n;z;s
+                    formatStr = formatStr.substring(secondAt + 1, lastAt);
+                } else {
+                    formatStr = formatStr.substring(0, secondAt);
+                }
+            }
+        }
+
+       // Excel's # with value 0 will output empty where Java will output 0. This hack removes the # from the format.
+       if (emulateCsv && cellValue == 0.0 && formatStr.contains("#") && !formatStr.contains("0")) {
+           formatStr = formatStr.replaceAll("#", "");
        }
-      
-       // See if we already have it cached
+
+        // See if we already have it cached
         Format format = formats.get(formatStr);
         if (format != null) {
             return format;
         }
         if ("General".equalsIgnoreCase(formatStr) || "@".equals(formatStr)) {
-            if (DataFormatter.isWholeNumber(cellValue)) {
+            if (isWholeNumber(cellValue)) {
                 return generalWholeNumFormat;
             }
             return generalDecimalNumFormat;
