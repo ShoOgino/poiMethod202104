@@ -1,0 +1,37 @@
+	public HDGFDiagram(DirectoryNode dir) throws IOException {
+		super(dir);
+
+		DocumentEntry docProps =
+			(DocumentEntry)dir.getEntry("VisioDocument");
+
+		// Grab the document stream
+		_docstream = new byte[docProps.getSize()];
+		dir.createDocumentInputStream("VisioDocument").read(_docstream);
+
+		// Check it's really visio
+		String typeString = new String(_docstream, 0, 20);
+		if(! typeString.equals(VISIO_HEADER)) {
+			throw new IllegalArgumentException("Wasn't a valid visio document, started with " + typeString);
+		}
+
+		// Grab the version number, 0x1a -> 0x1b
+		version = LittleEndian.getShort(_docstream, 0x1a);
+		// Grab the document size, 0x1c -> 0x1f
+		docSize = LittleEndian.getUInt(_docstream, 0x1c);
+		// ??? 0x20 -> 0x23
+
+		// Create the Chunk+Pointer Factories for the document version
+		ptrFactory = new PointerFactory(version);
+		chunkFactory = new ChunkFactory(version);
+
+		// Grab the pointer to the trailer
+		trailerPointer = ptrFactory.createPointer(_docstream, 0x24);
+
+		// Now grab the trailer
+		trailer = (TrailerStream)
+			Stream.createStream(trailerPointer, _docstream, chunkFactory, ptrFactory);
+
+		// Finally, find all our streams
+		trailer.findChildren(_docstream);
+	}
+
