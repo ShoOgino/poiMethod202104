@@ -1,0 +1,31 @@
+    /**
+     *  ExtSSTRecord can be continued. Ensure we properly read the continue remainder.
+     */
+    public void test50967() {
+        byte[] bytes = HexRead.readFromString(data_50967);
+
+        RecordInputStream in = TestcaseRecordInputStream.create(bytes);
+        assertEquals(ExtSSTRecord.sid, in.getSid());
+        ExtSSTRecord src = new ExtSSTRecord(in);
+        assertEquals(12386, src.getDataSize());
+        ExtSSTRecord.InfoSubRecord[] sub1 = src.getInfoSubRecords();
+
+        byte[] serialized = src.serialize();
+
+        in = TestcaseRecordInputStream.create(serialized);
+        assertEquals(ExtSSTRecord.sid, in.getSid());
+        ExtSSTRecord dst = new ExtSSTRecord(in);
+        assertEquals(12386, dst.getDataSize());
+        ExtSSTRecord.InfoSubRecord[] sub2 = src.getInfoSubRecords();
+        assertEquals(sub1.length, sub2.length);
+
+        for(int i = 0; i < sub1.length; i++){
+            ExtSSTRecord.InfoSubRecord s1 = sub1[i];
+            ExtSSTRecord.InfoSubRecord s2 = sub2[i];
+
+            assertEquals(s1.getBucketSSTOffset(), s2.getBucketSSTOffset());
+            assertEquals(s1.getStreamPos(), s2.getStreamPos());
+
+        }
+    }
+

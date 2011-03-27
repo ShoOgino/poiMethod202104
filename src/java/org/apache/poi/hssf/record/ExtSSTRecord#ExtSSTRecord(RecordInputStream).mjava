@@ -1,9 +1,17 @@
     public ExtSSTRecord(RecordInputStream in) {
         _stringsPerBucket = in.readShort();
+
         int nInfos = in.remaining() / InfoSubRecord.ENCODED_SIZE;
-        _sstInfos = new InfoSubRecord[nInfos];
-        for (int i = 0; i < _sstInfos.length; i++) {
-            _sstInfos[i] = new InfoSubRecord(in);
+        ArrayList<InfoSubRecord> lst = new ArrayList<InfoSubRecord>(nInfos);
+
+        while (in.available() > 0) {
+            InfoSubRecord info = new InfoSubRecord(in);
+            lst.add(info);
+
+            if(in.available() == 0 && in.hasNextRecord() && in.getNextSid() == ContinueRecord.sid) {
+                in.nextRecord();
+            }
         }
+        _sstInfos = lst.toArray(new InfoSubRecord[lst.size()]);
     }
 
