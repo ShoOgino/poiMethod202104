@@ -23,26 +23,27 @@
                if(m.matches()) {
                   // Found it! Tell all the string chunks
                   String charset = m.group(1);
-                  
-                  for(Chunk c : mainChunks.getAll()) {
-                     if(c instanceof StringChunk) {
-                        ((StringChunk)c).set7BitEncoding(charset);
-                     }
-                  }
-                  for(Chunk c : nameIdChunks.getAll()) {
-                     if(c instanceof StringChunk) {
-                        ((StringChunk)c).set7BitEncoding(charset);
-                     }
-                  }
-                  for(RecipientChunks rc : recipientChunks) {
-                     for(Chunk c : rc.getAll()) {
-                        if(c instanceof StringChunk) {
-                           ((StringChunk)c).set7BitEncoding(charset);
-                        }
-                     }
-                  }
+                  set7BitEncoding(charset);
+                  return;
                }
             }
+         }
+      } catch(ChunkNotFoundException e) {}
+      
+      // Nothing suitable in the headers, try HTML
+      try {
+         String html = getHmtlBody();
+         
+         // Look for a content type in the meta headers
+         Pattern p = Pattern.compile(
+               "<META\\s+HTTP-EQUIV=\"Content-Type\"\\s+CONTENT=\"text/html;\\s+charset=(.*?)\""
+         );
+         Matcher m = p.matcher(html);
+         if(m.find()) {
+            // Found it! Tell all the string chunks
+            String charset = m.group(1);
+            set7BitEncoding(charset);
+            return;
          }
       } catch(ChunkNotFoundException e) {}
    }
