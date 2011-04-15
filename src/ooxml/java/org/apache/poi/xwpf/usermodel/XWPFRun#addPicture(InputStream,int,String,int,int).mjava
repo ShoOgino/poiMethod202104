@@ -1,0 +1,100 @@
+    /**
+     * Adds a picture to the run. This method handles
+     *  attaching the picture data to the overall file.
+     *  
+     * @see org.apache.poi.xwpf.usermodel.Document#PICTURE_TYPE_EMF
+     * @see org.apache.poi.xwpf.usermodel.Document#PICTURE_TYPE_WMF
+     * @see org.apache.poi.xwpf.usermodel.Document#PICTURE_TYPE_PICT
+     * @see org.apache.poi.xwpf.usermodel.Document#PICTURE_TYPE_JPEG
+     * @see org.apache.poi.xwpf.usermodel.Document#PICTURE_TYPE_PNG
+     * @see org.apache.poi.xwpf.usermodel.Document#PICTURE_TYPE_DIB
+     *  
+     * @param pictureData The raw picture data
+     * @param pictureType The type of the picture, eg {@link Document#PICTURE_TYPE_JPEG}
+    * @throws IOException 
+    * @throws org.apache.poi.openxml4j.exceptions.InvalidFormatException 
+    * @throws IOException 
+     */
+    public XWPFPicture addPicture(InputStream pictureData, int pictureType, String filename, int width, int height)
+    throws InvalidFormatException, IOException {
+       XWPFDocument doc = paragraph.document;
+       
+       // Add the picture + relationship
+       int picNumber = doc.addPicture(pictureData, pictureType);
+       XWPFPictureData picData = doc.getAllPackagePictures().get(picNumber);
+       
+       // Create the drawing entry for it
+       try {
+          CTDrawing drawing = run.addNewDrawing();
+          CTInline inline = drawing.addNewInline();
+          
+          // Do the fiddly namespace bits on the inline
+          // (We need full control of what goes where and as what)
+          String xml = 
+             "<a:graphic xmlns:a=\"" + CTGraphicalObject.type.getName().getNamespaceURI() + "\">" +
+             "<a:graphicData uri=\"" + CTGraphicalObject.type.getName().getNamespaceURI() + "\">" +
+             "<pic:pic xmlns:pic=\"" + CTPicture.type.getName().getNamespaceURI() + "\" />" +
+             "</a:graphicData>" +
+             "</a:graphic>";
+          inline.set(XmlToken.Factory.parse(xml));
+          
+          // Setup the inline
+          inline.setDistT(0);
+          inline.setDistR(0);
+          inline.setDistB(0);
+          inline.setDistL(0);
+          
+          CTNonVisualDrawingProps docPr = inline.addNewDocPr();
+          docPr.setId(picNumber);
+          docPr.setName("Picture " + picNumber);
+          docPr.setDescr(filename);
+          
+          CTPositiveSize2D extent = inline.addNewExtent();
+          extent.setCx(width);
+          extent.setCy(height);
+   
+          // Grab the picture object
+          CTGraphicalObject graphic = inline.getGraphic();
+          CTGraphicalObjectData graphicData = graphic.getGraphicData();
+          CTPicture pic = getCTPictures(graphicData).get(0);
+          
+          // Set it up
+          CTPictureNonVisual nvPicPr = pic.addNewNvPicPr();
+          
+          CTNonVisualDrawingProps cNvPr = nvPicPr.addNewCNvPr();
+          cNvPr.setId(picNumber);
+          cNvPr.setName("Picture " + picNumber);
+          cNvPr.setDescr(filename);
+          
+          CTNonVisualPictureProperties cNvPicPr = nvPicPr.addNewCNvPicPr();
+          cNvPicPr.addNewPicLocks().setNoChangeAspect(true);
+          
+          CTBlipFillProperties blipFill = pic.addNewBlipFill();
+          CTBlip blip = blipFill.addNewBlip();
+          blip.setEmbed( picData.getPackageRelationship().getId() );
+          blipFill.addNewStretch().addNewFillRect();
+          
+          CTShapeProperties spPr = pic.addNewSpPr();
+          CTTransform2D xfrm = spPr.addNewXfrm();
+          
+          CTPoint2D off = xfrm.addNewOff();
+          off.setX(0);
+          off.setY(0);
+          
+          CTPositiveSize2D ext = xfrm.addNewExt();
+          ext.setCx(width);
+          ext.setCy(height);
+          
+          CTPresetGeometry2D prstGeom = spPr.addNewPrstGeom();
+          prstGeom.setPrst(STShapeType.RECT);
+          prstGeom.addNewAvLst();
+          
+          // Finish up
+          XWPFPicture xwpfPicture = new XWPFPicture(pic, paragraph);
+          pictures.add(xwpfPicture);
+          return xwpfPicture;
+       } catch(XmlException e) {
+          throw new IllegalStateException(e);
+       }
+    }
+
