@@ -1,0 +1,72 @@
+    public EncryptionVerifier(String descriptor) {
+        NamedNodeMap keyData = null;
+        try {
+            ByteArrayInputStream is;
+            is = new ByteArrayInputStream(descriptor.getBytes());
+            NodeList keyEncryptor = DocumentBuilderFactory.newInstance()
+                .newDocumentBuilder().parse(is)
+                .getElementsByTagName("keyEncryptor").item(0).getChildNodes();
+            for (int i = 0; i < keyEncryptor.getLength(); i++) {
+                Node node = keyEncryptor.item(i);
+                if (node.getNodeName().equals("p:encryptedKey")) {
+                    keyData = node.getAttributes();
+                    break;
+                }
+            }
+            if (keyData == null)
+                throw new EncryptedDocumentException("");
+        } catch (Exception e) {
+            throw new EncryptedDocumentException("Unable to parse keyEncryptor");
+        }
+
+        spinCount = Integer.parseInt(keyData.getNamedItem("spinCount")
+                                     .getNodeValue());
+        verifier = Base64.decodeBase64(keyData
+                                       .getNamedItem("encryptedVerifierHashInput")
+                                       .getNodeValue().getBytes());
+        salt = Base64.decodeBase64(keyData.getNamedItem("saltValue")
+                                   .getNodeValue().getBytes());
+
+        encryptedKey = Base64.decodeBase64(keyData
+                                           .getNamedItem("encryptedKeyValue")
+                                           .getNodeValue().getBytes());
+
+        int saltSize = Integer.parseInt(keyData.getNamedItem("saltSize")
+                                        .getNodeValue());
+        if (saltSize != salt.length)
+            throw new EncryptedDocumentException("Invalid salt size");
+
+        verifierHash = Base64.decodeBase64(keyData
+                                           .getNamedItem("encryptedVerifierHashValue")
+                                           .getNodeValue().getBytes());
+
+        int blockSize = Integer.parseInt(keyData.getNamedItem("blockSize")
+                                         .getNodeValue());
+
+        String alg = keyData.getNamedItem("cipherAlgorithm").getNodeValue();
+
+        if ("AES".equals(alg)) {
+            if (blockSize == 16)
+                algorithm = EncryptionHeader.ALGORITHM_AES_128;
+            else if (blockSize == 24)
+                algorithm = EncryptionHeader.ALGORITHM_AES_192;
+            else if (blockSize == 32)
+                algorithm = EncryptionHeader.ALGORITHM_AES_256;
+            else
+                throw new EncryptedDocumentException("Unsupported block size");
+        } else {
+            throw new EncryptedDocumentException("Unsupported cipher");
+        }
+
+        String chain = keyData.getNamedItem("cipherChaining").getNodeValue();
+        if ("ChainingModeCBC".equals(chain))
+            cipherMode = EncryptionHeader.MODE_CBC;
+        else if ("ChainingModeCFB".equals(chain))
+            cipherMode = EncryptionHeader.MODE_CFB;
+        else
+            throw new EncryptedDocumentException("Unsupported chaining mode");
+
+        verifierHashSize = Integer.parseInt(keyData.getNamedItem("hashSize")
+                                            .getNodeValue());
+    }
+

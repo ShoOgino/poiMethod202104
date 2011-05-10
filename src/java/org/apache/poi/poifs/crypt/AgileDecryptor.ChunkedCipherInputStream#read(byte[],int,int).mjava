@@ -1,0 +1,25 @@
+        public int read(byte[] b, int off, int len) throws IOException {
+            int total = 0;
+
+            while (len > 0) {
+                if (_chunk == null) {
+                    try {
+                        _chunk = nextChunk();
+                    } catch (GeneralSecurityException e) {
+                        throw new EncryptedDocumentException(e.getMessage());
+                    }
+                }
+                int count = (int)(4096L - (_pos & 0xfff));
+                count = Math.min(available(), Math.min(count, len));
+                System.arraycopy(_chunk, (int)(_pos & 0xfff), b, off, count);
+                off += count;
+                len -= count;
+                _pos += count;
+                if ((_pos & 0xfff) == 0)
+                    _chunk = null;
+                total += count;
+            }
+
+            return total;
+        }
+

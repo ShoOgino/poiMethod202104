@@ -1,0 +1,16 @@
+        private byte[] nextChunk() throws GeneralSecurityException, IOException {
+            int index = (int)(_pos >> 12);
+            byte[] blockKey = new byte[4];
+            LittleEndian.putInt(blockKey, index);
+            byte[] iv = generateIv(_info.getHeader().getAlgorithm(),
+                                   _info.getHeader().getKeySalt(), blockKey);
+            _cipher.init(Cipher.DECRYPT_MODE, _secretKey, new IvParameterSpec(iv));
+            if (_lastIndex != index)
+                _stream.skip((index - _lastIndex) << 12);
+
+            byte[] block = new byte[Math.min(_stream.available(), 4096)];
+            _stream.readFully(block);
+            _lastIndex = index + 1;
+            return _cipher.doFinal(block);
+        }
+
