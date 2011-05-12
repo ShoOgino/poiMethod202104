@@ -3,14 +3,16 @@
      */
     public NPOIFSFileSystem()
     {
-        _header         = new HeaderBlock(bigBlockSize);
-        _property_table = new NPropertyTable(_header);
-        _mini_store     = new NPOIFSMiniStore(this, _property_table.getRoot(), new ArrayList<BATBlock>(), _header);
-        _xbat_blocks     = new ArrayList<BATBlock>();
-        _bat_blocks     = new ArrayList<BATBlock>();
-        _root           = null;
+       this(true);
+       
+        // Mark us as having a single empty BAT at offset 0
+        _header.setBATCount(1);
+        _header.setBATArray(new int[] { 0 });
+        _bat_blocks.add(BATBlock.createEmptyBATBlock(bigBlockSize, false));
+        setNextBlock(0, POIFSConstants.FAT_SECTOR_BLOCK);
         
-        // Data needs to initially hold just the header block 
-        _data           = new ByteArrayBackedDataSource(new byte[bigBlockSize.getBigBlockSize()]);
+        // Now associate the properties with the empty block
+        _property_table.setStartBlock(1);
+        setNextBlock(1, POIFSConstants.END_OF_CHAIN);
     }
 
