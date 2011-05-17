@@ -1,0 +1,37 @@
+    /**
+     * Create a new row within the sheet and return the high level representation
+     *
+     * @param rownum  row number
+     * @return high level Row object representing a row in the sheet
+     * @see #removeRow(Row)
+     */
+    public Row createRow(int rownum)
+    {
+//Make the initial allocation as big as the row above.
+        Row previousRow=rownum>0?getRow(rownum-1):null;
+        int initialAllocationSize=0;
+//have previous row in memory -> take that value.
+        if(previousRow!=null)
+            initialAllocationSize=previousRow.getLastCellNum();
+//are we called after a flush(0)? If yes, ask the writer for the value.
+        if(initialAllocationSize<=0&&_writer.getNumberOfFlushedRows()>0)
+            initialAllocationSize=_writer.getNumberOfCellsOfLastFlushedRow();
+//default to 10 on the first row.
+        if(initialAllocationSize<=0)
+            initialAllocationSize=10;
+        SXSSFRow newRow=new SXSSFRow(this,initialAllocationSize);
+        _rows.put(new Integer(rownum),newRow);
+        if(_randomAccessWindowSize>=0&&_rows.size()>_randomAccessWindowSize)
+        {
+            try
+            {
+               flushRows(_randomAccessWindowSize);
+            }
+            catch (IOException ioe)
+            {
+                throw new RuntimeException(ioe);
+            }
+        }
+        return newRow;
+    }
+

@@ -1,0 +1,34 @@
+    /**
+     * Get the value of the cell as an error code.
+     * <p>
+     * For strings, numbers, and booleans, we throw an exception.
+     * For blank cells we return a 0.
+     * </p>
+     *
+     * @return the value of the cell as an error code
+     * @throws IllegalStateException if the cell type returned by {@link #getCellType()} isn't CELL_TYPE_ERROR
+     * @see org.apache.poi.ss.usermodel.FormulaError for error codes
+     */
+    public byte getErrorCellValue()
+    {
+        int cellType = getCellType();
+        switch(cellType) 
+        {
+            case CELL_TYPE_BLANK:
+                return 0;
+            case CELL_TYPE_FORMULA:
+            {
+                FormulaValue fv=(FormulaValue)_value;
+                if(fv.getFormulaType()!=CELL_TYPE_ERROR)
+                      throw typeMismatch(CELL_TYPE_ERROR, CELL_TYPE_FORMULA, false);
+                return ((ErrorFormulaValue)_value).getPreEvaluatedValue();
+            }
+            case CELL_TYPE_ERROR:
+            {
+                return ((ErrorValue)_value).getValue();
+            }
+            default:
+                throw typeMismatch(CELL_TYPE_ERROR, cellType, false);
+        }
+    }
+

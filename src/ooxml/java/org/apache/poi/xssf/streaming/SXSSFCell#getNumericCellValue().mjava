@@ -1,0 +1,32 @@
+    /**
+     * Get the value of the cell as a number.
+     * <p>
+     * For strings we throw an exception. For blank cells we return a 0.
+     * For formulas or error cells we return the precalculated value;
+     * </p>
+     * @return the value of the cell as a number
+     * @throws IllegalStateException if the cell type returned by {@link #getCellType()} is CELL_TYPE_STRING
+     * @exception NumberFormatException if the cell value isn't a parsable <code>double</code>.
+     * @see org.apache.poi.ss.usermodel.DataFormatter for turning this number into a string similar to that which Excel would render this number as.
+     */
+    public double getNumericCellValue()
+    {
+        int cellType = getCellType();
+        switch(cellType) 
+        {
+            case CELL_TYPE_BLANK:
+                return 0.0;
+            case CELL_TYPE_FORMULA:
+            {
+                FormulaValue fv=(FormulaValue)_value;
+                if(fv.getFormulaType()!=CELL_TYPE_NUMERIC)
+                      throw typeMismatch(CELL_TYPE_NUMERIC, CELL_TYPE_FORMULA, false);
+                return ((NumericFormulaValue)_value).getPreEvaluatedValue();
+            }
+            case CELL_TYPE_NUMERIC:
+                return ((NumericValue)_value).getValue();
+            default:
+                throw typeMismatch(CELL_TYPE_NUMERIC, cellType, false);
+        }
+    }
+
