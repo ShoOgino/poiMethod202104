@@ -8,17 +8,30 @@
             String ref = new CellReference(_rownum, columnIndex).formatAsString();
             _out.write("<c r=\""+ref+"\"");
             CellStyle cellStyle=cell.getCellStyle();
-            if(cellStyle!=null) _out.write(" s=\""+cellStyle.getIndex()+"\"");
+            if(cellStyle.getIndex() != 0) _out.write(" s=\""+cellStyle.getIndex()+"\"");
             int cellType=cell.getCellType();
             switch(cellType)
             {
                 case Cell.CELL_TYPE_BLANK:
                 {
-//TODO: What needs to be done here?
+                    _out.write(">");
+                    break;
                 }
                 case Cell.CELL_TYPE_FORMULA:
                 {
-//TODO: What needs to be done here?
+                    _out.write(">");
+                    _out.write("<f>");
+                    outputQuotedString(cell.getCellFormula());
+                    _out.write("</f>");
+                    switch (cell.getCachedFormulaResultType()){
+                        case Cell.CELL_TYPE_NUMERIC:
+                            double nval = cell.getNumericCellValue();
+                            if(!Double.isNaN(nval)){
+                                _out.write("<v>"+nval+"</v>");
+                            }
+                            break;
+                    }
+                    break;
                 }
                 case Cell.CELL_TYPE_STRING:
                 {
@@ -36,15 +49,16 @@
                 }
                 case Cell.CELL_TYPE_BOOLEAN:
                 {
-                    _out.write(" t=\"n\">");
+                    _out.write(" t=\"b\">");
                     _out.write("<v>"+(cell.getBooleanCellValue()?"1":"0")+"</v>");
                     break;
                 }
                 case Cell.CELL_TYPE_ERROR:
                 {
-//TODO: What needs to be done here?
-                    _out.write(" t=\"inlineStr\">");
-                    _out.write("<is><t></t></is>");
+                    FormulaError error = FormulaError.forInt(cell.getErrorCellValue());
+
+                    _out.write(" t=\"e\">");
+                    _out.write("<v>" +  error.getString() +"</v>");
                     break;
                 }
                 default:

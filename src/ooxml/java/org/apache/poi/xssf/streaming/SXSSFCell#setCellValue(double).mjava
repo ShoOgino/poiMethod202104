@@ -7,10 +7,18 @@
      */
     public void setCellValue(double value)
     {
-        ensureTypeOrFormulaType(CELL_TYPE_NUMERIC);
-        if(_value.getType()==CELL_TYPE_FORMULA)
-            ((NumericFormulaValue)_value).setPreEvaluatedValue(value);
-        else
-            ((NumericValue)_value).setValue(value);
+        if(Double.isInfinite(value)) {
+            // Excel does not support positive/negative infinities,
+            // rather, it gives a #DIV/0! error in these cases.
+            setCellErrorValue(FormulaError.DIV0.getCode());
+        } else if (Double.isNaN(value)){
+            setCellErrorValue(FormulaError.NUM.getCode());
+        } else {
+            ensureTypeOrFormulaType(CELL_TYPE_NUMERIC);
+            if(_value.getType()==CELL_TYPE_FORMULA)
+                ((NumericFormulaValue)_value).setPreEvaluatedValue(value);
+            else
+                ((NumericValue)_value).setValue(value);
+        }
     }
 
