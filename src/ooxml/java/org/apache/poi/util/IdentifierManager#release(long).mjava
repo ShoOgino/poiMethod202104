@@ -1,0 +1,76 @@
+    /**
+     * @param id
+     * the identifier to release. Must be greater than or equal to
+     * {@link #lowerbound} and must be less than or equal to {@link #upperbound}
+     * @return true, if the identifier was reserved and has been successfully
+     * released, false, if the identifier was not reserved.
+     */
+    public boolean release(long id) {
+        if (id < lowerbound || id > upperbound) {
+            throw new IllegalArgumentException("Value for parameter 'id' was out of bounds");
+        }
+
+        if (id == upperbound) {
+            Segment lastSegment = segments.getLast();
+            if (lastSegment.end == upperbound - 1) {
+                lastSegment.end = upperbound;
+                return true;
+            } else if (lastSegment.end == upperbound) {
+                return false;
+            } else {
+                segments.add(new Segment(upperbound, upperbound));
+                return true;
+            }
+        }
+
+        if (id == lowerbound) {
+            Segment firstSegment = segments.getFirst();
+            if (firstSegment.start == lowerbound + 1) {
+                firstSegment.start = lowerbound;
+                return true;
+            } else if (firstSegment.start == lowerbound) {
+                return false;
+            } else {
+                segments.addFirst(new Segment(lowerbound, lowerbound));
+                return true;
+            }
+        }
+
+        long higher = id + 1;
+        long lower = id - 1;
+        ListIterator<Segment> iter = segments.listIterator();
+
+        while (iter.hasNext()) {
+            Segment segment = iter.next();
+            if (segment.end < lower) {
+                continue;
+            }
+            if (segment.start > higher) {
+                iter.previous();
+                iter.add(new Segment(id, id));
+                return true;
+            }
+            if (segment.start == higher) {
+                segment.start = id;
+                return true;
+            }
+            else if (segment.end == lower) {
+                segment.end = id;
+                /* check if releasing this elements glues two segments into one */
+                if (iter.hasNext()) {
+                  Segment next = iter.next();
+                    if (next.start == segment.end + 1) {
+                        segment.end = next.end;
+                        iter.remove();
+                    }
+                }
+                return true;
+            }
+            else {
+                /* id was not reserved, return false */
+                break;
+            }
+        }
+        return false;
+    }
+

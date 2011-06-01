@@ -1,41 +1,38 @@
-	/**
-	 * Figures out the policy for the given document,
-	 *  and creates any header and footer objects
-	 *  as required.
-	 */
-	public XWPFHeaderFooterPolicy(XWPFDocument doc, CTSectPr sectPr) throws IOException, XmlException {
-		// Grab what headers and footers have been defined
-		// For now, we don't care about different ranges, as it
-		//  doesn't seem that .docx properly supports that
-		//  feature of the file format yet
-		this.doc = doc;
-		for(int i=0; i<sectPr.sizeOfHeaderReferenceArray(); i++) {
-			// Get the header
-			CTHdrFtrRef ref = sectPr.getHeaderReferenceArray(i);
-			PackagePart hdrPart = doc.getPartById(ref.getId());
-
+    /**
+     * Figures out the policy for the given document,
+     *  and creates any header and footer objects
+     *  as required.
+     */
+    public XWPFHeaderFooterPolicy(XWPFDocument doc, CTSectPr sectPr) throws IOException, XmlException {
+        // Grab what headers and footers have been defined
+        // For now, we don't care about different ranges, as it
+        //  doesn't seem that .docx properly supports that
+        //  feature of the file format yet
+        this.doc = doc;
+        for(int i=0; i<sectPr.sizeOfHeaderReferenceArray(); i++) {
+            // Get the header
+            CTHdrFtrRef ref = sectPr.getHeaderReferenceArray(i);
+            POIXMLDocumentPart relatedPart = doc.getRelationById(ref.getId());
             XWPFHeader hdr = null;
-
-            for (POIXMLDocumentPart part : doc.getRelations()) {
-                if (part.getPackagePart().getPartName().equals(hdrPart.getPartName())) {
-                    hdr = (XWPFHeader) part;
-                }
+            if (relatedPart != null && relatedPart instanceof XWPFHeader) {
+                hdr = (XWPFHeader) relatedPart;
             }
-
-			// Assign it
-			Enum type = ref.getType();
-			assignHeader(hdr, type);
-		}
-		for(int i=0; i<sectPr.sizeOfFooterReferenceArray(); i++) {
-			// Get the footer
-			CTHdrFtrRef ref = sectPr.getFooterReferenceArray(i);
-			PackagePart ftrPart = doc.getPartById(ref.getId());
-			XWPFFooter ftr = new XWPFFooter(doc, 
-					FtrDocument.Factory.parse(ftrPart.getInputStream()).getFtr());
-
-			// Assign it
-			Enum type = ref.getType();
-			assignFooter(ftr, type);
-		}
-	}
+            // Assign it
+            Enum type = ref.getType();
+            assignHeader(hdr, type);
+        }
+        for(int i=0; i<sectPr.sizeOfFooterReferenceArray(); i++) {
+            // Get the footer
+            CTHdrFtrRef ref = sectPr.getFooterReferenceArray(i);
+            POIXMLDocumentPart relatedPart = doc.getRelationById(ref.getId());
+            XWPFFooter ftr = null;
+            if (relatedPart != null && relatedPart instanceof XWPFFooter)
+            {
+                ftr = (XWPFFooter) relatedPart;
+            }
+            // Assign it
+            Enum type = ref.getType();
+            assignFooter(ftr, type);
+        }
+    }
 

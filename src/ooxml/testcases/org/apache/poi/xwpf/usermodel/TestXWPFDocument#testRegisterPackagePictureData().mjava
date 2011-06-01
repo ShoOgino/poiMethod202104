@@ -1,0 +1,30 @@
+	public void testRegisterPackagePictureData() throws IOException, InvalidFormatException {
+	    XWPFDocument doc = XWPFTestDataSamples.openSampleDocument("issue_51265_1.docx");
+	    
+	    /* manually assemble a new image package part*/
+	    OPCPackage opcPckg = doc.getPackage();
+	    XWPFRelation jpgRelation = XWPFRelation.IMAGE_JPEG;
+	    PackagePartName partName = PackagingURIHelper.createPartName(jpgRelation.getDefaultFileName().replace('#', '2'));
+        PackagePart newImagePart = opcPckg.createPart(partName, jpgRelation.getContentType());
+        byte[] nature1 = XWPFTestDataSamples.getImage("abstract4.jpg");
+        OutputStream os = newImagePart.getOutputStream();
+        os.write(nature1);
+	    os.close();
+	    XWPFHeader xwpfHeader = doc.getHeaderList().get(0);
+	    PackageRelationship relationship = xwpfHeader.getPackagePart().addRelationship(partName, TargetMode.INTERNAL, jpgRelation.getRelation());
+	    XWPFPictureData newPicData = new XWPFPictureData(newImagePart,relationship);
+	    /* new part is now ready to rumble */
+	    
+	    assertFalse(xwpfHeader.getAllPictures().contains(newPicData));
+	    assertFalse(doc.getAllPictures().contains(newPicData));
+	    assertFalse(doc.getAllPackagePictures().contains(newPicData));
+
+	    doc.registerPackagePictureData(newPicData);
+	    
+	    assertFalse(xwpfHeader.getAllPictures().contains(newPicData));
+	    assertFalse(doc.getAllPictures().contains(newPicData));
+	    assertTrue(doc.getAllPackagePictures().contains(newPicData));
+	    
+	    doc.getPackage().revert();
+	}
+

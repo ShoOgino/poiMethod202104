@@ -1,0 +1,62 @@
+    public long reserve(long id) {
+        if (id < lowerbound || id > upperbound) {
+            throw new IllegalArgumentException("Value for parameter 'id' was out of bounds");
+        }
+        verifyIdentifiersLeft();
+        
+        if (id == upperbound) {
+            Segment lastSegment = segments.getLast();
+            if (lastSegment.end == upperbound) {
+                lastSegment.end = upperbound - 1;
+                if (lastSegment.start > lastSegment.end) {
+                    segments.removeLast();
+                }
+                return id;
+            }
+            return reserveNew();
+        }
+
+        if (id == lowerbound) {
+            Segment firstSegment = segments.getFirst();
+            if (firstSegment.start == lowerbound) {
+                firstSegment.start = lowerbound + 1;
+                if (firstSegment.end < firstSegment.start) {
+                    segments.removeFirst();
+                }
+                return id;
+            }
+            return reserveNew();
+        }
+
+        ListIterator<Segment> iter = segments.listIterator();
+        while (iter.hasNext()) {
+            Segment segment = iter.next();
+            if (segment.end < id) {
+                continue;
+            }
+            else if (segment.start > id) {
+                break;
+            }
+            else if (segment.start == id) {
+                segment.start = id + 1;
+                if (segment.end < segment.start) {
+                    iter.remove();
+                }
+                return id;
+            }
+            else if (segment.end == id) {
+                segment.end = id - 1;
+                if (segment.start > segment.end) {
+                    iter.remove();
+                }
+                return id;
+            }
+            else {
+                iter.add(new Segment(id + 1, segment.end));
+                segment.end = id - 1;
+                return id;
+            }
+        }
+        return reserveNew();
+    }
+

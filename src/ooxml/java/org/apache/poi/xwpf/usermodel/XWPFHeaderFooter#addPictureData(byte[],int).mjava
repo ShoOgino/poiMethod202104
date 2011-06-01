@@ -1,0 +1,64 @@
+    /**
+     * Adds a picture to the document.
+     *
+     * @param is                The stream to read image from
+     * @param format            The format of the picture.
+     *
+     * @return the index to this picture (0 based), the added picture can be obtained from {@link #getAllPictures()} .
+     * @throws InvalidFormatException 
+     */
+    public String addPictureData(byte[] pictureData,int format) throws InvalidFormatException
+    {
+        XWPFPictureData xwpfPicData = document.findPackagePictureData(pictureData, format);
+        POIXMLRelation relDesc = XWPFPictureData.RELATIONS[format];
+
+        if (xwpfPicData == null)
+        {
+            /* Part doesn't exist, create a new one */
+            int idx = document.getNextPicNameNumber(format);
+            xwpfPicData = (XWPFPictureData) createRelationship(relDesc, XWPFFactory.getInstance(),idx);
+            /* write bytes to new part */
+            PackagePart picDataPart = xwpfPicData.getPackagePart();
+            OutputStream out = null;
+            try {
+                out = picDataPart.getOutputStream();
+                out.write(pictureData);
+            } catch (IOException e) {
+                throw new POIXMLException(e);
+            } finally {
+                try {
+                    out.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+            
+            document.registerPackagePictureData(xwpfPicData);
+            pictures.add(xwpfPicData);
+            return getRelationId(xwpfPicData);
+        }
+        else if (!getRelations().contains(xwpfPicData))
+        {
+            /*
+             * Part already existed, but was not related so far. Create
+             * relationship to the already existing part and update
+             * POIXMLDocumentPart data.
+             */
+            PackagePart picDataPart = xwpfPicData.getPackagePart();
+            // TODO add support for TargetMode.EXTERNAL relations.
+            TargetMode targetMode = TargetMode.INTERNAL;
+            PackagePartName partName = picDataPart.getPartName();
+            String relation = relDesc.getRelation();
+            PackageRelationship relShip = getPackagePart().addRelationship(partName,targetMode,relation);
+            String id = relShip.getId();
+            addRelation(id,xwpfPicData);
+            pictures.add(xwpfPicData);
+            return id;
+        }
+        else 
+        {
+            /* Part already existed, get relation id and return it */
+            return getRelationId(xwpfPicData);
+        }
+    }
+
