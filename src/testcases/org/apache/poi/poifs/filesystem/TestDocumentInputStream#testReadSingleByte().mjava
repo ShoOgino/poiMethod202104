@@ -2,30 +2,35 @@
      * test simple read method
      */
     public void testReadSingleByte() throws IOException {
-        DocumentInputStream stream    = new DocumentInputStream(_workbook_o);
-        int                 remaining = _workbook_size;
+       DocumentInputStream[] streams = new DocumentInputStream[] {
+             new DocumentInputStream(_workbook_o),
+             new NDocumentInputStream(_workbook_n)
+       };
+       for(DocumentInputStream stream : streams) {
+          int remaining = _workbook_size;
 
-        for (int j = 0; j < _workbook_size; j++)
-        {
-	    int b = stream.read();
-	    assertTrue("checking sign of " + j, b >= 0);
-            assertEquals("validating byte " + j, _workbook_data[ j ],
-                         ( byte ) b);
-            remaining--;
-            assertEquals("checking remaining after reading byte " + j,
-                         remaining, stream.available());
-        }
-        assertEquals(-1, stream.read());
-        stream.close();
-        try
-        {
-            stream.read();
-            fail("Should have caught IOException");
-        }
-        catch (IOException ignored)
-        {
-
-            // as expected
-        }
+          // Try and read each byte in turn
+          for (int j = 0; j < _workbook_size; j++) {
+             int b = stream.read();
+             assertTrue("checking sign of " + j, b >= 0);
+             assertEquals("validating byte " + j, _workbook_data[ j ],
+                   ( byte ) b);
+             remaining--;
+             assertEquals("checking remaining after reading byte " + j,
+                   remaining, stream.available());
+          }
+          
+          // Ensure we fell off the end
+          assertEquals(-1, stream.read());
+          
+          // Check that after close we can no longer read
+          stream.close();
+          try {
+             stream.read();
+             fail("Should have caught IOException");
+          } catch (IOException ignored) {
+             // as expected
+          }
+       }
     }
 
