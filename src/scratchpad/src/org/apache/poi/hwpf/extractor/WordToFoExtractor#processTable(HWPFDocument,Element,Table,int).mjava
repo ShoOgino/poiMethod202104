@@ -1,0 +1,97 @@
+    protected void processTable(HWPFDocument hwpfDocument, Element flow,
+	    Table table, int thisTableLevel) {
+	Element tableElement = addTable(flow);
+
+	Element tableHeader = createTableHeader();
+	Element tableBody = createTableBody();
+
+	final int tableRows = table.numRows();
+
+	int maxColumns = Integer.MIN_VALUE;
+	for (int r = 0; r < tableRows; r++) {
+	    maxColumns = Math.max(maxColumns, table.getRow(r).numCells());
+	}
+
+	for (int r = 0; r < tableRows; r++) {
+	    TableRow tableRow = table.getRow(r);
+
+	    Element tableRowElement = createTableRow();
+	    WordToFoUtils.setTableRowProperties(tableRow, tableRowElement);
+
+	    final int rowCells = tableRow.numCells();
+	    for (int c = 0; c < rowCells; c++) {
+		TableCell tableCell = tableRow.getCell(c);
+
+		if (tableCell.isMerged() && !tableCell.isFirstMerged())
+		    continue;
+
+		if (tableCell.isVerticallyMerged()
+			&& !tableCell.isFirstVerticallyMerged())
+		    continue;
+
+		Element tableCellElement = createTableCell();
+		WordToFoUtils.setTableCellProperties(tableRow, tableCell,
+			tableCellElement, r == 0, r == tableRows - 1, c == 0,
+			c == rowCells - 1);
+
+		if (tableCell.isFirstMerged()) {
+		    int count = 0;
+		    for (int c1 = c; c1 < rowCells; c1++) {
+			TableCell nextCell = tableRow.getCell(c1);
+			if (nextCell.isMerged())
+			    count++;
+			if (!nextCell.isMerged())
+			    break;
+		    }
+		    tableCellElement.setAttribute("number-columns-spanned", ""
+			    + count);
+		} else {
+		    if (c == rowCells - 1 && c != maxColumns - 1) {
+			tableCellElement.setAttribute("number-columns-spanned",
+				"" + (maxColumns - c));
+		    }
+		}
+
+		if (tableCell.isFirstVerticallyMerged()) {
+		    int count = 0;
+		    for (int r1 = r; r1 < tableRows; r1++) {
+			TableRow nextRow = table.getRow(r1);
+			if (nextRow.numCells() < c)
+			    break;
+			TableCell nextCell = nextRow.getCell(c);
+			if (nextCell.isVerticallyMerged())
+			    count++;
+			if (!nextCell.isVerticallyMerged())
+			    break;
+		    }
+		    tableCellElement.setAttribute("number-rows-spanned", ""
+			    + count);
+		}
+
+		processSectionParagraphes(hwpfDocument, tableCellElement,
+			tableCell, thisTableLevel);
+
+		if (!tableCellElement.hasChildNodes()) {
+		    tableCellElement.appendChild(createBlock());
+		}
+
+		tableRowElement.appendChild(tableCellElement);
+	    }
+
+	    if (tableRow.isTableHeader()) {
+		tableHeader.appendChild(tableRowElement);
+	    } else {
+		tableBody.appendChild(tableRowElement);
+	    }
+	}
+
+	if (tableHeader.hasChildNodes()) {
+	    tableElement.appendChild(tableHeader);
+	}
+	if (tableBody.hasChildNodes()) {
+	    tableElement.appendChild(tableBody);
+	} else {
+	    System.err.println("Table without body");
+	}
+    }
+
