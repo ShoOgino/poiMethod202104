@@ -1,55 +1,68 @@
     protected void processParagraph(HWPFDocument hwpfDocument,
-	    Element parentFopElement, int currentTableLevel,
-	    Paragraph paragraph, String bulletText) {
-	final Element block = createBlock();
-	parentFopElement.appendChild(block);
+            Element parentFopElement, int currentTableLevel,
+            Paragraph paragraph, String bulletText) {
+        final Element block = createBlock();
+        parentFopElement.appendChild(block);
 
-	WordToFoUtils.setParagraphProperties(paragraph, block);
+        WordToFoUtils.setParagraphProperties(paragraph, block);
 
-	final int charRuns = paragraph.numCharacterRuns();
+        final int charRuns = paragraph.numCharacterRuns();
 
-	if (charRuns == 0) {
-	    return;
-	}
+        if (charRuns == 0) {
+            return;
+        }
 
-	final String pFontName;
-	final int pFontSize;
-	final boolean pBold;
-	final boolean pItalic;
-	{
-	    CharacterRun characterRun = paragraph.getCharacterRun(0);
-	    pFontSize = characterRun.getFontSize() / 2;
-	    pFontName = characterRun.getFontName();
-	    pBold = characterRun.isBold();
-	    pItalic = characterRun.isItalic();
-	}
-	WordToFoUtils.setFontFamily(block, pFontName);
-	WordToFoUtils.setFontSize(block, pFontSize);
-	WordToFoUtils.setBold(block, pBold);
-	WordToFoUtils.setItalic(block, pItalic);
+        final String pFontName;
+        final int pFontSize;
+        final boolean pBold;
+        final boolean pItalic;
+        {
+            CharacterRun characterRun = paragraph.getCharacterRun(0);
+            pFontSize = characterRun.getFontSize() / 2;
+            pFontName = characterRun.getFontName();
+            pBold = characterRun.isBold();
+            pItalic = characterRun.isItalic();
+        }
+        WordToFoUtils.setFontFamily(block, pFontName);
+        WordToFoUtils.setFontSize(block, pFontSize);
+        WordToFoUtils.setBold(block, pBold);
+        WordToFoUtils.setItalic(block, pItalic);
 
-	StringBuilder lineText = new StringBuilder();
+        StringBuilder lineText = new StringBuilder();
 
-	if (WordToFoUtils.isNotEmpty(bulletText)) {
-	    Element inline = createInline();
-	    block.appendChild(inline);
+        if (WordToFoUtils.isNotEmpty(bulletText)) {
+            Element inline = createInline();
+            block.appendChild(inline);
 
-	    Text textNode = createText(bulletText);
-	    inline.appendChild(textNode);
+            Text textNode = createText(bulletText);
+            inline.appendChild(textNode);
 
-	    lineText.append(bulletText);
-	}
+            lineText.append(bulletText);
+        }
 
-	for (int c = 0; c < charRuns; c++) {
-	    CharacterRun characterRun = paragraph.getCharacterRun(c);
+        for (int c = 0; c < charRuns; c++) {
+            CharacterRun characterRun = paragraph.getCharacterRun(c);
+
+            if (hwpfDocument.getPicturesTable().hasPicture(characterRun)) {
+                Picture picture = hwpfDocument.getPicturesTable()
+                        .extractPicture(characterRun, true);
+
+                processImage(block, characterRun.text().charAt(0) == 0x01,
+                        picture);
+                continue;
+            }
 
 	    String text = characterRun.text();
 	    if (text.getBytes().length == 0)
 		continue;
 
-	    if (text.getBytes()[0] == FIELD_BEGIN_MARK) {
-		int skipTo = tryImageWithinField(hwpfDocument, paragraph, c,
-			block);
+            if (text.getBytes()[0] == FIELD_BEGIN_MARK) {
+                /*
+                 * check if we have a field with calculated image as a result.
+                 * MathType equation, for example.
+                 */
+                int skipTo = tryImageWithinField(hwpfDocument, paragraph, c,
+                        block);
 
 		if (skipTo != c) {
 		    c = skipTo;
