@@ -1,50 +1,59 @@
-    protected void processSectionParagraphes(HWPFDocument hwpfDocument,
-	    Element flow, Range range, int currentTableLevel) {
-	final Map<Integer, Table> allTables = new HashMap<Integer, Table>();
-	for (TableIterator tableIterator = WordToFoUtils.newTableIterator(
-		range, currentTableLevel + 1); tableIterator.hasNext();) {
-	    Table next = tableIterator.next();
-	    allTables.put(Integer.valueOf(next.getStartOffset()), next);
-	}
+    protected void processSectionParagraphes( HWPFDocument hwpfDocument,
+            Element flow, Range range, int currentTableLevel )
+    {
+        final Map<Integer, Table> allTables = new HashMap<Integer, Table>();
+        for ( TableIterator tableIterator = WordToFoUtils.newTableIterator(
+                range, currentTableLevel + 1 ); tableIterator.hasNext(); )
+        {
+            Table next = tableIterator.next();
+            allTables.put( Integer.valueOf( next.getStartOffset() ), next );
+        }
 
-	final ListTables listTables = hwpfDocument.getListTables();
-	int currentListInfo = 0;
+        final ListTables listTables = hwpfDocument.getListTables();
+        int currentListInfo = 0;
 
-	final int paragraphs = range.numParagraphs();
-	for (int p = 0; p < paragraphs; p++) {
-	    Paragraph paragraph = range.getParagraph(p);
+        final int paragraphs = range.numParagraphs();
+        for ( int p = 0; p < paragraphs; p++ )
+        {
+            Paragraph paragraph = range.getParagraph( p );
 
-	    if (allTables.containsKey(Integer.valueOf(paragraph
-		    .getStartOffset()))) {
-		Table table = allTables.get(Integer.valueOf(paragraph
-			.getStartOffset()));
-		processTable(hwpfDocument, flow, table, currentTableLevel + 1);
-		continue;
-	    }
+            if ( allTables.containsKey( Integer.valueOf( paragraph
+                    .getStartOffset() ) ) )
+            {
+                Table table = allTables.get( Integer.valueOf( paragraph
+                        .getStartOffset() ) );
+                processTable( hwpfDocument, flow, table, currentTableLevel + 1 );
+                continue;
+            }
 
-	    if (paragraph.isInTable()
-		    && paragraph.getTableLevel() != currentTableLevel) {
-		continue;
-	    }
+            if ( paragraph.isInTable()
+                    && paragraph.getTableLevel() != currentTableLevel )
+            {
+                continue;
+            }
 
-	    if (paragraph.getIlfo() != currentListInfo) {
-		currentListInfo = paragraph.getIlfo();
-	    }
+            if ( paragraph.getIlfo() != currentListInfo )
+            {
+                currentListInfo = paragraph.getIlfo();
+            }
 
-	    if (currentListInfo != 0) {
-		final ListFormatOverride listFormatOverride = listTables
-			.getOverride(paragraph.getIlfo());
+            if ( currentListInfo != 0 )
+            {
+                final ListFormatOverride listFormatOverride = listTables
+                        .getOverride( paragraph.getIlfo() );
 
-		String label = WordToFoUtils.getBulletText(listTables,
-			paragraph, listFormatOverride.getLsid());
+                String label = WordToFoUtils.getBulletText( listTables,
+                        paragraph, listFormatOverride.getLsid() );
 
-		processParagraph(hwpfDocument, flow, currentTableLevel,
-			paragraph, label);
-	    } else {
-		processParagraph(hwpfDocument, flow, currentTableLevel,
-			paragraph, WordToFoUtils.EMPTY);
-	    }
-	}
+                processParagraph( hwpfDocument, flow, currentTableLevel,
+                        paragraph, label );
+            }
+            else
+            {
+                processParagraph( hwpfDocument, flow, currentTableLevel,
+                        paragraph, WordToFoUtils.EMPTY );
+            }
+        }
 
     }
 
