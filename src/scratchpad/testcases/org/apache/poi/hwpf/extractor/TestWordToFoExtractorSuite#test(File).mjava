@@ -1,0 +1,34 @@
+    protected static void test( File child ) throws Exception
+    {
+        HWPFDocument hwpfDocument;
+        FileInputStream fileInputStream = new FileInputStream( child );
+        try
+        {
+            hwpfDocument = new HWPFDocument( fileInputStream );
+        }
+        catch ( Exception exc )
+        {
+            // unable to parse file -- not WordToFoExtractor fault
+            return;
+        }
+        finally
+        {
+            fileInputStream.close();
+        }
+
+        WordToFoExtractor wordToFoExtractor = new WordToFoExtractor(
+                DocumentBuilderFactory.newInstance().newDocumentBuilder()
+                        .newDocument() );
+        wordToFoExtractor.processDocument( hwpfDocument );
+
+        StringWriter stringWriter = new StringWriter();
+
+        Transformer transformer = TransformerFactory.newInstance()
+                .newTransformer();
+        transformer.setOutputProperty( OutputKeys.INDENT, "yes" );
+        transformer.transform(
+                new DOMSource( wordToFoExtractor.getDocument() ),
+                new StreamResult( stringWriter ) );
+        // no exceptions
+    }
+
