@@ -1,0 +1,49 @@
+    /**
+     * Called to test whether or not the embedded workbook was correctly
+     * updated. This method simply recovers the first cell from the first row
+     * of the first workbook and tests the value it contains.
+     * <p/>
+     * Note that execution will not continue up to the assertion as the
+     * embedded workbook is now corrupted and causes an IllegalArgumentException
+     * with the following message
+     * <p/>
+     * <em>java.lang.IllegalArgumentException: Your InputStream was neither an
+     * OLE2 stream, nor an OOXML stream</em>
+     * <p/>
+     * to be thrown when the WorkbookFactory.createWorkbook(InputStream) method
+     * is executed.
+     *
+     * @throws org.apache.poi.openxml4j.exceptions.OpenXML4JException
+     *                             Rather
+     *                             than use the specific classes (HSSF/XSSF) to handle the embedded
+     *                             workbook this method uses those defeined in the SS stream. As
+     *                             a result, it might be the case that a SpreadsheetML file is
+     *                             opened for processing, throwing this exception if that file is
+     *                             invalid.
+     * @throws java.io.IOException Thrown if a problem occurs in the underlying
+     *                             file system.
+     */
+    public void checkUpdatedDoc() throws OpenXML4JException, IOException {
+        Workbook workbook = null;
+        Sheet sheet = null;
+        Row row = null;
+        Cell cell = null;
+        PackagePart pPart = null;
+        Iterator<PackagePart> pIter = null;
+        List<PackagePart> embeddedDocs = this.doc.getAllEmbedds();
+        if (embeddedDocs != null && !embeddedDocs.isEmpty()) {
+            pIter = embeddedDocs.iterator();
+            while (pIter.hasNext()) {
+                pPart = pIter.next();
+                if (pPart.getPartName().getExtension().equals(BINARY_EXTENSION) ||
+                        pPart.getPartName().getExtension().equals(OPENXML_EXTENSION)) {
+                    workbook = WorkbookFactory.create(pPart.getInputStream());
+                    sheet = workbook.getSheetAt(SHEET_NUM);
+                    row = sheet.getRow(ROW_NUM);
+                    cell = row.getCell(CELL_NUM);
+                    Assert.assertEquals(cell.getNumericCellValue(), NEW_VALUE);
+                }
+            }
+        }
+    }
+
