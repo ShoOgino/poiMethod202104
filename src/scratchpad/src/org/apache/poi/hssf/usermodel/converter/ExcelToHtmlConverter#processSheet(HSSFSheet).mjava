@@ -1,0 +1,56 @@
+    protected void processSheet( HSSFSheet sheet )
+    {
+        Element h1 = htmlDocumentFacade.createHeader1();
+        h1.appendChild( htmlDocumentFacade.createText( sheet.getSheetName() ) );
+        htmlDocumentFacade.getBody().appendChild( h1 );
+
+        final int physicalNumberOfRows = sheet.getPhysicalNumberOfRows();
+        if ( physicalNumberOfRows <= 0 )
+            return;
+
+        Element table = htmlDocumentFacade.createTable();
+        Element tableBody = htmlDocumentFacade.createTableBody();
+
+        final List<Element> emptyRowElements = new ArrayList<Element>(
+                physicalNumberOfRows );
+
+        for ( int r = 0; r < physicalNumberOfRows; r++ )
+        {
+            HSSFRow row = sheet.getRow( r );
+
+            Element tableRowElement = htmlDocumentFacade.createTableRow();
+
+            boolean emptyRow;
+            if ( row != null )
+            {
+                emptyRow = processRow( row, tableRowElement );
+            }
+            else
+            {
+                emptyRow = true;
+            }
+
+            if ( emptyRow )
+            {
+                emptyRowElements.add( tableRowElement );
+            }
+            else
+            {
+                if ( !emptyRowElements.isEmpty() )
+                {
+                    for ( Element emptyCellElement : emptyRowElements )
+                    {
+                        tableBody.appendChild( emptyCellElement );
+                    }
+                    emptyRowElements.clear();
+                }
+
+                tableBody.appendChild( tableRowElement );
+                emptyRow = false;
+            }
+        }
+
+        table.appendChild( tableBody );
+        htmlDocumentFacade.getBody().appendChild( table );
+    }
+

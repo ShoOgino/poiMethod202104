@@ -1,0 +1,94 @@
+    protected boolean processCell( HSSFCell cell, Element tableCellElement )
+    {
+        final HSSFCellStyle cellStyle = cell.getCellStyle();
+
+        String value;
+        switch ( cell.getCellType() )
+        {
+        case HSSFCell.CELL_TYPE_STRING:
+            // XXX: enrich
+            value = cell.getRichStringCellValue().getString();
+            break;
+        case HSSFCell.CELL_TYPE_FORMULA:
+            switch ( cell.getCachedFormulaResultType() )
+            {
+            case HSSFCell.CELL_TYPE_STRING:
+                HSSFRichTextString str = cell.getRichStringCellValue();
+                if ( str != null && str.length() > 0 )
+                {
+                    value = ( str.toString() );
+                }
+                else
+                {
+                    value = ExcelToHtmlUtils.EMPTY;
+                }
+                break;
+            case HSSFCell.CELL_TYPE_NUMERIC:
+                HSSFCellStyle style = cellStyle;
+                if ( style == null )
+                {
+                    value = String.valueOf( cell.getNumericCellValue() );
+                }
+                else
+                {
+                    value = ( _formatter.formatRawCellContents(
+                            cell.getNumericCellValue(), style.getDataFormat(),
+                            style.getDataFormatString() ) );
+                }
+                break;
+            case HSSFCell.CELL_TYPE_BOOLEAN:
+                value = String.valueOf( cell.getBooleanCellValue() );
+                break;
+            case HSSFCell.CELL_TYPE_ERROR:
+                value = ErrorEval.getText( cell.getErrorCellValue() );
+                break;
+            default:
+                logger.log(
+                        POILogger.WARN,
+                        "Unexpected cell cachedFormulaResultType ("
+                                + cell.getCachedFormulaResultType() + ")" );
+                value = ExcelToHtmlUtils.EMPTY;
+                break;
+            }
+            break;
+        case HSSFCell.CELL_TYPE_BLANK:
+            value = ExcelToHtmlUtils.EMPTY;
+            break;
+        case HSSFCell.CELL_TYPE_NUMERIC:
+            value = _formatter.formatCellValue( cell );
+            break;
+        case HSSFCell.CELL_TYPE_BOOLEAN:
+            value = String.valueOf( cell.getBooleanCellValue() );
+            break;
+        case HSSFCell.CELL_TYPE_ERROR:
+            value = ErrorEval.getText( cell.getErrorCellValue() );
+            break;
+        default:
+            logger.log( POILogger.WARN,
+                    "Unexpected cell type (" + cell.getCellType() + ")" );
+            return true;
+        }
+
+        final short cellStyleIndex = cellStyle.getIndex();
+        if ( cellStyleIndex != 0 )
+        {
+            tableCellElement.setAttribute( "class", "cellstyle_"
+                    + cellStyleIndex );
+            usedStyles.add( Short.valueOf( cellStyleIndex ) );
+            if ( ExcelToHtmlUtils.isEmpty( value ) )
+            {
+                /*
+                 * if cell style is defined (like borders, etc.) but cell text
+                 * is empty, add "&nbsp;" to output, so browser won't collapse
+                 * and ignore cell
+                 */
+                value = "\u00A0";
+            }
+        }
+
+        Text text = htmlDocumentFacade.createText( value );
+        tableCellElement.appendChild( text );
+
+        return ExcelToHtmlUtils.isEmpty( value ) && cellStyleIndex == 0;
+    }
+
