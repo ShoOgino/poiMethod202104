@@ -1,0 +1,73 @@
+    protected void processField( HWPFDocumentCore wordDocument,
+            Element currentBlock, Paragraph paragraph, int currentTableLevel,
+            List<CharacterRun> characterRuns, int beginMark, int separatorMark,
+            int endMark )
+    {
+
+        Pattern hyperlinkPattern = Pattern
+                .compile( "[ \\t\\r\\n]*HYPERLINK \"(.*)\"[ \\t\\r\\n]*" );
+        Pattern pagerefPattern = Pattern
+                .compile( "[ \\t\\r\\n]*PAGEREF ([^ ]*)[ \\t\\r\\n]*\\\\h[ \\t\\r\\n]*" );
+
+        if ( separatorMark - beginMark > 1 )
+        {
+            int index = beginMark + 1;
+            CharacterRun firstAfterBegin = null;
+            while ( index < separatorMark )
+            {
+                firstAfterBegin = paragraph.getCharacterRun( index );
+                if ( firstAfterBegin == null )
+                {
+                    logger.log( POILogger.WARN,
+                            "Paragraph " + paragraph.getStartOffset() + "--"
+                                    + paragraph.getEndOffset()
+                                    + " contains null CharacterRun #" + index );
+                    index++;
+                    continue;
+                }
+                break;
+            }
+
+            if ( firstAfterBegin != null )
+            {
+                final Matcher hyperlinkMatcher = hyperlinkPattern
+                        .matcher( firstAfterBegin.text() );
+                if ( hyperlinkMatcher.matches() )
+                {
+                    String hyperlink = hyperlinkMatcher.group( 1 );
+                    processHyperlink( wordDocument, currentBlock, paragraph,
+                            characterRuns, currentTableLevel, hyperlink,
+                            separatorMark + 1, endMark );
+                    return;
+                }
+
+                final Matcher pagerefMatcher = pagerefPattern
+                        .matcher( firstAfterBegin.text() );
+                if ( pagerefMatcher.matches() )
+                {
+                    String pageref = pagerefMatcher.group( 1 );
+                    processPageref( wordDocument, currentBlock, paragraph,
+                            characterRuns, currentTableLevel, pageref,
+                            separatorMark + 1, endMark );
+                    return;
+                }
+            }
+        }
+
+        StringBuilder debug = new StringBuilder( "Unsupported field type: \n" );
+        for ( int i = beginMark; i <= endMark; i++ )
+        {
+            debug.append( "\t" );
+            debug.append( paragraph.getCharacterRun( i ) );
+            debug.append( "\n" );
+        }
+        logger.log( POILogger.WARN, debug );
+
+        // just output field value
+        if ( separatorMark + 1 < endMark )
+            processCharacters( wordDocument, currentTableLevel, paragraph,
+                    currentBlock, characterRuns, separatorMark + 1, endMark );
+
+        return;
+    }
+

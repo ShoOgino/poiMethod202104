@@ -1,0 +1,59 @@
+    protected void processParagraph( HWPFDocumentCore hwpfDocument,
+            Element parentFopElement, int currentTableLevel,
+            Paragraph paragraph, String bulletText )
+    {
+        final Element pElement = htmlDocumentFacade.createParagraph();
+        parentFopElement.appendChild( pElement );
+
+        StringBuilder style = new StringBuilder();
+        WordToHtmlUtils.addParagraphProperties( paragraph, style );
+
+        final int charRuns = paragraph.numCharacterRuns();
+
+        if ( charRuns == 0 )
+        {
+            return;
+        }
+
+        {
+            final String pFontName;
+            final int pFontSize;
+            final CharacterRun characterRun = paragraph.getCharacterRun( 0 );
+            if ( characterRun != null )
+            {
+                pFontSize = characterRun.getFontSize() / 2;
+                pFontName = characterRun.getFontName();
+                WordToHtmlUtils.addFontFamily( pFontName, style );
+                WordToHtmlUtils.addFontSize( pFontSize, style );
+            }
+            else
+            {
+                pFontSize = -1;
+                pFontName = WordToHtmlUtils.EMPTY;
+            }
+            blocksProperies.push( new BlockProperies( pFontName, pFontSize ) );
+        }
+        try
+        {
+            if ( WordToHtmlUtils.isNotEmpty( bulletText ) )
+            {
+                Text textNode = htmlDocumentFacade.createText( bulletText );
+                pElement.appendChild( textNode );
+            }
+
+            List<CharacterRun> characterRuns = WordToHtmlUtils
+                    .findCharacterRuns( paragraph );
+            processCharacters( hwpfDocument, currentTableLevel, paragraph,
+                    pElement, characterRuns, 0, characterRuns.size() );
+        }
+        finally
+        {
+            blocksProperies.pop();
+        }
+
+        if ( style.length() > 0 )
+            pElement.setAttribute( "style", style.toString() );
+
+        return;
+    }
+

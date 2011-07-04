@@ -1,0 +1,70 @@
+    protected void processParagraph( HWPFDocumentCore hwpfDocument,
+            Element parentFopElement, int currentTableLevel,
+            Paragraph paragraph, String bulletText )
+    {
+        final Element block = foDocumentFacade.createBlock();
+        parentFopElement.appendChild( block );
+
+        WordToFoUtils.setParagraphProperties( paragraph, block );
+
+        final int charRuns = paragraph.numCharacterRuns();
+
+        if ( charRuns == 0 )
+        {
+            return;
+        }
+
+        {
+            final String pFontName;
+            final int pFontSize;
+            final boolean pBold;
+            final boolean pItalic;
+            {
+                CharacterRun characterRun = paragraph.getCharacterRun( 0 );
+                pFontSize = characterRun.getFontSize() / 2;
+                pFontName = characterRun.getFontName();
+                pBold = characterRun.isBold();
+                pItalic = characterRun.isItalic();
+            }
+            WordToFoUtils.setFontFamily( block, pFontName );
+            WordToFoUtils.setFontSize( block, pFontSize );
+            WordToFoUtils.setBold( block, pBold );
+            WordToFoUtils.setItalic( block, pItalic );
+
+            blocksProperies.push( new BlockProperies( pFontName, pFontSize,
+                    pBold, pItalic ) );
+        }
+        try
+        {
+            boolean haveAnyText = false;
+
+            if ( WordToFoUtils.isNotEmpty( bulletText ) )
+            {
+                Element inline = foDocumentFacade.createInline();
+                block.appendChild( inline );
+
+                Text textNode = foDocumentFacade.createText( bulletText );
+                inline.appendChild( textNode );
+
+                haveAnyText |= bulletText.trim().length() != 0;
+            }
+
+            List<CharacterRun> characterRuns = WordToFoUtils
+                    .findCharacterRuns( paragraph );
+            haveAnyText = processCharacters( hwpfDocument, currentTableLevel,
+                    paragraph, block, characterRuns, 0, characterRuns.size() );
+
+            if ( !haveAnyText )
+            {
+                Element leader = foDocumentFacade.createLeader();
+                block.appendChild( leader );
+            }
+        }
+        finally
+        {
+            blocksProperies.pop();
+        }
+
+        return;
+    }
+
