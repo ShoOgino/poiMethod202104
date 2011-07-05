@@ -18,7 +18,7 @@
 
 		r.initAll();
 		int tableLevel = paragraph.getTableLevel();
-		int tableEnd = r._parEnd;
+		int tableEndInclusive = r._parEnd ;
 
         if ( r._parStart != 0 )
         {
@@ -33,23 +33,29 @@
             }
         }
 
+        final Range overallrange = getDocument() instanceof HWPFDocument ? ((HWPFDocument) getDocument())
+                .getOverallRange() : getDocument().getRange();
         int limit = _paragraphs.size();
-        for ( ; tableEnd < limit; tableEnd++ )
+        for ( ; tableEndInclusive < limit - 1; tableEndInclusive++ )
         {
-            Paragraph next = new Paragraph( _paragraphs.get( tableEnd ), this );
+            Paragraph next = new Paragraph( _paragraphs.get( tableEndInclusive + 1 ),
+                    overallrange );
             if ( !next.isInTable() || next.getTableLevel() < tableLevel )
                 break;
         }
 
-		initAll();
-		if (tableEnd > _parEnd) {
-			throw new ArrayIndexOutOfBoundsException(
-					"The table's bounds fall outside of this Range");
-		}
-		if (tableEnd < 0) {
-			throw new ArrayIndexOutOfBoundsException(
-					"The table's end is negative, which isn't allowed!");
-		}
-		return new Table(r._parStart, tableEnd, r._doc.getRange(), paragraph.getTableLevel());
-	}
+        initAll();
+        if ( tableEndInclusive + 1 > _parEnd )
+        {
+            throw new ArrayIndexOutOfBoundsException(
+                    "The table's bounds fall outside of this Range" );
+        }
+        if ( tableEndInclusive < 0 )
+        {
+            throw new ArrayIndexOutOfBoundsException(
+                    "The table's end is negative, which isn't allowed!" );
+        }
+        return new Table( r._parStart, tableEndInclusive + 1, r._doc.getRange(),
+                paragraph.getTableLevel() );
+    }
 

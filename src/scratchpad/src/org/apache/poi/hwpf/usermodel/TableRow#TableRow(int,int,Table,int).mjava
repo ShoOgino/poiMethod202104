@@ -1,41 +1,70 @@
-  public TableRow(int startIdx, int endIdx, Table parent, int levelNum)
-  {
-    super(startIdx, endIdx, parent);
-
-    _tprops = TableSprmUncompressor.uncompressTAP(_papx.toByteArray(), 2);
-    _levelNum = levelNum;
-    _cells = new TableCell[_tprops.getItcMac()];
-
-    int start = 0;
-    int end = 0;
-
-    for (int cellIndex = 0; cellIndex < _cells.length; cellIndex++)
+    public TableRow( int startIdxInclusive, int endIdxExclusive, Table parent,
+            int levelNum )
     {
-      Paragraph p = getParagraph(start);
-      String s = p.text();
+        super( startIdxInclusive, endIdxExclusive, parent );
 
-      while (! ( s.length() > 0 && (s.charAt(s.length() - 1) == TABLE_CELL_MARK) ||
-                p.isEmbeddedCellMark() && p.getTableLevel() == levelNum) && end < endIdx)
-      {
-        end++;
-        p = getParagraph(end);
-        s = p.text();
-      }
+        _tprops = TableSprmUncompressor.uncompressTAP( _papx.toByteArray(), 2 );
+        _levelNum = levelNum;
+        final short expectedCellsCount = _tprops.getItcMac();
 
-      // Create it for the correct paragraph range
-      _cells[cellIndex] = new TableCell(start, end, this, levelNum,
-                                        _tprops.getRgtc()[cellIndex],
-                                        _tprops.getRgdxaCenter()[cellIndex],
-                                        _tprops.getRgdxaCenter()[cellIndex+1]-_tprops.getRgdxaCenter()[cellIndex]);
-      // Now we've decided where everything is, tweak the
-      //  record of the paragraph end so that the
-      //  paragraph level counts work
-      // This is a bit hacky, we really need a better fix...
-      _cells[cellIndex]._parEnd++;
-      
-      // Next!
-      end++;
-      start = end;
+        int lastCellStart = 0;
+        List<TableCell> cells = new ArrayList<TableCell>( expectedCellsCount );
+        for ( int p = 0; p < (endIdxExclusive - startIdxInclusive); p++ )
+        {
+            Paragraph paragraph = getParagraph( p );
+            String s = paragraph.text();
+
+            if ( s.length() > 0
+                    && s.charAt( s.length() - 1 ) == TABLE_CELL_MARK
+                    && paragraph.getTableLevel() == levelNum )
+            {
+                TableCellDescriptor tableCellDescriptor = _tprops.getRgtc() != null
+                        && _tprops.getRgtc().length > cells.size() ? _tprops
+                        .getRgtc()[cells.size()] : new TableCellDescriptor();
+                final short leftEdge = _tprops.getRgdxaCenter() != null
+                        && _tprops.getRgdxaCenter().length > cells.size() ? _tprops
+                        .getRgdxaCenter()[cells.size()] : 0;
+                final short rightEdge = _tprops.getRgdxaCenter() != null
+                        && _tprops.getRgdxaCenter().length > cells.size() + 1 ? _tprops
+                        .getRgdxaCenter()[cells.size() + 1] : 0;
+
+                TableCell tableCell = new TableCell( lastCellStart, p + 1,
+                        this, levelNum, tableCellDescriptor, leftEdge,
+                        rightEdge - leftEdge );
+                cells.add( tableCell );
+                lastCellStart = p + 1;
+            }
+        }
+
+        if ( lastCellStart < (endIdxExclusive - startIdxInclusive - 1) )
+        {
+            TableCellDescriptor tableCellDescriptor = _tprops.getRgtc() != null
+                    && _tprops.getRgtc().length > cells.size() ? _tprops
+                    .getRgtc()[cells.size()] : new TableCellDescriptor();
+            final short leftEdge = _tprops.getRgdxaCenter() != null
+                    && _tprops.getRgdxaCenter().length > cells.size() ? _tprops
+                    .getRgdxaCenter()[cells.size()] : 0;
+            final short rightEdge = _tprops.getRgdxaCenter() != null
+                    && _tprops.getRgdxaCenter().length > cells.size() + 1 ? _tprops
+                    .getRgdxaCenter()[cells.size() + 1] : 0;
+
+            TableCell tableCell = new TableCell( lastCellStart,
+                    (endIdxExclusive - startIdxInclusive - 1), this, levelNum,
+                    tableCellDescriptor, leftEdge, rightEdge - leftEdge );
+            cells.add( tableCell );
+        }
+
+        if ( cells.size() != expectedCellsCount )
+        {
+            logger.log( POILogger.WARN,
+                    "Number of found table cells (" + cells.size()
+                            + ") for table row [" + getStartOffset() + "c; "
+                            + getEndOffset()
+                            + "c] not equals to stored property value "
+                            + expectedCellsCount );
+            _tprops.setItcMac( (short) cells.size() );
+        }
+
+        _cells = cells.toArray( new TableCell[cells.size()] );
     }
-  }
 
