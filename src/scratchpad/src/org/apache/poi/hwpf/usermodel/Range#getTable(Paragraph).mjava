@@ -17,19 +17,29 @@
 		}
 
 		r.initAll();
+		int tableLevel = paragraph.getTableLevel();
 		int tableEnd = r._parEnd;
 
-		if (r._parStart != 0 && getParagraph(r._parStart - 1).isInTable()
-				&& getParagraph(r._parStart - 1)._sectionEnd >= r._sectionStart) {
-			throw new IllegalArgumentException("This paragraph is not the first one in the table");
-		}
+        if ( r._parStart != 0 )
+        {
+            Paragraph previous = new Paragraph(
+                    _paragraphs.get( r._parStart - 1 ), this );
+            if ( previous.isInTable() && //
+                    previous.getTableLevel() == tableLevel //
+                    && previous._sectionEnd >= r._sectionStart )
+            {
+                throw new IllegalArgumentException(
+                        "This paragraph is not the first one in the table" );
+            }
+        }
 
-		int limit = _paragraphs.size();
-		for (; tableEnd < limit; tableEnd++) {
-			if (!getParagraph(tableEnd).isInTable()) {
-				break;
-			}
-		}
+        int limit = _paragraphs.size();
+        for ( ; tableEnd < limit; tableEnd++ )
+        {
+            Paragraph next = new Paragraph( _paragraphs.get( tableEnd ), this );
+            if ( !next.isInTable() || next.getTableLevel() < tableLevel )
+                break;
+        }
 
 		initAll();
 		if (tableEnd > _parEnd) {
