@@ -1,8 +1,8 @@
-    protected void processTable( HWPFDocumentCore wordDocument, Element flow,
-            Table table, int thisTableLevel )
+    protected void processTable( HWPFDocumentCore hwpfDocument, Element flow,
+            Table table )
     {
-        Element tableHeader = foDocumentFacade.createTableHeader();
-        Element tableBody = foDocumentFacade.createTableBody();
+        Element tableHeader = htmlDocumentFacade.createTableHeader();
+        Element tableBody = htmlDocumentFacade.createTableBody();
 
         final int tableRows = table.numRows();
 
@@ -16,8 +16,9 @@
         {
             TableRow tableRow = table.getRow( r );
 
-            Element tableRowElement = foDocumentFacade.createTableRow();
-            WordToFoUtils.setTableRowProperties( tableRow, tableRowElement );
+            Element tableRowElement = htmlDocumentFacade.createTableRow();
+            StringBuilder tableRowStyle = new StringBuilder();
+            WordToHtmlUtils.addTableRowProperties( tableRow, tableRowStyle );
 
             final int rowCells = tableRow.numCells();
             for ( int c = 0; c < rowCells; c++ )
@@ -31,10 +32,20 @@
                         && !tableCell.isFirstVerticallyMerged() )
                     continue;
 
-                Element tableCellElement = foDocumentFacade.createTableCell();
-                WordToFoUtils.setTableCellProperties( tableRow, tableCell,
-                        tableCellElement, r == 0, r == tableRows - 1, c == 0,
-                        c == rowCells - 1 );
+                Element tableCellElement;
+                if ( tableRow.isTableHeader() )
+                {
+                    tableCellElement = htmlDocumentFacade
+                            .createTableHeaderCell();
+                }
+                else
+                {
+                    tableCellElement = htmlDocumentFacade.createTableCell();
+                }
+                StringBuilder tableCellStyle = new StringBuilder();
+                WordToHtmlUtils.addTableCellProperties( tableRow, tableCell,
+                        r == 0, r == tableRows - 1, c == 0, c == rowCells - 1,
+                        tableCellStyle );
 
                 if ( tableCell.isFirstMerged() )
                 {
@@ -47,16 +58,14 @@
                         if ( !nextCell.isMerged() )
                             break;
                     }
-                    tableCellElement.setAttribute( "number-columns-spanned", ""
-                            + count );
+                    tableCellElement.setAttribute( "colspan", "" + count );
                 }
                 else
                 {
                     if ( c == rowCells - 1 && c != maxColumns - 1 )
                     {
-                        tableCellElement.setAttribute(
-                                "number-columns-spanned", ""
-                                        + ( maxColumns - c ) );
+                        tableCellElement.setAttribute( "colspan", ""
+                                + ( maxColumns - c ) );
                     }
                 }
 
@@ -74,21 +83,27 @@
                         if ( !nextCell.isVerticallyMerged() )
                             break;
                     }
-                    tableCellElement.setAttribute( "number-rows-spanned", ""
-                            + count );
+                    tableCellElement.setAttribute( "rowspan", "" + count );
                 }
 
-                processSectionParagraphes( wordDocument, tableCellElement,
-                        tableCell, thisTableLevel );
+                processSectionParagraphes( hwpfDocument, tableCellElement,
+                        tableCell, table.getTableLevel() );
 
                 if ( !tableCellElement.hasChildNodes() )
                 {
-                    tableCellElement.appendChild( foDocumentFacade
-                            .createBlock() );
+                    tableCellElement.appendChild( htmlDocumentFacade
+                            .createParagraph() );
                 }
+                if ( tableCellStyle.length() > 0 )
+                    tableCellElement.setAttribute( "style",
+                            tableCellStyle.toString() );
 
                 tableRowElement.appendChild( tableCellElement );
             }
+
+            if ( tableRowStyle.length() > 0 )
+                tableRowElement
+                        .setAttribute( "style", tableRowStyle.toString() );
 
             if ( tableRow.isTableHeader() )
             {
@@ -98,9 +113,10 @@
             {
                 tableBody.appendChild( tableRowElement );
             }
+
         }
 
-        final Element tableElement = foDocumentFacade.createTable();
+        final Element tableElement = htmlDocumentFacade.createTable();
         if ( tableHeader.hasChildNodes() )
         {
             tableElement.appendChild( tableHeader );
