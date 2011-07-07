@@ -3,11 +3,17 @@
         if ( args.length == 0 )
         {
             System.err.println( "Use:" );
-            System.err.println( "   HWPFLister <filename> "
-                    + "[--papx] [--papxProperties] "
-                    + "[--paragraphs] [--paragraphsSprms] [--paragraphsText]" );
+            System.err
+                    .println( "\tHWPFLister <filename>\n"
+                            + "\t\t[--textPieces] [--textPiecesText]\n"
+                            + "\t\t[--papx] [--papxProperties]\n"
+                            + "\t\t[--paragraphs] [--paragraphsSprms] [--paragraphsText]\n"
+                            + "\t\t[--writereadback]\n" );
             System.exit( 1 );
         }
+
+        boolean outputTextPieces = false;
+        boolean outputTextPiecesText = false;
 
         boolean outputParagraphs = false;
         boolean outputParagraphsSprms = false;
@@ -16,8 +22,15 @@
         boolean outputPapx = false;
         boolean outputPapxProperties = false;
 
+        boolean writereadback = false;
+
         for ( String arg : Arrays.asList( args ).subList( 1, args.length ) )
         {
+            if ( "--textPieces".equals( arg ) )
+                outputTextPieces = true;
+            if ( "--textPiecesText".equals( arg ) )
+                outputTextPiecesText = true;
+
             if ( "--paragraphs".equals( arg ) )
                 outputParagraphs = true;
             if ( "--paragraphsSprms".equals( arg ) )
@@ -29,11 +42,23 @@
                 outputPapx = true;
             if ( "--papxProperties".equals( arg ) )
                 outputPapxProperties = true;
+
+            if ( "--writereadback".equals( arg ) )
+                writereadback = true;
         }
 
-        HWPFLister lister = new HWPFLister( new HWPFDocument(
-                new FileInputStream( args[0] ) ) );
+        HWPFDocument doc = new HWPFDocument( new FileInputStream( args[0] ) );
+        if ( writereadback )
+            doc = writeOutAndReadBack( doc );
+
+        HWPFLister lister = new HWPFLister( doc );
         lister.dumpFIB();
+
+        if ( outputTextPieces )
+        {
+            System.out.println( "== Text pieces ==" );
+            lister.dumpTextPieces( outputTextPiecesText );
+        }
 
         if ( outputParagraphs )
         {
