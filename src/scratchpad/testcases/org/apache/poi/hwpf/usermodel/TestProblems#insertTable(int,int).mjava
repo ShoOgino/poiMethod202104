@@ -1,18 +1,44 @@
-    private static void insertTable(int rows, int columns) {
+    private static void insertTable( int rows, int columns )
+    {
         // POI apparently can't create a document from scratch,
         // so we need an existing empty dummy document
-        HWPFDocument doc = HWPFTestDataSamples.openSampleFile("empty.doc");
+        HWPFDocument doc = HWPFTestDataSamples.openSampleFile( "empty.doc" );
 
         Range range = doc.getRange();
-        Table table = range.insertBefore(new TableProperties((short) columns), rows);
+        Table table = range.insertBefore(
+                new TableProperties( (short) columns ), rows );
+        table.sanityCheck();
+        range.sanityCheck();
 
-        for (int rowIdx = 0; rowIdx < table.numRows(); rowIdx++) {
-            TableRow row = table.getRow(rowIdx);
-            for (int colIdx = 0; colIdx < row.numCells(); colIdx++) {
-                TableCell cell = row.getCell(colIdx);
-                Paragraph par = cell.getParagraph(0);
-                par.insertBefore("" + (rowIdx * row.numCells() + colIdx));
+        for ( int rowIdx = 0; rowIdx < table.numRows(); rowIdx++ )
+        {
+            TableRow row = table.getRow( rowIdx );
+            row.sanityCheck();
+            for ( int colIdx = 0; colIdx < row.numCells(); colIdx++ )
+            {
+                TableCell cell = row.getCell( colIdx );
+                cell.sanityCheck();
+
+                Paragraph par = cell.getParagraph( 0 );
+                par.sanityCheck();
+
+                par.insertBefore( "" + ( rowIdx * row.numCells() + colIdx ) );
+
+                par.sanityCheck();
+                cell.sanityCheck();
+                row.sanityCheck();
+                table.sanityCheck();
+                range.sanityCheck();
             }
+        }
+
+        String text = range.text();
+        int mustBeAfter = 0;
+        for ( int i = 0; i < rows * columns; i++ )
+        {
+            int next = text.indexOf( Integer.toString( i ), mustBeAfter );
+            assertFalse( next == -1 );
+            mustBeAfter = next;
         }
     }
 
