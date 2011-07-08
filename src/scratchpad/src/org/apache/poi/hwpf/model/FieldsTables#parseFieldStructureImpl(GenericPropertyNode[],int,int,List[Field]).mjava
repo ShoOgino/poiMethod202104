@@ -1,0 +1,110 @@
+    private void parseFieldStructureImpl( GenericPropertyNode[] nodes,
+            int startOffsetInclusive, int endOffsetExclusive, List<Field> result )
+    {
+        int next = startOffsetInclusive;
+        while ( next < endOffsetExclusive )
+        {
+            GenericPropertyNode startNode = nodes[next];
+            PlexOfField startPlexOfField = new PlexOfField( startNode );
+            if ( startPlexOfField.getFld().getBoundaryType() != FieldDescriptor.FIELD_BEGIN_MARK )
+            {
+                /* Start mark seems to be missing */
+                next++;
+                continue;
+            }
+
+            /*
+             * we have start node. end offset points to next node, separator or
+             * end
+             */
+            int nextNodePositionInArray = Arrays.binarySearch(
+                    nodes,
+                    next + 1,
+                    endOffsetExclusive,
+                    new GenericPropertyNode( startNode.getEnd(), startNode
+                            .getEnd() + 1, BYTES_EMPTY ), comparator );
+            if ( nextNodePositionInArray < 0 )
+            {
+                /*
+                 * too bad, this start field mark doesn't have corresponding end
+                 * field mark or separator field mark in fields table
+                 */
+                next++;
+                continue;
+            }
+            GenericPropertyNode nextNode = nodes[nextNodePositionInArray];
+            PlexOfField nextPlexOfField = new PlexOfField( nextNode );
+
+            switch ( nextPlexOfField.getFld().getBoundaryType() )
+            {
+            case FieldDescriptor.FIELD_SEPARATOR_MARK:
+            {
+                GenericPropertyNode separatorNode = nextNode;
+                PlexOfField separatorPlexOfField = nextPlexOfField;
+
+                int endNodePositionInArray = Arrays.binarySearch( nodes,
+                        nextNodePositionInArray, endOffsetExclusive,
+                        new GenericPropertyNode( separatorNode.getEnd(),
+                                separatorNode.getEnd() + 1, BYTES_EMPTY ),
+                        comparator );
+                if ( endNodePositionInArray < 0 )
+                {
+                    /*
+                     * too bad, this separator field mark doesn't have
+                     * corresponding end field mark in fields table
+                     */
+                    next++;
+                    continue;
+                }
+                GenericPropertyNode endNode = nodes[endNodePositionInArray];
+                PlexOfField endPlexOfField = new PlexOfField( endNode );
+
+                Field field = new Field( startPlexOfField,
+                        separatorPlexOfField, endPlexOfField );
+                result.add( field );
+
+                // adding included fields
+                if ( startNode.getStart() + 1 < separatorNode.getStart() - 1 )
+                {
+                    parseFieldStructureImpl( nodes, next + 1,
+                            nextNodePositionInArray, result );
+                }
+                if ( separatorNode.getStart() + 1 < endNode.getStart() - 1 )
+                {
+                    parseFieldStructureImpl( nodes,
+                            nextNodePositionInArray + 1,
+                            endNodePositionInArray, result );
+                }
+
+                next = endNodePositionInArray + 1;
+
+                break;
+            }
+            case FieldDescriptor.FIELD_END_MARK:
+            {
+                // we have no separator
+                Field field = new Field( startPlexOfField, null,
+                        nextPlexOfField );
+                result.add( field );
+
+                // adding included fields
+                if ( startNode.getStart() + 1 < nextNode.getStart() - 1 )
+                {
+                    parseFieldStructureImpl( nodes, next + 1,
+                            nextNodePositionInArray, result );
+                }
+
+                next = nextNodePositionInArray + 1;
+                break;
+            }
+            case FieldDescriptor.FIELD_BEGIN_MARK:
+            default:
+            {
+                /* something is wrong, ignoring this mark along with start mark */
+                next++;
+                continue;
+            }
+            }
+        }
+    }
+
