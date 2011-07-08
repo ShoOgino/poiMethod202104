@@ -1,0 +1,53 @@
+    protected void processField( HWPFDocument hwpfDocument, Range parentRange,
+            int currentTableLevel, Field field, Element currentBlock )
+    {
+        switch ( field.getType() )
+        {
+        case 37: // page reference
+        {
+            final Range firstSubrange = field.firstSubrange( parentRange );
+            if ( firstSubrange != null )
+            {
+                String formula = firstSubrange.text();
+                Pattern pagerefPattern = Pattern
+                        .compile( "[ \\t\\r\\n]*PAGEREF ([^ ]*)[ \\t\\r\\n]*\\\\h[ \\t\\r\\n]*" );
+                Matcher matcher = pagerefPattern.matcher( formula );
+                if ( matcher.find() )
+                {
+                    String pageref = matcher.group( 1 );
+                    processPageref( hwpfDocument, currentBlock,
+                            field.secondSubrange( parentRange ),
+                            currentTableLevel, pageref );
+                    return;
+                }
+            }
+            break;
+        }
+        case 88: // hyperlink
+        {
+            final Range firstSubrange = field.firstSubrange( parentRange );
+            if ( firstSubrange != null )
+            {
+                String formula = firstSubrange.text();
+                Pattern hyperlinkPattern = Pattern
+                        .compile( "[ \\t\\r\\n]*HYPERLINK \"(.*)\"[ \\t\\r\\n]*" );
+                Matcher matcher = hyperlinkPattern.matcher( formula );
+                if ( matcher.find() )
+                {
+                    String hyperlink = matcher.group( 1 );
+                    processHyperlink( hwpfDocument, currentBlock,
+                            field.secondSubrange( parentRange ),
+                            currentTableLevel, hyperlink );
+                    return;
+                }
+            }
+            break;
+        }
+        }
+
+        logger.log( POILogger.WARN, parentRange + " contains " + field
+                + " with unsupported type or format" );
+        processCharacters( hwpfDocument, currentTableLevel,
+                field.secondSubrange( parentRange ), currentBlock );
+    }
+

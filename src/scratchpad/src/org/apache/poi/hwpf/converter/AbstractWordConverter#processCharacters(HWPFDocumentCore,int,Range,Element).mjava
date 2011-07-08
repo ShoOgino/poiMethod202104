@@ -1,12 +1,14 @@
     protected boolean processCharacters( HWPFDocumentCore hwpfDocument,
-            int currentTableLevel, Paragraph paragraph, final Element block,
-            List<CharacterRun> characterRuns, final int start, final int end )
+            int currentTableLevel, Range range, final Element block )
     {
+        if (range == null)
+            return false;
+
         boolean haveAnyText = false;
 
-        for ( int c = start; c < end; c++ )
+        for ( int c = 0; c < range.numCharacterRuns(); c++ )
         {
-            CharacterRun characterRun = characterRuns.get( c );
+            CharacterRun characterRun = range.getCharacterRun( c );
 
             if ( characterRun == null )
                 throw new AssertionError();
@@ -30,8 +32,23 @@
 
             if ( text.getBytes()[0] == FIELD_BEGIN_MARK )
             {
-                int skipTo = tryField( hwpfDocument, paragraph,
-                        currentTableLevel, characterRuns, c, block );
+                if ( hwpfDocument instanceof HWPFDocument )
+                {
+                    Field aliveField = ( (HWPFDocument) hwpfDocument )
+                            .getFieldsTables().lookupFieldByStartOffset(
+                                    FieldsTables.PLCFFLDMOM,
+                                    characterRun.getStartOffset() );
+                    if ( aliveField != null )
+                    {
+                        processField( ( (HWPFDocument) hwpfDocument ), range,
+                                currentTableLevel, aliveField, block );
+                        c = aliveField.getEndOffset();
+                        continue;
+                    }
+                }
+
+                int skipTo = tryDeadField( hwpfDocument, range,
+                        currentTableLevel, c, block );
 
                 if ( skipTo != c )
                 {
