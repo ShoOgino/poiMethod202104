@@ -5,7 +5,15 @@
     HWPFOutputStream docStream = sys.getStream("WordDocument");
     OutputStream tableStream = sys.getStream("1Table");
 
-    PlexOfCps binTable = new PlexOfCps(4);
+        /*
+         * Page 35:
+         * 
+         * "Associated with each interval is a BTE. A BTE holds a four-byte PN
+         * (page number) which identifies the FKP page in the file which
+         * contains the formatting information for that interval. A CHPX FKP
+         * further partitions an interval into runs of exception text."
+         */
+        PlexOfCps bte = new PlexOfCps( 4 );
 
     // each FKP must start on a 512 byte page.
     int docOffset = docStream.getOffset();
@@ -35,7 +43,7 @@
       CHPFormattedDiskPage cfkp = new CHPFormattedDiskPage();
       cfkp.fill(overflow);
 
-      byte[] bufFkp = cfkp.toByteArray(fcMin);
+            byte[] bufFkp = cfkp.toByteArray( tpt, fcMin );
       docStream.write(bufFkp);
       overflow = cfkp.getOverflow();
 
@@ -47,10 +55,10 @@
 
       byte[] intHolder = new byte[4];
       LittleEndian.putInt(intHolder, pageNum++);
-      binTable.addProperty(new GenericPropertyNode(start, end, intHolder));
+      bte.addProperty(new GenericPropertyNode(start, end, intHolder));
 
     }
     while (overflow != null);
-    tableStream.write(binTable.toByteArray());
+    tableStream.write(bte.toByteArray());
   }
 
