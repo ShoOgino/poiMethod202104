@@ -1,0 +1,30 @@
+    /**
+     * Creates a PAPFormattedDiskPage from a 512 byte array
+     */
+    public PAPFormattedDiskPage( byte[] documentStream, byte[] dataStream,
+            int offset, TextPieceTable tpt, boolean ignorePapxWithoutTextPieces )
+    {
+        super( documentStream, offset );
+        for ( int x = 0; x < _crun; x++ )
+        {
+            int startAt = getStart( x );
+            int endAt = getEnd( x );
+            if ( !ignorePapxWithoutTextPieces
+                    || tpt.isIndexInTable( startAt, endAt ) )
+                _papxList.add( new PAPX( startAt, endAt, tpt, getGrpprl( x ),
+                        getParagraphHeight( x ), dataStream ) );
+            else
+            {
+                logger.log( POILogger.WARN, "PAPX [",
+                        Integer.valueOf( startAt ), "; ",
+                        Integer.valueOf( endAt ),
+                        ") (bytes) doesn't have corresponding text pieces "
+                                + "and will be skipped" );
+
+                _papxList.add( null );
+            }
+        }
+        _fkp = null;
+        _dataStream = dataStream;
+    }
+
