@@ -2,7 +2,8 @@
      * Constructor used to read a binTable in from a Word document.
      */
     public CHPBinTable( byte[] documentStream, byte[] tableStream, int offset,
-            int size, TextPieceTable tpt, boolean ignoreChpxWithoutTextPieces )
+            int size, ComplexFileTable complexFileTable, TextPieceTable tpt,
+            boolean ignoreChpxWithoutTextPieces )
     {
         /*
          * Page 35:
@@ -35,6 +36,58 @@
             _textRuns.add(chpx);
       }
     }
+
+        if ( complexFileTable != null )
+        {
+            SprmBuffer[] sprmBuffers = complexFileTable.getGrpprls();
+
+            // adding CHPX from fast-saved SPRMs
+            for ( TextPiece textPiece : tpt.getTextPieces() )
+            {
+                PropertyModifier prm = textPiece.getPieceDescriptor().getPrm();
+                if ( !prm.isComplex() )
+                    continue;
+                int igrpprl = prm.getIgrpprl();
+
+                if ( igrpprl < 0 || igrpprl >= sprmBuffers.length )
+                {
+                    logger.log( POILogger.WARN, textPiece
+                            + "'s PRM references to unknown grpprl" );
+                    continue;
+                }
+
+                boolean hasChp = false;
+                SprmBuffer sprmBuffer = sprmBuffers[igrpprl];
+                for ( SprmIterator iterator = sprmBuffer.iterator(); iterator
+                        .hasNext(); )
+                {
+                    SprmOperation sprmOperation = iterator.next();
+                    if ( sprmOperation.getType() == SprmOperation.TYPE_CHP )
+                    {
+                        hasChp = true;
+                        break;
+                    }
+                }
+
+                if ( hasChp )
+                {
+                    SprmBuffer newSprmBuffer;
+                    try
+                    {
+                        newSprmBuffer = (SprmBuffer) sprmBuffer.clone();
+                    }
+                    catch ( CloneNotSupportedException e )
+                    {
+                        // shall not happen
+                        throw new Error( e );
+                    }
+
+                    CHPX chpx = new CHPX( textPiece.getStart(),
+                            textPiece.getEnd(), newSprmBuffer );
+                    _textRuns.add( chpx );
+                }
+            }
+        }
 
         // rebuild document paragraphs structure
         StringBuilder docText = new StringBuilder();
