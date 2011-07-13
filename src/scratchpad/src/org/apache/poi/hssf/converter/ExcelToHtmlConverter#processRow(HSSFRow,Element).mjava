@@ -1,13 +1,23 @@
-    protected boolean processRow( HSSFRow row, Element tableRowElement )
+    /**
+     * @return maximum 1-base index of column that were rendered, zero if none
+     */
+    protected int processRow( HSSFRow row, Element tableRowElement )
     {
-        boolean emptyRow = true;
-
         final short maxColIx = row.getLastCellNum();
         if ( maxColIx <= 0 )
-            return true;
+            return 0;
 
         final List<Element> emptyCells = new ArrayList<Element>( maxColIx );
 
+        if ( isOutputRowNumbers() )
+        {
+            Element tableRowNumberCellElement = htmlDocumentFacade
+                    .createTableHeaderCell();
+            processRowNumber( row, tableRowNumberCellElement );
+            emptyCells.add( tableRowNumberCellElement );
+        }
+
+        int maxRenderedColumn = 0;
         for ( int colIx = 0; colIx < maxColIx; colIx++ )
         {
             HSSFCell cell = row.getCell( colIx );
@@ -37,10 +47,10 @@
                 emptyCells.clear();
 
                 tableRowElement.appendChild( tableCellElement );
-                emptyRow = false;
+                maxRenderedColumn = colIx;
             }
         }
 
-        return emptyRow;
+        return maxRenderedColumn + 1;
     }
 

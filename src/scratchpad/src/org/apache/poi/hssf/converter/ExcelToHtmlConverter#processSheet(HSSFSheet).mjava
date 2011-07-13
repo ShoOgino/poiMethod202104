@@ -1,8 +1,6 @@
     protected void processSheet( HSSFSheet sheet )
     {
-        Element h1 = htmlDocumentFacade.createHeader1();
-        h1.appendChild( htmlDocumentFacade.createText( sheet.getSheetName() ) );
-        htmlDocumentFacade.getBody().appendChild( h1 );
+        processSheetHeader( htmlDocumentFacade.getBody(), sheet );
 
         final int physicalNumberOfRows = sheet.getPhysicalNumberOfRows();
         if ( physicalNumberOfRows <= 0 )
@@ -13,24 +11,24 @@
 
         final List<Element> emptyRowElements = new ArrayList<Element>(
                 physicalNumberOfRows );
-
+        int maxSheetColumns = 1;
         for ( int r = 0; r < physicalNumberOfRows; r++ )
         {
             HSSFRow row = sheet.getRow( r );
 
             Element tableRowElement = htmlDocumentFacade.createTableRow();
 
-            boolean emptyRow;
+            int maxRowColumnNumber;
             if ( row != null )
             {
-                emptyRow = processRow( row, tableRowElement );
+                maxRowColumnNumber = processRow( row, tableRowElement );
             }
             else
             {
-                emptyRow = true;
+                maxRowColumnNumber = 0;
             }
 
-            if ( emptyRow )
+            if ( maxRowColumnNumber == 0 )
             {
                 emptyRowElements.add( tableRowElement );
             }
@@ -38,19 +36,27 @@
             {
                 if ( !emptyRowElements.isEmpty() )
                 {
-                    for ( Element emptyCellElement : emptyRowElements )
+                    for ( Element emptyRowElement : emptyRowElements )
                     {
-                        tableBody.appendChild( emptyCellElement );
+                        tableBody.appendChild( emptyRowElement );
                     }
                     emptyRowElements.clear();
                 }
 
                 tableBody.appendChild( tableRowElement );
-                emptyRow = false;
             }
+            maxSheetColumns = Math.max( maxSheetColumns, maxRowColumnNumber );
+        }
+
+        processColumnWidths( sheet, maxSheetColumns, table );
+
+        if ( isOutputColumnHeaders() )
+        {
+            processColumnHeaders( maxSheetColumns, table );
         }
 
         table.appendChild( tableBody );
+
         htmlDocumentFacade.getBody().appendChild( table );
     }
 
