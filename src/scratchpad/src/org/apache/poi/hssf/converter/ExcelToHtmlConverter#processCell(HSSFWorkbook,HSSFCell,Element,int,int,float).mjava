@@ -71,12 +71,13 @@
             return true;
         }
 
+        boolean noText = ExcelToHtmlUtils.isEmpty( value );
         final short cellStyleIndex = cellStyle.getIndex();
         if ( cellStyleIndex != 0 )
         {
             tableCellElement.setAttribute( "class",
                     getStyleClassName( workbook, cellStyle ) );
-            if ( ExcelToHtmlUtils.isEmpty( value ) )
+            if ( noText )
             {
                 /*
                  * if cell style is defined (like borders, etc.) but cell text
@@ -105,7 +106,7 @@
 
         Text text = htmlDocumentFacade.createText( value );
 
-        if ( isUseDivsToSpan() )
+        if ( !noText && isUseDivsToSpan() )
         {
             tableCellElement.setAttribute( "style",
                     "padding:0;margin:0;align:left;vertical-align:top;" );
@@ -115,13 +116,22 @@
 
             Element innerDiv = htmlDocumentFacade.getDocument().createElement(
                     "div" );
-            innerDiv.setAttribute( "style", "position:absolute;min-width:"
-                    + normalWidthPx
-                    + "px;"
-                    + ( maxSpannedWidthPx != Integer.MAX_VALUE ? "max-width:"
-                            + maxSpannedWidthPx + "px;" : "" )
-                    + "overflow:hidden;max-height:" + normalHeightPt
-                    + "pt;white-space:nowrap;" );
+            StringBuilder innerDivStyle = new StringBuilder();
+            innerDivStyle.append( "position:absolute;min-width:" );
+            innerDivStyle.append( normalWidthPx );
+            innerDivStyle.append( "px;" );
+            if ( maxSpannedWidthPx != Integer.MAX_VALUE )
+            {
+                innerDivStyle.append( "max-width:" );
+                innerDivStyle.append( maxSpannedWidthPx );
+                innerDivStyle.append( "px;" );
+            }
+            innerDivStyle.append( "overflow:hidden;max-height:" );
+            innerDivStyle.append( normalHeightPt );
+            innerDivStyle.append( "pt;white-space:nowrap;" );
+            ExcelToHtmlUtils.appendAlign( innerDivStyle,
+                    cellStyle.getAlignment() );
+            innerDiv.setAttribute( "style", innerDivStyle.toString() );
 
             innerDiv.appendChild( text );
             outerDiv.appendChild( innerDiv );
