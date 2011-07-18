@@ -2,7 +2,8 @@
      * @return maximum 1-base index of column that were rendered, zero if none
      */
     protected int processRow( HSSFWorkbook workbook, HSSFSheet sheet,
-            HSSFRow row, Element tableRowElement )
+            CellRangeAddress[][] mergedRanges, HSSFRow row,
+            Element tableRowElement )
     {
         final short maxColIx = row.getLastCellNum();
         if ( maxColIx <= 0 )
@@ -21,10 +22,18 @@
         int maxRenderedColumn = 0;
         for ( int colIx = 0; colIx < maxColIx; colIx++ )
         {
-            HSSFCell cell = row.getCell( colIx );
-
             if ( !isOutputHiddenColumns() && sheet.isColumnHidden( colIx ) )
                 continue;
+
+            CellRangeAddress range = ExcelToHtmlUtils.getCellRangeAddress(
+                    mergedRanges, row.getRowNum(), colIx );
+
+            if ( range != null
+                    && ( range.getFirstColumn() != colIx || range.getFirstRow() != row
+                            .getRowNum() ) )
+                continue;
+
+            HSSFCell cell = row.getCell( colIx );
 
             int divWidthPx = 0;
             if ( isUseDivsToSpan() )
@@ -53,6 +62,20 @@
             }
 
             Element tableCellElement = htmlDocumentFacade.createTableCell();
+
+            if ( range != null )
+            {
+                if ( range.getFirstColumn() != range.getLastColumn() )
+                    tableCellElement.setAttribute(
+                            "colspan",
+                            String.valueOf( range.getLastColumn()
+                                    - range.getFirstColumn() + 1 ) );
+                if ( range.getFirstRow() != range.getLastRow() )
+                    tableCellElement.setAttribute(
+                            "rowspan",
+                            String.valueOf( range.getLastRow()
+                                    - range.getFirstRow() + 1 ) );
+            }
 
             boolean emptyCell;
             if ( cell != null )
