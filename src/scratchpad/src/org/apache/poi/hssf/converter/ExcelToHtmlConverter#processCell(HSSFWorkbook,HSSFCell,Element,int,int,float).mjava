@@ -75,8 +75,17 @@
         final short cellStyleIndex = cellStyle.getIndex();
         if ( cellStyleIndex != 0 )
         {
-            tableCellElement.setAttribute( "class",
-                    getStyleClassName( workbook, cellStyle ) );
+            String mainCssClass = getStyleClassName( workbook, cellStyle );
+            if ( !noText && isUseDivsToSpan() )
+            {
+                tableCellElement.setAttribute( "class", mainCssClass + " "
+                        + cssClassContainerCell );
+            }
+            else
+            {
+                tableCellElement.setAttribute( "class", mainCssClass );
+            }
+
             if ( noText )
             {
                 /*
@@ -108,14 +117,10 @@
 
         if ( !noText && isUseDivsToSpan() )
         {
-            tableCellElement.setAttribute( "style",
-                    "padding:0;margin:0;align:left;vertical-align:top;" );
-            Element outerDiv = htmlDocumentFacade.getDocument().createElement(
-                    "div" );
-            outerDiv.setAttribute( "style", "position:relative;" );
+            Element outerDiv = htmlDocumentFacade.createBlock();
+            outerDiv.setAttribute( "class", this.cssClassContainerDiv );
 
-            Element innerDiv = htmlDocumentFacade.getDocument().createElement(
-                    "div" );
+            Element innerDiv = htmlDocumentFacade.createBlock();
             StringBuilder innerDivStyle = new StringBuilder();
             innerDivStyle.append( "position:absolute;min-width:" );
             innerDivStyle.append( normalWidthPx );
@@ -131,7 +136,11 @@
             innerDivStyle.append( "pt;white-space:nowrap;" );
             ExcelToHtmlUtils.appendAlign( innerDivStyle,
                     cellStyle.getAlignment() );
-            innerDiv.setAttribute( "style", innerDivStyle.toString() );
+            innerDiv.setAttribute(
+                    "class",
+                    htmlDocumentFacade.getOrCreateCssClass(
+                            outerDiv.getTagName(), "d",
+                            innerDivStyle.toString() ) );
 
             innerDiv.appendChild( text );
             outerDiv.appendChild( innerDiv );
