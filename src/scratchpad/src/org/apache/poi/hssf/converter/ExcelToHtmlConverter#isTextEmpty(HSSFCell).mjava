@@ -1,0 +1,60 @@
+    protected boolean isTextEmpty( HSSFCell cell )
+    {
+        final String value;
+        switch ( cell.getCellType() )
+        {
+        case HSSFCell.CELL_TYPE_STRING:
+            // XXX: enrich
+            value = cell.getRichStringCellValue().getString();
+            break;
+        case HSSFCell.CELL_TYPE_FORMULA:
+            switch ( cell.getCachedFormulaResultType() )
+            {
+            case HSSFCell.CELL_TYPE_STRING:
+                HSSFRichTextString str = cell.getRichStringCellValue();
+                if ( str == null || str.length() <= 0 )
+                    return false;
+
+                value = str.toString();
+                break;
+            case HSSFCell.CELL_TYPE_NUMERIC:
+                HSSFCellStyle style = cell.getCellStyle();
+                if ( style == null )
+                {
+                    return false;
+                }
+
+                value = ( _formatter.formatRawCellContents(
+                        cell.getNumericCellValue(), style.getDataFormat(),
+                        style.getDataFormatString() ) );
+                break;
+            case HSSFCell.CELL_TYPE_BOOLEAN:
+                value = String.valueOf( cell.getBooleanCellValue() );
+                break;
+            case HSSFCell.CELL_TYPE_ERROR:
+                value = ErrorEval.getText( cell.getErrorCellValue() );
+                break;
+            default:
+                value = ExcelToHtmlUtils.EMPTY;
+                break;
+            }
+            break;
+        case HSSFCell.CELL_TYPE_BLANK:
+            value = ExcelToHtmlUtils.EMPTY;
+            break;
+        case HSSFCell.CELL_TYPE_NUMERIC:
+            value = _formatter.formatCellValue( cell );
+            break;
+        case HSSFCell.CELL_TYPE_BOOLEAN:
+            value = String.valueOf( cell.getBooleanCellValue() );
+            break;
+        case HSSFCell.CELL_TYPE_ERROR:
+            value = ErrorEval.getText( cell.getErrorCellValue() );
+            break;
+        default:
+            return true;
+        }
+
+        return ExcelToHtmlUtils.isEmpty( value );
+    }
+

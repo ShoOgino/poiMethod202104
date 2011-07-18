@@ -26,12 +26,40 @@
             if ( !isOutputHiddenColumns() && sheet.isColumnHidden( colIx ) )
                 continue;
 
+            int divWidthPx = 0;
+            if ( isUseDivsToSpan() )
+            {
+                divWidthPx = getColumnWidth( sheet, colIx );
+
+                boolean hasBreaks = false;
+                for ( int nextColumnIndex = colIx + 1; nextColumnIndex < maxColIx; nextColumnIndex++ )
+                {
+                    if ( !isOutputHiddenColumns()
+                            && sheet.isColumnHidden( nextColumnIndex ) )
+                        continue;
+
+                    if ( row.getCell( nextColumnIndex ) != null
+                            && !isTextEmpty( row.getCell( nextColumnIndex ) ) )
+                    {
+                        hasBreaks = true;
+                        break;
+                    }
+
+                    divWidthPx += getColumnWidth( sheet, nextColumnIndex );
+                }
+
+                if ( !hasBreaks )
+                    divWidthPx = Integer.MAX_VALUE;
+            }
+
             Element tableCellElement = htmlDocumentFacade.createTableCell();
 
             boolean emptyCell;
             if ( cell != null )
             {
-                emptyCell = processCell( workbook, cell, tableCellElement );
+                emptyCell = processCell( workbook, cell, tableCellElement,
+                        getColumnWidth( sheet, colIx ), divWidthPx,
+                        row.getHeight() / 20f );
             }
             else
             {

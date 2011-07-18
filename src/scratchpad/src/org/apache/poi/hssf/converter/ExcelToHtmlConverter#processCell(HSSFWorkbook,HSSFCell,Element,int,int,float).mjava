@@ -1,5 +1,6 @@
     protected boolean processCell( HSSFWorkbook workbook, HSSFCell cell,
-            Element tableCellElement )
+            Element tableCellElement, int normalWidthPx, int maxSpannedWidthPx,
+            float normalHeightPt )
     {
         final HSSFCellStyle cellStyle = cell.getCellStyle();
 
@@ -86,8 +87,50 @@
             }
         }
 
+        if ( isOutputLeadingSpacesAsNonBreaking() && value.startsWith( " " ) )
+        {
+            StringBuilder builder = new StringBuilder();
+            for ( int c = 0; c < value.length(); c++ )
+            {
+                if ( value.charAt( c ) != ' ' )
+                    break;
+                builder.append( '\u00a0' );
+            }
+
+            if ( value.length() != builder.length() )
+                builder.append( value.substring( builder.length() ) );
+
+            value = builder.toString();
+        }
+
         Text text = htmlDocumentFacade.createText( value );
-        tableCellElement.appendChild( text );
+
+        if ( isUseDivsToSpan() )
+        {
+            tableCellElement.setAttribute( "style",
+                    "padding:0;margin:0;align:left;vertical-align:top;" );
+            Element outerDiv = htmlDocumentFacade.getDocument().createElement(
+                    "div" );
+            outerDiv.setAttribute( "style", "position:relative;" );
+
+            Element innerDiv = htmlDocumentFacade.getDocument().createElement(
+                    "div" );
+            innerDiv.setAttribute( "style", "position:absolute;min-width:"
+                    + normalWidthPx
+                    + "px;"
+                    + ( maxSpannedWidthPx != Integer.MAX_VALUE ? "max-width:"
+                            + maxSpannedWidthPx + "px;" : "" )
+                    + "overflow:hidden;max-height:" + normalHeightPt
+                    + "pt;white-space:nowrap;" );
+
+            innerDiv.appendChild( text );
+            outerDiv.appendChild( innerDiv );
+            tableCellElement.appendChild( outerDiv );
+        }
+        else
+        {
+            tableCellElement.appendChild( text );
+        }
 
         return ExcelToHtmlUtils.isEmpty( value ) && cellStyleIndex == 0;
     }
