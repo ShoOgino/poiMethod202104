@@ -1,0 +1,48 @@
+    public static HWPFDocument openSampleFileFromArchive( String sampleFileName )
+    {
+        final long start = System.currentTimeMillis();
+        try
+        {
+            ZipInputStream is = new ZipInputStream( POIDataSamples
+                    .getDocumentInstance()
+                    .openResourceAsStream( sampleFileName ) );
+            try
+            {
+                is.getNextEntry();
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                try
+                {
+                    IOUtils.copy( is, baos );
+                }
+                finally
+                {
+                    baos.close();
+                }
+
+                final long endUnzip = System.currentTimeMillis();
+                byte[] byteArray = baos.toByteArray();
+
+                logger.log( POILogger.DEBUG, "Unzipped in ",
+                        Long.valueOf( endUnzip - start ), " ms -- ",
+                        Long.valueOf( byteArray.length ), " byte(s)" );
+
+                ByteArrayInputStream bais = new ByteArrayInputStream( byteArray );
+                HWPFDocument doc = new HWPFDocument( bais );
+                final long endParse = System.currentTimeMillis();
+
+                logger.log( POILogger.DEBUG, "Parsed in ",
+                        Long.valueOf( endParse - start ), " ms" );
+
+                return doc;
+            }
+            finally
+            {
+                is.close();
+            }
+        }
+        catch ( IOException e )
+        {
+            throw new RuntimeException( e );
+        }
+    }
+
