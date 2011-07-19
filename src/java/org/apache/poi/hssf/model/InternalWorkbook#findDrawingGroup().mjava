@@ -21,15 +21,23 @@
                 }
 
                 EscherDggRecord dgg = null;
+                EscherContainerRecord bStore = null;
                 for(Iterator<EscherRecord> it = cr.getChildIterator(); it.hasNext();) {
-                    Object er = it.next();
+                    EscherRecord er = it.next();
                     if(er instanceof EscherDggRecord) {
                         dgg = (EscherDggRecord)er;
+                    } else if (er.getRecordId() == EscherContainerRecord.BSTORE_CONTAINER) {
+                        bStore = (EscherContainerRecord) er;
                     }
                 }
 
                 if(dgg != null) {
                     drawingManager = new DrawingManager2(dgg);
+                    if(bStore != null){
+                        for(EscherRecord bs : bStore.getChildRecords()){
+                            if(bs instanceof EscherBSERecord) escherBSERecords.add((EscherBSERecord)bs);
+                        }
+                    }
                     return;
                 }
             }
@@ -42,14 +50,22 @@
         if(dgLoc != -1) {
             DrawingGroupRecord dg = (DrawingGroupRecord)records.get(dgLoc);
             EscherDggRecord dgg = null;
+            EscherContainerRecord bStore = null;
             for(EscherRecord er : dg.getEscherRecords()) {
-                if(er instanceof EscherDggRecord) {
-                    dgg = (EscherDggRecord)er;
+                if (er instanceof EscherDggRecord) {
+                    dgg = (EscherDggRecord) er;
+                } else if (er.getRecordId() == EscherContainerRecord.BSTORE_CONTAINER) {
+                    bStore = (EscherContainerRecord) er;
                 }
             }
 
             if(dgg != null) {
                 drawingManager = new DrawingManager2(dgg);
+                if(bStore != null){
+                    for(EscherRecord bs : bStore.getChildRecords()){
+                        if(bs instanceof EscherBSERecord) escherBSERecords.add((EscherBSERecord)bs);
+                    }
+                }
             }
         }
     }

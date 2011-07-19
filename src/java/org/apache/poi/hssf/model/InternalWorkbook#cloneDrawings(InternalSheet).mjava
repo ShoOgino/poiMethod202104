@@ -37,20 +37,34 @@
                     //update id of the drawing in the cloned sheet
                     dg.setOptions( (short) ( dgId << 4 ) );
                 } else if (er instanceof EscherContainerRecord){
-                    //recursively find shape records and re-generate shapeId
-                    List<EscherRecord> spRecords = new ArrayList<EscherRecord>();
+                    // iterate over shapes and re-generate shapeId
                     EscherContainerRecord cp = (EscherContainerRecord)er;
-                    cp.getRecordsById(EscherSpRecord.RECORD_ID,  spRecords);
-                    for(Iterator<EscherRecord> spIt = spRecords.iterator(); spIt.hasNext();) {
-                        EscherSpRecord sp = (EscherSpRecord)spIt.next();
-                        int shapeId = drawingManager.allocateShapeId((short)dgId, dg);
-                        //allocateShapeId increments the number of shapes. roll back to the previous value
-                        dg.setNumShapes(dg.getNumShapes()-1);
-                        sp.setShapeId(shapeId);
+                    for(Iterator<EscherRecord> spIt = cp.getChildRecords().iterator(); spIt.hasNext();) {
+                        EscherContainerRecord shapeContainer = (EscherContainerRecord)spIt.next();
+                        for(EscherRecord shapeChildRecord : shapeContainer.getChildRecords()) {
+                            int recordId = shapeChildRecord.getRecordId();
+                            if (recordId == EscherSpRecord.RECORD_ID){
+                                EscherSpRecord sp = (EscherSpRecord)shapeChildRecord;
+                                int shapeId = drawingManager.allocateShapeId((short)dgId, dg);
+                                //allocateShapeId increments the number of shapes. roll back to the previous value
+                                dg.setNumShapes(dg.getNumShapes()-1);
+                                sp.setShapeId(shapeId);
+                            } else if (recordId == EscherOptRecord.RECORD_ID){
+                                EscherOptRecord opt = (EscherOptRecord)shapeChildRecord;
+                                EscherSimpleProperty prop = (EscherSimpleProperty)opt.lookup(
+                                        EscherProperties.BLIP__BLIPTODISPLAY );
+                                if (prop != null){
+                                    int pictureIndex = prop.getPropertyValue();
+                                    // increment reference count for pictures
+                                    EscherBSERecord bse = getBSERecord(pictureIndex);
+                                    bse.setRef(bse.getRef() + 1);
+                                }
+
+                            }
+                        }
                     }
                 }
             }
-
         }
     }
 
