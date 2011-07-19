@@ -1,0 +1,29 @@
+    public static String[] read( byte[] data, int startOffset )
+    {
+        short ffff = LittleEndian.getShort( data, startOffset );
+
+        if ( ffff != (short) 0xffff )
+        {
+            // Non-extended character Pascal strings
+            throw new UnsupportedOperationException(
+                    "Non-extended character Pascal strings are not supported right now. "
+                            + "Please, contact POI developers for update." );
+        }
+
+        // strings are extended character strings
+        int offset = startOffset + 2;
+        int numEntries = LittleEndian.getInt( data, offset );
+        offset += 4;
+
+        String[] entries = new String[numEntries];
+        for ( int i = 0; i < numEntries; i++ )
+        {
+            int len = LittleEndian.getShort( data, offset );
+            offset += 2;
+            String value = StringUtil.getFromUnicodeLE( data, offset, len );
+            offset += len * 2;
+            entries[i] = value;
+        }
+        return entries;
+    }
+

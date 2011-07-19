@@ -1,0 +1,29 @@
+    public static int write( HWPFOutputStream tableStream, String[] entries )
+            throws IOException
+    {
+        byte[] header = new byte[6];
+        LittleEndian.putShort( header, 0, (short) 0xffff );
+
+        if ( entries == null || entries.length == 0 )
+        {
+            LittleEndian.putInt( header, 2, 0 );
+            tableStream.write( header );
+            return 6;
+        }
+
+        LittleEndian.putInt( header, 2, entries.length );
+        tableStream.write( header );
+        int size = 6;
+
+        for ( String entry : entries )
+        {
+            byte[] buf = new byte[entry.length() * 2 + 2];
+            LittleEndian.putShort( buf, 0, (short) entry.length() );
+            StringUtil.putUnicodeLE( entry, buf, 2 );
+            tableStream.write( buf );
+            size += buf.length;
+        }
+
+        return size;
+    }
+
