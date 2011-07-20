@@ -1,4 +1,4 @@
-    public void testOneSeriePlot() throws Exception {
+    public void testFormulaCache() {
 	Workbook wb = new XSSFWorkbook();
 	Sheet sheet = new SheetBuilder(wb, plotData).build();
 	Drawing drawing = sheet.createDrawingPatriarch();
@@ -11,12 +11,18 @@
 	ScatterChartData scatterChartData =
 	    chart.getChartDataFactory().createScatterChartData();
 
-	DataMarker xMarker = new DataMarker(sheet, CellRangeAddress.valueOf("A1:A10"));
-	DataMarker yMarker = new DataMarker(sheet, CellRangeAddress.valueOf("B1:B10"));
+	DataMarker xMarker = new DataMarker(sheet, CellRangeAddress.valueOf("A1:E1"));
+	DataMarker yMarker = new DataMarker(sheet, CellRangeAddress.valueOf("A2:E2"));
 	ScatterChartSerie serie = scatterChartData.addSerie(xMarker, yMarker);
 
-	assertEquals(1, scatterChartData.getSeries().size());
-
 	chart.plot(scatterChartData, bottomAxis, leftAxis);
+
+	XSSFScatterChartData.Serie xssfScatterSerie =
+	    (XSSFScatterChartData.Serie) serie;
+	XSSFNumberCache yCache = xssfScatterSerie.getLastCalculatedYCache();
+
+	assertEquals(5, yCache.getPointCount());
+	assertEquals(4.0, yCache.getValueAt(3), 0.00001);
+	assertEquals(16.0, yCache.getValueAt(5), 0.00001);
     }
 

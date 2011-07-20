@@ -1,0 +1,27 @@
+    /**
+     * Builds new numeric cache container.
+     * @param marker data marker to use for cache evaluation
+     * @param ctNumRef parent number reference
+     * @return numeric cache instance
+     */
+    static XSSFNumberCache buildCache(DataMarker marker, CTNumRef ctNumRef) {
+	CellRangeAddress range = marker.getRange();
+	int numOfPoints = range.getNumberOfCells();
+
+	if (numOfPoints == 0) {
+	    // Nothing to do.
+	    return null;
+	}
+
+	XSSFNumberCache cache = new XSSFNumberCache(ctNumRef.addNewNumCache());
+	cache.setPointCount(numOfPoints);
+
+	Workbook wb = marker.getSheet().getWorkbook();
+	FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
+
+	CellWalk cellWalk = new CellWalk(marker);
+	NumCacheCellHandler numCacheHandler = cache.new NumCacheCellHandler(evaluator);
+	cellWalk.traverse(numCacheHandler);
+	return cache;
+    }
+
