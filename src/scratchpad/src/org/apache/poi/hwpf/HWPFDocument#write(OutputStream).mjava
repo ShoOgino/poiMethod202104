@@ -110,17 +110,75 @@
     _fib.setLcbPlcfbtePapx(tableStream.getOffset() - tableOffset);
     tableOffset = tableStream.getOffset();
 
+        /*
+         * plcfendRef (endnote reference position table) Written immediately
+         * after the previously recorded table if the document contains endnotes
+         * 
+         * plcfendTxt (endnote text position table) Written immediately after
+         * the plcfendRef if the document contains endnotes
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 24 of 210
+         */
+        _endnotesTables.writeRef( _fib, tableStream );
+        _endnotesTables.writeTxt( _fib, tableStream );
+        tableOffset = tableStream.getOffset();
+
+    /*
+     * plcffld*** (table of field positions and statuses for annotation
+     * subdocument) Written immediately after the previously recorded table,
+     * if the ******* subdocument contains fields.
+     * 
+     * Microsoft Office Word 97-2007 Binary File Format (.doc)
+     * Specification; Page 24 of 210
+     */
+
+    if ( _fieldsTables != null )
+    {
+        _fieldsTables.write( _fib, tableStream );
+        tableOffset = tableStream.getOffset();
+    }
+
+        /*
+         * plcffndRef (footnote reference position table) Written immediately
+         * after the stsh if the document contains footnotes
+         * 
+         * plcffndTxt (footnote text position table) Written immediately after
+         * the plcffndRef if the document contains footnotes
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 24 of 210
+         */
+        _footnotesTables.writeRef( _fib, tableStream );
+        _footnotesTables.writeTxt( _fib, tableStream );
+        tableOffset = tableStream.getOffset();
+
+        /*
+         * plcfsed (section table) Written immediately after the previously
+         * recorded table. Recorded in all Word documents
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 25 of 210
+         */
+
     // write out the SectionTable.
     _fib.setFcPlcfsed(tableOffset);
     _st.writeTo(docSys, fcMin);
     _fib.setLcbPlcfsed(tableStream.getOffset() - tableOffset);
     tableOffset = tableStream.getOffset();
 
-        if ( _fieldsTables != null )
-        {
-            _fieldsTables.write( _fib, tableStream );
-            tableOffset = tableStream.getOffset();
-        }
+        /*
+         * plcflst (list formats) Written immediately after the end of the
+         * previously recorded, if there are any lists defined in the document.
+         * This begins with a short count of LSTF structures followed by those
+         * LSTF structures. This is immediately followed by the allocated data
+         * hanging off the LSTFs. This data consists of the array of LVLs for
+         * each LSTF. (Each LVL consists of an LVLF followed by two grpprls and
+         * an XST.)
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 25 of 210
+         */
 
     // write out the list tables
     if (_lt != null)
@@ -128,7 +186,22 @@
       _fib.setFcPlcfLst(tableOffset);
       _lt.writeListDataTo(tableStream);
       _fib.setLcbPlcfLst(tableStream.getOffset() - tableOffset);
+    }
 
+    /*
+     * plflfo (more list formats) Written immediately after the end of the
+     * plcflst and its accompanying data, if there are any lists defined in
+     * the document. This consists first of a PL of LFO records, followed by
+     * the allocated data (if any) hanging off the LFOs. The allocated data
+     * consists of the array of LFOLVLFs for each LFO (and each LFOLVLF is
+     * immediately followed by some LVLs).
+     * 
+     * Microsoft Office Word 97-2007 Binary File Format (.doc)
+     * Specification; Page 26 of 210
+     */
+
+    if (_lt != null)
+    {
       _fib.setFcPlfLfo(tableStream.getOffset());
       _lt.writeListOverridesTo(tableStream);
       _fib.setLcbPlfLfo(tableStream.getOffset() - tableOffset);
