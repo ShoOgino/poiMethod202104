@@ -1,0 +1,123 @@
+    private boolean processRangeBookmarks( HWPFDocumentCore document,
+            int currentTableLevel, Range range, final Element block,
+            Map<Integer, List<Bookmark>> rangeBookmakrs )
+    {
+        final int startOffset = range.getStartOffset();
+        final int endOffset = range.getEndOffset();
+
+        int beforeBookmarkStart = startOffset;
+        for ( Map.Entry<Integer, List<Bookmark>> entry : rangeBookmakrs
+                .entrySet() )
+        {
+            final List<Bookmark> startedAt = entry.getValue();
+
+            final List<Bookmark> bookmarks;
+            if ( entry.getKey().intValue() == startOffset
+                    && !bookmarkStack.isEmpty() )
+            {
+                /*
+                 * we need to filter out some bookmarks because already
+                 * processing them in caller methods
+                 */
+                List<Bookmark> filtered = new ArrayList<Bookmark>(
+                        startedAt.size() );
+                for ( Bookmark bookmark : startedAt )
+                {
+                    if ( this.bookmarkStack.contains( bookmark ) )
+                        continue;
+
+                    filtered.add( bookmark );
+                }
+
+                if ( filtered.isEmpty() )
+                    // no bookmarks - skip to next start point
+                    continue;
+
+                bookmarks = filtered;
+            }
+            else
+            {
+                bookmarks = startedAt;
+            }
+
+            // TODO: test me
+            /*
+             * we processing only bookmarks with max size, they shall be first
+             * in sorted list. Other bookmarks will be processed by called
+             * method
+             */
+            final Bookmark firstBookmark = bookmarks.iterator().next();
+            final int startBookmarkOffset = firstBookmark.getStart();
+            final int endBookmarkOffset = Math.min( firstBookmark.getEnd(),
+                    range.getEndOffset() );
+            List<Bookmark> toProcess = new ArrayList<Bookmark>(
+                    bookmarks.size() );
+            for ( Bookmark bookmark : bookmarks )
+            {
+                if ( Math.min( bookmark.getEnd(), range.getEndOffset() ) != endBookmarkOffset )
+                    break;
+                toProcess.add( bookmark );
+            }
+
+            if ( beforeBookmarkStart != startBookmarkOffset )
+            {
+                // we have range before bookmark
+                Range beforeBookmarkRange = new Range( beforeBookmarkStart,
+                        startBookmarkOffset, range )
+                {
+                    @Override
+                    public String toString()
+                    {
+                        return "BeforeBookmarkRange (" + super.toString() + ")";
+                    }
+                };
+                processCharacters( document, currentTableLevel,
+                        beforeBookmarkRange, block );
+            }
+            Range bookmarkRange = new Range( startBookmarkOffset,
+                    endBookmarkOffset, range )
+            {
+                @Override
+                public String toString()
+                {
+                    return "BookmarkRange (" + super.toString() + ")";
+                }
+            };
+
+            bookmarkStack.addAll( toProcess );
+            try
+            {
+                processBookmarks( document, block, bookmarkRange,
+                        currentTableLevel,
+                        Collections.unmodifiableList( toProcess ) );
+            }
+            finally
+            {
+                bookmarkStack.removeAll( toProcess );
+            }
+            beforeBookmarkStart = endBookmarkOffset;
+        }
+
+        if ( beforeBookmarkStart == startOffset )
+        {
+            return false;
+        }
+
+        if ( beforeBookmarkStart != endOffset )
+        {
+            // we have range after last bookmark
+            Range afterLastBookmarkRange = new Range( beforeBookmarkStart,
+                    endOffset, range )
+            {
+                @Override
+                public String toString()
+                {
+                    return "AfterBookmarkRange (" + super.toString() + ")";
+                }
+            };
+            processCharacters( document, currentTableLevel,
+                    afterLastBookmarkRange, block );
+        }
+        return true;
+    }
+

@@ -1,10 +1,26 @@
-    protected boolean processCharacters( HWPFDocumentCore hwpfDocument,
+    protected boolean processCharacters( HWPFDocumentCore document,
             int currentTableLevel, Range range, final Element block )
     {
         if ( range == null )
             return false;
 
         boolean haveAnyText = false;
+
+        if ( document instanceof HWPFDocument )
+        {
+            final HWPFDocument doc = (HWPFDocument) document;
+            Map<Integer, List<Bookmark>> rangeBookmarks = doc.getBookmarks()
+                    .getBookmarksStartedBetween( range.getStartOffset(),
+                            range.getEndOffset() );
+
+            if ( rangeBookmarks != null && !rangeBookmarks.isEmpty() )
+            {
+                boolean processedAny = processRangeBookmarks( doc,
+                        currentTableLevel, range, block, rangeBookmarks );
+                if ( processedAny )
+                    return true;
+            }
+        }
 
         for ( int c = 0; c < range.numCharacterRuns(); c++ )
         {
@@ -13,11 +29,11 @@
             if ( characterRun == null )
                 throw new AssertionError();
 
-            if ( hwpfDocument instanceof HWPFDocument
-                    && ( (HWPFDocument) hwpfDocument ).getPicturesTable()
+            if ( document instanceof HWPFDocument
+                    && ( (HWPFDocument) document ).getPicturesTable()
                             .hasPicture( characterRun ) )
             {
-                HWPFDocument newFormat = (HWPFDocument) hwpfDocument;
+                HWPFDocument newFormat = (HWPFDocument) document;
                 Picture picture = newFormat.getPicturesTable().extractPicture(
                         characterRun, true );
 
@@ -32,15 +48,15 @@
 
             if ( text.getBytes()[0] == FIELD_BEGIN_MARK )
             {
-                if ( hwpfDocument instanceof HWPFDocument )
+                if ( document instanceof HWPFDocument )
                 {
-                    Field aliveField = ( (HWPFDocument) hwpfDocument )
+                    Field aliveField = ( (HWPFDocument) document )
                             .getFieldsTables().lookupFieldByStartOffset(
                                     FieldsDocumentPart.MAIN,
                                     characterRun.getStartOffset() );
                     if ( aliveField != null )
                     {
-                        processField( ( (HWPFDocument) hwpfDocument ), range,
+                        processField( ( (HWPFDocument) document ), range,
                                 currentTableLevel, aliveField, block );
 
                         int continueAfter = aliveField.getFieldEndOffset();
@@ -55,8 +71,8 @@
                     }
                 }
 
-                int skipTo = tryDeadField( hwpfDocument, range,
-                        currentTableLevel, c, block );
+                int skipTo = tryDeadField( document, range, currentTableLevel,
+                        c, block );
 
                 if ( skipTo != c )
                 {
