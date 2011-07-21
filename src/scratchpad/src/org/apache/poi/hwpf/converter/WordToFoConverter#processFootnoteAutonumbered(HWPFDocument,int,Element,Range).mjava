@@ -2,28 +2,30 @@
     protected void processFootnoteAutonumbered( HWPFDocument doc,
             int noteIndex, Element block, Range footnoteTextRange )
     {
-        String textIndex = String.valueOf( noteIndex + 1 );
+        final String textIndex = String.valueOf( noteIndex + 1 );
+        final String forwardLinkName = "footnote_" + textIndex;
+        final String backwardLinkName = "footnote_back_" + textIndex;
 
-        {
-            Element inline = foDocumentFacade.createInline();
-            inline.setTextContent( textIndex );
-            inline.setAttribute( "baseline-shift", "super" );
-            inline.setAttribute( "font-size", "smaller" );
-            block.appendChild( inline );
-        }
+        Element footNote = foDocumentFacade.createFootnote();
+        block.appendChild( footNote );
+
+        Element inline = foDocumentFacade.createInline();
+        Element forwardLink = foDocumentFacade
+                .createBasicLinkInternal( forwardLinkName );
+        forwardLink.appendChild( createNoteInline( textIndex ) );
+        forwardLink.setAttribute( "id", backwardLinkName );
+        inline.appendChild( forwardLink );
+        footNote.appendChild( inline );
 
         Element footnoteBody = foDocumentFacade.createFootnoteBody();
         Element footnoteBlock = foDocumentFacade.createBlock();
+        Element backwardLink = foDocumentFacade
+                .createBasicLinkInternal( backwardLinkName );
+        backwardLink.appendChild( createNoteInline( textIndex + " " ) );
+        backwardLink.setAttribute( "id", forwardLinkName );
+        footnoteBlock.appendChild( backwardLink );
         footnoteBody.appendChild( footnoteBlock );
-        block.appendChild( footnoteBody );
-
-        {
-            Element inline = foDocumentFacade.createInline();
-            inline.setTextContent( textIndex );
-            inline.setAttribute( "baseline-shift", "super" );
-            inline.setAttribute( "font-size", "smaller" );
-            footnoteBlock.appendChild( inline );
-        }
+        footNote.appendChild( footnoteBody );
 
         processCharacters( doc, Integer.MIN_VALUE, footnoteTextRange,
                 footnoteBlock );
