@@ -1,11 +1,11 @@
-    private void parseFieldStructureImpl( GenericPropertyNode[] nodes,
-            int startOffsetInclusive, int endOffsetExclusive, List<Field> result )
+    private void parseFieldStructureImpl( List<PlexOfField> plexOfFields,
+            int startOffsetInclusive, int endOffsetExclusive,
+            List<FieldImpl> result )
     {
         int next = startOffsetInclusive;
         while ( next < endOffsetExclusive )
         {
-            GenericPropertyNode startNode = nodes[next];
-            PlexOfField startPlexOfField = new PlexOfField( startNode );
+            PlexOfField startPlexOfField = plexOfFields.get( next );
             if ( startPlexOfField.getFld().getBoundaryType() != FieldDescriptor.FIELD_BEGIN_MARK )
             {
                 /* Start mark seems to be missing */
@@ -17,9 +17,9 @@
              * we have start node. end offset points to next node, separator or
              * end
              */
-            int nextNodePositionInArray = binarySearch( nodes, next + 1,
-                    endOffsetExclusive, startNode.getEnd() );
-            if ( nextNodePositionInArray < 0 )
+            int nextNodePositionInList = binarySearch( plexOfFields, next + 1,
+                    endOffsetExclusive, startPlexOfField.getFcEnd() );
+            if ( nextNodePositionInList < 0 )
             {
                 /*
                  * too bad, this start field mark doesn't have corresponding end
@@ -28,20 +28,19 @@
                 next++;
                 continue;
             }
-            GenericPropertyNode nextNode = nodes[nextNodePositionInArray];
-            PlexOfField nextPlexOfField = new PlexOfField( nextNode );
+            PlexOfField nextPlexOfField = plexOfFields
+                    .get( nextNodePositionInList );
 
             switch ( nextPlexOfField.getFld().getBoundaryType() )
             {
             case FieldDescriptor.FIELD_SEPARATOR_MARK:
             {
-                GenericPropertyNode separatorNode = nextNode;
                 PlexOfField separatorPlexOfField = nextPlexOfField;
 
-                int endNodePositionInArray = binarySearch( nodes,
-                        nextNodePositionInArray, endOffsetExclusive,
-                        separatorNode.getEnd() );
-                if ( endNodePositionInArray < 0 )
+                int endNodePositionInList = binarySearch( plexOfFields,
+                        nextNodePositionInList, endOffsetExclusive,
+                        separatorPlexOfField.getFcEnd() );
+                if ( endNodePositionInList < 0 )
                 {
                     /*
                      * too bad, this separator field mark doesn't have
@@ -50,8 +49,8 @@
                     next++;
                     continue;
                 }
-                GenericPropertyNode endNode = nodes[endNodePositionInArray];
-                PlexOfField endPlexOfField = new PlexOfField( endNode );
+                PlexOfField endPlexOfField = plexOfFields
+                        .get( endNodePositionInList );
 
                 if ( endPlexOfField.getFld().getBoundaryType() != FieldDescriptor.FIELD_END_MARK )
                 {
@@ -60,42 +59,45 @@
                     continue;
                 }
 
-                Field field = new Field( startPlexOfField,
+                FieldImpl field = new FieldImpl( startPlexOfField,
                         separatorPlexOfField, endPlexOfField );
                 result.add( field );
 
                 // adding included fields
-                if ( startNode.getStart() + 1 < separatorNode.getStart() - 1 )
+                if ( startPlexOfField.getFcStart() + 1 < separatorPlexOfField
+                        .getFcStart() - 1 )
                 {
-                    parseFieldStructureImpl( nodes, next + 1,
-                            nextNodePositionInArray, result );
+                    parseFieldStructureImpl( plexOfFields, next + 1,
+                            nextNodePositionInList, result );
                 }
-                if ( separatorNode.getStart() + 1 < endNode.getStart() - 1 )
+                if ( separatorPlexOfField.getFcStart() + 1 < endPlexOfField
+                        .getFcStart() - 1 )
                 {
-                    parseFieldStructureImpl( nodes,
-                            nextNodePositionInArray + 1,
-                            endNodePositionInArray, result );
+                    parseFieldStructureImpl( plexOfFields,
+                            nextNodePositionInList + 1, endNodePositionInList,
+                            result );
                 }
 
-                next = endNodePositionInArray + 1;
+                next = endNodePositionInList + 1;
 
                 break;
             }
             case FieldDescriptor.FIELD_END_MARK:
             {
                 // we have no separator
-                Field field = new Field( startPlexOfField, null,
+                FieldImpl field = new FieldImpl( startPlexOfField, null,
                         nextPlexOfField );
                 result.add( field );
 
                 // adding included fields
-                if ( startNode.getStart() + 1 < nextNode.getStart() - 1 )
+                if ( startPlexOfField.getFcStart() + 1 < nextPlexOfField
+                        .getFcStart() - 1 )
                 {
-                    parseFieldStructureImpl( nodes, next + 1,
-                            nextNodePositionInArray, result );
+                    parseFieldStructureImpl( plexOfFields, next + 1,
+                            nextNodePositionInList, result );
                 }
 
-                next = nextNodePositionInArray + 1;
+                next = nextNodePositionInList + 1;
                 break;
             }
             case FieldDescriptor.FIELD_BEGIN_MARK:
