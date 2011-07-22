@@ -31,7 +31,11 @@
 
                 if ( tableCell.isVerticallyMerged()
                         && !tableCell.isFirstVerticallyMerged() )
+                {
+                    currentEdgeIndex += getTableCellEdgesIndexSkipCount( table,
+                            r, tableCellEdges, currentEdgeIndex, c, tableCell );
                     continue;
+                }
 
                 Element tableCellElement;
                 if ( tableRow.isTableHeader() )
@@ -48,42 +52,22 @@
                         r == 0, r == tableRows - 1, c == 0, c == rowCells - 1,
                         tableCellStyle );
 
-                int colSpan = 0;
-                int cellRightEdge = tableCell.getLeftEdge()
-                        + tableCell.getWidth();
-                while ( tableCellEdges[currentEdgeIndex] < cellRightEdge )
-                {
-                    colSpan++;
-                    currentEdgeIndex++;
-                }
+                int colSpan = getNumberColumnsSpanned( tableCellEdges,
+                        currentEdgeIndex, tableCell );
+                currentEdgeIndex += colSpan;
 
                 if ( colSpan == 0 )
                     continue;
 
                 if ( colSpan != 1 )
-                {
                     tableCellElement.setAttribute( "colspan",
                             String.valueOf( colSpan ) );
-                }
 
-                if ( tableCell.isFirstVerticallyMerged() )
-                {
-                    int count = 1;
-                    for ( int r1 = r + 1; r1 < tableRows; r1++ )
-                    {
-                        TableRow nextRow = table.getRow( r1 );
-                        if ( nextRow.numCells() < c )
-                            break;
-                        TableCell nextCell = nextRow.getCell( c );
-                        if ( !nextCell.isVerticallyMerged()
-                                || nextCell.isFirstVerticallyMerged() )
-                            break;
-                        count++;
-                    }
-                    if ( count > 1 )
-                        tableCellElement.setAttribute( "rowspan",
-                                String.valueOf( count ) );
-                }
+                final int rowSpan = getNumberRowsSpanned( table, r, c,
+                        tableCell );
+                if ( rowSpan > 1 )
+                    tableCellElement.setAttribute( "rowspan",
+                            String.valueOf( rowSpan ) );
 
                 processParagraphes( hwpfDocument, tableCellElement, tableCell,
                         table.getTableLevel() );
