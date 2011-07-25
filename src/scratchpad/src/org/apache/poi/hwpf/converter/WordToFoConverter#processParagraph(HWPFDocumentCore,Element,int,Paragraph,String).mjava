@@ -14,46 +14,26 @@
             return;
         }
 
+        boolean haveAnyText = false;
+
+        if ( WordToFoUtils.isNotEmpty( bulletText ) )
         {
-            CharacterRun characterRun = paragraph.getCharacterRun( 0 );
-            int pFontSize = characterRun.getFontSize() / 2;
-            Triplet triplet = getCharacterRunTriplet( characterRun );
+            Element inline = foDocumentFacade.createInline();
+            block.appendChild( inline );
 
-            WordToFoUtils.setFontFamily( block, triplet.fontName );
-            WordToFoUtils.setFontSize( block, pFontSize );
-            WordToFoUtils.setBold( block, triplet.bold );
-            WordToFoUtils.setItalic( block, triplet.italic );
+            Text textNode = foDocumentFacade.createText( bulletText );
+            inline.appendChild( textNode );
 
-            blocksProperies.push( new BlockProperies( triplet.fontName,
-                    pFontSize, triplet.bold, triplet.italic ) );
+            haveAnyText |= bulletText.trim().length() != 0;
         }
-        try
+
+        haveAnyText = processCharacters( hwpfDocument, currentTableLevel,
+                paragraph, block );
+
+        if ( !haveAnyText )
         {
-            boolean haveAnyText = false;
-
-            if ( WordToFoUtils.isNotEmpty( bulletText ) )
-            {
-                Element inline = foDocumentFacade.createInline();
-                block.appendChild( inline );
-
-                Text textNode = foDocumentFacade.createText( bulletText );
-                inline.appendChild( textNode );
-
-                haveAnyText |= bulletText.trim().length() != 0;
-            }
-
-            haveAnyText = processCharacters( hwpfDocument, currentTableLevel,
-                    paragraph, block );
-
-            if ( !haveAnyText )
-            {
-                Element leader = foDocumentFacade.createLeader();
-                block.appendChild( leader );
-            }
-        }
-        finally
-        {
-            blocksProperies.pop();
+            Element leader = foDocumentFacade.createLeader();
+            block.appendChild( leader );
         }
 
         WordToFoUtils.compactInlines( block );
