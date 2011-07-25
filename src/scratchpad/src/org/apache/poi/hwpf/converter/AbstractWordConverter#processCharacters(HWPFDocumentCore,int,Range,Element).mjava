@@ -1,25 +1,139 @@
-    protected boolean processCharacters( HWPFDocumentCore document,
-            int currentTableLevel, Range range, final Element block )
+    protected boolean processCharacters( final HWPFDocumentCore document,
+            final int currentTableLevel, final Range range, final Element block )
     {
         if ( range == null )
             return false;
 
         boolean haveAnyText = false;
 
+        /*
+         * In text there can be fields, bookmarks, may be other structures (code
+         * below allows extension). Those structures can overlaps, so either we
+         * should process char-by-char (slow) or find a correct way to
+         * reconstruct the structure of range -- sergey
+         */
+        List<Structure> structures = new LinkedList<Structure>();
         if ( document instanceof HWPFDocument )
         {
             final HWPFDocument doc = (HWPFDocument) document;
+
             Map<Integer, List<Bookmark>> rangeBookmarks = doc.getBookmarks()
                     .getBookmarksStartedBetween( range.getStartOffset(),
                             range.getEndOffset() );
 
-            if ( rangeBookmarks != null && !rangeBookmarks.isEmpty() )
+            if ( rangeBookmarks != null )
             {
-                boolean processedAny = processRangeBookmarks( doc,
-                        currentTableLevel, range, block, rangeBookmarks );
-                if ( processedAny )
-                    return true;
+                for ( List<Bookmark> lists : rangeBookmarks.values() )
+                {
+                    for ( Bookmark bookmark : lists )
+                    {
+                        if ( !bookmarkStack.contains( bookmark ) )
+                            addToStructures( structures, new Structure(
+                                    bookmark ) );
+                    }
+                }
             }
+
+            // TODO: dead fields?
+            for ( int c = 0; c < range.numCharacterRuns(); c++ )
+            {
+                CharacterRun characterRun = range.getCharacterRun( c );
+                if ( characterRun == null )
+                    throw new AssertionError();
+                Field aliveField = ( (HWPFDocument) document ).getFields()
+                        .getFieldByStartOffset( FieldsDocumentPart.MAIN,
+                                characterRun.getStartOffset() );
+                if ( aliveField != null )
+                {
+                    addToStructures( structures, new Structure( aliveField ) );
+                }
+            }
+        }
+
+        structures = new ArrayList<Structure>( structures );
+        Collections.sort( structures );
+
+        int previous = range.getStartOffset();
+        for ( Structure structure : structures )
+        {
+            if ( structure.start != previous )
+            {
+                Range subrange = new Range( previous, structure.start, range )
+                {
+                    @Override
+                    public String toString()
+                    {
+                        return "BetweenStructuresSubrange " + super.toString();
+                    }
+                };
+                processCharacters( document, currentTableLevel, subrange, block );
+            }
+
+            if ( structure.structure instanceof Bookmark )
+            {
+                // other bookmarks with same bundaries
+                List<Bookmark> bookmarks = new LinkedList<Bookmark>();
+                for ( Bookmark bookmark : ( (HWPFDocument) document )
+                        .getBookmarks()
+                        .getBookmarksStartedBetween( structure.start,
+                                structure.start + 1 ).values().iterator()
+                        .next() )
+                {
+                    if ( bookmark.getStart() == structure.start
+                            && bookmark.getEnd() == structure.end )
+                    {
+                        bookmarks.add( bookmark );
+                    }
+                }
+
+                bookmarkStack.addAll( bookmarks );
+                try
+                {
+                    Range subrange = new Range( previous, structure.start,
+                            range )
+                    {
+                        @Override
+                        public String toString()
+                        {
+                            return "BookmarksSubrange " + super.toString();
+                        }
+                    };
+
+                    processBookmarks( document, block, subrange,
+                            currentTableLevel, bookmarks );
+                }
+                finally
+                {
+                    bookmarkStack.removeAll( bookmarks );
+                }
+            }
+            else if ( structure.structure instanceof Field )
+            {
+                Field field = (Field) structure.structure;
+                processField( (HWPFDocument) document, range,
+                        currentTableLevel, field, block );
+            }
+            else
+            {
+                throw new UnsupportedOperationException( "NYI: "
+                        + structure.structure.getClass() );
+            }
+
+            previous = structure.end;
+        }
+
+        if ( previous != range.getStartOffset() )
+        {
+            Range subrange = new Range( previous, range.getEndOffset(), range )
+            {
+                @Override
+                public String toString()
+                {
+                    return "AfterStructureSubrange " + super.toString();
+                }
+            };
+            processCharacters( document, currentTableLevel, subrange, block );
+            return true;
         }
 
         for ( int c = 0; c < range.numCharacterRuns(); c++ )
