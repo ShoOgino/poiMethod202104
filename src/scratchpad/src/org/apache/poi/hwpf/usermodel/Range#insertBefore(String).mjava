@@ -1,32 +1,25 @@
-	/**
-	 * Inserts text into the front of this range.
-	 *
-	 * @param text
-	 *            The text to insert
-	 * @return The character run that text was inserted into.
-	 */
-	public CharacterRun insertBefore(String text)
-	// throws UnsupportedEncodingException
-	{
-		initAll();
+    /**
+     * Inserts text into the front of this range.
+     * 
+     * @param text
+     *            The text to insert
+     * @return The character run that text was inserted into.
+     */
+    public CharacterRun insertBefore( String text )
+    {
+        initAll();
 
-		TextPiece tp = _text.get(_textStart);
-		StringBuffer sb = tp.getStringBuffer();
+        _text.insert( _start, text );
+        _doc.getCharacterTable().adjustForInsert( _charStart, text.length() );
+        _doc.getParagraphTable().adjustForInsert( _parStart, text.length() );
+        _doc.getSectionTable().adjustForInsert( _sectionStart, text.length() );
+        adjustForInsert( text.length() );
 
-		// Since this is the first item in our list, it is safe to assume that
-		// _start >= tp.getStart()
-		int insertIndex = _start - tp.getStart();
-		sb.insert(insertIndex, text);
+        // update the FIB.CCPText + friends fields
+        adjustFIB( text.length() );
 
-		int adjustedLength = _doc.getTextTable().adjustForInsert(_textStart, text.length());
-		_doc.getCharacterTable().adjustForInsert(_charStart, adjustedLength);
-		_doc.getParagraphTable().adjustForInsert(_parStart, adjustedLength);
-		_doc.getSectionTable().adjustForInsert(_sectionStart, adjustedLength);
-		adjustForInsert(adjustedLength);
+        assert sanityCheck();
 
-		// update the FIB.CCPText + friends fields
-		adjustFIB(text.length());
-
-		return getCharacterRun(0);
-	}
+        return getCharacterRun( 0 );
+    }
 
