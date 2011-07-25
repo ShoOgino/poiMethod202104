@@ -1,0 +1,28 @@
+    public void testFunctionsFromTestSpreadsheet() {
+        HSSFWorkbook workbook = HSSFTestDataSamples.openSampleWorkbook("SubtotalsNested.xls");
+        HSSFSheet sheet = workbook.getSheetAt(0);
+        FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
+
+        assertEquals("A1", 10.0, sheet.getRow(0).getCell(0).getNumericCellValue());
+        assertEquals("A2", 20.0, sheet.getRow(1).getCell(0).getNumericCellValue());
+
+        //Test simple subtotal over one area
+        Cell cellA3 = sheet.getRow(2).getCell(0);
+        confirmExpectedResult(evaluator, "A3", cellA3, 30.0);
+
+        //Test existence of the second area
+        assertNotNull("B1 must not be null", sheet.getRow(0).getCell(1));
+        assertEquals("B1", 7.0, sheet.getRow(0).getCell(1).getNumericCellValue());
+
+        Cell cellC1 = sheet.getRow(0).getCell(2);
+        Cell cellC2 = sheet.getRow(1).getCell(2);
+        Cell cellC3 = sheet.getRow(2).getCell(2);
+
+        //Test Functions SUM, COUNT and COUNTA calculation of SUBTOTAL
+        //a) areas A and B are used
+        //b) first 2 subtotals don't consider the value of nested subtotal in A3
+        confirmExpectedResult(evaluator, "SUBTOTAL(SUM;A1:A7;B1:B7)", cellC1, 37.0);
+        confirmExpectedResult(evaluator, "SUBTOTAL(COUNT;A1:A7;B1:B7)", cellC2, 3.0);
+        confirmExpectedResult(evaluator, "SUBTOTAL(COUNTA;A1:A7;B1:B7)", cellC3, 5.0);
+    }
+
