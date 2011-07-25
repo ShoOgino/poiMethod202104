@@ -1,52 +1,6 @@
-    public PAPBinTable( byte[] documentStream, byte[] tableStream,
-            byte[] dataStream, int offset, int size,
-            ComplexFileTable complexFileTable, TextPieceTable tpt,
-            boolean reconstructPapxTable )
+    public void rebuild( byte[] dataStream, ComplexFileTable complexFileTable )
     {
         long start = System.currentTimeMillis();
-
-        {
-            PlexOfCps binTable = new PlexOfCps( tableStream, offset, size, 4 );
-            this.tpt = tpt;
-
-            int length = binTable.length();
-            for ( int x = 0; x < length; x++ )
-            {
-                GenericPropertyNode node = binTable.getProperty( x );
-
-                int pageNum = LittleEndian.getInt( node.getBytes() );
-                int pageOffset = POIFSConstants.SMALLER_BIG_BLOCK_SIZE
-                        * pageNum;
-
-                PAPFormattedDiskPage pfkp = new PAPFormattedDiskPage(
-                        documentStream, dataStream, pageOffset, tpt,
-                        reconstructPapxTable );
-
-                int fkpSize = pfkp.size();
-
-                for ( int y = 0; y < fkpSize; y++ )
-                {
-                    PAPX papx = pfkp.getPAPX( y );
-
-                    if ( papx != null )
-                        _paragraphs.add( papx );
-                }
-            }
-        }
-
-        logger.log( POILogger.DEBUG, "PAPX tables loaded in ",
-                Long.valueOf( System.currentTimeMillis() - start ), " ms (",
-                Integer.valueOf( _paragraphs.size() ), " elements)" );
-        start = System.currentTimeMillis();
-
-        if ( !reconstructPapxTable )
-        {
-            Collections.sort( _paragraphs );
-
-            logger.log( POILogger.DEBUG, "PAPX sorted in ",
-                    Long.valueOf( System.currentTimeMillis() - start ), " ms" );
-            return;
-        }
 
         if ( complexFileTable != null )
         {

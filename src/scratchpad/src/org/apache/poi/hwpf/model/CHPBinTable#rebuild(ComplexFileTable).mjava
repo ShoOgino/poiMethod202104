@@ -1,55 +1,6 @@
-    /**
-     * Constructor used to read a binTable in from a Word document.
-     */
-    public CHPBinTable( byte[] documentStream, byte[] tableStream, int offset,
-            int size, ComplexFileTable complexFileTable, TextPieceTable tpt,
-            boolean reconstructChpxTable )
+    public void rebuild( ComplexFileTable complexFileTable )
     {
         long start = System.currentTimeMillis();
-        /*
-         * Page 35:
-         * 
-         * "Associated with each interval is a BTE. A BTE holds a four-byte PN
-         * (page number) which identifies the FKP page in the file which
-         * contains the formatting information for that interval. A CHPX FKP
-         * further partitions an interval into runs of exception text."
-         */
-        PlexOfCps bte = new PlexOfCps( tableStream, offset, size, 4 );
-        this.tpt = tpt;
-
-    int length = bte.length();
-    for (int x = 0; x < length; x++)
-    {
-      GenericPropertyNode node = bte.getProperty(x);
-
-      int pageNum = LittleEndian.getInt(node.getBytes());
-      int pageOffset = POIFSConstants.SMALLER_BIG_BLOCK_SIZE * pageNum;
-
-      CHPFormattedDiskPage cfkp = new CHPFormattedDiskPage(documentStream,
-        pageOffset, tpt, reconstructChpxTable);
-
-      int fkpSize = cfkp.size();
-
-      for (int y = 0; y < fkpSize; y++)
-      {
-        final CHPX chpx = cfkp.getCHPX(y);
-        if (chpx != null)
-            _textRuns.add(chpx);
-      }
-    }
-        logger.log( POILogger.DEBUG, "CHPX FKPs loaded in ",
-                Long.valueOf( System.currentTimeMillis() - start ), " ms (",
-                Integer.valueOf( _textRuns.size() ), " elements)" );
-        start = System.currentTimeMillis();
-
-        if ( !reconstructChpxTable )
-        {
-            Collections.sort( _textRuns );
-
-            logger.log( POILogger.DEBUG, "CHPX sorted in ",
-                    Long.valueOf( System.currentTimeMillis() - start ), " ms" );
-            return;
-        }
 
         if ( complexFileTable != null )
         {
@@ -283,12 +234,12 @@
                 iterator.remove();
                 continue;
             }
-            
+
             previous = current;
         }
 
         logger.log( POILogger.DEBUG, "CHPX compacted in ",
                 Long.valueOf( System.currentTimeMillis() - start ), " ms (",
                 Integer.valueOf( _textRuns.size() ), " elements)" );
-}
+    }
 
