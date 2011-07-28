@@ -1,7 +1,10 @@
     protected void processDrawnObject( HWPFDocument doc,
             CharacterRun characterRun, Element block )
     {
-        // main?
+        if ( getPicturesManager() == null )
+            return;
+
+        // TODO: support headers
         OfficeDrawing officeDrawing = doc.getOfficeDrawingsMain()
                 .getOfficeDrawingAt( characterRun.getStartOffset() );
         if ( officeDrawing == null )
@@ -11,7 +14,15 @@
             return;
         }
 
-        // TODO: do something :)
+        byte[] pictureData = officeDrawing.getPictureData();
+        if ( pictureData == null )
+            // usual shape?
+            return;
 
+        final PictureType type = PictureType.findMatchingType( pictureData );
+        String path = getPicturesManager().savePicture( pictureData, type,
+                "s" + characterRun.getStartOffset() + "." + type );
+
+        processDrawnObject( doc, characterRun, officeDrawing, path, block );
     }
 

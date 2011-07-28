@@ -1,55 +1,63 @@
-  private void fillJPGWidthHeight() {
-    /*
-    http://www.codecomments.com/archive281-2004-3-158083.html
+    private void fillJPGWidthHeight()
+    {
+        /*
+         * http://www.codecomments.com/archive281-2004-3-158083.html
+         * 
+         * Algorhitm proposed by Patrick TJ McPhee:
+         * 
+         * read 2 bytes make sure they are 'ffd8'x repeatedly: read 2 bytes make
+         * sure the first one is 'ff'x if the second one is 'd9'x stop else if
+         * the second one is c0 or c2 (or possibly other values ...) skip 2
+         * bytes read one byte into depth read two bytes into height read two
+         * bytes into width else read two bytes into length skip forward
+         * length-2 bytes
+         * 
+         * Also used Ruby code snippet from:
+         * http://www.bigbold.com/snippets/posts/show/805 for reference
+         */
+        int pointer = pictureBytesStartOffset + 2;
+        int firstByte = _dataStream[pointer];
+        int secondByte = _dataStream[pointer + 1];
 
-    Algorhitm proposed by Patrick TJ McPhee:
+        int endOfPicture = pictureBytesStartOffset + size;
+        while ( pointer < endOfPicture - 1 )
+        {
+            do
+            {
+                firstByte = _dataStream[pointer];
+                secondByte = _dataStream[pointer + 1];
+                pointer += 2;
+            }
+            while ( !( firstByte == (byte) 0xFF ) && pointer < endOfPicture - 1 );
 
-    read 2 bytes
-    make sure they are 'ffd8'x
-    repeatedly:
-    read 2 bytes
-    make sure the first one is 'ff'x
-    if the second one is 'd9'x stop
-    else if the second one is c0 or c2 (or possibly other values ...)
-    skip 2 bytes
-    read one byte into depth
-    read two bytes into height
-    read two bytes into width
-    else
-    read two bytes into length
-    skip forward length-2 bytes
-
-    Also used Ruby code snippet from: http://www.bigbold.com/snippets/posts/show/805 for reference
-    */
-    int pointer = pictureBytesStartOffset+2;
-    int firstByte = _dataStream[pointer];
-    int secondByte = _dataStream[pointer+1];
-
-    int endOfPicture = pictureBytesStartOffset + size;
-    while(pointer<endOfPicture-1) {
-      do {
-        firstByte = _dataStream[pointer];
-        secondByte = _dataStream[pointer+1];
-        pointer += 2;
-      } while (!(firstByte==(byte)0xFF) && pointer<endOfPicture-1);
-
-      if (firstByte==((byte)0xFF) && pointer<endOfPicture-1) {
-        if (secondByte==(byte)0xD9 || secondByte==(byte)0xDA) {
-          break;
-        } else if ( (secondByte & 0xF0) == 0xC0 && secondByte!=(byte)0xC4 && secondByte!=(byte)0xC8 && secondByte!=(byte)0xCC) {
-          pointer += 5;
-          this.height = getBigEndianShort(_dataStream, pointer);
-          this.width = getBigEndianShort(_dataStream, pointer+2);
-          break;
-        } else {
-          pointer++;
-          pointer++;
-          int length = getBigEndianShort(_dataStream, pointer);
-          pointer+=length;
+            if ( firstByte == ( (byte) 0xFF ) && pointer < endOfPicture - 1 )
+            {
+                if ( secondByte == (byte) 0xD9 || secondByte == (byte) 0xDA )
+                {
+                    break;
+                }
+                else if ( ( secondByte & 0xF0 ) == 0xC0
+                        && secondByte != (byte) 0xC4
+                        && secondByte != (byte) 0xC8
+                        && secondByte != (byte) 0xCC )
+                {
+                    pointer += 5;
+                    this.height = getBigEndianShort( _dataStream, pointer );
+                    this.width = getBigEndianShort( _dataStream, pointer + 2 );
+                    break;
+                }
+                else
+                {
+                    pointer++;
+                    pointer++;
+                    int length = getBigEndianShort( _dataStream, pointer );
+                    pointer += length;
+                }
+            }
+            else
+            {
+                pointer++;
+            }
         }
-      } else {
-        pointer++;
-      }
     }
-  }
 

@@ -1,0 +1,52 @@
+    private EscherBlipRecord getBitmapRecord( int bitmapIndex )
+    {
+        List<? extends EscherContainerRecord> bContainers = _escherRecordHolder
+                .getBStoreContainers();
+        if ( bContainers == null || bContainers.size() != 1 )
+            return null;
+
+        EscherContainerRecord bContainer = bContainers.get( 0 );
+        final List<EscherRecord> bitmapRecords = bContainer.getChildRecords();
+
+        if ( bitmapRecords.size() < bitmapIndex )
+            return null;
+
+        EscherRecord imageRecord = bitmapRecords.get( bitmapIndex - 1 );
+
+        if ( imageRecord instanceof EscherBlipRecord )
+        {
+            return (EscherBlipRecord) imageRecord;
+        }
+
+        if ( imageRecord instanceof EscherBSERecord )
+        {
+            EscherBSERecord bseRecord = (EscherBSERecord) imageRecord;
+
+            EscherBlipRecord blip = bseRecord.getBlipRecord();
+            if ( blip != null )
+            {
+                return blip;
+            }
+
+            if ( bseRecord.getOffset() > 0 )
+            {
+                /*
+                 * Blip stored in delay stream, which in a word doc, is the main
+                 * stream
+                 */
+                EscherRecordFactory recordFactory = new DefaultEscherRecordFactory();
+                EscherRecord record = recordFactory.createRecord( _mainStream,
+                        bseRecord.getOffset() );
+
+                if ( record instanceof EscherBlipRecord )
+                {
+                    record.fillFields( _mainStream, bseRecord.getOffset(),
+                            recordFactory );
+                    return (EscherBlipRecord) record;
+                }
+            }
+        }
+
+        return null;
+    }
+
