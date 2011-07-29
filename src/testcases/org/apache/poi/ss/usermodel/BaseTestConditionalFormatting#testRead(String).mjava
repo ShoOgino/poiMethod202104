@@ -1,0 +1,85 @@
+    protected void testRead(String filename){
+        Workbook wb = _testDataProvider.openSampleWorkbook(filename);
+        Sheet sh = wb.getSheet("CF");
+        SheetConditionalFormatting sheetCF = sh.getSheetConditionalFormatting();
+        assertEquals(3, sheetCF.getNumConditionalFormattings());
+
+        ConditionalFormatting cf1 = sheetCF.getConditionalFormattingAt(0);
+        assertEquals(2, cf1.getNumberOfRules());
+
+        CellRangeAddress[] regions1 = cf1.getFormattingRanges();
+        assertEquals(1, regions1.length);
+        assertEquals("A1:A8", regions1[0].formatAsString());
+
+        // CF1 has two rules: values less than -3 are bold-italic red, values greater than 3 are green
+        ConditionalFormattingRule rule1 = cf1.getRule(0);
+        assertEquals(ConditionalFormattingRule.CONDITION_TYPE_CELL_VALUE_IS, rule1.getConditionType());
+        assertEquals(ComparisonOperator.GT, rule1.getComparisonOperation());
+        assertEquals("3", rule1.getFormula1());
+        assertNull(rule1.getFormula2());
+        // fills and borders are not set
+        assertNull(rule1.getPatternFormatting());
+        assertNull(rule1.getBorderFormatting());
+
+        FontFormatting fmt1 = rule1.getFontFormatting();
+//        assertEquals(IndexedColors.GREEN.index, fmt1.getFontColorIndex());
+        assertTrue(fmt1.isBold());
+        assertFalse(fmt1.isItalic());
+
+        ConditionalFormattingRule rule2 = cf1.getRule(1);
+        assertEquals(ConditionalFormattingRule.CONDITION_TYPE_CELL_VALUE_IS, rule2.getConditionType());
+        assertEquals(ComparisonOperator.LT, rule2.getComparisonOperation());
+        assertEquals("-3", rule2.getFormula1());
+        assertNull(rule2.getFormula2());
+        assertNull(rule2.getPatternFormatting());
+        assertNull(rule2.getBorderFormatting());
+
+        FontFormatting fmt2 = rule2.getFontFormatting();
+//        assertEquals(IndexedColors.RED.index, fmt2.getFontColorIndex());
+        assertTrue(fmt2.isBold());
+        assertTrue(fmt2.isItalic());
+
+
+        ConditionalFormatting cf2 = sheetCF.getConditionalFormattingAt(1);
+        assertEquals(1, cf2.getNumberOfRules());
+        CellRangeAddress[] regions2 = cf2.getFormattingRanges();
+        assertEquals(1, regions2.length);
+        assertEquals("B9", regions2[0].formatAsString());
+
+        ConditionalFormattingRule rule3 = cf2.getRule(0);
+        assertEquals(ConditionalFormattingRule.CONDITION_TYPE_FORMULA, rule3.getConditionType());
+        assertEquals(ComparisonOperator.NO_COMPARISON, rule3.getComparisonOperation());
+        assertEquals("$A$8>5", rule3.getFormula1());
+        assertNull(rule3.getFormula2());
+
+        FontFormatting fmt3 = rule3.getFontFormatting();
+//        assertEquals(IndexedColors.RED.index, fmt3.getFontColorIndex());
+        assertTrue(fmt3.isBold());
+        assertTrue(fmt3.isItalic());
+
+        PatternFormatting fmt4 = rule3.getPatternFormatting();
+//        assertEquals(IndexedColors.LIGHT_CORNFLOWER_BLUE.index, fmt4.getFillBackgroundColor());
+//        assertEquals(IndexedColors.AUTOMATIC.index, fmt4.getFillForegroundColor());
+        assertEquals(PatternFormatting.NO_FILL, fmt4.getFillPattern());
+        // borders are not set
+        assertNull(rule3.getBorderFormatting());
+
+        ConditionalFormatting cf3 = sheetCF.getConditionalFormattingAt(2);
+        CellRangeAddress[] regions3 = cf3.getFormattingRanges();
+        assertEquals(1, regions3.length);
+        assertEquals("B1:B7", regions3[0].formatAsString());
+        assertEquals(2, cf3.getNumberOfRules());
+
+        ConditionalFormattingRule rule4 = cf3.getRule(0);
+        assertEquals(ConditionalFormattingRule.CONDITION_TYPE_CELL_VALUE_IS, rule4.getConditionType());
+        assertEquals(ComparisonOperator.LE, rule4.getComparisonOperation());
+        assertEquals("\"AAA\"", rule4.getFormula1());
+        assertNull(rule4.getFormula2());
+
+        ConditionalFormattingRule rule5 = cf3.getRule(1);
+        assertEquals(ConditionalFormattingRule.CONDITION_TYPE_CELL_VALUE_IS, rule5.getConditionType());
+        assertEquals(ComparisonOperator.BETWEEN, rule5.getComparisonOperation());
+        assertEquals("\"A\"", rule5.getFormula1());
+        assertEquals("\"AAA\"", rule5.getFormula2());
+    }
+

@@ -1,0 +1,38 @@
+    public void testCopy() {
+        Workbook wb = _testDataProvider.createWorkbook();
+        Sheet sheet1 = wb.createSheet();
+        Sheet sheet2 = wb.createSheet();
+        SheetConditionalFormatting sheet1CF = sheet1.getSheetConditionalFormatting();
+        SheetConditionalFormatting sheet2CF = sheet2.getSheetConditionalFormatting();
+        assertEquals(0, sheet1CF.getNumConditionalFormattings());
+        assertEquals(0, sheet2CF.getNumConditionalFormattings());
+
+        ConditionalFormattingRule rule1 = sheet1CF.createConditionalFormattingRule(
+                ComparisonOperator.EQUAL, "SUM(A1:A5)+10");
+
+        ConditionalFormattingRule rule2 = sheet1CF.createConditionalFormattingRule(
+                ComparisonOperator.NOT_EQUAL, "15");
+
+        // adjacent address are merged
+        int formatIndex = sheet1CF.addConditionalFormatting(
+                new CellRangeAddress[]{
+                        CellRangeAddress.valueOf("A1:A5"),
+                        CellRangeAddress.valueOf("C1:C5")
+                }, rule1, rule2);
+        assertEquals(0, formatIndex);
+        assertEquals(1, sheet1CF.getNumConditionalFormattings());
+
+        assertEquals(0, sheet2CF.getNumConditionalFormattings());
+        sheet2CF.addConditionalFormatting(sheet1CF.getConditionalFormattingAt(formatIndex));
+        assertEquals(1, sheet2CF.getNumConditionalFormattings());
+
+        ConditionalFormatting sheet2cf = sheet2CF.getConditionalFormattingAt(0);
+        assertEquals(2, sheet2cf.getNumberOfRules());
+        assertEquals("SUM(A1:A5)+10", sheet2cf.getRule(0).getFormula1());
+        assertEquals(ComparisonOperator.EQUAL, sheet2cf.getRule(0).getComparisonOperation());
+        assertEquals(ConditionalFormattingRule.CONDITION_TYPE_CELL_VALUE_IS, sheet2cf.getRule(0).getConditionType());
+        assertEquals("15", sheet2cf.getRule(1).getFormula1());
+        assertEquals(ComparisonOperator.NOT_EQUAL, sheet2cf.getRule(1).getComparisonOperation());
+        assertEquals(ConditionalFormattingRule.CONDITION_TYPE_CELL_VALUE_IS, sheet2cf.getRule(1).getConditionType());
+    }
+

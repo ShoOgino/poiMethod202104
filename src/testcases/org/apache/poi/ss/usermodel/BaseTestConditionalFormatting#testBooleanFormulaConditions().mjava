@@ -1,0 +1,37 @@
+    /**
+     * Test format conditions based on a boolean formula
+     */
+    public void testBooleanFormulaConditions() {
+        Workbook wb = _testDataProvider.createWorkbook();
+        Sheet sh = wb.createSheet();
+        SheetConditionalFormatting sheetCF = sh.getSheetConditionalFormatting();
+
+        ConditionalFormattingRule rule1 = sheetCF.createConditionalFormattingRule("SUM(A1:A5)>10");
+        assertEquals(ConditionalFormattingRule.CONDITION_TYPE_FORMULA, rule1.getConditionType());
+        assertEquals("SUM(A1:A5)>10", rule1.getFormula1());
+        int formatIndex1 = sheetCF.addConditionalFormatting(
+                new CellRangeAddress[]{
+                        CellRangeAddress.valueOf("B1"),
+                        CellRangeAddress.valueOf("C3"),
+                }, rule1);
+        assertEquals(0, formatIndex1);
+        assertEquals(1, sheetCF.getNumConditionalFormattings());
+        CellRangeAddress[] ranges1 = sheetCF.getConditionalFormattingAt(formatIndex1).getFormattingRanges();
+        assertEquals(2, ranges1.length);
+        assertEquals("B1", ranges1[0].formatAsString());
+        assertEquals("C3", ranges1[1].formatAsString());
+
+        // adjacent address are merged
+        int formatIndex2 = sheetCF.addConditionalFormatting(
+                new CellRangeAddress[]{
+                        CellRangeAddress.valueOf("B1"),
+                        CellRangeAddress.valueOf("B2"),
+                        CellRangeAddress.valueOf("B3"),
+                }, rule1);
+        assertEquals(1, formatIndex2);
+        assertEquals(2, sheetCF.getNumConditionalFormattings());
+        CellRangeAddress[] ranges2 = sheetCF.getConditionalFormattingAt(formatIndex2).getFormattingRanges();
+        assertEquals(1, ranges2.length);
+        assertEquals("B1:B3", ranges2[0].formatAsString());
+    }
+

@@ -1,0 +1,79 @@
+    public void testCreateCF() {
+        Workbook workbook = _testDataProvider.createWorkbook();
+        Sheet sheet = workbook.createSheet();
+        String formula = "7";
+
+        SheetConditionalFormatting sheetCF = sheet.getSheetConditionalFormatting();
+
+        ConditionalFormattingRule rule1 = sheetCF.createConditionalFormattingRule(formula);
+        FontFormatting fontFmt = rule1.createFontFormatting();
+        fontFmt.setFontStyle(true, false);
+
+        BorderFormatting bordFmt = rule1.createBorderFormatting();
+        bordFmt.setBorderBottom(BorderFormatting.BORDER_THIN);
+        bordFmt.setBorderTop(BorderFormatting.BORDER_THICK);
+        bordFmt.setBorderLeft(BorderFormatting.BORDER_DASHED);
+        bordFmt.setBorderRight(BorderFormatting.BORDER_DOTTED);
+
+        PatternFormatting patternFmt = rule1.createPatternFormatting();
+        patternFmt.setFillBackgroundColor(IndexedColors.YELLOW.index);
+
+
+        ConditionalFormattingRule rule2 = sheetCF.createConditionalFormattingRule(ComparisonOperator.BETWEEN, "1", "2");
+        ConditionalFormattingRule [] cfRules =
+        {
+            rule1, rule2
+        };
+
+        short col = 1;
+        CellRangeAddress [] regions = {
+            new CellRangeAddress(0, 65535, col, col)
+        };
+
+        sheetCF.addConditionalFormatting(regions, cfRules);
+        sheetCF.addConditionalFormatting(regions, cfRules);
+
+        // Verification
+        assertEquals(2, sheetCF.getNumConditionalFormattings());
+        sheetCF.removeConditionalFormatting(1);
+        assertEquals(1, sheetCF.getNumConditionalFormattings());
+        ConditionalFormatting cf = sheetCF.getConditionalFormattingAt(0);
+        assertNotNull(cf);
+
+        regions = cf.getFormattingRanges();
+        assertNotNull(regions);
+        assertEquals(1, regions.length);
+        CellRangeAddress r = regions[0];
+        assertEquals(1, r.getFirstColumn());
+        assertEquals(1, r.getLastColumn());
+        assertEquals(0, r.getFirstRow());
+        assertEquals(65535, r.getLastRow());
+
+        assertEquals(2, cf.getNumberOfRules());
+
+        rule1 = cf.getRule(0);
+        assertEquals("7",rule1.getFormula1());
+        assertNull(rule1.getFormula2());
+
+        FontFormatting    r1fp = rule1.getFontFormatting();
+        assertNotNull(r1fp);
+
+        assertTrue(r1fp.isItalic());
+        assertFalse(r1fp.isBold());
+
+        BorderFormatting  r1bf = rule1.getBorderFormatting();
+        assertNotNull(r1bf);
+        assertEquals(BorderFormatting.BORDER_THIN, r1bf.getBorderBottom());
+        assertEquals(BorderFormatting.BORDER_THICK,r1bf.getBorderTop());
+        assertEquals(BorderFormatting.BORDER_DASHED,r1bf.getBorderLeft());
+        assertEquals(BorderFormatting.BORDER_DOTTED,r1bf.getBorderRight());
+
+        PatternFormatting r1pf = rule1.getPatternFormatting();
+        assertNotNull(r1pf);
+//        assertEquals(IndexedColors.YELLOW.index,r1pf.getFillBackgroundColor());
+
+        rule2 = cf.getRule(1);
+        assertEquals("2",rule2.getFormula2());
+        assertEquals("1",rule2.getFormula1());
+    }
+

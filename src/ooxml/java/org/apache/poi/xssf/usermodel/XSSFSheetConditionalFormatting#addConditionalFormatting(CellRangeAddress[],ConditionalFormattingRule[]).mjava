@@ -1,0 +1,41 @@
+    public int addConditionalFormatting(CellRangeAddress[] regions, ConditionalFormattingRule[] cfRules) {
+        if (regions == null) {
+            throw new IllegalArgumentException("regions must not be null");
+        }
+        for(CellRangeAddress range : regions) range.validate(SpreadsheetVersion.EXCEL2007);
+
+        if (cfRules == null) {
+            throw new IllegalArgumentException("cfRules must not be null");
+        }
+        if (cfRules.length == 0) {
+            throw new IllegalArgumentException("cfRules must not be empty");
+        }
+        if (cfRules.length > 3) {
+            throw new IllegalArgumentException("Number of rules must not exceed 3");
+        }
+        XSSFConditionalFormattingRule[] hfRules;
+        if(cfRules instanceof XSSFConditionalFormattingRule[]) hfRules = (XSSFConditionalFormattingRule[])cfRules;
+        else {
+            hfRules = new XSSFConditionalFormattingRule[cfRules.length];
+            System.arraycopy(cfRules, 0, hfRules, 0, hfRules.length);
+        }
+        CellRangeAddress[] mergeCellRanges = CellRangeUtil.mergeCellRanges(regions);
+        CTConditionalFormatting cf = _sheet.getCTWorksheet().addNewConditionalFormatting();
+        List<String> refs = new ArrayList<String>();
+        for(CellRangeAddress a : mergeCellRanges) refs.add(a.formatAsString());
+        cf.setSqref(refs);
+
+
+        int priority = 1;
+        for(CTConditionalFormatting c : _sheet.getCTWorksheet().getConditionalFormattingList()){
+            priority += c.sizeOfCfRuleArray();
+        }
+
+        for(ConditionalFormattingRule rule : cfRules){
+            XSSFConditionalFormattingRule xRule = (XSSFConditionalFormattingRule)rule;
+            xRule.getCTCfRule().setPriority(priority++);
+            cf.addNewCfRule().set(xRule.getCTCfRule());
+        }
+        return _sheet.getCTWorksheet().sizeOfConditionalFormattingArray() - 1;
+    }
+
