@@ -1,0 +1,42 @@
+    /**
+     * @param rowNumber the zero based row index to expand
+     */
+    private void expandRow(int rowNumber) {
+        if (rowNumber == -1)
+            return;
+        XSSFRow row = getRow(rowNumber);
+        // If it is already expanded do nothing.
+        if (!row.getCTRow().isSetHidden())
+            return;
+
+        // Find the start of the group.
+        int startIdx = findStartOfRowOutlineGroup(rowNumber);
+
+        // Find the end of the group.
+        int endIdx = findEndOfRowOutlineGroup(rowNumber);
+
+        // expand:
+        // collapsed must be unset
+        // hidden bit gets unset _if_ surrounding groups are expanded you can
+        // determine
+        // this by looking at the hidden bit of the enclosing group. You will
+        // have
+        // to look at the start and the end of the current group to determine
+        // which
+        // is the enclosing group
+        // hidden bit only is altered for this outline level. ie. don't
+        // un-collapse contained groups
+        if (!isRowGroupHiddenByParent(rowNumber)) {
+            for (int i = startIdx; i < endIdx; i++) {
+                if (row.getCTRow().getOutlineLevel() == getRow(i).getCTRow()
+                        .getOutlineLevel()) {
+                    getRow(i).getCTRow().unsetHidden();
+                } else if (!isRowGroupCollapsed(i)) {
+                    getRow(i).getCTRow().unsetHidden();
+                }
+            }
+        }
+        // Write collapse field
+        getRow(endIdx).getCTRow().unsetCollapsed();
+    }
+

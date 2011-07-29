@@ -1,0 +1,42 @@
+    /**
+     * Get VML drawing for this sheet (aka 'legacy' drawig)
+     *
+     * @param autoCreate if true, then a new VML drawing part is created
+     *
+     * @return the VML drawing of <code>null</code> if the drawing was not found and autoCreate=false
+     */
+    protected XSSFVMLDrawing getVMLDrawing(boolean autoCreate) {
+        XSSFVMLDrawing drawing = null;
+        CTLegacyDrawing ctDrawing = getCTLegacyDrawing();
+        if(ctDrawing == null) {
+            if(autoCreate) {
+                //drawingNumber = #drawings.size() + 1
+                int drawingNumber = getPackagePart().getPackage().getPartsByContentType(XSSFRelation.VML_DRAWINGS.getContentType()).size() + 1;
+                drawing = (XSSFVMLDrawing)createRelationship(XSSFRelation.VML_DRAWINGS, XSSFFactory.getInstance(), drawingNumber);
+                String relId = drawing.getPackageRelationship().getId();
+
+                //add CTLegacyDrawing element which indicates that this sheet contains drawing components built on the drawingML platform.
+                //The relationship Id references the part containing the drawing definitions.
+                ctDrawing = worksheet.addNewLegacyDrawing();
+                ctDrawing.setId(relId);
+            }
+        } else {
+            //search the referenced drawing in the list of the sheet's relations
+            for(POIXMLDocumentPart p : getRelations()){
+                if(p instanceof XSSFVMLDrawing) {
+                    XSSFVMLDrawing dr = (XSSFVMLDrawing)p;
+                    String drId = dr.getPackageRelationship().getId();
+                    if(drId.equals(ctDrawing.getId())){
+                        drawing = dr;
+                        break;
+                    }
+                    break;
+                }
+            }
+            if(drawing == null){
+                logger.log(POILogger.ERROR, "Can't find VML drawing with id=" + ctDrawing.getId() + " in the list of the sheet's relationships");
+            }
+        }
+        return drawing;
+    }
+
