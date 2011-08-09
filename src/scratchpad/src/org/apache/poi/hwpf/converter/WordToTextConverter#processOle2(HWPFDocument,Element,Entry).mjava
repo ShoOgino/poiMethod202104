@@ -1,0 +1,42 @@
+    @Override
+    protected boolean processOle2( HWPFDocument wordDocument, Element block,
+            Entry entry ) throws Exception
+    {
+        if ( !( entry instanceof DirectoryNode ) )
+            return false;
+        DirectoryNode directoryNode = (DirectoryNode) entry;
+
+        // even if no ExtractorFactory in classpath
+        if ( directoryNode.hasEntry( "WordDocument" ) )
+        {
+            String text = WordToTextConverter.getText( (DirectoryNode) entry );
+            block.appendChild( textDocumentFacade
+                    .createText( UNICODECHAR_ZERO_WIDTH_SPACE + text
+                            + UNICODECHAR_ZERO_WIDTH_SPACE ) );
+            return true;
+        }
+
+        try
+        {
+            Class<?> cls = Class
+                    .forName( "org.apache.poi.extractor.ExtractorFactory" );
+            Method createExtractor = cls.getMethod( "createExtractor",
+                    DirectoryNode.class );
+            Object extractor = createExtractor.invoke( null, directoryNode );
+
+            Method getText = extractor.getClass().getMethod( "getText" );
+            String text = (String) getText.invoke( extractor );
+
+            block.appendChild( textDocumentFacade
+                    .createText( UNICODECHAR_ZERO_WIDTH_SPACE + text
+                            + UNICODECHAR_ZERO_WIDTH_SPACE ) );
+            return true;
+        }
+        catch ( ClassNotFoundException exc )
+        {
+            // no extractor in classpath
+        }
+
+        return false;
+    }
+

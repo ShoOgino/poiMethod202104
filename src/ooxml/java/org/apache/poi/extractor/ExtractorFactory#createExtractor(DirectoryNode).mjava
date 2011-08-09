@@ -1,0 +1,53 @@
+    public static POITextExtractor createExtractor(DirectoryNode poifsDir) throws IOException,
+            InvalidFormatException, OpenXML4JException, XmlException
+    {
+        // Look for certain entries in the stream, to figure it
+        // out from
+        if (poifsDir.hasEntry("Workbook")) {
+            if (getPreferEventExtractor()) {
+                return new EventBasedExcelExtractor(poifsDir);
+            }
+            return new ExcelExtractor(poifsDir);
+        }
+
+        if (poifsDir.hasEntry("WordDocument")) {
+            // Old or new style word document?
+            try {
+                return new WordExtractor(poifsDir);
+            } catch (OldWordFileFormatException e) {
+                return new Word6Extractor(poifsDir);
+            }
+        }
+
+        if (poifsDir.hasEntry("PowerPoint Document")) {
+            return new PowerPointExtractor(poifsDir);
+        }
+
+        if (poifsDir.hasEntry("VisioDocument")) {
+            return new VisioTextExtractor(poifsDir);
+        }
+
+        if (poifsDir.hasEntry("Quill")) {
+            return new PublisherTextExtractor(poifsDir);
+        }
+
+        if (poifsDir.hasEntry("__substg1.0_1000001E") || poifsDir.hasEntry("__substg1.0_1000001F")
+                || poifsDir.hasEntry("__substg1.0_0047001E")
+                || poifsDir.hasEntry("__substg1.0_0047001F")
+                || poifsDir.hasEntry("__substg1.0_0037001E")
+                || poifsDir.hasEntry("__substg1.0_0037001F"))
+        {
+            return new OutlookTextExtactor(poifsDir);
+        }
+
+        for (Iterator<Entry> entries = poifsDir.getEntries(); entries.hasNext();) {
+            Entry entry = entries.next();
+
+            if (entry.getName().equals("Package")) {
+                OPCPackage pkg = OPCPackage.open(poifsDir.createDocumentInputStream("Package"));
+                return createExtractor(pkg);
+            }
+        }
+        throw new IllegalArgumentException("No supported documents found in the OLE2 stream");
+    }
+

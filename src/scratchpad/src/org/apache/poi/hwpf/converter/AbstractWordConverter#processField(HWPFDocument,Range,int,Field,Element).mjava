@@ -1,4 +1,4 @@
-    protected void processField( HWPFDocument hwpfDocument, Range parentRange,
+    protected void processField( HWPFDocument wordDocument, Range parentRange,
             int currentTableLevel, Field field, Element currentBlock )
     {
         switch ( field.getType() )
@@ -15,12 +15,42 @@
                 if ( matcher.find() )
                 {
                     String pageref = matcher.group( 1 );
-                    processPageref( hwpfDocument, currentBlock,
+                    processPageref( wordDocument, currentBlock,
                             field.secondSubrange( parentRange ),
                             currentTableLevel, pageref );
                     return;
                 }
             }
+            break;
+        }
+        case 58: // Embedded Object
+        {
+            if ( !field.hasSeparator() )
+            {
+                logger.log( POILogger.WARN, parentRange + " contains " + field
+                        + " with 'Embedded Object' but without separator mark" );
+                return;
+            }
+
+            CharacterRun separator = field
+                    .getMarkSeparatorCharacterRun( parentRange );
+
+            if ( separator.isOle2() )
+            {
+                // the only supported so far
+                boolean processed = processOle2( wordDocument, separator,
+                        currentBlock );
+
+                // if we didn't output OLE - output field value
+                if ( !processed )
+                {
+                    processCharacters( wordDocument, currentTableLevel,
+                            field.secondSubrange( parentRange ), currentBlock );
+                }
+
+                return;
+            }
+
             break;
         }
         case 88: // hyperlink
@@ -35,7 +65,7 @@
                 if ( matcher.find() )
                 {
                     String hyperlink = matcher.group( 1 );
-                    processHyperlink( hwpfDocument, currentBlock,
+                    processHyperlink( wordDocument, currentBlock,
                             field.secondSubrange( parentRange ),
                             currentTableLevel, hyperlink );
                     return;
@@ -47,7 +77,7 @@
 
         logger.log( POILogger.WARN, parentRange + " contains " + field
                 + " with unsupported type or format" );
-        processCharacters( hwpfDocument, currentTableLevel,
+        processCharacters( wordDocument, currentTableLevel,
                 field.secondSubrange( parentRange ), currentBlock );
     }
 

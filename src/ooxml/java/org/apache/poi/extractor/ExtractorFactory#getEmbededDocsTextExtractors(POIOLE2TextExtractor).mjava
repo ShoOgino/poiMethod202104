@@ -2,7 +2,7 @@
 	 * Returns an array of text extractors, one for each of
 	 *  the embeded documents in the file (if there are any).
 	 * If there are no embeded documents, you'll get back an
-	 *  empty array. Otherwise, you'll get one open 
+	 *  empty array. Otherwise, you'll get one open
 	 *  {@link POITextExtractor} for each embeded file.
 	 */
 	public static POITextExtractor[] getEmbededDocsTextExtractors(POIOLE2TextExtractor ext) throws IOException, InvalidFormatException, OpenXML4JException, XmlException {
@@ -10,16 +10,16 @@
 		ArrayList<Entry> dirs = new ArrayList<Entry>();
 		// For anything else not directly held in as a POIFS directory
 		ArrayList<InputStream> nonPOIFS = new ArrayList<InputStream>();
-		
+
       // Find all the embeded directories
-		POIFSFileSystem fs = ext.getFileSystem();
-		if(fs == null) {
+		DirectoryEntry root = ext.getRoot();
+		if(root == null) {
 			throw new IllegalStateException("The extractor didn't know which POIFS it came from!");
 		}
-		
+
 		if(ext instanceof ExcelExtractor) {
 			// These are in MBD... under the root
-			Iterator<Entry> it = fs.getRoot().getEntries();
+			Iterator<Entry> it = root.getEntries();
 			while(it.hasNext()) {
 				Entry entry = it.next();
 				if(entry.getName().startsWith("MBD")) {
@@ -30,7 +30,7 @@
 			// These are in ObjectPool -> _... under the root
 			try {
 				DirectoryEntry op = (DirectoryEntry)
-					fs.getRoot().getEntry("ObjectPool");
+				        root.getEntry("ObjectPool");
 				Iterator<Entry> it = op.getEntries();
 				while(it.hasNext()) {
 					Entry entry = it.next();
@@ -54,7 +54,7 @@
 		      }
 		   }
 		}
-		
+
 		// Create the extractors
 		if(
 		      (dirs == null || dirs.size() == 0) &&
@@ -62,11 +62,11 @@
 		){
 			return new POITextExtractor[0];
 		}
-		
+
 		ArrayList<POITextExtractor> e = new ArrayList<POITextExtractor>();
 		for(int i=0; i<dirs.size(); i++) {
 			e.add( createExtractor(
-					(DirectoryNode)dirs.get(i), ext.getFileSystem()
+					(DirectoryNode)dirs.get(i)
 			) );
 		}
 		for(int i=0; i<nonPOIFS.size(); i++) {
