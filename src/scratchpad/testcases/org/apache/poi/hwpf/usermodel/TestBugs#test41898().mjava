@@ -1,14 +1,8 @@
     /**
-     * [FAILING] 41898 - Word 2003 pictures cannot be extracted
+     * [RESOLVED INVALID] 41898 - Word 2003 pictures cannot be extracted
      */
-    public void Bug41898()
+    public void test41898()
     {
-        /*
-         * Commenting out this test case temporarily. The file emf_2003_image
-         * does not contain any pictures. Instead it has an office drawing
-         * object. Need to rewrite this test after revisiting the implementation
-         * of office drawing objects. -- (nick?)
-         */
         HWPFDocument doc = HWPFTestDataSamples.openSampleFile( "Bug41898.doc" );
         List<Picture> pics = doc.getPicturesTable().getAllPictures();
 
@@ -19,8 +13,6 @@
         assertNotNull( pic.suggestFileExtension() );
         assertNotNull( pic.suggestFullFileName() );
 
-        // This one's tricky
-        // TODO: Fix once we've sorted bug #41898
         assertNotNull( pic.getContent() );
         assertNotNull( pic.getRawContent() );
 
@@ -28,5 +20,18 @@
         assertEquals( 4, pic.getSize() );
         assertEquals( 0x80000000l, LittleEndian.getUInt( pic.getContent() ) );
         assertEquals( 0x80000000l, LittleEndian.getUInt( pic.getRawContent() ) );
+
+        /*
+         * This is a file with empty EMF image, but present Office Drawing
+         * --sergey
+         */
+        final Collection<OfficeDrawing> officeDrawings = doc
+                .getOfficeDrawingsMain().getOfficeDrawings();
+        assertNotNull( officeDrawings );
+        assertEquals( 1, officeDrawings.size() );
+
+        OfficeDrawing officeDrawing = officeDrawings.iterator().next();
+        assertNotNull( officeDrawing );
+        assertEquals( 1044, officeDrawing.getShapeId() );
     }
 
