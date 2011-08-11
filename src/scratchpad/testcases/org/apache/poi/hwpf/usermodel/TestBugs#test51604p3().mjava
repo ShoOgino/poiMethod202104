@@ -1,0 +1,44 @@
+    /**
+     * [RESOLVED FIXED] Bug 51604 - replace text fails for doc ( poi 3.8 beta
+     * release from download site )
+     */
+    public void test51604p3() throws IOException
+    {
+        HWPFDocument doc = HWPFTestDataSamples.openSampleFile( "Bug51604.doc" );
+
+        byte[] originalData = new byte[doc.getFileInformationBlock()
+                .getLcbDop()];
+        System.arraycopy( doc.getTableStream(), doc.getFileInformationBlock()
+                .getFcDop(), originalData, 0, originalData.length );
+
+        HWPFOutputStream outputStream = new HWPFOutputStream();
+        doc.getDocProperties().writeTo( outputStream );
+        final byte[] oldData = outputStream.toByteArray();
+
+        assertEquals( Arrays.toString( originalData ),
+                Arrays.toString( oldData ) );
+
+        Range range = doc.getRange();
+        int numParagraph = range.numParagraphs();
+        for ( int i = 0; i < numParagraph; i++ )
+        {
+            Paragraph paragraph = range.getParagraph( i );
+            int numCharRuns = paragraph.numCharacterRuns();
+            for ( int j = 0; j < numCharRuns; j++ )
+            {
+                CharacterRun charRun = paragraph.getCharacterRun( j );
+                String text = charRun.text();
+                if ( text.contains( "Header" ) )
+                    charRun.replaceText( text, "added" );
+            }
+        }
+
+        doc = HWPFTestDataSamples.writeOutAndReadBack( doc );
+
+        outputStream = new HWPFOutputStream();
+        doc.getDocProperties().writeTo( outputStream );
+        final byte[] newData = outputStream.toByteArray();
+
+        assertEquals( Arrays.toString( oldData ), Arrays.toString( newData ) );
+    }
+
