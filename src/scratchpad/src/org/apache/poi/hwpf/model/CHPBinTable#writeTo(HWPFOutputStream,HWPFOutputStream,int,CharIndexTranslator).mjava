@@ -1,0 +1,65 @@
+    public void writeTo( HWPFOutputStream wordDocumentStream,
+            HWPFOutputStream tableStream, int fcMin,
+            CharIndexTranslator translator ) throws IOException
+    {
+
+        /*
+         * Page 35:
+         * 
+         * "Associated with each interval is a BTE. A BTE holds a four-byte PN
+         * (page number) which identifies the FKP page in the file which
+         * contains the formatting information for that interval. A CHPX FKP
+         * further partitions an interval into runs of exception text."
+         */
+        PlexOfCps bte = new PlexOfCps( 4 );
+
+    // each FKP must start on a 512 byte page.
+    int docOffset = wordDocumentStream.getOffset();
+    int mod = docOffset % POIFSConstants.SMALLER_BIG_BLOCK_SIZE;
+    if (mod != 0)
+    {
+      byte[] padding = new byte[POIFSConstants.SMALLER_BIG_BLOCK_SIZE - mod];
+      wordDocumentStream.write(padding);
+    }
+
+    // get the page number for the first fkp
+    docOffset = wordDocumentStream.getOffset();
+    int pageNum = docOffset/POIFSConstants.SMALLER_BIG_BLOCK_SIZE;
+
+        // get the ending fc
+        // CHPX lastRun = _textRuns.get(_textRuns.size() - 1);
+        // int endingFc = lastRun.getEnd();
+        // endingFc += fcMin;
+        int endingFc = translator.getByteIndex( _textRuns.get(
+                _textRuns.size() - 1 ).getEnd() );
+
+    ArrayList<CHPX> overflow = _textRuns;
+    do
+    {
+      CHPX startingProp = overflow.get(0);
+            // int start = startingProp.getStart() + fcMin;
+            int start = translator.getByteIndex( startingProp.getStart() );
+
+      CHPFormattedDiskPage cfkp = new CHPFormattedDiskPage();
+      cfkp.fill(overflow);
+
+            byte[] bufFkp = cfkp.toByteArray( translator );
+      wordDocumentStream.write(bufFkp);
+      overflow = cfkp.getOverflow();
+
+      int end = endingFc;
+      if (overflow != null)
+      {
+          // end = overflow.get(0).getStart() + fcMin;
+          end = translator.getByteIndex( overflow.get( 0 ).getStart() );
+      }
+
+      byte[] intHolder = new byte[4];
+      LittleEndian.putInt(intHolder, pageNum++);
+      bte.addProperty(new GenericPropertyNode(start, end, intHolder));
+
+    }
+    while (overflow != null);
+    tableStream.write(bte.toByteArray());
+  }
+

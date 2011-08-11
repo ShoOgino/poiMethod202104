@@ -1,52 +1,9 @@
-  public void writeTo(HWPFFileSystem sys, int fcMin)
-    throws IOException
-  {
-    HWPFOutputStream docStream = sys.getStream("WordDocument");
-    HWPFOutputStream tableStream = sys.getStream("1Table");
-
-    int offset = docStream.getOffset();
-    int len = _sections.size();
-    PlexOfCps plex = new PlexOfCps(SED_SIZE);
-
-    for (int x = 0; x < len; x++)
+    @Deprecated
+    public void writeTo( HWPFFileSystem sys, int fcMin ) throws IOException
     {
-      SEPX sepx = _sections.get(x);
-      byte[] grpprl = sepx.getGrpprl();
+        HWPFOutputStream docStream = sys.getStream( "WordDocument" );
+        HWPFOutputStream tableStream = sys.getStream( "1Table" );
 
-      // write the sepx to the document stream. starts with a 2 byte size
-      // followed by the grpprl
-      byte[] shortBuf = new byte[2];
-      LittleEndian.putShort(shortBuf, (short)grpprl.length);
-
-      docStream.write(shortBuf);
-      docStream.write(grpprl);
-
-      // set the fc in the section descriptor
-      SectionDescriptor sed = sepx.getSectionDescriptor();
-      sed.setFc(offset);
-
-      // add the section descriptor bytes to the PlexOfCps.
-
-            /* original line */
-            GenericPropertyNode property = new GenericPropertyNode(
-                    sepx.getStart(), sepx.getEnd(), sed.toByteArray() );
-            /*
-             * Line using Ryan's FCtoCP() conversion method - unable to observe
-             * any effect on our testcases when using this code - piers
-             */
-            /*
-             * there is an effect on Bug45743.doc actually. writeoutreadback
-             * changes byte offset of chars (but preserve string offsets).
-             * Changing back to original lines - sergey
-             */
-            // GenericPropertyNode property = new GenericPropertyNode(
-            // tpt.getCharIndex( sepx.getStartBytes() ),
-            // tpt.getCharIndex( sepx.getEndBytes() ), sed.toByteArray() );
-
-      plex.addProperty(property);
-
-      offset = docStream.getOffset();
+        writeTo( docStream, tableStream );
     }
-    tableStream.write(plex.toByteArray());
-  }
 

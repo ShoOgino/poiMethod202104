@@ -1,0 +1,57 @@
+    public void writeTo( HWPFOutputStream wordDocumentStream,
+            HWPFOutputStream tableStream, CharIndexTranslator translator )
+            throws IOException
+    {
+
+    PlexOfCps binTable = new PlexOfCps(4);
+
+    // each FKP must start on a 512 byte page.
+    int docOffset = wordDocumentStream.getOffset();
+    int mod = docOffset % POIFSConstants.SMALLER_BIG_BLOCK_SIZE;
+    if (mod != 0)
+    {
+      byte[] padding = new byte[POIFSConstants.SMALLER_BIG_BLOCK_SIZE - mod];
+      wordDocumentStream.write(padding);
+    }
+
+    // get the page number for the first fkp
+    docOffset = wordDocumentStream.getOffset();
+    int pageNum = docOffset/POIFSConstants.SMALLER_BIG_BLOCK_SIZE;
+
+        // get the ending fc
+        // int endingFc = _paragraphs.get(_paragraphs.size() - 1).getEnd();
+        // endingFc += fcMin;
+        int endingFc = translator.getByteIndex( _paragraphs.get(
+                _paragraphs.size() - 1 ).getEnd() );
+
+    ArrayList<PAPX> overflow = _paragraphs;
+    do
+    {
+      PAPX startingProp = overflow.get(0);
+
+            // int start = startingProp.getStart() + fcMin;
+            int start = translator.getByteIndex( startingProp.getStart() );
+
+      PAPFormattedDiskPage pfkp = new PAPFormattedDiskPage();
+      pfkp.fill(overflow);
+
+      byte[] bufFkp = pfkp.toByteArray(tableStream, translator);
+      wordDocumentStream.write(bufFkp);
+      overflow = pfkp.getOverflow();
+
+      int end = endingFc;
+      if (overflow != null)
+      {
+                // end = overflow.get(0).getStart() + fcMin;
+                end = translator.getByteIndex( overflow.get( 0 ).getStart() );
+      }
+
+      byte[] intHolder = new byte[4];
+      LittleEndian.putInt(intHolder, pageNum++);
+      binTable.addProperty(new GenericPropertyNode(start, end, intHolder));
+
+    }
+    while (overflow != null);
+    tableStream.write(binTable.toByteArray());
+  }
+

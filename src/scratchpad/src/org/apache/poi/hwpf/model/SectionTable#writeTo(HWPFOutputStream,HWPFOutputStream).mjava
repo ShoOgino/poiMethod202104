@@ -1,0 +1,50 @@
+    public void writeTo( HWPFOutputStream wordDocumentStream,
+            HWPFOutputStream tableStream ) throws IOException
+    {
+
+    int offset = wordDocumentStream.getOffset();
+    int len = _sections.size();
+    PlexOfCps plex = new PlexOfCps(SED_SIZE);
+
+    for (int x = 0; x < len; x++)
+    {
+      SEPX sepx = _sections.get(x);
+      byte[] grpprl = sepx.getGrpprl();
+
+      // write the sepx to the document stream. starts with a 2 byte size
+      // followed by the grpprl
+      byte[] shortBuf = new byte[2];
+      LittleEndian.putShort(shortBuf, (short)grpprl.length);
+
+      wordDocumentStream.write(shortBuf);
+      wordDocumentStream.write(grpprl);
+
+      // set the fc in the section descriptor
+      SectionDescriptor sed = sepx.getSectionDescriptor();
+      sed.setFc(offset);
+
+      // add the section descriptor bytes to the PlexOfCps.
+
+            /* original line */
+            GenericPropertyNode property = new GenericPropertyNode(
+                    sepx.getStart(), sepx.getEnd(), sed.toByteArray() );
+            /*
+             * Line using Ryan's FCtoCP() conversion method - unable to observe
+             * any effect on our testcases when using this code - piers
+             */
+            /*
+             * there is an effect on Bug45743.doc actually. writeoutreadback
+             * changes byte offset of chars (but preserve string offsets).
+             * Changing back to original lines - sergey
+             */
+            // GenericPropertyNode property = new GenericPropertyNode(
+            // tpt.getCharIndex( sepx.getStartBytes() ),
+            // tpt.getCharIndex( sepx.getEndBytes() ), sed.toByteArray() );
+
+      plex.addProperty(property);
+
+      offset = wordDocumentStream.getOffset();
+    }
+    tableStream.write(plex.toByteArray());
+  }
+
