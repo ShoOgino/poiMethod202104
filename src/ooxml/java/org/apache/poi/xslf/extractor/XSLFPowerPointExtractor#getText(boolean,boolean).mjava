@@ -7,40 +7,40 @@
 		StringBuffer text = new StringBuffer();
 
 		XSLFSlide[] slides = slideshow.getSlides();
-		for(int i = 0; i < slides.length; i++) {
-			CTSlide rawSlide = slides[i]._getCTSlide();
-			CTSlideIdListEntry slideId = slides[i]._getCTSlideId();
-			
-			try {
-				// For now, still very low level
-				CTNotesSlide notes = 
-					slideshow._getXSLFSlideShow().getNotes(slideId);
-				CTCommentList comments =
-					slideshow._getXSLFSlideShow().getSlideComments(slideId);
-				
-				if(slideText) {
-					extractText(slides[i].getCommonSlideData(), text);
-					
-					// Comments too for the slide
-					if(comments != null) {
-						for(CTComment comment : comments.getCmList()) {
-							// TODO - comment authors too
-							// (They're in another stream)
-							text.append(
-									comment.getText() + "\n"
-							);
-						}
-					}
-				}
+        try {
+            XSLFSlideShow xsl = new XSLFSlideShow(slideshow.getPackage());
+            for (int i = 0; i < slides.length; i++) {
+                CTSlideIdListEntry slideId = slideshow.getCTPresentation().getSldIdLst().getSldIdArray(i);
 
-				if(notesText && notes != null) {
-					extractText(new XSLFCommonSlideData(notes.getCSld()), text);
-				}
-			} catch(Exception e) {
-				throw new RuntimeException(e);
-			}
-		}
-		
-		return text.toString();
+                // For now, still very low level
+                CTNotesSlide notes =
+                        xsl.getNotes(slideId);
+                CTCommentList comments =
+                        xsl.getSlideComments(slideId);
+
+                if (slideText) {
+                    extractText(new XSLFCommonSlideData(slides[i].getXmlObject().getCSld()), text);
+
+                    // Comments too for the slide
+                    if (comments != null) {
+                        for (CTComment comment : comments.getCmList()) {
+                            // TODO - comment authors too
+                            // (They're in another stream)
+                            text.append(
+                                    comment.getText() + "\n"
+                            );
+                        }
+                    }
+                }
+
+                if (notesText && notes != null) {
+                    extractText(new XSLFCommonSlideData(notes.getCSld()), text);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        return text.toString();
 	}
 

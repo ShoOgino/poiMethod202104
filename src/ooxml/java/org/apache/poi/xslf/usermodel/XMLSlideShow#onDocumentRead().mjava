@@ -1,0 +1,35 @@
+    @Override
+    protected void onDocumentRead() throws IOException {
+        try {
+            PresentationDocument doc =
+                    PresentationDocument.Factory.parse(getCorePart().getInputStream());
+            _presentation = doc.getPresentation();
+            Map<String, XSLFSlide> shIdMap = new HashMap<String, XSLFSlide>();
+
+            _masters = new HashMap<String, XSLFSlideMaster>();
+            for (POIXMLDocumentPart p : getRelations()) {
+                if (p instanceof XSLFSlide) {
+                    shIdMap.put(p.getPackageRelationship().getId(), (XSLFSlide) p);
+                } else if (p instanceof XSLFSlideMaster){
+                    XSLFSlideMaster master = (XSLFSlideMaster)p;
+                    _masters.put(p.getPackageRelationship().getId(), master);
+                }
+            }
+
+            _slides = new ArrayList<XSLFSlide>();
+            if (_presentation.isSetSldIdLst()) {
+                List<CTSlideIdListEntry> slideIds = _presentation.getSldIdLst().getSldIdList();
+                for (CTSlideIdListEntry slId : slideIds) {
+                    XSLFSlide sh = shIdMap.get(slId.getId2());
+                    if (sh == null) {
+                        _logger.log(POILogger.WARN, "Slide with r:id " + slId.getId() + " was defined, but didn't exist in package, skipping");
+                        continue;
+                    }
+                    _slides.add(sh);
+                }
+            }
+        } catch (XmlException e) {
+            throw new POIXMLException(e);
+        }
+    }
+

@@ -1,0 +1,57 @@
+    /**
+     * Set the shape path
+     *
+     * @param path  shape outline
+     * @return the number of points written
+     */
+    public int setPath(GeneralPath path) {
+        CTPath2D ctPath = CTPath2D.Factory.newInstance();
+
+        Rectangle2D bounds = path.getBounds2D();
+        int x0 = Units.toEMU(bounds.getX());
+        int y0 = Units.toEMU(bounds.getY());
+        PathIterator it = path.getPathIterator(new AffineTransform());
+        int numPoints = 0;
+        ctPath.setH(Units.toEMU(bounds.getHeight()));
+        ctPath.setW(Units.toEMU(bounds.getWidth()));
+        while (!it.isDone()) {
+            double[] vals = new double[6];
+            int type = it.currentSegment(vals);
+            switch (type) {
+                case PathIterator.SEG_MOVETO:
+                    CTAdjPoint2D mv = ctPath.addNewMoveTo().addNewPt();
+                    mv.setX(Units.toEMU(vals[0]) - x0);
+                    mv.setY(Units.toEMU(vals[1]) - y0);
+                    numPoints++;
+                    break;
+                case PathIterator.SEG_LINETO:
+                    CTAdjPoint2D ln = ctPath.addNewLnTo().addNewPt();
+                    ln.setX(Units.toEMU(vals[0]) - x0);
+                    ln.setY(Units.toEMU(vals[1]) - y0);
+                    numPoints++;
+                    break;
+                case PathIterator.SEG_CUBICTO:
+                    CTPath2DCubicBezierTo bez = ctPath.addNewCubicBezTo();
+                    CTAdjPoint2D p1 = bez.addNewPt();
+                    p1.setX(Units.toEMU(vals[0]) - x0);
+                    p1.setY(Units.toEMU(vals[1]) - y0);
+                    CTAdjPoint2D p2 = bez.addNewPt();
+                    p2.setX(Units.toEMU(vals[2]) - x0);
+                    p2.setY(Units.toEMU(vals[3]) - y0);
+                    CTAdjPoint2D p3 = bez.addNewPt();
+                    p3.setX(Units.toEMU(vals[4]) - x0);
+                    p3.setY(Units.toEMU(vals[5]) - y0);
+                    numPoints += 3;
+                    break;
+                case PathIterator.SEG_CLOSE:
+                    numPoints++;
+                    ctPath.addNewClose();
+                    break;
+            }
+            it.next();
+        }
+        getSpPr().getCustGeom().getPathLst().setPathArray(new CTPath2D[]{ctPath});
+        setAnchor(bounds);
+        return numPoints;
+    }
+

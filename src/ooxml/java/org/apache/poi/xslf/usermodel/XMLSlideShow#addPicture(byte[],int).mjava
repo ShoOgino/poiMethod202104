@@ -1,0 +1,31 @@
+    /**
+     * Adds a picture to the workbook.
+     *
+     * @param pictureData       The bytes of the picture
+     * @param format            The format of the picture.
+     *
+     * @return the index to this picture (1 based).
+     * @see XSLFPictureData#PICTURE_TYPE_EMF
+     * @see XSLFPictureData#PICTURE_TYPE_WMF
+     * @see XSLFPictureData#PICTURE_TYPE_PICT
+     * @see XSLFPictureData#PICTURE_TYPE_JPEG
+     * @see XSLFPictureData#PICTURE_TYPE_PNG
+     * @see XSLFPictureData#PICTURE_TYPE_DIB
+     */
+    public int addPicture(byte[] pictureData, int format) {
+        getAllPictures();
+        
+        int imageNumber = getPackage().getPartsByName(Pattern.compile("/ppt/media/.*?")).size() + 1;
+        XSLFPictureData img = (XSLFPictureData) createRelationship(
+                XSLFPictureData.RELATIONS[format], XSLFFactory.getInstance(), imageNumber, true);
+        _pictures.add(img);
+        try {
+            OutputStream out = img.getPackagePart().getOutputStream();
+            out.write(pictureData);
+            out.close();
+        } catch (IOException e) {
+            throw new POIXMLException(e);
+        }
+        return imageNumber - 1;
+    }
+
