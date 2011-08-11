@@ -7,33 +7,48 @@
    */
   public StyleSheet(byte[] tableStream, int offset)
   {
-      int startOffset = offset;
-      _stshiLength = LittleEndian.getShort(tableStream, offset);
-      offset += LittleEndian.SHORT_SIZE;
-      int stdCount = LittleEndian.getShort(tableStream, offset);
-      offset += LittleEndian.SHORT_SIZE;
-      _baseLength = LittleEndian.getShort(tableStream, offset);
-      offset += LittleEndian.SHORT_SIZE;
-      _flags = LittleEndian.getShort(tableStream, offset);
-      offset += LittleEndian.SHORT_SIZE;
-      _maxIndex = LittleEndian.getShort(tableStream, offset);
-      offset += LittleEndian.SHORT_SIZE;
-      _maxFixedIndex = LittleEndian.getShort(tableStream, offset);
-      offset += LittleEndian.SHORT_SIZE;
-      _stylenameVersion = LittleEndian.getShort(tableStream, offset);
-      offset += LittleEndian.SHORT_SIZE;
+        int startOffset = offset;
+        _cbStshi = LittleEndian.getShort( tableStream, offset );
+        offset += LittleEndian.SHORT_SIZE;
 
-      _rgftc = new int[3];
-      _rgftc[0] = LittleEndian.getShort(tableStream, offset);
-      offset += LittleEndian.SHORT_SIZE;
-      _rgftc[1] = LittleEndian.getShort(tableStream, offset);
-      offset += LittleEndian.SHORT_SIZE;
-      _rgftc[2] = LittleEndian.getShort(tableStream, offset);
-      offset += LittleEndian.SHORT_SIZE;
+        /*
+         * Count of styles in stylesheet
+         * 
+         * The number of styles in this style sheet. There will be stshi.cstd
+         * (cbSTD, STD) pairs in the file following the STSHI. Note: styles can
+         * be empty, i.e. cbSTD==0.
+         */
+        int cstd = LittleEndian.getUShort( tableStream, offset );
+        offset += LittleEndian.SHORT_SIZE;
 
-      offset = startOffset + LittleEndian.SHORT_SIZE + _stshiLength;
-      _styleDescriptions = new StyleDescription[stdCount];
-      for(int x = 0; x < stdCount; x++)
+        _cbSTDBaseInFile = LittleEndian.getUShort( tableStream, offset );
+        offset += LittleEndian.SHORT_SIZE;
+
+        _flags = LittleEndian.getShort( tableStream, offset );
+        offset += LittleEndian.SHORT_SIZE;
+
+        _stiMaxWhenSaved = LittleEndian.getUShort( tableStream, offset );
+        offset += LittleEndian.SHORT_SIZE;
+
+        _istdMaxFixedWhenSaved = LittleEndian.getUShort( tableStream, offset );
+        offset += LittleEndian.SHORT_SIZE;
+
+        nVerBuiltInNamesWhenSaved = LittleEndian.getUShort( tableStream, offset );
+        offset += LittleEndian.SHORT_SIZE;
+
+        _rgftcStandardChpStsh = new int[3];
+        _rgftcStandardChpStsh[0] = LittleEndian.getShort( tableStream, offset );
+        offset += LittleEndian.SHORT_SIZE;
+        _rgftcStandardChpStsh[1] = LittleEndian.getShort( tableStream, offset );
+        offset += LittleEndian.SHORT_SIZE;
+        _rgftcStandardChpStsh[2] = LittleEndian.getShort( tableStream, offset );
+        offset += LittleEndian.SHORT_SIZE;
+
+        // shall we discard cbLSD and mpstilsd?
+        
+      offset = startOffset + LittleEndian.SHORT_SIZE + _cbStshi;
+      _styleDescriptions = new StyleDescription[cstd];
+      for(int x = 0; x < cstd; x++)
       {
           int stdSize = LittleEndian.getShort(tableStream, offset);
           //get past the size
@@ -43,7 +58,7 @@
               //byte[] std = new byte[stdSize];
 
               StyleDescription aStyle = new StyleDescription(tableStream,
-                _baseLength, offset, true);
+                _cbSTDBaseInFile, offset, true);
 
               _styleDescriptions[x] = aStyle;
           }
