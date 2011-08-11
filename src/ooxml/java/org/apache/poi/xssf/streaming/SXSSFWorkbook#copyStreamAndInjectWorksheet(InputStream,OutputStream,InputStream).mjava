@@ -1,17 +1,72 @@
-    private static void copyStreamAndInjectWorksheet(InputStream in, OutputStream out,InputStream worksheetData) throws IOException {
+    private static void copyStreamAndInjectWorksheet(InputStream in, OutputStream out, InputStream worksheetData) throws IOException {
         InputStreamReader inReader=new InputStreamReader(in,"UTF-8"); //TODO: Is it always UTF-8 or do we need to read the xml encoding declaration in the file? If not, we should perhaps use a SAX reader instead.
         OutputStreamWriter outWriter=new OutputStreamWriter(out,"UTF-8");
+        boolean needsStartTag = true;
         int c;
         int pos=0;
-        String s="<sheetData/>";
+        String s="<sheetData";
         int n=s.length();
-//Copy from "in" to "out" up to the string "<sheetData/>" (excluding).
+//Copy from "in" to "out" up to the string "<sheetData/>" or "</sheetData>" (excluding).
         while(((c=inReader.read())!=-1))
         {
             if(c==s.charAt(pos))
             {
                 pos++;
-                if(pos==n) break;
+                if(pos==n)
+                {
+                	if ("<sheetData".equals(s))
+                	{
+                    	c = inReader.read();
+                    	if (c == -1)
+                    	{
+                    		outWriter.write(s);
+                    		break;
+                    	}
+                    	if (c == '>')
+                    	{
+                    		// Found <sheetData>
+                    		outWriter.write(s);
+                    		outWriter.write(c);
+                    		s = "</sheetData>";
+                    		n = s.length();
+                    		pos = 0;
+                    		needsStartTag = false;
+                    		continue;
+                    	}
+                    	if (c == '/')
+                    	{
+                    		// Found <sheetData/
+                        	c = inReader.read();
+                        	if (c == -1)
+                        	{
+                        		outWriter.write(s);
+                        		break;
+                        	}
+                        	if (c == '>')
+                        	{
+                        		// Found <sheetData/>
+                        		break;
+                        	}
+                        	
+                    		outWriter.write(s);
+                    		outWriter.write('/');
+                    		outWriter.write(c);
+                    		pos = 0;
+                    		continue;
+                    	}
+                    	
+                		outWriter.write(s);
+                		outWriter.write('/');
+                		outWriter.write(c);
+                		pos = 0;
+                		continue;
+                	}
+                	else
+                	{
+                		// Found </sheetData>
+                    	break;
+                	}
+                }
             }
             else
             {
@@ -28,8 +83,15 @@
             }
         }
         outWriter.flush();
+        if (needsStartTag)
+        {
+        	outWriter.write("<sheetData>\n");
+        	outWriter.flush();
+        }
 //Copy the worksheet data to "out".
         copyStream(worksheetData,out);
+        outWriter.write("</sheetData>");
+        outWriter.flush();
 //Copy the rest of "in" to "out".
         while(((c=inReader.read())!=-1))
             outWriter.write(c);
