@@ -10,8 +10,8 @@
   {
     // initialize our streams for writing.
     HWPFFileSystem docSys = new HWPFFileSystem();
-    HWPFOutputStream wordDocumentStream = docSys.getStream("WordDocument");
-    HWPFOutputStream tableStream = docSys.getStream("1Table");
+    HWPFOutputStream wordDocumentStream = docSys.getStream(STREAM_WORD_DOCUMENT);
+    HWPFOutputStream tableStream = docSys.getStream(STREAM_TABLE_1);
     //HWPFOutputStream dataStream = docSys.getStream("Data");
     int tableOffset = 0;
 
@@ -284,6 +284,9 @@
       mainBuf = tempBuf;
     }
 
+        // Table1 stream will be used
+        _fib.setFWhichTblStm( true );
+
     // write out the FileInformationBlock.
     //_fib.serialize(mainBuf, 0);
     _fib.writeTo(mainBuf, tableStream);
@@ -308,36 +311,80 @@
       dataBuf = tempBuf;
     }
 
-//    // spit out the Word document.
-//    POIFSFileSystem pfs = new POIFSFileSystem();
-//    
-//    pfs.createDocument(new ByteArrayInputStream(mainBuf), "WordDocument");
-//    pfs.createDocument(new ByteArrayInputStream(tableBuf), "1Table");
-//    pfs.createDocument(new ByteArrayInputStream(dataBuf), "Data");
-//    writeProperties(pfs);
+        // create new document preserving order of entries
+        POIFSFileSystem pfs = new POIFSFileSystem();
+        boolean docWritten = false;
+        boolean dataWritten = false;
+        boolean tableWritten = false;
+        boolean propertiesWritten = false;
+        for ( Iterator<Entry> iter = directory.getEntries(); iter.hasNext(); )
+        {
+            Entry entry = iter.next();
+            if ( entry.getName().equals( STREAM_WORD_DOCUMENT ) )
+            {
+                if ( !docWritten )
+                {
+                    pfs.createDocument( new ByteArrayInputStream( mainBuf ),
+                            STREAM_WORD_DOCUMENT );
+                    docWritten = true;
+                }
+            }
+            else if ( entry.getName().equals( STREAM_TABLE_0 )
+                    || entry.getName().equals( STREAM_TABLE_1 ) )
+            {
+                if ( !tableWritten )
+                {
+                    pfs.createDocument( new ByteArrayInputStream( tableBuf ),
+                            STREAM_TABLE_1 );
+                    tableWritten = true;
+                }
+            }
+            else if ( entry.getName().equals(
+                    SummaryInformation.DEFAULT_STREAM_NAME )
+                    || entry.getName().equals(
+                            DocumentSummaryInformation.DEFAULT_STREAM_NAME ) )
+            {
+                if ( !propertiesWritten )
+                {
+                    writeProperties( pfs );
+                    propertiesWritten = true;
+                }
+            }
+            else if ( entry.getName().equals( STREAM_DATA ) )
+            {
+                if ( !dataWritten )
+                {
+                    pfs.createDocument( new ByteArrayInputStream( dataBuf ),
+                            STREAM_DATA );
+                    dataWritten = true;
+                }
+            }
+            else
+            {
+                copyNodeRecursively( entry, pfs.getRoot() );
+            }
+        }
 
-        POIFSFileSystem pfs = directory.getFileSystem();
-        deleteEntrySafe( pfs, "WordDocument" );
-        deleteEntrySafe( pfs, "0Table" );
-        deleteEntrySafe( pfs, "1Table" );
-        deleteEntrySafe( pfs, "Data" );
+        if ( !docWritten )
+            pfs.createDocument( new ByteArrayInputStream( mainBuf ),
+                    STREAM_WORD_DOCUMENT );
+        if ( !tableWritten )
+            pfs.createDocument( new ByteArrayInputStream( tableBuf ),
+                    STREAM_TABLE_1 );
+        if ( !propertiesWritten )
+            writeProperties( pfs );
+        if ( !dataWritten )
+            pfs.createDocument( new ByteArrayInputStream( dataBuf ),
+                    STREAM_DATA );
 
-        // read properties only if they were not read
-        getSummaryInformation();
-        // update properties in case user changed them
-        deleteEntrySafe( pfs, SummaryInformation.DEFAULT_STREAM_NAME );
-        deleteEntrySafe( pfs, DocumentSummaryInformation.DEFAULT_STREAM_NAME );
-        writeProperties( pfs );
-
-        pfs.createDocument( new ByteArrayInputStream( mainBuf ), "WordDocument" );
-        pfs.createDocument( new ByteArrayInputStream( tableBuf ), "1Table" );
-        pfs.createDocument( new ByteArrayInputStream( dataBuf ), "Data" );
         pfs.writeFilesystem( out );
+        this.directory = pfs.getRoot();
 
         /*
          * since we updated all references in FIB and etc, using new arrays to
          * access data
          */
+        this.directory = pfs.getRoot();
         this._tableStream = tableStream.toByteArray();
         this._dataStream = dataBuf;
     }
