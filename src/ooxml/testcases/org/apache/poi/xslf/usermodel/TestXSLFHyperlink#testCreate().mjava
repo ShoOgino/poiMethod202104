@@ -1,0 +1,40 @@
+    public void testCreate() throws Exception  {
+        XMLSlideShow ppt = new XMLSlideShow();
+        XSLFSlide slide1 = ppt.createSlide();
+        XSLFSlide slide2 = ppt.createSlide();
+
+        int numRel = slide1.getPackagePart().getRelationships().size();
+        assertEquals(1, numRel);
+        XSLFTextBox sh1 = slide1.createTextBox();
+        XSLFTextRun r1 = sh1.addNewTextParagraph().addNewTextRun();
+        r1.setText("Web Page");
+        XSLFHyperlink link1 = r1.createHyperlink();
+        link1.setAddress("http://poi.apache.org/");
+        assertEquals(URI.create("http://poi.apache.org/"), link1.getTargetURI());
+        assertEquals(numRel + 1, slide1.getPackagePart().getRelationships().size());
+
+        String id1 = link1.getXmlObject().getId();
+        assertNotNull(id1);
+        PackageRelationship rel1 = slide1.getPackagePart().getRelationship(id1);
+        assertNotNull(rel1);
+        assertEquals(id1, rel1.getId());
+        assertEquals(TargetMode.EXTERNAL, rel1.getTargetMode());
+        assertEquals(XSLFRelation.HYPERLINK.getRelation(), rel1.getRelationshipType());
+
+        XSLFTextBox sh2 = slide1.createTextBox();
+        XSLFTextRun r2 = sh2.addNewTextParagraph().addNewTextRun();
+        r2.setText("Place in this document");
+        XSLFHyperlink link2 = r2.createHyperlink();
+        link2.setAddress(slide2);
+        assertEquals(URI.create("/ppt/slides/slide2.xml"), link2.getTargetURI());
+        assertEquals(numRel + 2, slide1.getPackagePart().getRelationships().size());
+
+        String id2 = link2.getXmlObject().getId();
+        assertNotNull(id2);
+        PackageRelationship rel2 = slide1.getPackagePart().getRelationship(id2);
+        assertNotNull(rel2);
+        assertEquals(id2, rel2.getId());
+        assertEquals(TargetMode.INTERNAL, rel2.getTargetMode());
+        assertEquals(XSLFRelation.SLIDE.getRelation(), rel2.getRelationshipType());
+    }
+
