@@ -1,0 +1,67 @@
+    protected int processSheet( HSSFSheet sheet, Element flow )
+    {
+        final int physicalNumberOfRows = sheet.getPhysicalNumberOfRows();
+        if ( physicalNumberOfRows <= 0 )
+            return 0;
+
+        processSheetName( sheet, flow );
+
+        Element table = foDocumentFacade.createTable();
+        Element tableBody = foDocumentFacade.createTableBody();
+
+        final CellRangeAddress[][] mergedRanges = ExcelToHtmlUtils
+                .buildMergedRangesMap( sheet );
+
+        final List<Element> emptyRowElements = new ArrayList<Element>(
+                physicalNumberOfRows );
+        int maxSheetColumns = 1;
+        for ( int r = 0; r < physicalNumberOfRows; r++ )
+        {
+            HSSFRow row = sheet.getRow( r );
+
+            if ( row == null )
+                continue;
+
+            if ( !isOutputHiddenRows() && row.getZeroHeight() )
+                continue;
+
+            Element tableRowElement = foDocumentFacade.createTableRow();
+            tableRowElement.setAttribute( "height", row.getHeight() / 20f
+                    + "pt" );
+
+            int maxRowColumnNumber = processRow( mergedRanges, row,
+                    tableRowElement );
+
+            if ( maxRowColumnNumber == 0 )
+            {
+                emptyRowElements.add( tableRowElement );
+            }
+            else
+            {
+                if ( !emptyRowElements.isEmpty() )
+                {
+                    for ( Element emptyRowElement : emptyRowElements )
+                    {
+                        tableBody.appendChild( emptyRowElement );
+                    }
+                    emptyRowElements.clear();
+                }
+
+                tableBody.appendChild( tableRowElement );
+            }
+            maxSheetColumns = Math.max( maxSheetColumns, maxRowColumnNumber );
+        }
+
+        processColumnWidths( sheet, maxSheetColumns, table );
+
+        if ( isOutputColumnHeaders() )
+        {
+            processColumnHeaders( sheet, maxSheetColumns, table );
+        }
+
+        table.appendChild( tableBody );
+        flow.appendChild( table );
+
+        return maxSheetColumns;
+    }
+

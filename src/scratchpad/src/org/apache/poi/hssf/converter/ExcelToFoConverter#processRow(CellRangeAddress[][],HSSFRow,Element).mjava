@@ -1,0 +1,112 @@
+    /**
+     * @return maximum 1-base index of column that were rendered, zero if none
+     */
+    protected int processRow( CellRangeAddress[][] mergedRanges, HSSFRow row,
+            Element tableRowElement )
+    {
+        final HSSFSheet sheet = row.getSheet();
+        final short maxColIx = row.getLastCellNum();
+        if ( maxColIx <= 0 )
+            return 0;
+
+        final List<Element> emptyCells = new ArrayList<Element>( maxColIx );
+
+        if ( isOutputRowNumbers() )
+        {
+            Element tableRowNumberCellElement = foDocumentFacade
+                    .createTableCell();
+            processRowNumber( row, tableRowNumberCellElement );
+            emptyCells.add( tableRowNumberCellElement );
+        }
+
+        int maxRenderedColumn = 0;
+        for ( int colIx = 0; colIx < maxColIx; colIx++ )
+        {
+            if ( !isOutputHiddenColumns() && sheet.isColumnHidden( colIx ) )
+                continue;
+
+            CellRangeAddress range = ExcelToHtmlUtils.getMergedRange(
+                    mergedRanges, row.getRowNum(), colIx );
+
+            if ( range != null
+                    && ( range.getFirstColumn() != colIx || range.getFirstRow() != row
+                            .getRowNum() ) )
+                continue;
+
+            HSSFCell cell = row.getCell( colIx );
+
+            int divWidthPx = 0;
+            // if ( isUseDivsToSpan() )
+            // {
+            // divWidthPx = getColumnWidth( sheet, colIx );
+            //
+            // boolean hasBreaks = false;
+            // for ( int nextColumnIndex = colIx + 1; nextColumnIndex <
+            // maxColIx; nextColumnIndex++ )
+            // {
+            // if ( !isOutputHiddenColumns()
+            // && sheet.isColumnHidden( nextColumnIndex ) )
+            // continue;
+            //
+            // if ( row.getCell( nextColumnIndex ) != null
+            // && !isTextEmpty( row.getCell( nextColumnIndex ) ) )
+            // {
+            // hasBreaks = true;
+            // break;
+            // }
+            //
+            // divWidthPx += getColumnWidth( sheet, nextColumnIndex );
+            // }
+            //
+            // if ( !hasBreaks )
+            // divWidthPx = Integer.MAX_VALUE;
+            // }
+
+            Element tableCellElement = foDocumentFacade.createTableCell();
+
+            if ( range != null )
+            {
+                if ( range.getFirstColumn() != range.getLastColumn() )
+                    tableCellElement.setAttribute(
+                            "number-columns-spanned",
+                            String.valueOf( range.getLastColumn()
+                                    - range.getFirstColumn() + 1 ) );
+                if ( range.getFirstRow() != range.getLastRow() )
+                    tableCellElement.setAttribute(
+                            "number-rows-spanned",
+                            String.valueOf( range.getLastRow()
+                                    - range.getFirstRow() + 1 ) );
+            }
+
+            boolean emptyCell;
+            if ( cell != null )
+            {
+                emptyCell = processCell( cell, tableCellElement,
+                        getColumnWidth( sheet, colIx ), divWidthPx,
+                        row.getHeight() / 20f );
+            }
+            else
+            {
+                emptyCell = true;
+            }
+
+            if ( emptyCell )
+            {
+                emptyCells.add( tableCellElement );
+            }
+            else
+            {
+                for ( Element emptyCellElement : emptyCells )
+                {
+                    tableRowElement.appendChild( emptyCellElement );
+                }
+                emptyCells.clear();
+
+                tableRowElement.appendChild( tableCellElement );
+                maxRenderedColumn = colIx;
+            }
+        }
+
+        return maxRenderedColumn + 1;
+    }
+

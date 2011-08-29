@@ -1,0 +1,156 @@
+    protected boolean processCell( HSSFCell cell, Element tableCellElement,
+            int normalWidthPx, int maxSpannedWidthPx, float normalHeightPt )
+    {
+        final HSSFCellStyle cellStyle = cell.getCellStyle();
+
+        String value;
+        switch ( cell.getCellType() )
+        {
+        case HSSFCell.CELL_TYPE_STRING:
+            // XXX: enrich
+            value = cell.getRichStringCellValue().getString();
+            break;
+        case HSSFCell.CELL_TYPE_FORMULA:
+            switch ( cell.getCachedFormulaResultType() )
+            {
+            case HSSFCell.CELL_TYPE_STRING:
+                HSSFRichTextString str = cell.getRichStringCellValue();
+                if ( str != null && str.length() > 0 )
+                {
+                    value = ( str.toString() );
+                }
+                else
+                {
+                    value = ExcelToHtmlUtils.EMPTY;
+                }
+                break;
+            case HSSFCell.CELL_TYPE_NUMERIC:
+                HSSFCellStyle style = cellStyle;
+                if ( style == null )
+                {
+                    value = String.valueOf( cell.getNumericCellValue() );
+                }
+                else
+                {
+                    value = ( _formatter.formatRawCellContents(
+                            cell.getNumericCellValue(), style.getDataFormat(),
+                            style.getDataFormatString() ) );
+                }
+                break;
+            case HSSFCell.CELL_TYPE_BOOLEAN:
+                value = String.valueOf( cell.getBooleanCellValue() );
+                break;
+            case HSSFCell.CELL_TYPE_ERROR:
+                value = ErrorEval.getText( cell.getErrorCellValue() );
+                break;
+            default:
+                logger.log(
+                        POILogger.WARN,
+                        "Unexpected cell cachedFormulaResultType ("
+                                + cell.getCachedFormulaResultType() + ")" );
+                value = ExcelToHtmlUtils.EMPTY;
+                break;
+            }
+            break;
+        case HSSFCell.CELL_TYPE_BLANK:
+            value = ExcelToHtmlUtils.EMPTY;
+            break;
+        case HSSFCell.CELL_TYPE_NUMERIC:
+            value = _formatter.formatCellValue( cell );
+            break;
+        case HSSFCell.CELL_TYPE_BOOLEAN:
+            value = String.valueOf( cell.getBooleanCellValue() );
+            break;
+        case HSSFCell.CELL_TYPE_ERROR:
+            value = ErrorEval.getText( cell.getErrorCellValue() );
+            break;
+        default:
+            logger.log( POILogger.WARN,
+                    "Unexpected cell type (" + cell.getCellType() + ")" );
+            return true;
+        }
+
+        final boolean noText = ExcelToHtmlUtils.isEmpty( value );
+        // final boolean wrapInDivs = !noText && isUseDivsToSpan()
+        // && !cellStyle.getWrapText();
+
+        final short cellStyleIndex = cellStyle.getIndex();
+        if ( cellStyleIndex != 0 )
+        {
+            // HSSFWorkbook workbook = cell.getRow().getSheet().getWorkbook();
+            // String mainCssClass = getStyleClassName( workbook, cellStyle );
+            // if ( wrapInDivs )
+            // {
+            // tableCellElement.setAttribute( "class", mainCssClass + " "
+            // + cssClassContainerCell );
+            // }
+            // else
+            // {
+            // tableCellElement.setAttribute( "class", mainCssClass );
+            // }
+
+            if ( noText )
+            {
+                /*
+                 * if cell style is defined (like borders, etc.) but cell text
+                 * is empty, add "&nbsp;" to output, so browser won't collapse
+                 * and ignore cell
+                 */
+                value = "\u00A0";
+            }
+        }
+
+        if ( isOutputLeadingSpacesAsNonBreaking() && value.startsWith( " " ) )
+        {
+            StringBuilder builder = new StringBuilder();
+            for ( int c = 0; c < value.length(); c++ )
+            {
+                if ( value.charAt( c ) != ' ' )
+                    break;
+                builder.append( '\u00a0' );
+            }
+
+            if ( value.length() != builder.length() )
+                builder.append( value.substring( builder.length() ) );
+
+            value = builder.toString();
+        }
+
+        Text text = foDocumentFacade.createText( value );
+
+        // if ( wrapInDivs )
+        // {
+        // Element outerDiv = htmlDocumentFacade.createBlock();
+        // outerDiv.setAttribute( "class", this.cssClassContainerDiv );
+        //
+        // Element innerDiv = htmlDocumentFacade.createBlock();
+        // StringBuilder innerDivStyle = new StringBuilder();
+        // innerDivStyle.append( "position:absolute;min-width:" );
+        // innerDivStyle.append( normalWidthPx );
+        // innerDivStyle.append( "px;" );
+        // if ( maxSpannedWidthPx != Integer.MAX_VALUE )
+        // {
+        // innerDivStyle.append( "max-width:" );
+        // innerDivStyle.append( maxSpannedWidthPx );
+        // innerDivStyle.append( "px;" );
+        // }
+        // innerDivStyle.append( "overflow:hidden;max-height:" );
+        // innerDivStyle.append( normalHeightPt );
+        // innerDivStyle.append( "pt;white-space:nowrap;" );
+        // ExcelToHtmlUtils.appendAlign( innerDivStyle,
+        // cellStyle.getAlignment() );
+        // htmlDocumentFacade.addStyleClass( outerDiv, "d",
+        // innerDivStyle.toString() );
+        //
+        // innerDiv.appendChild( text );
+        // outerDiv.appendChild( innerDiv );
+        // tableCellElement.appendChild( outerDiv );
+        // }
+        // else
+        {
+            tableCellElement.appendChild( text );
+        }
+
+        return ExcelToHtmlUtils.isEmpty( value ) && cellStyleIndex == 0;
+    }
+
