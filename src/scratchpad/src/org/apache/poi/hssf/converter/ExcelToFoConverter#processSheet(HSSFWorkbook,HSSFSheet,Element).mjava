@@ -1,4 +1,4 @@
-    protected int processSheet( HSSFWorkbook workbook, HSSFSheet sheet,
+    protected float processSheet( HSSFWorkbook workbook, HSSFSheet sheet,
             Element flow )
     {
         final int physicalNumberOfRows = sheet.getPhysicalNumberOfRows();
@@ -8,6 +8,8 @@
         processSheetName( sheet, flow );
 
         Element table = foDocumentFacade.createTable();
+        table.setAttribute( "table-layout", "fixed" );
+
         Element tableBody = foDocumentFacade.createTableBody();
 
         final CellRangeAddress[][] mergedRanges = ExcelToHtmlUtils
@@ -33,6 +35,13 @@
             int maxRowColumnNumber = processRow( workbook, mergedRanges, row,
                     tableRowElement );
 
+            if ( tableRowElement.getChildNodes().getLength() == 0 )
+            {
+                Element emptyCellElement = foDocumentFacade.createTableCell();
+                emptyCellElement.appendChild( foDocumentFacade.createBlock() );
+                tableRowElement.appendChild( emptyCellElement );
+            }
+
             if ( maxRowColumnNumber == 0 )
             {
                 emptyRowElements.add( tableRowElement );
@@ -53,7 +62,7 @@
             maxSheetColumns = Math.max( maxSheetColumns, maxRowColumnNumber );
         }
 
-        processColumnWidths( sheet, maxSheetColumns, table );
+        float tableWidthIn = processColumnWidths( sheet, maxSheetColumns, table );
 
         if ( isOutputColumnHeaders() )
         {
@@ -63,6 +72,6 @@
         table.appendChild( tableBody );
         flow.appendChild( table );
 
-        return maxSheetColumns;
+        return tableWidthIn;
     }
 

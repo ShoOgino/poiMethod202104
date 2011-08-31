@@ -1,13 +1,24 @@
     /**
      * Creates COLGROUP element with width specified for all columns. (Except
      * first if <tt>{@link #isOutputRowNumbers()}==true</tt>)
+     * 
+     * @return table width in inches
      */
-    protected void processColumnWidths( HSSFSheet sheet, int maxSheetColumns,
+    protected float processColumnWidths( HSSFSheet sheet, int maxSheetColumns,
             Element table )
     {
+        float tableWidth = 0;
+
         if ( isOutputRowNumbers() )
         {
-            table.appendChild( foDocumentFacade.createTableColumn() );
+            final float columnWidthIn = getDefaultColumnWidth( sheet ) / DPI;
+
+            final Element rowNumberColumn = foDocumentFacade
+                    .createTableColumn();
+            rowNumberColumn.setAttribute( "column-width", columnWidthIn + "in" );
+            table.appendChild( rowNumberColumn );
+
+            tableWidth += columnWidthIn;
         }
 
         for ( int c = 0; c < maxSheetColumns; c++ )
@@ -15,10 +26,16 @@
             if ( !isOutputHiddenColumns() && sheet.isColumnHidden( c ) )
                 continue;
 
+            final float columnWidthIn = getColumnWidth( sheet, c ) / DPI;
+
             Element col = foDocumentFacade.createTableColumn();
-            col.setAttribute( "column-width",
-                    String.valueOf( getColumnWidth( sheet, c ) / DPI ) + "in" );
+            col.setAttribute( "column-width", columnWidthIn + "in" );
             table.appendChild( col );
+
+            tableWidth += columnWidthIn;
         }
+
+        table.setAttribute( "width", tableWidth + "in" );
+        return tableWidth;
     }
 
