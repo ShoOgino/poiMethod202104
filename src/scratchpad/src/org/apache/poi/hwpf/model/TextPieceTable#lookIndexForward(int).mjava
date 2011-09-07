@@ -1,22 +1,40 @@
     public int lookIndexForward( final int startBytePos )
     {
-        int bytePos = startBytePos;
-        for ( TextPiece tp : _textPiecesFCOrder )
+        if ( _textPiecesFCOrder.isEmpty() )
+            throw new IllegalStateException( "Text pieces table is empty" );
+
+        if ( _textPiecesFCOrder.get( 0 ).getPieceDescriptor().getFilePosition() > startBytePos )
+            return _textPiecesFCOrder.get( 0 ).getPieceDescriptor().getFilePosition();
+
+        if ( _textPiecesFCOrder.get( _textPiecesFCOrder.size() - 1 )
+                .getPieceDescriptor().getFilePosition() <= startBytePos )
+            return startBytePos;
+
+        int low = 0;
+        int high = _textPiecesFCOrder.size() - 1;
+
+        while ( low <= high )
         {
-            int pieceStart = tp.getPieceDescriptor().getFilePosition();
+            int mid = ( low + high ) >>> 1;
+            final TextPiece textPiece = _textPiecesFCOrder.get( mid );
+            int midVal = textPiece.getPieceDescriptor().getFilePosition();
 
-            if ( bytePos >= pieceStart + tp.bytesLength() )
-            {
-                continue;
-            }
-
-            if ( pieceStart > bytePos )
-            {
-                bytePos = pieceStart;
-            }
-
-            break;
+            if ( midVal < startBytePos )
+                low = mid + 1;
+            else if ( midVal > startBytePos )
+                high = mid - 1;
+            else
+                // found piece with exact start
+                return textPiece.getPieceDescriptor().getFilePosition();
         }
-        return bytePos;
+        assert low == high;
+        assert _textPiecesFCOrder.get( low ).getPieceDescriptor()
+                .getFilePosition() < startBytePos;
+        // last line can't be current, can it?
+        assert _textPiecesFCOrder.get( low + 1 ).getPieceDescriptor()
+                .getFilePosition() > startBytePos;
+
+        // shifting to next piece start
+        return _textPiecesFCOrder.get( low + 1 ).getPieceDescriptor().getFilePosition();
     }
 

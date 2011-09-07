@@ -1,0 +1,36 @@
+    public int[][] getCharIndexRanges( int startBytePosInclusive,
+            int endBytePosExclusive )
+    {
+        List<int[]> result = new LinkedList<int[]>();
+        for ( TextPiece textPiece : _textPiecesFCOrder )
+        {
+            final int tpStart = textPiece.getPieceDescriptor()
+                    .getFilePosition();
+            final int tpEnd = textPiece.getPieceDescriptor().getFilePosition()
+                    + textPiece.bytesLength();
+            if ( startBytePosInclusive > tpEnd )
+                continue;
+            if ( endBytePosExclusive < tpStart )
+                break;
+
+            final int rangeStartBytes = Math.max( tpStart,
+                    startBytePosInclusive );
+            final int rangeEndBytes = Math.min( tpEnd, endBytePosExclusive );
+            final int rangeLengthBytes = rangeEndBytes - rangeStartBytes;
+
+            if ( rangeStartBytes > rangeEndBytes )
+                continue;
+
+            final int encodingMultiplier = textPiece.isUnicode() ? 2 : 1;
+
+            final int rangeStartCp = textPiece.getStart()
+                    + ( rangeStartBytes - tpStart ) / encodingMultiplier;
+            final int rangeEndCp = rangeStartCp + rangeLengthBytes
+                    / encodingMultiplier;
+
+            result.add( new int[] { rangeStartCp, rangeEndCp } );
+        }
+
+        return result.toArray( new int[result.size()][] );
+    }
+
