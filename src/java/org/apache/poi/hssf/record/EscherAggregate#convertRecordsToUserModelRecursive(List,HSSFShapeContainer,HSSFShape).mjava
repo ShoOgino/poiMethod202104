@@ -1,0 +1,101 @@
+	private static void convertRecordsToUserModelRecursive(List tcc, HSSFShapeContainer container, HSSFShape parent) {
+		// Now process the containers for each group
+		//  and objects
+		for(int i=1; i<tcc.size(); i++) {
+			EscherContainerRecord shapeContainer = (EscherContainerRecord)tcc.get(i);
+
+			// Could be a group, or a base object
+			if (shapeContainer.getRecordId() == EscherContainerRecord.SPGR_CONTAINER)
+			{
+				// Group
+				final int shapeChildren = shapeContainer.getChildRecords().size();
+				if (shapeChildren > 0)
+				{
+					HSSFShapeGroup group = new HSSFShapeGroup( parent, new HSSFClientAnchor() );
+					addToParentOrContainer(group, container, parent);
+
+					EscherContainerRecord groupContainer = (EscherContainerRecord) shapeContainer.getChild( 0 );
+					convertRecordsToUserModel( groupContainer, group );
+					
+					if (shapeChildren>1){
+						convertRecordsToUserModelRecursive(shapeContainer.getChildRecords(), container, group);
+					}
+				} else
+				{
+					log.log( POILogger.WARN,
+							"Found drawing group without children." );
+				}
+
+			} else if (shapeContainer.getRecordId() == EscherContainerRecord.SP_CONTAINER)
+			{
+				EscherSpRecord spRecord = shapeContainer
+						.getChildById( EscherSpRecord.RECORD_ID );
+				int type = spRecord.getShapeType();
+
+				switch (type)
+				{
+				case ST_TEXTBOX:
+					HSSFTextbox box = new HSSFTextbox( parent,
+							new HSSFClientAnchor() );
+					addToParentOrContainer(box, container, parent);
+
+					convertRecordsToUserModel( shapeContainer, box );
+					break;
+				case ST_PICTUREFRAME:
+					// Duplicated from
+					// org.apache.poi.hslf.model.Picture.getPictureIndex()
+					EscherOptRecord opt = (EscherOptRecord) getEscherChild(
+							shapeContainer, EscherOptRecord.RECORD_ID );
+					EscherSimpleProperty prop = (EscherSimpleProperty)opt.lookup(
+							EscherProperties.BLIP__BLIPTODISPLAY );
+					if (prop == null)
+					{
+						log.log( POILogger.WARN,
+								"Picture index for picture shape not found." );
+					} else
+					{
+						int pictureIndex = prop.getPropertyValue();
+
+						EscherClientAnchorRecord anchorRecord = (EscherClientAnchorRecord) getEscherChild(
+								shapeContainer,
+								EscherClientAnchorRecord.RECORD_ID );
+
+						EscherChildAnchorRecord childRecord = (EscherChildAnchorRecord) getEscherChild(
+								shapeContainer,
+								EscherChildAnchorRecord.RECORD_ID );
+
+						if (anchorRecord!=null && childRecord!=null){
+							log.log( POILogger.WARN, "Picture with both CLIENT and CHILD anchor: "+ type );
+						}
+					
+						HSSFAnchor anchor;
+						if (anchorRecord!=null){
+							anchor = toClientAnchor(anchorRecord);
+						}else{
+							anchor = toChildAnchor(childRecord);
+						}
+
+						HSSFPicture picture = new HSSFPicture( parent, anchor );
+						picture.setPictureIndex( pictureIndex );
+
+						addToParentOrContainer(picture, container, parent);
+					}
+					break;
+				default:
+					final HSSFSimpleShape shape = new HSSFSimpleShape( parent,
+							new HSSFClientAnchor() );
+					addToParentOrContainer(shape, container, parent);
+					convertRecordsToUserModel( shapeContainer, shape);
+					
+					log.log( POILogger.WARN, "Unhandled shape type: "
+							+ type );
+					break;
+				}
+			} else
+			{
+				log.log( POILogger.WARN, "Unexpected record id of shape group." );
+			}
+
+		}
+	}
+
