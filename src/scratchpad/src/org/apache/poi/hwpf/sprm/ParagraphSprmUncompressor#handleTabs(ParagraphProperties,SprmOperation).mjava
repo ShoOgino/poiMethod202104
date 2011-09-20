@@ -4,12 +4,12 @@
     int offset = sprm.getGrpprlOffset();
     int delSize = grpprl[offset++];
     int[] tabPositions = pap.getRgdxaTab();
-    byte[] tabDescriptors = pap.getRgtbd();
+    TabDescriptor[] tabDescriptors = pap.getRgtbd();
 
-    Map<Integer, Byte> tabMap = new HashMap<Integer, Byte>();
+    Map<Integer, TabDescriptor> tabMap = new HashMap<Integer, TabDescriptor>();
     for (int x = 0; x < tabPositions.length; x++)
     {
-      tabMap.put(Integer.valueOf(tabPositions[x]), Byte.valueOf(tabDescriptors[x]));
+      tabMap.put(Integer.valueOf(tabPositions[x]), tabDescriptors[x]);
     }
 
     for (int x = 0; x < delSize; x++)
@@ -23,13 +23,13 @@
     for (int x = 0; x < addSize; x++)
     {
       Integer key = Integer.valueOf(LittleEndian.getShort(grpprl, offset));
-      Byte val = Byte.valueOf(grpprl[start + ((LittleEndian.SHORT_SIZE * addSize) + x)]);
+      TabDescriptor val = new TabDescriptor( grpprl, start + ((TabDescriptor.getSize() * addSize) + x) );
       tabMap.put(key, val);
       offset += LittleEndian.SHORT_SIZE;
     }
 
     tabPositions = new int[tabMap.size()];
-    tabDescriptors = new byte[tabPositions.length];
+    tabDescriptors = new TabDescriptor[tabPositions.length];
     
     List<Integer> list = new ArrayList<Integer>(tabMap.keySet());
     Collections.sort(list);
@@ -38,7 +38,10 @@
     {
       Integer key = list.get(x);
       tabPositions[x] = key.intValue();
-      tabDescriptors[x] = tabMap.get(key).byteValue();
+      if (tabMap.containsKey( key ))
+          tabDescriptors[x] = tabMap.get(key);
+      else
+          tabDescriptors[x] = new TabDescriptor();
     }
 
     pap.setRgdxaTab(tabPositions);
