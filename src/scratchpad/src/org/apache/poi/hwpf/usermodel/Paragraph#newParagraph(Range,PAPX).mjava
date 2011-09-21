@@ -1,0 +1,44 @@
+    @Internal
+    static Paragraph newParagraph( Range parent, PAPX papx )
+    {
+        HWPFDocumentCore doc = parent._doc;
+        ListTables listTables = doc.getListTables();
+        StyleSheet styleSheet = doc.getStyleSheet();
+
+        ParagraphProperties properties = new ParagraphProperties();
+        properties.setIstd( papx.getIstd() );
+
+        if ( styleSheet != null )
+        {
+            int style = papx.getIstd();
+            byte[] grpprl = styleSheet.getPAPX( style );
+            properties = ParagraphSprmUncompressor.uncompressPAP( properties,
+                    grpprl, 2 );
+        }
+
+        properties = ParagraphSprmUncompressor.uncompressPAP( properties,
+                papx.getGrpprl(), 2 );
+
+        if ( properties.getIlfo() != 0 && listTables != null )
+        {
+            final ListFormatOverride listFormatOverride = listTables
+                    .getOverride( properties.getIlfo() );
+            final ListLevel listLevel = listTables.getLevel(
+                    listFormatOverride.getLsid(), properties.getIlvl() );
+
+            if ( listLevel.getGrpprlPapx() != null )
+            {
+                properties = ParagraphSprmUncompressor.uncompressPAP(
+                        properties, listLevel.getGrpprlPapx(), 0 );
+                // reapply PAPX properties
+                properties = ParagraphSprmUncompressor.uncompressPAP(
+                        properties, papx.getGrpprl(), 2 );
+            }
+        }
+
+        if ( properties.getIlfo() > 0 )
+            return new ListEntry( papx, properties, parent );
+
+        return new Paragraph( papx, properties, parent );
+    }
+
