@@ -1,0 +1,60 @@
+   /**
+    * Gets the requested text from the file
+    * @param slideText Should we retrieve text from slides?
+    * @param notesText Should we retrieve text from notes?
+    * @param masterText Should we retrieve text from master slides?
+    */
+   public String getText(boolean slideText, boolean notesText, boolean masterText) {
+      StringBuffer text = new StringBuffer();
+
+      XSLFSlide[] slides = slideshow.getSlides();
+      XSLFCommentAuthors commentAuthors = slideshow.getCommentAuthors();
+
+      for (XSLFSlide slide : slides) {
+         try {
+            XSLFNotes notes = slide.getNotes();
+            XSLFComments comments = slide.getComments();
+            XSLFSlideMaster master = slide.getMasterSheet();
+
+            // TODO Do the slide's name
+            // (Stored in docProps/app.xml)
+
+            // Do the slide's text if requested
+            if (slideText) {
+               extractText(slide.getCommonSlideData(), text);
+               
+               // If there's a master sheet and it's requested, grab text from there
+               if(masterText && master != null) {
+                  extractText(master.getCommonSlideData(), text);
+               }
+
+               // If the slide has comments, do those too
+               if (comments != null) {
+                  for (CTComment comment : comments.getCTCommentsList().getCmList()) {
+                     // Do the author if we can
+                     if (commentAuthors != null) {
+                        CTCommentAuthor author = commentAuthors.getAuthorById(comment.getAuthorId());
+                        if(author != null) {
+                           text.append(author.getName() + ": ");
+                        }
+                     }
+                     
+                     // Then the comment text, with a new line afterwards
+                     text.append(comment.getText());
+                     text.append("\n");
+                  }
+               }
+            }
+
+            // Do the notes if requested
+            if (notesText && notes != null) {
+               extractText(notes.getCommonSlideData(), text);
+            }
+         } catch (Exception e) {
+            throw new RuntimeException(e);
+         }
+      }
+
+      return text.toString();
+   }
+
