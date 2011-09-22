@@ -1,0 +1,53 @@
+    protected int getNumberRowsSpanned( Table table,
+            final int[] tableCellEdges, int currentRowIndex,
+            int currentColumnIndex, TableCell tableCell )
+    {
+        if ( !tableCell.isFirstVerticallyMerged() )
+            return 1;
+
+        final int numRows = table.numRows();
+
+        int count = 1;
+        for ( int r1 = currentRowIndex + 1; r1 < numRows; r1++ )
+        {
+            TableRow nextRow = table.getRow( r1 );
+            if ( currentColumnIndex >= nextRow.numCells() )
+                break;
+
+            // we need to skip row if he don't have cells at all
+            boolean hasCells = false;
+            int currentEdgeIndex = 0;
+            for ( int c = 0; c < nextRow.numCells(); c++ )
+            {
+                TableCell nextTableCell = nextRow.getCell( c );
+                if ( !nextTableCell.isVerticallyMerged()
+                        || nextTableCell.isFirstVerticallyMerged() )
+                {
+                    int colSpan = getNumberColumnsSpanned( tableCellEdges,
+                            currentEdgeIndex, nextTableCell );
+                    currentEdgeIndex += colSpan;
+
+                    if ( colSpan != 0 )
+                    {
+                        hasCells = true;
+                        break;
+                    }
+                }
+                else
+                {
+                    currentEdgeIndex += getNumberColumnsSpanned(
+                            tableCellEdges, currentEdgeIndex, nextTableCell );
+                }
+            }
+            if ( !hasCells )
+                continue;
+
+            TableCell nextCell = nextRow.getCell( currentColumnIndex );
+            if ( !nextCell.isVerticallyMerged()
+                    || nextCell.isFirstVerticallyMerged() )
+                break;
+            count++;
+        }
+        return count;
+    }
+
