@@ -1,47 +1,8 @@
     public List<DrawingParagraph> getText() {
-        CTGroupShape gs = data.getSpTree();
-
-        List<DrawingParagraph> out = new ArrayList<DrawingParagraph>();
-
-        processShape(gs, out);
-
-        for (CTGroupShape shape : gs.getGrpSpList()) {
-            processShape(shape, out);
-        }
-
-        for (CTGraphicalObjectFrame frame: gs.getGraphicFrameList()) {
-            CTGraphicalObjectData data = frame.getGraphic().getGraphicData();
-            XmlCursor c = data.newCursor();
-            c.selectPath("declare namespace pic='"+CTTable.type.getName().getNamespaceURI()+"' .//pic:tbl");
-
-            while (c.toNextSelection()) {
-                XmlObject o = c.getObject();
-
-                if (o instanceof XmlAnyTypeImpl) {
-                    // Pesky XmlBeans bug - see Bugzilla #49934
-                    try {
-                        o = CTTable.Factory.parse(o.toString());
-                    } catch (XmlException e) {
-                        throw new POIXMLException(e);
-                    }
-                }
-
-                if (o instanceof CTTable) {
-                    DrawingTable table = new DrawingTable((CTTable) o);
-
-                    for (DrawingTableRow row : table.getRows()) {
-                        for (DrawingTableCell cell : row.getCells()) {
-                            DrawingTextBody textBody = cell.getTextBody();
-
-                            out.addAll(Arrays.asList(textBody.getParagraphs()));
-                        }
-                    }
-                }
-            }
-
-            c.dispose();
-        }
-
-        return out;
+       List<DrawingParagraph> paragraphs = new ArrayList<DrawingParagraph>();
+       for(DrawingTextBody textBody : getDrawingText()) {
+          paragraphs.addAll(Arrays.asList(textBody.getParagraphs()));
+       }
+       return paragraphs;
     }
 
