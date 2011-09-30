@@ -1,0 +1,46 @@
+    static Sttb read( int cDataLength, byte[] buffer, int startOffset )
+    {
+        short ffff = LittleEndian.getShort( buffer, startOffset );
+        int offset = startOffset + 2;
+
+        if ( ffff != (short) 0xffff )
+        {
+            // Non-extended character Pascal strings
+            throw new UnsupportedOperationException(
+                    "Non-extended character Pascal strings are not supported right now. "
+                            + "Please, contact POI developers for update." );
+        }
+        // strings are extended character strings
+
+        int cData = cDataLength == 2 ? LittleEndian.getUShort( buffer, offset )
+                : LittleEndian.getInt( buffer, offset );
+        offset += cDataLength;
+
+        Sttb sttb = new Sttb();
+        sttb.cDataLength = cDataLength;
+        sttb.cbExtra = LittleEndian.getUShort( buffer, offset );
+        offset += 2;
+
+        sttb.data = new String[cData];
+        sttb.extraData = new byte[cData][];
+
+        for ( int i = 0; i < cData; i++ )
+        {
+            int cchData = LittleEndian.getShort( buffer, offset );
+            offset += 2;
+
+            if ( cchData < 0 )
+                continue;
+
+            sttb.data[i] = StringUtil
+                    .getFromUnicodeLE( buffer, offset, cchData );
+            offset += cchData * 2;
+
+            sttb.extraData[i] = LittleEndian.getByteArray( buffer, offset,
+                    sttb.cbExtra );
+            offset += sttb.cbExtra;
+        }
+
+        return sttb;
+    }
+

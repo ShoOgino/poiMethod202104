@@ -1,0 +1,62 @@
+    static void write( Sttb sttb, HWPFOutputStream tableStream )
+            throws IOException
+    {
+        final int headerSize = sttb.cDataLength == 2 ? 6 : 8;
+
+        byte[] header = new byte[headerSize];
+        LittleEndian.putShort( header, 0, (short) 0xffff );
+
+        if ( sttb.data == null || sttb.data.length == 0 )
+        {
+            if ( sttb.cDataLength == 4 )
+            {
+                LittleEndian.putInt( header, 2, 0 );
+                LittleEndian.putUShort( header, 6, sttb.cbExtra );
+                tableStream.write( header );
+                return;
+            }
+
+            LittleEndian.putUShort( header, 2, 0 );
+            LittleEndian.putUShort( header, 4, sttb.cbExtra );
+            tableStream.write( header );
+            return;
+        }
+
+        if ( sttb.cDataLength == 4 )
+        {
+            LittleEndian.putInt( header, 2, sttb.data.length );
+            LittleEndian.putUShort( header, 6, sttb.cbExtra );
+            tableStream.write( header );
+        }
+        else
+        {
+            LittleEndian.putUShort( header, 2, sttb.data.length );
+            LittleEndian.putUShort( header, 4, sttb.cbExtra );
+            tableStream.write( header );
+        }
+
+        for ( int i = 0; i < sttb.data.length; i++ )
+        {
+            String entry = sttb.data[i];
+            if ( entry == null )
+            {
+                // is it correct?
+                tableStream.write( new byte[] { -1, 0 } );
+                continue;
+            }
+
+            byte[] buf = new byte[entry.length() * 2 + sttb.cbExtra + 2];
+
+            LittleEndian.putShort( buf, 0, (short) entry.length() );
+            StringUtil.putUnicodeLE( entry, buf, 2 );
+
+            if ( sttb.extraData != null && i < sttb.extraData.length
+                    && sttb.extraData[i] != null )
+                System.arraycopy( sttb.extraData[i], 0, buf,
+                        entry.length() * 2,
+                        Math.min( sttb.extraData[i].length, sttb.cbExtra ) );
+
+            tableStream.write( buf );
+        }
+    }
+
