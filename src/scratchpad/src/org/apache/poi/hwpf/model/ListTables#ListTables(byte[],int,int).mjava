@@ -1,4 +1,4 @@
-  public ListTables(byte[] tableStream, int lstOffset, int lfoOffset)
+  public ListTables(byte[] tableStream, int lstOffset, final int lfoOffset)
   {
     // get the list data
     int length = LittleEndian.getShort(tableStream, lstOffset);
@@ -20,26 +20,49 @@
       }
     }
 
-    // now get the list format overrides. The size is an int unlike the LST size
-    length = LittleEndian.getInt(tableStream, lfoOffset);
-    lfoOffset += LittleEndian.INT_SIZE;
-    int lfolvlOffset = lfoOffset + (LIST_FORMAT_OVERRIDE_SIZE * length);
-    for (int x = 0; x < length; x++)
-    {
-      ListFormatOverride lfo = new ListFormatOverride(tableStream, lfoOffset);
-      lfoOffset += LIST_FORMAT_OVERRIDE_SIZE;
-      int num = lfo.numOverrides();
-      for (int y = 0; y < num; y++)
-      {
-        while(tableStream[lfolvlOffset] == -1)
         {
-          lfolvlOffset++;
+            /*
+             * The PlfLfo structure contains the list format override data for
+             * the document. -- Page 424 of 621. [MS-DOC] -- v20110315 Word
+             * (.doc) Binary File Format
+             */
+            int offset = lfoOffset;
+
+            /*
+             * lfoMac (4 bytes): An unsigned integer that specifies the count of
+             * elements in both the rgLfo and rgLfoData arrays. -- Page 424 of
+             * 621. [MS-DOC] -- v20110315 Word (.doc) Binary File Format
+             */
+            long lfoMac = LittleEndian.getUInt( tableStream, offset );
+            offset += LittleEndian.INT_SIZE;
+
+            /*
+             * An array of LFO structures. The number of elements in this array
+             * is specified by lfoMac. -- Page 424 of 621. [MS-DOC] -- v20110315
+             * Word (.doc) Binary File Format
+             */
+            for ( int x = 0; x < lfoMac; x++ )
+            {
+                ListFormatOverride lfo = new ListFormatOverride( tableStream,
+                        offset );
+                offset += LFO.getSize();
+                _overrideList.add( lfo );
+            }
+
+            /*
+             * An array of LFOData that is parallel to rgLfo. The number of
+             * elements that are contained in this array is specified by lfoMac.
+             * -- Page 424 of 621. [MS-DOC] -- v20110315 Word (.doc) Binary File
+             * Format
+             */
+            for ( int x = 0; x < lfoMac; x++ )
+            {
+                ListFormatOverride lfo = _overrideList.get( x );
+                LFOData lfoData = new LFOData( tableStream, offset,
+                        lfo.numOverrides() );
+                lfo.setLfoData( lfoData );
+                offset += lfoData.getSizeInBytes();
+            }
         }
-        ListFormatOverrideLevel lfolvl = new ListFormatOverrideLevel(tableStream, lfolvlOffset);
-        lfo.setOverride(y, lfolvl);
-        lfolvlOffset += lfolvl.getSizeInBytes();
-      }
-      _overrideList.add(lfo);
     }
-  }
 
