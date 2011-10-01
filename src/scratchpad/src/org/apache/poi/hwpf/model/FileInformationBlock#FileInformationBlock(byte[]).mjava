@@ -7,6 +7,12 @@
         offset = FibBase.getSize();
         assert offset == 32;
 
+        if ( _fibBase.isFEncrypted() )
+        {
+            throw new EncryptedDocumentException(
+                    "Cannot process encrypted word file" );
+        }
+
         _csw = LittleEndian.getUShort( mainDocument, offset );
         offset += LittleEndian.SHORT_SIZE;
         assert offset == 34;
@@ -19,12 +25,60 @@
         offset += LittleEndian.SHORT_SIZE;
         assert offset == 64;
 
+        if ( _fibBase.getNFib() < 105 )
+        {
+            _fibRgLw = new FibRgLw95( mainDocument, offset );
+            offset += FibRgLw97.getSize();
+
+            // magic number, run tests after changes
+            _cbRgFcLcb = 74;
+
+            // skip fibRgFcLcbBlob (read later at fillVariableFields)
+            offset += _cbRgFcLcb * LittleEndian.INT_SIZE * 2;
+
+            _cswNew = LittleEndian.getUShort( mainDocument, offset );
+            offset += LittleEndian.SHORT_SIZE;
+
+            _cswNew = 0;
+            _nFibNew = -1;
+            _fibRgCswNew = new byte[0];
+
+            return;
+        }
+
         _fibRgLw = new FibRgLw97( mainDocument, offset );
         offset += FibRgLw97.getSize();
         assert offset == 152;
-        
+
         _cbRgFcLcb = LittleEndian.getUShort( mainDocument, offset );
         offset += LittleEndian.SHORT_SIZE;
         assert offset == 154;
+
+        // skip fibRgFcLcbBlob (read later at fillVariableFields)
+        offset += _cbRgFcLcb * LittleEndian.INT_SIZE * 2;
+
+        _cswNew = LittleEndian.getUShort( mainDocument, offset );
+        offset += LittleEndian.SHORT_SIZE;
+
+        if ( _cswNew != 0 )
+        {
+            _nFibNew = LittleEndian.getUShort( mainDocument, offset );
+            offset += LittleEndian.SHORT_SIZE;
+
+            // first short is already read as _nFibNew
+            final int fibRgCswNewLength = ( _cswNew - 1 )
+                    * LittleEndian.SHORT_SIZE;
+            _fibRgCswNew = new byte[fibRgCswNewLength];
+            LittleEndian.getByteArray( mainDocument, offset, fibRgCswNewLength );
+            offset += fibRgCswNewLength;
+        }
+        else
+        {
+            _nFibNew = -1;
+            _fibRgCswNew = new byte[0];
+        }
+
+        assertCbRgFcLcb();
+        assertCswNew();
     }
 
