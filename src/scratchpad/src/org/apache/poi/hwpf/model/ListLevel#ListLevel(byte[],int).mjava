@@ -13,19 +13,48 @@
         System.arraycopy( buf, offset, _grpprlChpx, 0, _lvlf.getCbGrpprlChpx() );
         offset += _lvlf.getCbGrpprlChpx();
 
-        int numberTextLength = LittleEndian.getShort( buf, offset );
-        /* sometimes numberTextLength<0 */
-        /* by derjohng */
-        if ( numberTextLength > 0 )
+        /*
+         * "If this level uses bullets (see lvlf.nfc), the cch field of this Xst
+         * MUST be equal to 0x0001, and this MUST NOT contain any placeholders."
+         * -- page 389 of 621 -- [MS-DOC] -- v20110315 Word (.doc) Binary File
+         * Format
+         */
+        if ( _lvlf.getNfc() == 0x17 )
         {
-            _numberText = new char[numberTextLength];
+            int numberTextLength = LittleEndian.getShort( buf, offset );
             offset += LittleEndian.SHORT_SIZE;
-            for ( int x = 0; x < numberTextLength; x++ )
+
+            if ( numberTextLength != 1 )
             {
-                _numberText[x] = (char) LittleEndian.getShort( buf, offset );
-                offset += LittleEndian.SHORT_SIZE;
+                logger.log( POILogger.WARN, "LVL at offset ",
+                        Integer.valueOf( originalOffset ),
+                        " has nfc == 0x17 (bullets), but cch != 1 (",
+                        Integer.valueOf( numberTextLength ), ")" );
+            }
+
+            _xst = new char[] { (char) LittleEndian.getShort( buf, offset ) };
+            offset += LittleEndian.SHORT_SIZE;
+        }
+        else
+        {
+            int numberTextLength = LittleEndian.getShort( buf, offset );
+            offset += LittleEndian.SHORT_SIZE;
+
+            if ( numberTextLength > 0 )
+            {
+                _xst = new char[numberTextLength];
+                for ( int x = 0; x < numberTextLength; x++ )
+                {
+                    _xst[x] = (char) LittleEndian.getShort( buf, offset );
+                    offset += LittleEndian.SHORT_SIZE;
+                }
+            }
+            else
+            {
+                /* sometimes numberTextLength<0 */
+                /* by derjohng */
+                _xst = new char[] {};
             }
         }
-
     }
 
