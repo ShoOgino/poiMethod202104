@@ -1,0 +1,69 @@
+  public SectionTable(byte[] documentStream, byte[] tableStream, int offset,
+                      int size, int fcMin,
+                      TextPieceTable tpt, int mainLength)
+  {
+    PlexOfCps sedPlex = new PlexOfCps(tableStream, offset, size, SED_SIZE);
+    this.tpt = tpt;
+    this._text = tpt.getTextPieces();
+
+    int length = sedPlex.length();
+
+    for (int x = 0; x < length; x++)
+    {
+      GenericPropertyNode node = sedPlex.getProperty(x);
+      SectionDescriptor sed = new SectionDescriptor(node.getBytes(), 0);
+
+            int fileOffset = sed.getFc();
+            // int startAt = CPtoFC(node.getStart());
+            // int endAt = CPtoFC(node.getEnd());
+            int startAt = node.getStart();
+            int endAt = node.getEnd();
+
+      // check for the optimization
+      if (fileOffset == 0xffffffff)
+      {
+        _sections.add(new SEPX(sed, startAt, endAt, new byte[0]));
+      }
+      else
+      {
+        // The first short at the offset is the size of the grpprl.
+        int sepxSize = LittleEndian.getShort(documentStream, fileOffset);
+        byte[] buf = new byte[sepxSize];
+        fileOffset += LittleEndian.SHORT_SIZE;
+        System.arraycopy(documentStream, fileOffset, buf, 0, buf.length);
+        _sections.add(new SEPX(sed, startAt, endAt, buf));
+      }
+    }
+
+    // Some files seem to lie about their unicode status, which
+    //  is very very pesky. Try to work around these, but this
+    //  is getting on for black magic...
+    int mainEndsAt = mainLength;
+    boolean matchAt = false;
+    boolean matchHalf = false;
+    for(int i=0; i<_sections.size(); i++) {
+    	SEPX s = _sections.get(i);
+    	if(s.getEnd() == mainEndsAt) {
+    		matchAt = true;
+    	} else if(s.getEnd() == mainEndsAt || s.getEnd() == mainEndsAt-1) {
+    		matchHalf = true;
+    	}
+    }
+    if(! matchAt && matchHalf) {
+    	_logger.log(POILogger.WARN, "Your document seemed to be mostly unicode, but the section definition was in bytes! Trying anyway, but things may well go wrong!");
+        for(int i=0; i<_sections.size(); i++) {
+        	SEPX s = _sections.get(i);
+            GenericPropertyNode node = sedPlex.getProperty(i);
+
+                // s.setStart( CPtoFC(node.getStart()) );
+                // s.setEnd( CPtoFC(node.getEnd()) );
+                int startAt = node.getStart();
+                int endAt = node.getEnd();
+                s.setStart( startAt );
+                s.setEnd( endAt );
+        }
+    }
+
+    Collections.sort( _sections, PropertyNode.StartComparator.instance );
+  }
+
