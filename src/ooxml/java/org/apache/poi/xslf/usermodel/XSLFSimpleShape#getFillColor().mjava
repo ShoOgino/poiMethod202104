@@ -1,0 +1,36 @@
+    /**
+     * @return solid fill color of null if not set
+     */
+    public Color getFillColor() {
+        final XSLFTheme theme = _sheet.getTheme();
+
+        PropertyFetcher<Color> fetcher = new PropertyFetcher<Color>(){
+            public boolean fetch(XSLFSimpleShape shape){
+                CTShapeProperties spPr = shape.getSpPr();
+                if (spPr.isSetNoFill()) {
+                    setValue(null);
+                    return true;
+                }
+                if (spPr.isSetSolidFill()) {
+                    setValue( theme.getSolidFillColor(spPr.getSolidFill()) );
+                    return true;
+                }
+                return false;
+            }
+        };
+        fetchShapeProperty(fetcher);
+
+        Color color = fetcher.getValue();
+        if(color == null){
+            // fill color was not found, check if it is defined in the theme
+            CTShapeStyle style = getSpStyle();
+            if (style != null) {
+                CTSchemeColor schemeColor = style.getFillRef().getSchemeClr();
+                if (schemeColor != null) {
+                    color = theme.getSchemeColor(schemeColor);
+                }
+            }
+        }
+        return color;
+    }
+

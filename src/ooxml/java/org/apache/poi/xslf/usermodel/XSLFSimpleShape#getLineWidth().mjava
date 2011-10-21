@@ -1,8 +1,34 @@
-    public double getLineWidth(){
-        CTShapeProperties spPr = getSpPr();
-        CTLineProperties ln = spPr.getLn();
-        if(ln == null || !ln.isSetW()) return 0;
+    public double getLineWidth() {
+        PropertyFetcher<Double> fetcher = new PropertyFetcher<Double>(){
+            public boolean fetch(XSLFSimpleShape shape){
+                CTShapeProperties spPr = shape.getSpPr();
+                CTLineProperties ln = spPr.getLn();
+                if (ln != null) {
+                    if (ln.isSetNoFill()) {
+                        setValue(0.);
+                        return true;
+                    }
 
-        return Units.toPoints(ln.getW());
+                    if (ln.isSetW()) {
+                        setValue( Units.toPoints(ln.getW()) );
+                        return true;
+                    }
+                }
+                return false;
+            }
+        };
+        fetchShapeProperty(fetcher);
+
+        double lineWidth = 0;
+        if(fetcher.getValue() == null) {
+            CTLineProperties defaultLn = getDefaultLineProperties();
+            if (defaultLn != null) {
+                if (defaultLn.isSetW()) lineWidth = Units.toPoints(defaultLn.getW());
+            }
+        } else {
+            lineWidth = fetcher.getValue();
+        }
+
+        return lineWidth;
     }
 

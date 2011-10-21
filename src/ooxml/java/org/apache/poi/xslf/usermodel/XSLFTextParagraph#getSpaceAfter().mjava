@@ -9,12 +9,19 @@
      * @return the vertical white space after the paragraph
      */
     public double getSpaceAfter(){
-        CTTextParagraphProperties pr = _p.getPPr();
-        if(pr == null || !pr.isSetSpcAft()) return 0; // TODO fetch from master
+        ParagraphPropertyFetcher<Double> fetcher = new ParagraphPropertyFetcher<Double>(getLevel()){
+            public boolean fetch(CTTextParagraphProperties props){
+                if(props.isSetSpcAft()){
+                    CTTextSpacing spc = props.getSpcAft();
 
-        CTTextSpacing spc = pr.getSpcAft();
-        if(spc.isSetSpcPct()) return spc.getSpcPct().getVal()*0.001;
-        else if (spc.isSetSpcPts()) return -spc.getSpcPts().getVal()*0.01;
-        else return 0;
+                    if(spc.isSetSpcPct()) setValue( spc.getSpcPct().getVal()*0.001 );
+                    else if (spc.isSetSpcPts()) setValue( -spc.getSpcPts().getVal()*0.01 );
+                    return true;
+                }
+                return false;
+            }
+        };
+        fetchParagraphProperty(fetcher);
+        return fetcher.getValue() == null ? 0 : fetcher.getValue();
     }
 

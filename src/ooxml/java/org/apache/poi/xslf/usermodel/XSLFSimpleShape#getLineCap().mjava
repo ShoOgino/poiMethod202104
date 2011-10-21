@@ -1,8 +1,30 @@
-    public LineCap getLineCap(){
-        CTShapeProperties spPr = getSpPr();
-        CTLineProperties ln = spPr.getLn();
-        if(ln == null || !ln.isSetCap()) return null;
+    public LineCap getLineCap() {
+        PropertyFetcher<LineCap> fetcher = new PropertyFetcher<LineCap>(){
+            public boolean fetch(XSLFSimpleShape shape){
+                CTShapeProperties spPr = shape.getSpPr();
+                CTLineProperties ln = spPr.getLn();
+                if (ln != null) {
+                    STLineCap.Enum stCap = ln.getCap();
+                    if (stCap != null) {
+                        setValue( LineCap.values()[stCap.intValue() - 1] );
+                        return true;
+                    }
+                }
+                return false;
+            }
+        };
+        fetchShapeProperty(fetcher);
 
-        return LineCap.values()[ln.getCap().intValue() - 1];
+        LineCap cap = fetcher.getValue();
+        if(cap == null){
+            CTLineProperties defaultLn = getDefaultLineProperties();
+            if (defaultLn != null) {
+                STLineCap.Enum stCap = defaultLn.getCap();
+                if (stCap != null) {
+                    cap = LineCap.values()[stCap.intValue() - 1];
+                }
+            }
+        }
+        return cap;
     }
 

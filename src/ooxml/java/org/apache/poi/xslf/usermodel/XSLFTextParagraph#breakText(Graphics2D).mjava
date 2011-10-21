@@ -1,0 +1,60 @@
+    void breakText(Graphics2D graphics){
+        _lines = new ArrayList<TextFragment>();
+
+        AttributedString at = getAttributedString();
+        AttributedCharacterIterator it = at.getIterator();
+        if(it.getBeginIndex() == it.getEndIndex()) {
+            return;
+        }
+        LineBreakMeasurer measurer = new LineBreakMeasurer(it, graphics.getFontRenderContext());
+        for (;;) {
+            int startIndex = measurer.getPosition();
+            double wrappingWidth = getWrappingWidth() + 1; // add a pixel to compensate rounding errors
+            TextLayout layout = measurer.nextLayout((float)wrappingWidth, it.getEndIndex(), true);
+             if (layout == null) {
+                 // layout can be null if the entire word at the current position
+                 // does not fit within the wrapping width. Try with requireNextWord=false.
+                 layout = measurer.nextLayout((float)wrappingWidth, it.getEndIndex(), false);
+             }
+
+            int endIndex = measurer.getPosition();
+
+            if(getTextAlign() == TextAlign.JUSTIFY) {
+                layout = layout.getJustifiedLayout((float)wrappingWidth);
+            }
+            
+            AttributedString str = new AttributedString(it, startIndex, endIndex);
+            TextFragment line = new TextFragment(layout, str);
+            _lines.add(line);
+
+            if(endIndex == it.getEndIndex()) break;
+        }
+
+        if(isBullet()) {
+            String buCharacter = getBulletCharacter();
+            String buFont = getBulletFont();
+            if(buCharacter != null && buFont != null && _lines.size() > 0) {
+                AttributedString str = new AttributedString(buCharacter);
+
+                TextFragment firstLine = _lines.get(0);
+                AttributedCharacterIterator bit = firstLine._str.getIterator();
+
+                Color buColor = getBulletFontColor();
+                str.addAttribute(TextAttribute.FOREGROUND, buColor == null ?
+                        bit.getAttribute(TextAttribute.FOREGROUND) : buColor);
+                str.addAttribute(TextAttribute.FAMILY, buFont);
+
+                double fontSize = (Double)bit.getAttribute(TextAttribute.SIZE);
+                double buSz = getBulletFontSize();
+                if(buSz > 0) fontSize *= buSz* 0.01;
+                else fontSize = -buSz;
+
+                str.addAttribute(TextAttribute.SIZE, fontSize);
+
+                TextLayout layout = new TextLayout(str.getIterator(), graphics.getFontRenderContext());
+                _bullet = new TextFragment(layout, str);
+            }
+        }
+
+    }
+

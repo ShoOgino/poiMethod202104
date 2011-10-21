@@ -1,9 +1,27 @@
     /**
-     * @return  font family or null if niot set
+     * @return  font family or null if not set
      */
     public String getFontFamily(){
-        if(!_r.isSetRPr() || !_r.getRPr().isSetLatin()) return null;
+        final XSLFTheme theme = _p.getParentShape().getSheet().getTheme();
 
-        return _r.getRPr().getLatin().getTypeface();
+        CharacterPropertyFetcher<String> visitor = new CharacterPropertyFetcher<String>(_p.getLevel()){
+            public boolean fetch(CTTextCharacterProperties props){
+                CTTextFont font = props.getLatin();
+                if(font != null){
+                    String typeface = font.getTypeface();
+                    if("+mj-lt".equals(typeface)) {
+                        typeface = theme.getMajorFont();
+                    } else if ("+mn-lt".equals(typeface)){
+                        typeface = theme.getMinorFont();
+                    }
+                    setValue(typeface);
+                    return true;
+                }
+                return false;
+            }
+        };
+        fetchCharacterProperty(visitor);
+
+        return  visitor.getValue();
     }
 

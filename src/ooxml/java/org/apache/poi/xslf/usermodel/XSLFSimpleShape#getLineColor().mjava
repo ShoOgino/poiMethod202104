@@ -1,9 +1,37 @@
-    public Color getLineColor(){
-        CTShapeProperties spPr = getSpPr();
-        if(!spPr.isSetLn() || !spPr.getLn().isSetSolidFill()) return null;
+    public Color getLineColor() {
+        final XSLFTheme theme = _sheet.getTheme();
 
-        CTSRgbColor rgb = spPr.getLn().getSolidFill().getSrgbClr();
-        byte[] val = rgb.getVal();
-        return new Color(0xFF & val[0], 0xFF & val[1], 0xFF & val[2]);
+        PropertyFetcher<Color> fetcher = new PropertyFetcher<Color>(){
+            public boolean fetch(XSLFSimpleShape shape){
+                CTShapeProperties spPr = shape.getSpPr();
+                CTLineProperties ln = spPr.getLn();
+                if (ln != null) {
+                    if (ln.isSetNoFill()) {
+                        setValue(null);
+                        return true;
+                    }
+                    CTSolidColorFillProperties solidLine = ln.getSolidFill();
+                    if (solidLine != null) {
+                        setValue( theme.getSolidFillColor(ln.getSolidFill()) );
+                        return true;
+                    }
+                }
+                return false;
+            }
+        };
+        fetchShapeProperty(fetcher);
+
+        Color color = fetcher.getValue();
+        if(color == null){
+            // line color was not found, check if it is defined in the theme
+            CTShapeStyle style = getSpStyle();
+            if (style != null) {
+                CTSchemeColor schemeColor = style.getLnRef().getSchemeClr();
+                if (schemeColor != null) {
+                    color = theme.getSchemeColor(schemeColor);
+                }
+            }
+        }
+        return color;
     }
 

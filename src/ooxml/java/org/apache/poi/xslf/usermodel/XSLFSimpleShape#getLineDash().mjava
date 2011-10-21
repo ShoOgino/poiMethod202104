@@ -1,9 +1,31 @@
-    public LineDash getLineDash(){
-        CTShapeProperties spPr = getSpPr();
-        CTLineProperties ln = spPr.getLn();
-        if(ln == null || !ln.isSetPrstDash()) return null;
+    public LineDash getLineDash() {
 
-        CTPresetLineDashProperties dash = ln.getPrstDash();
-        return LineDash.values()[dash.getVal().intValue() - 1];
+        PropertyFetcher<LineDash> fetcher = new PropertyFetcher<LineDash>(){
+            public boolean fetch(XSLFSimpleShape shape){
+                CTShapeProperties spPr = shape.getSpPr();
+                CTLineProperties ln = spPr.getLn();
+                if (ln != null) {
+                    CTPresetLineDashProperties ctDash = ln.getPrstDash();
+                    if (ctDash != null) {
+                        setValue( LineDash.values()[ctDash.getVal().intValue() - 1] );
+                        return true;
+                    }
+                }
+                return false;
+            }
+        };
+        fetchShapeProperty(fetcher);
+
+        LineDash dash = fetcher.getValue();
+        if(dash == null){
+            CTLineProperties defaultLn = getDefaultLineProperties();
+            if (defaultLn != null) {
+                CTPresetLineDashProperties ctDash = defaultLn.getPrstDash();
+                if (ctDash != null) {
+                    dash = LineDash.values()[ctDash.getVal().intValue() - 1];
+                }
+            }
+        }
+        return dash;
     }
 

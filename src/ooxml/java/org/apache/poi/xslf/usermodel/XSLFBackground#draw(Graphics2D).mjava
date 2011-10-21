@@ -1,0 +1,30 @@
+    public void draw(Graphics2D graphics) {
+        Dimension pg = getSheet().getSlideShow().getPageSize();
+        Rectangle anchor = new Rectangle(0, 0, pg.width, pg.height);
+        CTBackgroundProperties pr = ((CTBackground) getXmlObject()).getBgPr();
+        if (pr == null) return;
+
+        XSLFTheme theme = getSheet().getTheme();
+        if (pr.isSetSolidFill()) {
+            Color color = theme.getSolidFillColor(pr.getSolidFill());
+            graphics.setPaint(color);
+            graphics.fill(anchor);
+        }
+        if (pr.isSetBlipFill()) {
+
+            String blipId = pr.getBlipFill().getBlip().getEmbed();
+            PackagePart p = getSheet().getPackagePart();
+            PackageRelationship rel = p.getRelationship(blipId);
+            if (rel != null) {
+                try {
+                    BufferedImage img = ImageIO.read(p.getRelatedPart(rel).getInputStream());
+                    graphics.drawImage(img, (int) anchor.getX(), (int) anchor.getY(),
+                            (int) anchor.getWidth(), (int) anchor.getHeight(), null);
+                }
+                catch (Exception e) {
+                    return;
+                }
+            }
+        }
+    }
+

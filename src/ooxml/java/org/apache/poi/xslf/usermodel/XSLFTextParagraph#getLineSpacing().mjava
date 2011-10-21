@@ -9,12 +9,19 @@
      * @return the vertical line spacing.
      */
     public double getLineSpacing(){
-        CTTextParagraphProperties pr = _p.getPPr();
-        if(pr == null || !pr.isSetLnSpc()) return 100; // TODO fetch from master
+        ParagraphPropertyFetcher<Double> fetcher = new ParagraphPropertyFetcher<Double>(getLevel()){
+            public boolean fetch(CTTextParagraphProperties props){
+                if(props.isSetLnSpc()){
+                    CTTextSpacing spc = props.getLnSpc();
 
-        CTTextSpacing spc = pr.getLnSpc();
-        if(spc.isSetSpcPct()) return spc.getSpcPct().getVal()*0.001;
-        else if (spc.isSetSpcPts()) return -spc.getSpcPts().getVal()*0.01;
-        else return 100;
+                    if(spc.isSetSpcPct()) setValue( spc.getSpcPct().getVal()*0.001 );
+                    else if (spc.isSetSpcPts()) setValue( -spc.getSpcPts().getVal()*0.01 );
+                    return true;
+                }
+                return false;
+            }
+        };
+        fetchParagraphProperty(fetcher);
+        return fetcher.getValue() == null ? 100 : fetcher.getValue();
     }
 

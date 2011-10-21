@@ -1,0 +1,40 @@
+    /**
+     * TODO get rid of code duplication. Re-write to use xpath instead of beans
+     */
+    Color getPresetColor(CTPresetColor presetColor){
+        String colorName = presetColor.getVal().toString();
+        Color color;
+        try {
+            color = (Color)Color.class.getField(colorName).get(null);
+        } catch (Exception e){
+            color = Color.black;
+        }
+        if(presetColor.sizeOfAlphaArray() > 0){
+            int aval = presetColor.getAlphaArray(0).getVal();
+            int alpha =  Math.round(255 * aval / 100000f);
+            color = new Color(color.getRed(), color.getGreen(), color.getBlue(), alpha); 
+        }
+
+        int lumMod = 100, lumOff = 0;
+        if (presetColor.sizeOfLumModArray() > 0) {
+            lumMod = presetColor.getLumModArray(0).getVal() / 1000;
+        }
+        if (presetColor.sizeOfLumOffArray() > 0) {
+            lumOff = presetColor.getLumOffArray(0).getVal() / 1000;
+        }
+        if(presetColor.sizeOfShadeArray() > 0) {
+            lumMod = presetColor.getShadeArray(0).getVal() / 1000;
+        }
+        color = modulateLuminanace(color, lumMod, lumOff);
+
+        if(presetColor.sizeOfTintArray() > 0) {
+            float tint = presetColor.getTintArray(0).getVal() / 100000f;
+            int red = Math.round(tint * color.getRed() + (1 - tint) * 255);
+            int green = Math.round(tint * color.getGreen() + (1 - tint) * 255);
+            int blue = Math.round(tint * color.getBlue() + (1 - tint) * 255);
+            color = new Color(red, green, blue);
+        }
+
+        return color;
+    }
+
