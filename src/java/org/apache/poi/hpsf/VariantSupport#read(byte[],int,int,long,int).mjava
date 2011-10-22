@@ -14,13 +14,104 @@
      * @exception UnsupportedEncodingException if the specified codepage is not
      *            supported.
      * @see Variant
-     * @deprecated Use {@link #read(byte[],int,long,int)} instead
      */
-    @Deprecated
     public static Object read( final byte[] src, final int offset,
             final int length, final long type, final int codepage )
             throws ReadingNotSupportedException, UnsupportedEncodingException
     {
-        return read( src, offset, type, codepage );
+        TypedPropertyValue typedPropertyValue = new TypedPropertyValue(
+                (int) type, null );
+        int unpadded;
+        try {
+            unpadded = typedPropertyValue.readValue( src, offset );
+        } catch (UnsupportedOperationException exc) {
+            final byte[] v = new byte[length];
+            System.arraycopy( src, offset, v, 0, length );
+            throw new ReadingNotSupportedException( type, v );
+        }
+
+        switch ( (int) type )
+        {
+        case Variant.VT_EMPTY:
+        case Variant.VT_I4:
+        case Variant.VT_I8:
+        case Variant.VT_R8:
+            /*
+             * we have more property types that can be converted into Java
+             * objects, but current API need to be preserved, and it returns
+             * other types as byte arrays. In future major versions it shall be
+             * changed -- sergey
+             */
+            return typedPropertyValue.getValue();
+
+        case Variant.VT_I2:
+        {
+            /*
+             * also for backward-compatibility with prev. versions of POI
+             * --sergey
+             */
+            return Integer.valueOf( ( (Short) typedPropertyValue.getValue() )
+                    .intValue() );
+        }
+        case Variant.VT_FILETIME:
+        {
+            Filetime filetime = (Filetime) typedPropertyValue.getValue();
+            return Util.filetimeToDate( (int) filetime.getHigh(),
+                    (int) filetime.getLow() );
+        }
+        case Variant.VT_LPSTR:
+        {
+            CodePageString string = (CodePageString) typedPropertyValue
+                    .getValue();
+            return string.getJavaValue( codepage );
+        }
+        case Variant.VT_LPWSTR:
+        {
+            UnicodeString string = (UnicodeString) typedPropertyValue
+                    .getValue();
+            return string.toJavaString();
+        }
+        case Variant.VT_CF:
+        {
+            // if(l1 < 0) {
+            /**
+             * YK: reading the ClipboardData packet (VT_CF) is not quite
+             * correct. The size of the data is determined by the first four
+             * bytes of the packet while the current implementation calculates
+             * it in the Section constructor. Test files in Bugzilla 42726 and
+             * 45583 clearly show that this approach does not always work. The
+             * workaround below attempts to gracefully handle such cases instead
+             * of throwing exceptions.
+             * 
+             * August 20, 2009
+             */
+            // l1 = LittleEndian.getInt(src, o1); o1 += LittleEndian.INT_SIZE;
+            // }
+            // final byte[] v = new byte[l1];
+            // System.arraycopy(src, o1, v, 0, v.length);
+            // value = v;
+            // break;
+            ClipboardData clipboardData = (ClipboardData) typedPropertyValue
+                    .getValue();
+            return clipboardData.toByteArray();
+        }
+
+        case Variant.VT_BOOL:
+        {
+            VariantBool bool = (VariantBool) typedPropertyValue.getValue();
+            return Boolean.valueOf( bool.getValue() );
+        }
+
+        default:
+        {
+            /*
+             * it is not very good, but what can do without breaking current
+             * API? --sergey
+             */
+            final byte[] v = new byte[unpadded];
+            System.arraycopy( src, offset, v, 0, unpadded );
+            throw new ReadingNotSupportedException( type, v );
+        }
+        }
     }
 
