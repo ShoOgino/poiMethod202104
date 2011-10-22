@@ -41,16 +41,9 @@
             }
             case Variant.VT_LPSTR:
             {
-                final byte[] bytes =
-                    (codepage == -1 ?
-                    ((String) value).getBytes() :
-                    ((String) value).getBytes(codepageToEncoding(codepage)));
-                length = TypeWriter.writeUIntToStream(out, bytes.length + 1);
-                final byte[] b = new byte[bytes.length + 1];
-                System.arraycopy(bytes, 0, b, 0, bytes.length);
-                b[b.length - 1] = 0x00;
-                out.write(b);
-                length += b.length;
+                CodePageString codePageString = new CodePageString( (String) value,
+                        codepage );
+                length += codePageString.write( out );
                 break;
             }
             case Variant.VT_LPWSTR:
@@ -83,14 +76,13 @@
             }
             case Variant.VT_EMPTY:
             {
-                TypeWriter.writeUIntToStream(out, Variant.VT_EMPTY);
-                length = LittleEndianConsts.INT_SIZE;
+                length += TypeWriter.writeUIntToStream( out, Variant.VT_EMPTY );
                 break;
             }
             case Variant.VT_I2:
             {
-                TypeWriter.writeToStream(out, ((Integer) value).shortValue());
-                length = LittleEndianConsts.SHORT_SIZE;
+                length += TypeWriter.writeToStream( out,
+                        ( (Integer) value ).shortValue() );
                 break;
             }
             case Variant.VT_I4:
@@ -108,8 +100,7 @@
             }
             case Variant.VT_I8:
             {
-                TypeWriter.writeToStream(out, ((Long) value).longValue());
-                length = LittleEndianConsts.LONG_SIZE;
+                length += TypeWriter.writeToStream(out, ((Long) value).longValue());
                 break;
             }
             case Variant.VT_R8:
@@ -123,10 +114,8 @@
                 long filetime = Util.dateToFileTime((Date) value);
                 int high = (int) ((filetime >> 32) & 0x00000000FFFFFFFFL);
                 int low = (int) (filetime & 0x00000000FFFFFFFFL);
-                length += TypeWriter.writeUIntToStream
-                    (out, 0x0000000FFFFFFFFL & low);
-                length += TypeWriter.writeUIntToStream
-                    (out, 0x0000000FFFFFFFFL & high);
+                Filetime filetimeValue = new Filetime( low, high);
+                length += filetimeValue.write( out );
                 break;
             }
             default:
