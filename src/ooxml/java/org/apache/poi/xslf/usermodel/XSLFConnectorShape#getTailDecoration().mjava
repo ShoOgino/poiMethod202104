@@ -1,0 +1,54 @@
+    Shape getTailDecoration() {
+        LineEndLength tailLength = getLineTailLength();
+        LineEndWidth tailWidth = getLineTailWidth();
+
+        double lineWidth = getLineWidth();
+        Rectangle2D anchor = getAnchor();
+        double x2 = anchor.getX() + anchor.getWidth(),
+                y2 = anchor.getY() + anchor.getHeight();
+
+        double alpha = Math.atan(anchor.getHeight() / anchor.getWidth());
+
+        AffineTransform at = new AffineTransform();
+        Shape shape = null;
+        Rectangle2D bounds;
+        double scaleY = Math.pow(2, tailWidth.ordinal());
+        double scaleX = Math.pow(2, tailLength.ordinal());
+        switch (getLineHeadDecoration()) {
+            case OVAL:
+                shape = new Ellipse2D.Double(0, 0, lineWidth * scaleX, lineWidth * scaleY);
+                bounds = shape.getBounds2D();
+                at.translate(x2 - bounds.getWidth() / 2, y2 - bounds.getHeight() / 2);
+                at.rotate(alpha, bounds.getX() + bounds.getWidth() / 2, bounds.getY() + bounds.getHeight() / 2);
+                break;
+            case ARROW:
+                GeneralPath arrow = new GeneralPath();
+                arrow.moveTo(-lineWidth * 3, -lineWidth * 2);
+                arrow.lineTo(0, 0);
+                arrow.lineTo(-lineWidth * 3, lineWidth * 2);
+                shape = arrow;
+                at.translate(x2, y2);
+                at.rotate(alpha);
+                break;
+            case TRIANGLE:
+                scaleY = tailWidth.ordinal() + 1;
+                scaleX = tailLength.ordinal() + 1;
+                GeneralPath triangle = new GeneralPath();
+                triangle.moveTo(-lineWidth * scaleX, -lineWidth * scaleY/2);
+                triangle.lineTo(0, 0);
+                triangle.lineTo(-lineWidth * scaleX, lineWidth * scaleY/2);
+                triangle.closePath();
+                shape = triangle;
+                at.translate(x2, y2);
+                at.rotate(alpha);
+                break;
+            default:
+                break;
+        }
+
+        if (shape != null) {
+            shape = at.createTransformedShape(shape);
+        }
+        return shape;
+    }
+

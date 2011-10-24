@@ -1,0 +1,54 @@
+    Shape getHeadDecoration() {
+        LineEndLength headLength = getLineHeadLength();
+        LineEndWidth headWidth = getLineHeadWidth();
+
+        double lineWidth = getLineWidth();
+        Rectangle2D anchor = getAnchor();
+        double x1 = anchor.getX(),
+                y1 = anchor.getY();
+
+        double alpha = Math.atan(anchor.getHeight() / anchor.getWidth());
+
+        AffineTransform at = new AffineTransform();
+        Shape shape = null;
+        Rectangle2D bounds;
+        double scaleY = 1;
+        double scaleX = 1;
+        switch (getLineHeadDecoration()) {
+            case OVAL:
+                scaleY = Math.pow(2, headWidth.ordinal());
+                scaleX = Math.pow(2, headLength.ordinal());
+                shape = new Ellipse2D.Double(0, 0, lineWidth * scaleX, lineWidth * scaleY);
+                break;
+            case STEALTH:
+            case ARROW:
+                GeneralPath arrow = new GeneralPath();
+                arrow.moveTo(lineWidth * 3 * scaleX, -lineWidth * scaleY * 2);
+                arrow.lineTo(0, 0);
+                arrow.lineTo(lineWidth * 3 * scaleX, lineWidth * scaleY * 2);
+                shape = arrow;
+                at.translate(x1, y1);
+                at.rotate(alpha);
+                break;
+            case TRIANGLE:
+                scaleY = headWidth.ordinal() + 1;
+                scaleX = headLength.ordinal() + 1;
+                GeneralPath triangle = new GeneralPath();
+                triangle.moveTo(lineWidth * scaleX, -lineWidth * scaleY/2);
+                triangle.lineTo(0, 0);
+                triangle.lineTo(lineWidth * scaleX, lineWidth * scaleY/2);
+                triangle.closePath();
+                shape = triangle;
+                at.translate(x1, y1);
+                at.rotate(alpha);
+                break;
+            default:
+                break;
+        }
+
+        if (shape != null) {
+            shape = at.createTransformedShape(shape);
+        }
+        return shape;
+    }
+
