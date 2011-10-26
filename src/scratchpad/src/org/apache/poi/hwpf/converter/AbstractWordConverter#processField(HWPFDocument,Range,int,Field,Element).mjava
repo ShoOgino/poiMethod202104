@@ -9,9 +9,7 @@
             if ( firstSubrange != null )
             {
                 String formula = firstSubrange.text();
-                Pattern pagerefPattern = Pattern
-                        .compile( "[ \\t\\r\\n]*PAGEREF ([^ ]*)[ \\t\\r\\n]*\\\\h[ \\t\\r\\n]*" );
-                Matcher matcher = pagerefPattern.matcher( formula );
+                Matcher matcher = PATTERN_PAGEREF.matcher( formula );
                 if ( matcher.find() )
                 {
                     String pageref = matcher.group( 1 );
@@ -59,14 +57,36 @@
             if ( firstSubrange != null )
             {
                 String formula = firstSubrange.text();
-                Pattern hyperlinkPattern = Pattern
-                        .compile( "[ \\t\\r\\n]*HYPERLINK \"(.*)\"[ \\t\\r\\n]*" );
-                Matcher matcher = hyperlinkPattern.matcher( formula );
-                if ( matcher.find() )
+                Matcher matcher = PATTERN_HYPERLINK_EXTERNAL.matcher( formula );
+                if ( matcher.matches() )
                 {
                     String hyperlink = matcher.group( 1 );
                     processHyperlink( wordDocument, currentBlock,
                             field.secondSubrange( parentRange ),
+                            currentTableLevel, hyperlink );
+                    return;
+                }
+                matcher.usePattern( PATTERN_HYPERLINK_LOCAL );
+                if ( matcher.matches() )
+                {
+                    String hyperlink = matcher.group( 1 );
+                    Range textRange = null;
+                    String text = matcher.group( 2 );
+                    if ( AbstractWordUtils.isNotEmpty( text ) )
+                    {
+                        textRange = new Range( firstSubrange.getStartOffset()
+                                + matcher.start( 2 ),
+                                firstSubrange.getStartOffset()
+                                        + matcher.end( 2 ), firstSubrange )
+                        {
+                            @Override
+                            public String toString()
+                            {
+                                return "Local hyperlink text";
+                            }
+                        };
+                    }
+                    processPageref( wordDocument, currentBlock, textRange,
                             currentTableLevel, hyperlink );
                     return;
                 }

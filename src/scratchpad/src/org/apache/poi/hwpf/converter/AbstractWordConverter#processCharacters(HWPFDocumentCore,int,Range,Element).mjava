@@ -35,17 +35,38 @@
             }
 
             // TODO: dead fields?
+            int skipUntil = -1;
             for ( int c = 0; c < range.numCharacterRuns(); c++ )
             {
                 CharacterRun characterRun = range.getCharacterRun( c );
                 if ( characterRun == null )
                     throw new AssertionError();
+                if ( characterRun.getStartOffset() < skipUntil )
+                    continue;
+                String text = characterRun.text();
+                if ( text == null || text.length() == 0
+                        || text.charAt( 0 ) != FIELD_BEGIN_MARK )
+                    continue;
+
                 Field aliveField = ( (HWPFDocument) wordDocument ).getFields()
                         .getFieldByStartOffset( FieldsDocumentPart.MAIN,
                                 characterRun.getStartOffset() );
                 if ( aliveField != null )
                 {
                     addToStructures( structures, new Structure( aliveField ) );
+                    skipUntil = aliveField.getFieldEndOffset() + 1;
+                }
+                else
+                {
+                    int[] separatorEnd = tryDeadField_lookupFieldSeparatorEnd(
+                            wordDocument, range, c );
+                    if ( separatorEnd != null )
+                    {
+                        addToStructures( structures, new Structure(
+                                characterRun.getStartOffset(),
+                                separatorEnd[1] + 1 ) );
+                        c = separatorEnd[1];
+                    }
                 }
             }
         }
