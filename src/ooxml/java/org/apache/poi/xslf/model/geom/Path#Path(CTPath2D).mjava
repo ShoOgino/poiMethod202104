@@ -1,0 +1,34 @@
+    public Path(CTPath2D spPath){
+        _fill = spPath.getFill() != STPathFillMode.NONE;
+        _stroke = spPath.getStroke();
+
+        commands = new ArrayList<PathCommand>();
+        for(XmlObject ch : spPath.selectPath("*")){
+            if(ch instanceof CTPath2DMoveTo){
+                CTAdjPoint2D pt = ((CTPath2DMoveTo)ch).getPt();
+                commands.add(new MoveToCommand(pt));
+            } else if (ch instanceof CTPath2DLineTo){
+                CTAdjPoint2D pt = ((CTPath2DLineTo)ch).getPt();
+                commands.add(new LineToCommand(pt));
+            } else if (ch instanceof CTPath2DArcTo){
+                CTPath2DArcTo arc = (CTPath2DArcTo)ch;
+                commands.add(new ArcToCommand(arc));
+            } else if (ch instanceof CTPath2DQuadBezierTo){
+                CTPath2DQuadBezierTo bez = ((CTPath2DQuadBezierTo)ch);
+                CTAdjPoint2D pt1 = bez.getPtArray(0);
+                CTAdjPoint2D pt2 = bez.getPtArray(1);
+                commands.add(new QuadToCommand(pt1, pt2));
+            } else if (ch instanceof CTPath2DCubicBezierTo){
+                CTPath2DCubicBezierTo bez = ((CTPath2DCubicBezierTo)ch);
+                CTAdjPoint2D pt1 = bez.getPtArray(0);
+                CTAdjPoint2D pt2 = bez.getPtArray(1);
+                CTAdjPoint2D pt3 = bez.getPtArray(2);
+                commands.add(new CurveToCommand(pt1, pt2, pt3));
+            } else if (ch instanceof CTPath2DClose){
+                commands.add(new ClosePathCommand());
+            }  else {
+                throw new IllegalStateException("Unsupported path segment: " + ch);
+            }
+        }
+    }
+
