@@ -1,0 +1,34 @@
+    public Paint getLinePaint(final Graphics2D graphics) {
+        final XSLFTheme theme = _sheet.getTheme();
+        final Color nofill = new Color(0,0,0,0);
+        PropertyFetcher<Paint> fetcher = new PropertyFetcher<Paint>(){
+            public boolean fetch(XSLFSimpleShape shape){
+                CTLineProperties spPr = shape.getSpPr().getLn();
+                if (spPr != null) {
+                    if (spPr.isSetNoFill()) {
+                        setValue(nofill); // use it as 'nofill' value
+                        return true;
+                    }
+                    Paint paint = getPaint(graphics, spPr);
+                    if (paint != null) {
+                        setValue( paint );
+                        return true;
+                    }
+                }
+                return false;
+
+            }
+        };
+        fetchShapeProperty(fetcher);
+
+        Paint color = fetcher.getValue();
+        if(color == null){
+            // line color was not found, check if it is defined in the theme
+            CTShapeStyle style = getSpStyle();
+            if (style != null) {
+                color = new XSLFColor(style.getLnRef(), theme).getColor();
+            }
+        }
+        return color == nofill ? null : color;
+    }
+

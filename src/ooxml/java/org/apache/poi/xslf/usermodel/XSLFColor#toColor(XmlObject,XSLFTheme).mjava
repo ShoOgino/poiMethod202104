@@ -1,0 +1,51 @@
+    static Color toColor(XmlObject obj, XSLFTheme theme) {
+        Color color = null;
+        for (XmlObject ch : obj.selectPath("*")) {
+            if (ch instanceof CTHslColor) {
+                CTHslColor hsl = (CTHslColor)ch;
+                int h = hsl.getHue2();
+                int s = hsl.getSat2();
+                int l = hsl.getLum2();
+                // is it correct ? 
+                color = Color.getHSBColor(h / 60000f, s / 100000f, l / 100000f);
+            } else if (ch instanceof CTPresetColor) {
+                CTPresetColor prst = (CTPresetColor)ch;
+                String colorName = prst.getVal().toString();
+                color = presetColors.get(colorName);
+            } else if (ch instanceof CTSchemeColor) {
+                CTSchemeColor schemeColor = (CTSchemeColor)ch;
+                String colorRef = schemeColor.getVal().toString();
+                // find referenced CTColor in the theme and convert it to java.awt.Color via a recursive call
+                CTColor ctColor = theme.getCTColor(colorRef);
+                if(ctColor != null) color = toColor(ctColor, null);
+                else {
+                    color = Color.black;
+                }
+            } else if (ch instanceof CTScRgbColor) {
+                // same as CTSRgbColor but with values expressed in percents
+                CTScRgbColor scrgb = (CTScRgbColor)ch;
+                int r = scrgb.getR();
+                int g = scrgb.getG();
+                int b = scrgb.getB();
+                color = new Color(255 * r / 100000, 255 * g / 100000, 255 * b / 100000);
+            } else if (ch instanceof CTSRgbColor) {
+                CTSRgbColor srgb = (CTSRgbColor)ch;
+                byte[] val = srgb.getVal();
+                color = new Color(0xFF & val[0], 0xFF & val[1], 0xFF & val[2]);
+            } else if (ch instanceof CTSystemColor) {
+                CTSystemColor sys = (CTSystemColor)ch;
+                if(sys.isSetLastClr()) {
+                    byte[] val = sys.getLastClr();
+                    color = new Color(0xFF & val[0], 0xFF & val[1], 0xFF & val[2]);
+                } else {
+                    // YK: color is a string like "menuText" or "windowText", we return black for such cases
+                    String colorName = sys.getVal().toString();
+                    color = Color.black;
+                }
+            } else {
+                throw new IllegalArgumentException("Unexpected color choice: " + ch.getClass());
+            }
+        }
+        return color;
+    }
+
