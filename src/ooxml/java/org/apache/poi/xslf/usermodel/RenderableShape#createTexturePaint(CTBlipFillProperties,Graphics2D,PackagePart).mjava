@@ -1,0 +1,33 @@
+    private Paint createTexturePaint(CTBlipFillProperties blipFill, Graphics2D graphics,
+            PackagePart parentPart){
+        Paint paint = null;
+        CTBlip blip = blipFill.getBlip();
+        String blipId = blip.getEmbed();
+        PackageRelationship rel = parentPart.getRelationship(blipId);
+        if (rel != null) {
+            XSLFImageRendener renderer = null;
+            if (graphics != null)
+                renderer = (XSLFImageRendener) graphics.getRenderingHint(XSLFRenderingHint.IMAGE_RENDERER);
+            if (renderer == null) renderer = new XSLFImageRendener();
+
+            try {
+                BufferedImage img = renderer.readImage(parentPart.getRelatedPart(rel));
+                if (blip.sizeOfAlphaModFixArray() > 0) {
+                    float alpha = blip.getAlphaModFixArray(0).getAmt() / 100000.f;
+                    AlphaComposite ac = AlphaComposite.getInstance(
+                            AlphaComposite.SRC_OVER, alpha);
+                    if (graphics != null) graphics.setComposite(ac);
+                }
+
+                if(img != null) {
+                    paint = new TexturePaint(
+                            img, new Rectangle2D.Double(0, 0, img.getWidth(), img.getHeight()));
+                }
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return paint;
+    }
+

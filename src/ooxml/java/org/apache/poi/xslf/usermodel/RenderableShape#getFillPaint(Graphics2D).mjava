@@ -1,0 +1,55 @@
+    /**
+     * fetch shape fill as a java.awt.Paint
+     *
+     * @return either Color or GradientPaint or TexturePaint or null
+     */
+    Paint getFillPaint(final Graphics2D graphics) {
+        PropertyFetcher<Paint> fetcher = new PropertyFetcher<Paint>() {
+            public boolean fetch(XSLFSimpleShape shape) {
+                CTShapeProperties spPr = shape.getSpPr();
+                if (spPr.isSetNoFill()) {
+                    setValue(RenderableShape.NO_PAINT); // use it as 'nofill' value
+                    return true;
+                }
+                Paint paint = getPaint(graphics, spPr, null);
+                if (paint != null) {
+                    setValue(paint);
+                    return true;
+                }
+                return false;
+            }
+        };
+        _shape.fetchShapeProperty(fetcher);
+
+        Paint paint = fetcher.getValue();
+        if (paint == null) {
+            // fill color was not found, check if it is defined in the theme
+            CTShapeStyle style = _shape.getSpStyle();
+            if (style != null) {
+                // get a reference to a fill style within the style matrix.
+                CTStyleMatrixReference fillRef = style.getFillRef();
+                // The idx attribute refers to the index of a fill style or
+                // background fill style within the presentation's style matrix, defined by the fmtScheme element.
+                // value of 0 or 1000 indicates no background,
+                // values 1-999 refer to the index of a fill style within the fillStyleLst element
+                // values 1001 and above refer to the index of a background fill style within the bgFillStyleLst element.
+                int idx = (int)fillRef.getIdx();
+                CTSchemeColor phClr = fillRef.getSchemeClr();
+                XSLFSheet sheet = _shape.getSheet();
+                XSLFTheme theme = sheet.getTheme();
+                XmlObject fillProps = null;
+                if(idx >= 1 && idx <= 999){
+                    fillProps = theme.getXmlObject().
+                            getThemeElements().getFmtScheme().getFillStyleLst().selectPath("*")[idx - 1];
+                } else if (idx >= 1001 ){
+                    fillProps = theme.getXmlObject().
+                            getThemeElements().getFmtScheme().getBgFillStyleLst().selectPath("*")[idx - 1001];
+                }
+                if(fillProps != null) {
+                    paint = selectPaint(graphics, fillProps, phClr, sheet.getPackagePart());
+                }
+            }
+        }
+        return paint == RenderableShape.NO_PAINT ? null : paint;
+    }
+

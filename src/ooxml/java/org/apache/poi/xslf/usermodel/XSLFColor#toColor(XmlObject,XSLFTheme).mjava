@@ -1,4 +1,4 @@
-    static Color toColor(XmlObject obj, XSLFTheme theme) {
+    Color toColor(XmlObject obj, XSLFTheme theme) {
         Color color = null;
         for (XmlObject ch : obj.selectPath("*")) {
             if (ch instanceof CTHslColor) {
@@ -6,7 +6,8 @@
                 int h = hsl.getHue2();
                 int s = hsl.getSat2();
                 int l = hsl.getLum2();
-                // is it correct ? 
+                // This conversion is not correct and differs from PowerPoint.
+                // TODO: Revisit and improve.
                 color = Color.getHSBColor(h / 60000f, s / 100000f, l / 100000f);
             } else if (ch instanceof CTPresetColor) {
                 CTPresetColor prst = (CTPresetColor)ch;
@@ -15,12 +16,13 @@
             } else if (ch instanceof CTSchemeColor) {
                 CTSchemeColor schemeColor = (CTSchemeColor)ch;
                 String colorRef = schemeColor.getVal().toString();
+                if(_phClr != null) {
+                    // context color overrides the theme
+                    colorRef = _phClr.getVal().toString();
+                }
                 // find referenced CTColor in the theme and convert it to java.awt.Color via a recursive call
                 CTColor ctColor = theme.getCTColor(colorRef);
                 if(ctColor != null) color = toColor(ctColor, null);
-                else {
-                    color = Color.black;
-                }
             } else if (ch instanceof CTScRgbColor) {
                 // same as CTSRgbColor but with values expressed in percents
                 CTScRgbColor scrgb = (CTScRgbColor)ch;

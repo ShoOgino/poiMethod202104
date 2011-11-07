@@ -1,6 +1,9 @@
-    public XSLFShadow getShadow(){
-        PropertyFetcher<CTOuterShadowEffect> fetcher = new PropertyFetcher<CTOuterShadowEffect>(){
-            public boolean fetch(XSLFSimpleShape shape){
+    /**
+     * @return shadow of this shape or null if shadow is disabled
+     */
+    public XSLFShadow getShadow() {
+        PropertyFetcher<CTOuterShadowEffect> fetcher = new PropertyFetcher<CTOuterShadowEffect>() {
+            public boolean fetch(XSLFSimpleShape shape) {
                 CTShapeProperties spPr = shape.getSpPr();
                 if (spPr.isSetEffectLst()) {
                     CTOuterShadowEffect obj = spPr.getEffectLst().getOuterShdw();
@@ -13,16 +16,17 @@
         fetchShapeProperty(fetcher);
 
         CTOuterShadowEffect obj = fetcher.getValue();
-        if(obj == null){
+        if (obj == null) {
             // fill color was not found, check if it is defined in the theme
             CTShapeStyle style = getSpStyle();
             if (style != null) {
                 // 1-based index of a shadow style within the style matrix
                 int idx = (int) style.getEffectRef().getIdx();
-                
-                CTStyleMatrix styleMatrix = _sheet.getTheme().getXmlObject().getThemeElements().getFmtScheme();
-                CTEffectStyleItem ef = styleMatrix.getEffectStyleLst().getEffectStyleArray(idx - 1);
-                obj = ef.getEffectLst().getOuterShdw();
+                if(idx != 0) {
+                    CTStyleMatrix styleMatrix = _sheet.getTheme().getXmlObject().getThemeElements().getFmtScheme();
+                    CTEffectStyleItem ef = styleMatrix.getEffectStyleLst().getEffectStyleArray(idx - 1);
+                    obj = ef.getEffectLst().getOuterShdw();
+                }
             }
         }
         return obj == null ? null : new XSLFShadow(obj, this);

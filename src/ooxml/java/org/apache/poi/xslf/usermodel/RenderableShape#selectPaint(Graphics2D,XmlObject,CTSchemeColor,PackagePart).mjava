@@ -1,0 +1,53 @@
+    /**
+     * Convert shape fill into java.awt.Paint. The result is either Color or
+     * TexturePaint or GradientPaint or null
+     *
+     * @param graphics  the target graphics
+     * @param obj       the xml to read. Must contain elements from the EG_ColorChoice group:
+     * <code>
+     *     a:scrgbClr    RGB Color Model - Percentage Variant
+     *     a:srgbClr    RGB Color Model - Hex Variant
+     *     a:hslClr    Hue, Saturation, Luminance Color Model
+     *     a:sysClr    System Color
+     *     a:schemeClr    Scheme Color
+     *     a:prstClr    Preset Color
+     *  </code>
+     *
+     * @param phClr     context color
+     * @param parentPart    the parent package part. Any external references (images, etc.) are resolved relative to it.
+     *
+     * @return  the applied Paint or null if none was applied
+     */
+    public Paint selectPaint(Graphics2D graphics, XmlObject obj, CTSchemeColor phClr, PackagePart parentPart) {
+        XSLFTheme theme = _shape.getSheet().getTheme();
+        Rectangle2D anchor = _shape.getAnchor();
+
+        Paint paint = null;
+        if (obj instanceof CTNoFillProperties) {
+            paint = NO_PAINT;
+
+        }
+        else if (obj instanceof CTSolidColorFillProperties) {
+            CTSolidColorFillProperties solidFill = (CTSolidColorFillProperties) obj;
+            XSLFColor c = new XSLFColor(solidFill, theme, phClr);
+            paint = c.getColor();
+        }
+        else if (obj instanceof CTBlipFillProperties) {
+            CTBlipFillProperties blipFill = (CTBlipFillProperties)obj;
+            paint = createTexturePaint(blipFill, graphics, parentPart);
+        }
+        else if (obj instanceof CTGradientFillProperties) {
+            CTGradientFillProperties gradFill = (CTGradientFillProperties) obj;
+            if (gradFill.isSetLin()) {
+                 paint = createLinearGradientPaint(gradFill, anchor, theme, phClr);
+            } else if (gradFill.isSetPath()){
+                CTPathShadeProperties ps = gradFill.getPath();
+                if(ps.getPath() ==  STPathShadeType.CIRCLE){
+                    paint = createRadialGradientPaint(gradFill, anchor, theme, phClr);
+                }
+            }
+        }
+
+        return paint;
+    }
+

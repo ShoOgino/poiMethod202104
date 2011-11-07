@@ -1,35 +1,13 @@
+    /**
+     * Create a blank slide.
+     */
     public XSLFSlide createSlide() {
-        int slideNumber = 256, cnt = 1;
-        CTSlideIdList slideList;
-        if (!_presentation.isSetSldIdLst()) slideList = _presentation.addNewSldIdLst();
-        else {
-            slideList = _presentation.getSldIdLst();
-            for(CTSlideIdListEntry slideId : slideList.getSldIdList()){
-                slideNumber = (int)Math.max(slideId.getId() + 1, slideNumber);
-                cnt++;
-            }
-        }
-
-        XSLFSlide slide = (XSLFSlide)createRelationship(
-                XSLFRelation.SLIDE, XSLFFactory.getInstance(), cnt);
-
-        CTSlideIdListEntry slideId = slideList.addNewSldId();
-        slideId.setId(slideNumber);
-        slideId.setId2(slide.getPackageRelationship().getId());
-
         String masterId = _presentation.getSldMasterIdLst().getSldMasterIdArray(0).getId2();
         XSLFSlideMaster master = _masters.get(masterId);
 
-        XSLFSlideLayout layout = master.getLayout("blank");
+        XSLFSlideLayout layout = master.getLayout(SlideLayout.BLANK);
         if(layout == null) throw new IllegalArgumentException("Blank layout was not found");
 
-        slide.addRelation(layout.getPackageRelationship().getId(), layout);
-
-        PackagePartName ppName = layout.getPackagePart().getPartName();
-        slide.getPackagePart().addRelationship(ppName, TargetMode.INTERNAL,
-                layout.getPackageRelationship().getRelationshipType());
-
-        _slides.add(slide);
-        return slide;
+        return createSlide(layout);
     }
 

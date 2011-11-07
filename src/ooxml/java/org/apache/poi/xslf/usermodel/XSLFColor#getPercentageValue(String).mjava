@@ -1,12 +1,37 @@
+    /**
+     * Read a perecentage value from the supplied xml bean.
+     * Example:
+     *   <a:tint val="45000"/>
+     *
+     * the returned value is 45
+     *
+     * @return  the percentage value in the range [0 .. 100]
+     */
     private int getPercentageValue(String elem){
-        XmlObject[] obj = _xmlObject.selectPath(
-                "declare namespace a='http://schemas.openxmlformats.org/drawingml/2006/main' $this//a:" + elem);
+        String query = "declare namespace a='http://schemas.openxmlformats.org/drawingml/2006/main' $this//a:" + elem;
+
+        XmlObject[] obj;
+
+        // first ask the context color and if not found, ask the actual color bean
+        if(_phClr != null){
+            obj = _phClr.selectPath(query);
+            if(obj.length == 1){
+                Node attr = obj[0].getDomNode().getAttributes().getNamedItem("val");
+                if(attr != null) {
+                    return Integer.parseInt(attr.getNodeValue()) / 1000;
+                }
+            }
+        }
+
+        obj = _xmlObject.selectPath(query);
         if(obj.length == 1){
             Node attr = obj[0].getDomNode().getAttributes().getNamedItem("val");
             if(attr != null) {
                 return Integer.parseInt(attr.getNodeValue()) / 1000;
             }
         }
+
+
         return -1;
     }
 

@@ -1,0 +1,27 @@
+    /**
+     * @return the Paint object to fill
+     */
+    Paint getPaint(Graphics2D graphics){
+        RenderableShape rShape = new RenderableShape(this);
+
+        Paint fill = null;
+        CTBackground bg = (CTBackground)getXmlObject();
+        if(bg.isSetBgPr()){
+            XmlObject spPr = bg.getBgPr();
+            fill = rShape.getPaint(graphics, spPr, null);
+        } else if (bg.isSetBgRef()){
+            CTStyleMatrixReference bgRef= bg.getBgRef();
+            CTSchemeColor phClr = bgRef.getSchemeClr();
+
+            int idx = (int)bgRef.getIdx() - 1001;
+            XSLFTheme theme = getSheet().getTheme();
+            CTBackgroundFillStyleList bgStyles =
+                    theme.getXmlObject().getThemeElements().getFmtScheme().getBgFillStyleLst();
+
+            XmlObject bgStyle = bgStyles.selectPath("*")[idx];
+            fill = rShape.selectPaint(graphics, bgStyle, phClr, theme.getPackagePart());
+        }
+
+        return fill;
+    }
+

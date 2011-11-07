@@ -1,0 +1,42 @@
+    public Paint getLinePaint(final Graphics2D graphics) {
+        PropertyFetcher<Paint> fetcher = new PropertyFetcher<Paint>() {
+            public boolean fetch(XSLFSimpleShape shape) {
+                CTLineProperties spPr = shape.getSpPr().getLn();
+                if (spPr != null) {
+                    if (spPr.isSetNoFill()) {
+                        setValue(NO_PAINT); // use it as 'nofill' value
+                        return true;
+                    }
+                    Paint paint = getPaint(graphics, spPr, null);
+                    if (paint != null) {
+                        setValue(paint);
+                        return true;
+                    }
+                }
+                return false;
+
+            }
+        };
+        _shape.fetchShapeProperty(fetcher);
+
+        Paint paint = fetcher.getValue();
+        if (paint == null) {
+            // line color was not found, check if it is defined in the theme
+            CTShapeStyle style = _shape.getSpStyle();
+            if (style != null) {
+                // get a reference to a line style within the style matrix.
+                CTStyleMatrixReference lnRef = style.getLnRef();
+                int idx = (int)lnRef.getIdx();
+                CTSchemeColor phClr = lnRef.getSchemeClr();
+                if(idx > 0){
+                    XSLFTheme theme = _shape.getSheet().getTheme();
+                    XmlObject lnProps = theme.getXmlObject().
+                            getThemeElements().getFmtScheme().getLnStyleLst().selectPath("*")[idx - 1];
+                    paint = getPaint(graphics, lnProps, phClr);
+                }
+            }
+        }
+
+        return paint == NO_PAINT ? null : paint;
+    }
+

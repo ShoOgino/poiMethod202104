@@ -1,0 +1,36 @@
+    /**
+     * Create a slide and initialize it from the specified layout.
+     *
+     * @param layout
+     * @return created slide
+     */
+    public XSLFSlide createSlide(XSLFSlideLayout layout) {
+        int slideNumber = 256, cnt = 1;
+        CTSlideIdList slideList;
+        if (!_presentation.isSetSldIdLst()) slideList = _presentation.addNewSldIdLst();
+        else {
+            slideList = _presentation.getSldIdLst();
+            for(CTSlideIdListEntry slideId : slideList.getSldIdList()){
+                slideNumber = (int)Math.max(slideId.getId() + 1, slideNumber);
+                cnt++;
+            }
+        }
+
+        XSLFSlide slide = (XSLFSlide)createRelationship(
+                XSLFRelation.SLIDE, XSLFFactory.getInstance(), cnt);
+
+        CTSlideIdListEntry slideId = slideList.addNewSldId();
+        slideId.setId(slideNumber);
+        slideId.setId2(slide.getPackageRelationship().getId());
+
+        layout.copyLayout(slide);
+        slide.addRelation(layout.getPackageRelationship().getId(), layout);
+
+        PackagePartName ppName = layout.getPackagePart().getPartName();
+        slide.getPackagePart().addRelationship(ppName, TargetMode.INTERNAL,
+                layout.getPackageRelationship().getRelationshipType());
+
+        _slides.add(slide);
+        return slide;
+    }
+

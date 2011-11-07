@@ -1,21 +1,22 @@
     /**
-     * Walk up the inheritance tree and fetch properties.
+     * Walk up the inheritance tree and fetch shape properties.
      *
-     * slide <-- slideLayout <-- slideMaster
+     * The following order of inheritance is assumed:
+     * <p>
+     * slide <-- slideLayout <-- slideMaster <-- default styles in the slideMaster
+     * </p>
      *
-     *
-     * @param visitor   the object that collects the desired property
+     * @param visitor the object that collects the desired property
      * @return true if the property was fetched
      */
-    boolean fetchShapeProperty(PropertyFetcher visitor){
+    boolean fetchShapeProperty(PropertyFetcher visitor) {
         boolean ok = visitor.fetch(this);
 
         XSLFSimpleShape masterShape;
-        if(!ok){
-
-            // first try to fetch from the slide layout
-            XSLFSlideLayout layout = getSheet().getSlideLayout();
-            if(layout != null) {
+        XSLFSheet layout = getSheet().getMasterSheet();
+        if (layout != null) {
+            if (!ok) {
+                // first try to fetch from the slide layout
                 CTPlaceholder ph = getCTPlaceholder();
                 if (ph != null) {
                     masterShape = layout.getPlaceholder(ph);
@@ -24,38 +25,37 @@
                     }
                 }
             }
-        }
 
-        // try slide master
-        if (!ok) {
-            int textType;
-            CTPlaceholder ph = getCTPlaceholder();
-            if(ph == null || !ph.isSetType()) textType = STPlaceholderType.INT_BODY;
-            else {
-                switch(ph.getType().intValue()){
-                    case STPlaceholderType.INT_TITLE:
-                    case STPlaceholderType.INT_CTR_TITLE:
-                        textType = STPlaceholderType.INT_TITLE;
-                        break;
-                    case STPlaceholderType.INT_FTR:
-                    case STPlaceholderType.INT_SLD_NUM:
-                    case STPlaceholderType.INT_DT:
-                        textType = ph.getType().intValue();
-                        break;
-                    default:
-                        textType = STPlaceholderType.INT_BODY;
-                        break;
+            // try slide master
+            if (!ok) {
+                int textType;
+                CTPlaceholder ph = getCTPlaceholder();
+                if (ph == null || !ph.isSetType()) textType = STPlaceholderType.INT_BODY;
+                else {
+                    switch (ph.getType().intValue()) {
+                        case STPlaceholderType.INT_TITLE:
+                        case STPlaceholderType.INT_CTR_TITLE:
+                            textType = STPlaceholderType.INT_TITLE;
+                            break;
+                        case STPlaceholderType.INT_FTR:
+                        case STPlaceholderType.INT_SLD_NUM:
+                        case STPlaceholderType.INT_DT:
+                            textType = ph.getType().intValue();
+                            break;
+                        default:
+                            textType = STPlaceholderType.INT_BODY;
+                            break;
+                    }
+                }
+                XSLFSheet master = layout.getMasterSheet();
+                if (master != null) {
+                    masterShape = master.getPlaceholderByType(textType);
+                    if (masterShape != null) {
+                        ok = visitor.fetch(masterShape);
+                    }
                 }
             }
-            XSLFSlideMaster master = getSheet().getSlideMaster();
-            if(master != null) {
-                masterShape = master.getPlaceholderByType(textType);
-                if (masterShape != null) {
-                    ok = visitor.fetch(masterShape);
-                }
-            }
         }
-
         return ok;
     }
 

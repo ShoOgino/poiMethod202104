@@ -4,24 +4,27 @@
      * @param graphics
      */
     public void draw(Graphics2D graphics){
-        XSLFBackground bg = getBackground();
-        if(bg != null) bg.draw(graphics);
+        XSLFSheet master = getMasterSheet();
+        if(getFollowMasterGraphics() && master != null) master.draw(graphics);
 
         for(XSLFShape shape : getShapeList()) {
             if(!canDraw(shape)) continue;
 
         	// remember the initial transform and restore it after we are done with drawing
-        	AffineTransform at0 = graphics.getTransform();
+        	AffineTransform at = graphics.getTransform();
 
+            // concrete implementations can make sense of this hint,
+            // for example PSGraphics2D or PDFGraphics2D would call gsave() / grestore
             graphics.setRenderingHint(XSLFRenderingHint.GSAVE, true);
 
             // apply rotation and flipping
             shape.applyTransform(graphics);
-
+            // draw stuff
             shape.draw(graphics);
 
             // restore the coordinate system
-            graphics.setTransform(at0);
+            graphics.setTransform(at);
+
             graphics.setRenderingHint(XSLFRenderingHint.GRESTORE, true);
 
         }
