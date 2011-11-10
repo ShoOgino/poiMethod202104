@@ -1,6 +1,7 @@
     void breakText(Graphics2D graphics){
         _lines = new ArrayList<TextFragment>();
 
+        String text = getRenderableText();
         AttributedString at = getAttributedString(graphics);
         AttributedCharacterIterator it = at.getIterator();
         if(it.getBeginIndex() == it.getEndIndex()) {
@@ -9,12 +10,17 @@
         LineBreakMeasurer measurer = new LineBreakMeasurer(it, graphics.getFontRenderContext());
         for (;;) {
             int startIndex = measurer.getPosition();
-            double wrappingWidth = getWrappingWidth() + 1; // add a pixel to compensate rounding errors
-            TextLayout layout = measurer.nextLayout((float)wrappingWidth, it.getEndIndex(), true);
+            double wrappingWidth = getWrappingWidth(_lines.size() == 0) + 1; // add a pixel to compensate rounding errors
+
+
+            int nextBreak = text.indexOf('\n', startIndex + 1);
+            if(nextBreak == -1) nextBreak = it.getEndIndex();
+
+            TextLayout layout = measurer.nextLayout((float)wrappingWidth, nextBreak, true);
              if (layout == null) {
                  // layout can be null if the entire word at the current position
                  // does not fit within the wrapping width. Try with requireNextWord=false.
-                 layout = measurer.nextLayout((float)wrappingWidth, it.getEndIndex(), false);
+                 layout = measurer.nextLayout((float)wrappingWidth, nextBreak, false);
              }
 
             int endIndex = measurer.getPosition();
@@ -27,6 +33,8 @@
             AttributedString str = new AttributedString(it, startIndex, endIndex);
             TextFragment line = new TextFragment(layout, str);
             _lines.add(line);
+
+            _maxLineHeight = Math.max(_maxLineHeight, line.getHeight());
 
             if(endIndex == it.getEndIndex()) break;
         }

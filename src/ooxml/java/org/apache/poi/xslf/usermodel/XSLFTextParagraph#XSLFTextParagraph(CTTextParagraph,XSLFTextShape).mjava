@@ -3,14 +3,23 @@
         _runs = new ArrayList<XSLFTextRun>();
         _shape = shape;
 
-        for (CTRegularTextRun r : _p.getRList()) {
-            _runs.add(new XSLFTextRun(r, this));
-        }
-
-        for (CTTextField f : _p.getFldList()) {
-            CTRegularTextRun r = CTRegularTextRun.Factory.newInstance();
-            r.setT(f.getT());
-            _runs.add(new XSLFTextRun(r, this));
+        for(XmlObject ch : _p.selectPath("*")){
+            if(ch instanceof CTRegularTextRun){
+                CTRegularTextRun r = (CTRegularTextRun)ch;
+                _runs.add(new XSLFTextRun(r, this));
+            } else if (ch instanceof CTTextLineBreak){
+                CTTextLineBreak br = (CTTextLineBreak)ch;
+                CTRegularTextRun r = CTRegularTextRun.Factory.newInstance();
+                r.setRPr(br.getRPr());
+                r.setT("\n");
+                _runs.add(new XSLFTextRun(r, this));
+            } else if (ch instanceof CTTextField){
+                CTTextField f = (CTTextField)ch;
+                CTRegularTextRun r = CTRegularTextRun.Factory.newInstance();
+                r.setRPr(f.getRPr());
+                r.setT(f.getT());
+                _runs.add(new XSLFTextRun(r, this));
+            }
         }
     }
 
