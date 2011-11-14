@@ -1,27 +1,33 @@
     void breakText(Graphics2D graphics){
         _lines = new ArrayList<TextFragment>();
 
+        // does this paragraph contain text?
+        boolean emptyParagraph = _runs.size() == 0;
+
+        // ensure that the paragraph contains at least one character
+        if(_runs.size() == 0) ensureNotEmpty();
+
         String text = getRenderableText();
+        if(text.length() == 0) return;
+
         AttributedString at = getAttributedString(graphics);
         AttributedCharacterIterator it = at.getIterator();
-        if(it.getBeginIndex() == it.getEndIndex()) {
-            return;
-        }
         LineBreakMeasurer measurer = new LineBreakMeasurer(it, graphics.getFontRenderContext());
         for (;;) {
             int startIndex = measurer.getPosition();
             double wrappingWidth = getWrappingWidth(_lines.size() == 0) + 1; // add a pixel to compensate rounding errors
-
+            // shape width can be smaller that the sum of insets (proved by a test file)
+            if(wrappingWidth < 0) wrappingWidth = 1;
 
             int nextBreak = text.indexOf('\n', startIndex + 1);
             if(nextBreak == -1) nextBreak = it.getEndIndex();
 
             TextLayout layout = measurer.nextLayout((float)wrappingWidth, nextBreak, true);
-             if (layout == null) {
+            if (layout == null) {
                  // layout can be null if the entire word at the current position
                  // does not fit within the wrapping width. Try with requireNextWord=false.
                  layout = measurer.nextLayout((float)wrappingWidth, nextBreak, false);
-             }
+            }
 
             int endIndex = measurer.getPosition();
 
@@ -39,9 +45,10 @@
             if(endIndex == it.getEndIndex()) break;
         }
 
-        if(isBullet()) {
+        if(isBullet() && !emptyParagraph) {
             String buCharacter = getBulletCharacter();
             String buFont = getBulletFont();
+            if(buFont == null) buFont = getTextRuns().get(0).getFontFamily();
             if(buCharacter != null && buFont != null && _lines.size() > 0) {
                 AttributedString str = new AttributedString(buCharacter);
 

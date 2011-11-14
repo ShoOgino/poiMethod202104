@@ -1,13 +1,16 @@
     public Color getFontColor(){
         final XSLFTheme theme = _p.getParentShape().getSheet().getTheme();
         CTShapeStyle style = _p.getParentShape().getSpStyle();
-        final CTSchemeColor shapeStyle = style == null ? null : style.getFontRef().getSchemeClr();
+        final CTSchemeColor phClr = style == null ? null : style.getFontRef().getSchemeClr();
 
         CharacterPropertyFetcher<Color> fetcher = new CharacterPropertyFetcher<Color>(_p.getLevel()){
             public boolean fetch(CTTextCharacterProperties props){
                 CTSolidColorFillProperties solidFill = props.getSolidFill();
                 if(solidFill != null) {
-                    Color c = new XSLFColor(solidFill, theme, shapeStyle).getColor();
+                    boolean useCtxColor =
+                            (solidFill.isSetSchemeClr() && solidFill.getSchemeClr().getVal() == STSchemeColorVal.PH_CLR)
+                            || isFetchingFromMaster;
+                    Color c = new XSLFColor(solidFill, theme, useCtxColor ? phClr : null).getColor();
                     setValue(c);
                     return true;
                 }
