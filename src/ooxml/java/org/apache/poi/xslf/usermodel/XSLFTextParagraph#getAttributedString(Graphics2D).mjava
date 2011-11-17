@@ -4,6 +4,8 @@
 
         AttributedString string = new AttributedString(text);
 
+        XSLFFontManager fontHandler = (XSLFFontManager)graphics.getRenderingHint(XSLFRenderingHint.FONT_HANDLER);
+
         int startIndex = 0;
         for (XSLFTextRun run : _runs){
             int length = run.getRenderableText().length();
@@ -15,11 +17,15 @@
 
             string.addAttribute(TextAttribute.FOREGROUND, run.getFontColor(), startIndex, endIndex);
 
-            // user can pass an object to convert fonts via a rendering hint
-            string.addAttribute(TextAttribute.FAMILY, run.getFontFamily(), startIndex, endIndex);
+            // user can pass an custom object to convert fonts
+            String fontFamily = run.getFontFamily();
+            if(fontHandler != null) {
+                fontFamily = fontHandler.getRendererableFont(fontFamily, run.getPitchAndFamily());
+            }
+            string.addAttribute(TextAttribute.FAMILY, fontFamily, startIndex, endIndex);
 
             float fontSz = (float)run.getFontSize();
-            Number fontScale = (Number)graphics.getRenderingHint(XSLFRenderingHint.FONT_SCALE);
+            Number fontScale = (Number)graphics.getRenderingHint(XSLFRenderingHint.GROUP_SCALE);
             if(fontScale != null) fontSz *= fontScale.floatValue();
 
             string.addAttribute(TextAttribute.SIZE, fontSz , startIndex, endIndex);
