@@ -6,9 +6,18 @@
         if(!ok) {
             XSLFTextShape shape = getParentShape();
             ok = shape.fetchShapeProperty(visitor);
-            if(!ok) {
-                CTTextParagraphProperties defaultProps = getDefaultStyle();
-                if(defaultProps != null) ok = visitor.fetch(defaultProps);
+            if(!ok){
+                CTPlaceholder ph = shape.getCTPlaceholder();
+                if(ph == null){
+                    // if it is a plain text box then take defaults from presentation.xml
+                    XMLSlideShow ppt = getParentShape().getSheet().getSlideShow();
+                    CTTextParagraphProperties themeProps = ppt.getDefaultParagraphStyle(getLevel());
+                    if(themeProps != null) ok = visitor.fetch(themeProps);
+                } else {
+                    // defaults for placeholders are defined in the slide master
+                    CTTextParagraphProperties defaultProps = getDefaultMasterStyle();
+                    if(defaultProps != null) ok = visitor.fetch(defaultProps);
+                }
             }
         }
 

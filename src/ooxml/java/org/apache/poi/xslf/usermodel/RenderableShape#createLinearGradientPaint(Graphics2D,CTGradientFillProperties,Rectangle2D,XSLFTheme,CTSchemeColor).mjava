@@ -1,4 +1,4 @@
-    private static Paint createLinearGradientPaint(
+    private Paint createLinearGradientPaint(
             Graphics2D graphics,
             CTGradientFillProperties gradFill, Rectangle2D anchor,
             XSLFTheme theme, CTSchemeColor phClr) {
@@ -38,15 +38,16 @@
             fractions[i] = stop.getPos() / 100000.f;
         }
 
-        AffineTransform grAt;
-        if(gradFill.getRotWithShape()) grAt = new AffineTransform();
-        else {
-            // gradient fill is not rotated with the shape
-            try {
-                grAt = graphics.getTransform().createInverse();
-            } catch (Exception e){
-                // should not happen.
-                grAt = new AffineTransform();
+        AffineTransform grAt  = new AffineTransform();
+        if(gradFill.isSetRotWithShape() || !gradFill.getRotWithShape()) {
+            double rotation = _shape.getRotation();
+            if (rotation != 0.) {
+                double centerX = anchor.getX() + anchor.getWidth() / 2;
+                double centerY = anchor.getY() + anchor.getHeight() / 2;
+
+                grAt.translate(centerX, centerY);
+                grAt.rotate(Math.toRadians(-rotation));
+                grAt.translate(-centerX, -centerY);
             }
         }
 
