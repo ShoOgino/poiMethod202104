@@ -1,4 +1,57 @@
     public void testCopyRecursively() throws Exception {
-       // TODO
+       POIFSFileSystem fsD = new POIFSFileSystem();
+       POIFSFileSystem fs = new POIFSFileSystem();
+       DirectoryEntry dirA = fs.createDirectory("DirA");
+       DirectoryEntry dirB = fs.createDirectory("DirB");
+       
+       DocumentEntry entryR = fs.createDocument(new ByteArrayInputStream(dataSmallA), "EntryRoot");
+       DocumentEntry entryA1 = dirA.createDocument("EntryA1", new ByteArrayInputStream(dataSmallA));
+       DocumentEntry entryA2 = dirA.createDocument("EntryA2", new ByteArrayInputStream(dataSmallB));
+       
+       // Copy docs
+       assertEquals(0, fsD.getRoot().getEntryCount());
+       EntryUtils.copyNodeRecursively(entryR, fsD.getRoot());
+       
+       assertEquals(1, fsD.getRoot().getEntryCount());
+       assertNotNull(fsD.getRoot().getEntry("EntryRoot"));
+       
+       EntryUtils.copyNodeRecursively(entryA1, fsD.getRoot());
+       assertEquals(2, fsD.getRoot().getEntryCount());
+       assertNotNull(fsD.getRoot().getEntry("EntryRoot"));
+       assertNotNull(fsD.getRoot().getEntry("EntryA1"));
+       
+       EntryUtils.copyNodeRecursively(entryA2, fsD.getRoot());
+       assertEquals(3, fsD.getRoot().getEntryCount());
+       assertNotNull(fsD.getRoot().getEntry("EntryRoot"));
+       assertNotNull(fsD.getRoot().getEntry("EntryA1"));
+       assertNotNull(fsD.getRoot().getEntry("EntryA2"));
+       
+       // Copy directories
+       fsD = new POIFSFileSystem();
+       assertEquals(0, fsD.getRoot().getEntryCount());
+       
+       EntryUtils.copyNodeRecursively(dirB, fsD.getRoot());
+       assertEquals(1, fsD.getRoot().getEntryCount());
+       assertNotNull(fsD.getRoot().getEntry("DirB"));
+       assertEquals(0, ((DirectoryEntry)fsD.getRoot().getEntry("DirB")).getEntryCount());
+       
+       EntryUtils.copyNodeRecursively(dirA, fsD.getRoot());
+       assertEquals(2, fsD.getRoot().getEntryCount());
+       assertNotNull(fsD.getRoot().getEntry("DirB"));
+       assertEquals(0, ((DirectoryEntry)fsD.getRoot().getEntry("DirB")).getEntryCount());
+       assertNotNull(fsD.getRoot().getEntry("DirA"));
+       assertEquals(2, ((DirectoryEntry)fsD.getRoot().getEntry("DirA")).getEntryCount());
+       
+       // Copy the whole lot
+       fsD = new POIFSFileSystem();
+       assertEquals(0, fsD.getRoot().getEntryCount());
+       
+       EntryUtils.copyNodes(fs, fsD, new ArrayList<String>());
+       assertEquals(3, fsD.getRoot().getEntryCount());
+       assertNotNull(fsD.getRoot().getEntry(dirA.getName()));
+       assertNotNull(fsD.getRoot().getEntry(dirB.getName()));
+       assertNotNull(fsD.getRoot().getEntry(entryR.getName()));
+       assertEquals(0, ((DirectoryEntry)fsD.getRoot().getEntry("DirB")).getEntryCount());
+       assertEquals(2, ((DirectoryEntry)fsD.getRoot().getEntry("DirA")).getEntryCount());
     }
 

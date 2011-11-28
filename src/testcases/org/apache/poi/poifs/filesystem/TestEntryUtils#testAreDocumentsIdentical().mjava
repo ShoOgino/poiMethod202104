@@ -1,4 +1,45 @@
     public void testAreDocumentsIdentical() throws Exception {
-       // TODO
+       POIFSFileSystem fs = new POIFSFileSystem();
+       DirectoryEntry dirA = fs.createDirectory("DirA");
+       DirectoryEntry dirB = fs.createDirectory("DirB");
+       
+       DocumentEntry entryA1 = dirA.createDocument("Entry1", new ByteArrayInputStream(dataSmallA));
+       DocumentEntry entryA1b = dirA.createDocument("Entry1b", new ByteArrayInputStream(dataSmallA));
+       DocumentEntry entryA2 = dirA.createDocument("Entry2", new ByteArrayInputStream(dataSmallB));
+       DocumentEntry entryB1 = dirB.createDocument("Entry1", new ByteArrayInputStream(dataSmallA));
+       
+       
+       // Names must match
+       assertEquals(false, entryA1.getName().equals(entryA1b.getName()));
+       assertEquals(false, EntryUtils.areDocumentsIdentical(entryA1, entryA1b));
+       
+       // Contents must match
+       assertEquals(false, EntryUtils.areDocumentsIdentical(entryA1, entryA2));
+       
+       // Parents don't matter if contents + names are the same
+       assertEquals(false, entryA1.getParent().equals(entryB1.getParent()));
+       assertEquals(true, EntryUtils.areDocumentsIdentical(entryA1, entryB1));
+       
+       
+       // Can work with NPOIFS + POIFS
+       ByteArrayOutputStream tmpO = new ByteArrayOutputStream();
+       fs.writeFilesystem(tmpO);
+       ByteArrayInputStream tmpI = new ByteArrayInputStream(tmpO.toByteArray());
+       NPOIFSFileSystem nfs = new NPOIFSFileSystem(tmpI);
+       
+       DirectoryEntry dN1 = (DirectoryEntry)nfs.getRoot().getEntry("DirA");
+       DirectoryEntry dN2 = (DirectoryEntry)nfs.getRoot().getEntry("DirB");
+       DocumentEntry eNA1 = (DocumentEntry)dN1.getEntry(entryA1.getName());
+       DocumentEntry eNA2 = (DocumentEntry)dN1.getEntry(entryA2.getName());
+       DocumentEntry eNB1 = (DocumentEntry)dN2.getEntry(entryB1.getName());
+       
+       assertEquals(false, EntryUtils.areDocumentsIdentical(eNA1, eNA2));
+       assertEquals(true, EntryUtils.areDocumentsIdentical(eNA1, eNB1));
+       
+       assertEquals(false, EntryUtils.areDocumentsIdentical(eNA1, entryA1b));
+       assertEquals(false, EntryUtils.areDocumentsIdentical(eNA1, entryA2));
+       
+       assertEquals(true, EntryUtils.areDocumentsIdentical(eNA1, entryA1));
+       assertEquals(true, EntryUtils.areDocumentsIdentical(eNA1, entryB1));
     }
 
