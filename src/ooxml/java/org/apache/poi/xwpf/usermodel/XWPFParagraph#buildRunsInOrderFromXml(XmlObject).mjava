@@ -1,0 +1,44 @@
+    /**
+     * Identifies (in order) the parts of the paragraph /
+     *  sub-paragraph that correspond to character text
+     *  runs, and builds the appropriate runs for these.
+     */
+    private void buildRunsInOrderFromXml(XmlObject object) {
+        XmlCursor c = object.newCursor();
+        c.selectPath("child::*");
+        while (c.toNextSelection()) {
+            XmlObject o = c.getObject();
+            if (o instanceof CTR) {
+                runs.add(new XWPFRun((CTR) o, this));
+            }
+            if (o instanceof CTHyperlink) {
+                CTHyperlink link = (CTHyperlink) o;
+                for (CTR r : link.getRList()) {
+                    runs.add(new XWPFHyperlinkRun(link, r, this));
+                }
+            }
+            if (o instanceof CTSdtRun) {
+                CTSdtContentRun run = ((CTSdtRun) o).getSdtContent();
+                for (CTR r : run.getRList()) {
+                    runs.add(new XWPFRun(r, this));
+                }
+            }
+            if (o instanceof CTRunTrackChange) {
+                for (CTR r : ((CTRunTrackChange) o).getRList()) {
+                    runs.add(new XWPFRun(r, this));
+                }
+            }
+            if (o instanceof CTSimpleField) {
+                for (CTR r : ((CTSimpleField) o).getRList()) {
+                    runs.add(new XWPFRun(r, this));
+                }
+            }
+            if (o instanceof CTSmartTagRun) {
+                // Smart Tags can be nested many times. 
+                // This implementation does not preserve the tagging information
+                buildRunsInOrderFromXml(o);
+            }
+        }
+        c.dispose();
+    }
+
