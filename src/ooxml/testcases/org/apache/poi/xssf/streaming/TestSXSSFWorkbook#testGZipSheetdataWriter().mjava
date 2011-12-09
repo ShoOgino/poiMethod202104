@@ -1,0 +1,41 @@
+    public void testGZipSheetdataWriter(){
+        Workbook wb = new SXSSFWorkbook();
+        ((SXSSFWorkbook)wb).setCompressTempFiles(true);
+        int rowNum = 10000;
+        int sheetNum = 5;
+        for(int i = 0; i < sheetNum; i++){
+            Sheet sh = wb.createSheet("sheet" + i);
+            for(int j = 0; j < rowNum; j++){
+                Row row = sh.createRow(j);
+                Cell cell1 = row.createCell(0);
+                cell1.setCellValue(new CellReference(cell1).formatAsString());
+                
+                Cell cell2 = row.createCell(1);
+                cell2.setCellValue(i);
+
+                Cell cell3 = row.createCell(2);
+                cell3.setCellValue(j);
+            }
+        }
+
+        wb = SXSSFITestDataProvider.instance.writeOutAndReadBack(wb);
+        for(int i = 0; i < sheetNum; i++){
+            Sheet sh = wb.getSheetAt(i);
+            assertEquals("sheet" + i, sh.getSheetName());
+            for(int j = 0; j < rowNum; j++){
+                Row row = sh.getRow(j);
+                assertNotNull("row[" + j + "]", row);
+                Cell cell1 = row.getCell(0);
+                assertEquals(new CellReference(cell1).formatAsString(), cell1.getStringCellValue());
+
+                Cell cell2 = row.getCell(1);
+                assertEquals(i, (int)cell2.getNumericCellValue());
+
+                Cell cell3 = row.getCell(2);
+                assertEquals(j, (int)cell3.getNumericCellValue());
+            }
+        }
+
+        
+    }
+
