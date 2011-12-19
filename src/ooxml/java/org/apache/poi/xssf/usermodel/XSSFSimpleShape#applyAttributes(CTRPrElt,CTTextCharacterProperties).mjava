@@ -1,14 +1,42 @@
     /**
      *
-     * CTRPrElt --> CTFont adapter
+     * org.openxmlformats.schemas.spreadsheetml.x2006.main.CTRPrElt to
+     * org.openxmlformats.schemas.drawingml.x2006.main.CTFont adapter
      */
     private static void applyAttributes(CTRPrElt pr, CTTextCharacterProperties rPr){
 
         if(pr.sizeOfBArray() > 0) rPr.setB(pr.getBArray(0).getVal());
-        //if(pr.sizeOfUArray() > 0) rPr.setU(pr.getUArray(0).getVal());
+        if(pr.sizeOfUArray() > 0) {
+            STUnderlineValues.Enum u1 = pr.getUArray(0).getVal();
+            if(u1 == STUnderlineValues.SINGLE) rPr.setU(STTextUnderlineType.SNG);
+            else if(u1 == STUnderlineValues.DOUBLE) rPr.setU(STTextUnderlineType.DBL);
+            else if(u1 == STUnderlineValues.NONE) rPr.setU(STTextUnderlineType.NONE);
+        }
         if(pr.sizeOfIArray() > 0) rPr.setI(pr.getIArray(0).getVal());
 
-        CTTextFont rFont = rPr.addNewLatin();
-        rFont.setTypeface(pr.sizeOfRFontArray() > 0 ? pr.getRFontArray(0).getVal() : "Arial");
+        if(pr.sizeOfFamilyArray() > 0) {
+            CTTextFont rFont = rPr.addNewLatin();
+            rFont.setTypeface(pr.getRFontArray(0).getVal());
+        }
+        
+        if(pr.sizeOfColorArray() > 0) {
+            CTSolidColorFillProperties fill = rPr.isSetSolidFill() ? rPr.getSolidFill() : rPr.addNewSolidFill();
+            org.openxmlformats.schemas.spreadsheetml.x2006.main.CTColor xlsColor = pr.getColorArray(0);
+            if(xlsColor.isSetRgb()) {
+                CTSRgbColor clr = fill.isSetSrgbClr() ? fill.getSrgbClr() : fill.addNewSrgbClr();
+                clr.setVal(xlsColor.getRgb());
+            }
+            else if(xlsColor.isSetIndexed()) {
+                HSSFColor indexed = HSSFColor.getIndexHash().get((int) xlsColor.getIndexed());
+                if (indexed != null) {
+                    byte[] rgb = new byte[3];
+                    rgb[0] = (byte) indexed.getTriplet()[0];
+                    rgb[1] = (byte) indexed.getTriplet()[1];
+                    rgb[2] = (byte) indexed.getTriplet()[2];
+                    CTSRgbColor clr = fill.isSetSrgbClr() ? fill.getSrgbClr() : fill.addNewSrgbClr();
+                    clr.setVal(rgb);
+                }
+            }
+        }
     }
 
