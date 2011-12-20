@@ -1,10 +1,16 @@
-	/**
-	 * Retreives the text contents of the file
-	 */
-	public String getText() {
-		StringBuffer text = new StringBuffer();
-
-		for(int i=0; i<workbook.getNumberOfSheets(); i++) {
+   /**
+    * Retreives the text contents of the file
+    */
+   public String getText() {
+      DataFormatter formatter;
+      if(locale == null) {
+         formatter = new DataFormatter();
+      } else  {
+         formatter = new DataFormatter(locale);
+      }
+      
+      StringBuffer text = new StringBuffer();
+      for(int i=0; i<workbook.getNumberOfSheets(); i++) {
 			XSSFSheet sheet = workbook.getSheetAt(i);
 			if(includeSheetNames) {
 				text.append(workbook.getSheetName(i)).append("\n");
@@ -30,13 +36,20 @@
 					Cell cell = ri.next();
 
 					// Is it a formula one?
-					if(cell.getCellType() == Cell.CELL_TYPE_FORMULA && formulasNotResults) {
-						text.append(cell.getCellFormula());
+					if(cell.getCellType() == Cell.CELL_TYPE_FORMULA) {
+					   if (formulasNotResults) {
+					      text.append(cell.getCellFormula());
+					   } else {
+					      if (cell.getCachedFormulaResultType() == Cell.CELL_TYPE_STRING) {
+					         handleStringCell(text, cell);
+					      } else {
+					         handleNonStringCell(text, cell, formatter);
+					      }
+					   }
 					} else if(cell.getCellType() == Cell.CELL_TYPE_STRING) {
-						text.append(cell.getRichStringCellValue().getString());
+                  handleStringCell(text, cell);
 					} else {
-						XSSFCell xc = (XSSFCell)cell;
-						text.append(xc.getRawValue());
+                  handleNonStringCell(text, cell, formatter);
 					}
 
 					// Output the comment, if requested and exists
