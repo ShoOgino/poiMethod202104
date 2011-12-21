@@ -1,0 +1,28 @@
+    /**
+     * Evaluate for WORKDAY. Given a date, a number of days and a optional date or interval of holidays, determines which date it is past
+     * number of parametrized workdays.
+     * 
+     * @return {@link ValueEval} with date as its value.
+     */
+    public ValueEval evaluate(ValueEval[] args, OperationEvaluationContext ec) {
+        if (args.length < 2 || args.length > 3) {
+            return ErrorEval.VALUE_INVALID;
+        }
+
+        int srcCellRow = ec.getRowIndex();
+        int srcCellCol = ec.getColumnIndex();
+
+        double start;
+        int days;
+        double[] holidays;
+        try {
+            start = this.evaluator.evaluateDateArg(args[0], srcCellRow, srcCellCol);
+            days = (int) Math.floor(this.evaluator.evaluateNumberArg(args[1], srcCellRow, srcCellCol));
+            ValueEval holidaysCell = args.length == 3 ? args[2] : null;
+            holidays = this.evaluator.evaluateDatesArg(holidaysCell, srcCellRow, srcCellCol);
+            return new NumberEval(DateUtil.getExcelDate(WorkdayCalculator.instance.calculateWorkdays(start, days, holidays)));
+        } catch (EvaluationException e) {
+            return ErrorEval.VALUE_INVALID;
+        }
+    }
+

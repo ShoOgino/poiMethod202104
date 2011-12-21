@@ -1,0 +1,30 @@
+    /**
+     * Evaluate for NETWORKDAYS. Given two dates and a optional date or interval of holidays, determines how many working days are there
+     * between those dates.
+     * 
+     * @return {@link ValueEval} for the number of days between two dates.
+     */
+    public ValueEval evaluate(ValueEval[] args, OperationEvaluationContext ec) {
+        if (args.length < 2 || args.length > 3) {
+            return ErrorEval.VALUE_INVALID;
+        }
+
+        int srcCellRow = ec.getRowIndex();
+        int srcCellCol = ec.getColumnIndex();
+
+        double start, end;
+        double[] holidays;
+        try {
+            start = this.evaluator.evaluateDateArg(args[0], srcCellRow, srcCellCol);
+            end = this.evaluator.evaluateDateArg(args[1], srcCellRow, srcCellCol);
+            if (start > end) {
+                return ErrorEval.NAME_INVALID;
+            }
+            ValueEval holidaysCell = args.length == 3 ? args[2] : null;
+            holidays = this.evaluator.evaluateDatesArg(holidaysCell, srcCellRow, srcCellCol);
+            return new NumberEval(WorkdayCalculator.instance.calculateWorkdays(start, end, holidays));
+        } catch (EvaluationException e) {
+            return ErrorEval.VALUE_INVALID;
+        }
+    }
+

@@ -1,0 +1,26 @@
+    /**
+     * Calculate the workday past x workdays from a starting date, considering a range of holidays.
+     * 
+     * @param start start date.
+     * @param workdays number of workdays to be past from starting date.
+     * @param holidays an array of holidays.
+     * @return date past x workdays.
+     */
+    public Date calculateWorkdays(double start, int workdays, double[] holidays) {
+        Date startDate = DateUtil.getJavaDate(start);
+        Calendar endDate = Calendar.getInstance();
+        endDate.setTime(startDate);
+        endDate.add(Calendar.DAY_OF_YEAR, workdays);
+        int skippedDays = 0;
+        do {
+            double end = DateUtil.getExcelDate(endDate.getTime());
+            int saturdaysPast = this.pastDaysOfWeek(start, end, Calendar.SATURDAY);
+            int sundaysPast = this.pastDaysOfWeek(start, end, Calendar.SUNDAY);
+            int nonWeekendHolidays = this.calculateNonWeekendHolidays(start, end, holidays);
+            skippedDays = saturdaysPast + sundaysPast + nonWeekendHolidays;
+            endDate.add(Calendar.DAY_OF_YEAR, skippedDays);
+            start = end + isNonWorkday(end, holidays);
+        } while (skippedDays != 0);
+        return endDate.getTime();
+    }
+
