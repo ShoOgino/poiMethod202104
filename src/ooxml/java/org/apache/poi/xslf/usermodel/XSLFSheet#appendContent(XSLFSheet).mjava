@@ -1,0 +1,42 @@
+    /**
+     * Append content to this sheet.
+     *
+     * @param src the source sheet
+     * @return modified <code>this</code>.
+     */
+    public XSLFSheet appendContent(XSLFSheet src){
+        CTGroupShape spTree = getSpTree();
+        int numShapes = getShapeList().size();
+
+        CTGroupShape srcTree = src.getSpTree();
+        for(XmlObject ch : srcTree.selectPath("*")){
+            if(ch instanceof CTShape){ // simple shape
+                spTree.addNewSp().set(ch);
+            } else if (ch instanceof CTGroupShape){
+                spTree.addNewGrpSp().set(ch);
+            } else if (ch instanceof CTConnector){
+                spTree.addNewCxnSp().set(ch);
+            } else if (ch instanceof CTPicture){
+                spTree.addNewPic().set(ch);
+            } else if (ch instanceof CTGraphicalObjectFrame){
+                spTree.addNewGraphicFrame().set(ch);
+            }
+        }
+
+        _shapes = null;
+        _spTree = null;
+        _drawing = null;
+        _spTree = null;
+
+        // recursively update each shape
+        List<XSLFShape> tgtShapes = getShapeList();
+        List<XSLFShape> srcShapes = src.getShapeList();
+        for(int i = 0; i < srcShapes.size(); i++){
+            XSLFShape s1 = srcShapes.get(i);
+            XSLFShape s2 = tgtShapes.get(numShapes + i);
+
+            s2.copy(s1);
+        }
+        return this;
+    }
+
