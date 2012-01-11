@@ -19,7 +19,18 @@
              data = bb.array();
           } else {
              data = new byte[bigBlockSize.getBigBlockSize()];
-             bb.get(data, 0, data.length);
+             
+             int toRead = data.length;
+             if (bb.remaining() < bigBlockSize.getBigBlockSize()) {
+                // Looks to be a truncated block
+                // This isn't allowed, but some third party created files
+                //  sometimes do this, and we can normally read anyway
+                _logger.log(POILogger.WARN, "Short Property Block, ", bb.remaining(),
+                            " bytes instead of the expected " + bigBlockSize.getBigBlockSize());
+                toRead = bb.remaining();
+             }
+             
+             bb.get(data, 0, toRead);
           }
           
           PropertyFactory.convertToProperties(data, properties);
