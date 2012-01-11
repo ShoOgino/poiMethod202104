@@ -59,6 +59,20 @@
                     picData.onDocumentRead();
                     registerPackagePictureData(picData);
                     pictures.add(picData);
+                } else if (relation.equals(XWPFRelation.GLOSSARY_DOCUMENT.getRelation())) {
+                    // We don't currently process the glossary itself
+                    // Until we do, we do need to load the glossary child parts of it
+                    for (POIXMLDocumentPart gp : p.getRelations()) {
+                       // Trigger the onDocumentRead for all the child parts
+                       // Otherwise we'll hit issues on Styles, Settings etc on save
+                       try {
+                          Method onDocumentRead = gp.getClass().getDeclaredMethod("onDocumentRead");
+                          onDocumentRead.setAccessible(true);
+                          onDocumentRead.invoke(gp);
+                       } catch(Exception e) {
+                          throw new POIXMLException(e);
+                       }
+                    }
                 }
             }
             initHyperlinks();
