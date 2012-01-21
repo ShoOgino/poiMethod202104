@@ -1,0 +1,25 @@
+	public ValueEval evaluate(ValueEval[] args, OperationEvaluationContext ec) {
+        if(args.length < 3 || args.length % 2 == 0) {
+            return ErrorEval.VALUE_INVALID;
+        }
+
+		try {
+            AreaEval sumRange = convertRangeArg(args[0]);
+
+            // collect pairs of ranges and criteria
+            AreaEval[] ae = new AreaEval[(args.length - 1)/2];
+            I_MatchPredicate[] mp = new I_MatchPredicate[ae.length];
+            for(int i = 1, k=0; i < args.length; i += 2, k++){
+                ae[k] = convertRangeArg(args[i]);
+                mp[k] = Countif.createCriteriaPredicate(args[i+1], ec.getRowIndex(), ec.getColumnIndex());
+            }
+
+            validateCriteriaRanges(ae, sumRange);
+
+            double result = sumMatchingCells(ae, mp, sumRange);
+            return new NumberEval(result);
+		} catch (EvaluationException e) {
+			return e.getErrorEval();
+		}
+	}
+
