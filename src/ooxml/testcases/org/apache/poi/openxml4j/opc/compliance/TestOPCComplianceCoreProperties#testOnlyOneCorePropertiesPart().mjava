@@ -1,8 +1,25 @@
 	/**
 	 * Test M4.1 rule.
 	 */
-	public void testOnlyOneCorePropertiesPart() {
-		String msg = extractInvalidFormatMessage("OnlyOneCorePropertiesPartFAIL.docx");
-		assertEquals("OPC Compliance error [M4.1]: there is more than one core properties relationship in the package !", msg);
+	public void testOnlyOneCorePropertiesPart() throws Exception {
+	   // We have relaxed this check, so we can read the file anyway
+	   try {
+	      extractInvalidFormatMessage("OnlyOneCorePropertiesPartFAIL.docx");
+	      fail("M4.1 should be being relaxed");
+	   } catch (AssertionFailedError e) {}
+	   
+	   // We will use the first core properties, and ignore the others
+      InputStream is = OpenXML4JTestDataSamples.openSampleStream("MultipleCoreProperties.docx");
+      OPCPackage pkg = OPCPackage.open(is);
+      
+      // We can see 2 by type
+      assertEquals(2, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
+      // But only the first one by relationship
+      assertEquals(1, pkg.getPartsByRelationshipType(PackageRelationshipTypes.CORE_PROPERTIES).size());
+      // It should be core.xml not the older core1.xml
+      assertEquals(
+            "/docProps/core.xml",
+            pkg.getPartsByRelationshipType(PackageRelationshipTypes.CORE_PROPERTIES).get(0).getPartName().toString()
+      );
 	}
 
