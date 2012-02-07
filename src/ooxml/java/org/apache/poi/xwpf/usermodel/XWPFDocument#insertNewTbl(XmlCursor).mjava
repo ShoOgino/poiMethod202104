@@ -6,7 +6,6 @@
             cursor.toParent();
             CTTbl t = (CTTbl) cursor.getObject();
             XWPFTable newT = new XWPFTable(t, this);
-            cursor.removeXmlContents();
             XmlObject o = null;
             while (!(o instanceof CTTbl) && (cursor.toPrevSibling())) {
                 o = cursor.getObject();
@@ -18,16 +17,22 @@
                 tables.add(pos, newT);
             }
             int i = 0;
-            cursor = t.newCursor();
+            XmlCursor tableCursor = t.newCursor();
+            try {
+                cursor.toCursor(tableCursor);
             while (cursor.toPrevSibling()) {
                 o = cursor.getObject();
                 if (o instanceof CTP || o instanceof CTTbl)
                     i++;
             }
             bodyElements.add(i, newT);
-            cursor = t.newCursor();
+            	cursor.toCursor(tableCursor);
             cursor.toEndToken();
             return newT;
+        }
+            finally {
+            	tableCursor.dispose();
+            }
         }
         return null;
     }
