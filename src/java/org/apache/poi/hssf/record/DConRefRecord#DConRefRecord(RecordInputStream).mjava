@@ -1,0 +1,29 @@
+    /**
+     * Read Constructor.
+     *
+     * @param inStream RecordInputStream containing a DConRefRecord structure.
+     */
+    public DConRefRecord(RecordInputStream inStream)
+    {
+        if (inStream.getSid() != sid)
+            throw new RecordFormatException("Wrong sid: " + inStream.getSid());
+
+        firstRow = inStream.readUShort();
+        lastRow = inStream.readUShort();
+        firstCol = inStream.readUByte();
+        lastCol = inStream.readUByte();
+
+        charCount = inStream.readUShort();
+        charType = inStream.readUByte() & 0x01; //first bit only.
+
+        // byteLength depends on whether we are using single- or double-byte chars.
+        int byteLength = charCount * (charType + 1);
+
+        path = new byte[byteLength];
+        inStream.readFully(path);
+
+        if (path[0] == 0x02)
+            _unused = inStream.readRemainder();
+
+    }
+
