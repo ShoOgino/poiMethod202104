@@ -13,19 +13,24 @@
      * @see XSLFPictureData#PICTURE_TYPE_DIB
      */
     public int addPicture(byte[] pictureData, int format) {
-        getAllPictures();
-        
-        int imageNumber = _pictures.size() + 1;
-        XSLFPictureData img = (XSLFPictureData) createRelationship(
-                XSLFPictureData.RELATIONS[format], XSLFFactory.getInstance(), imageNumber, true);
-        _pictures.add(img);
-        try {
-            OutputStream out = img.getPackagePart().getOutputStream();
-            out.write(pictureData);
-            out.close();
-        } catch (IOException e) {
-            throw new POIXMLException(e);
+        XSLFPictureData img = findPictureData(pictureData);
+        POIXMLRelation relDesc = XSLFPictureData.RELATIONS[format];
+
+        if(img == null) {
+            int imageNumber = _pictures.size();
+            img = (XSLFPictureData) createRelationship(
+                    XSLFPictureData.RELATIONS[format], XSLFFactory.getInstance(), imageNumber + 1, true);
+            _pictures.add(img);
+            try {
+                OutputStream out = img.getPackagePart().getOutputStream();
+                out.write(pictureData);
+                out.close();
+            } catch (IOException e) {
+                throw new POIXMLException(e);
+            }
+            return _pictures.size() - 1;
+        } else {
+            return _pictures.indexOf(img);
         }
-        return imageNumber - 1;
     }
 
