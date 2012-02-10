@@ -1,16 +1,41 @@
     private static String decodeFileName(String encodedUrl) {
-        return encodedUrl.substring(1);
-        // TODO the following special characters may appear in the rest of the string, and need to get interpreted
-        /* see "MICROSOFT OFFICE EXCEL 97-2007  BINARY FILE FORMAT SPECIFICATION"
-        chVolume  1
-        chSameVolume  2
-        chDownDir  3
-        chUpDir  4
-        chLongVolume  5
-        chStartupDir  6
-        chAltStartupDir 7
-        chLibDir  8
-
-        */
+        /* see "MICROSOFT OFFICE EXCEL 97-2007  BINARY FILE FORMAT SPECIFICATION" */
+    	StringBuilder sb = new StringBuilder();
+        for(int i=1; i<encodedUrl.length(); i++) {
+        	char c = encodedUrl.charAt(i);
+        	switch (c) {
+        	case CH_VOLUME:
+        		char driveLetter = encodedUrl.charAt(++i);
+        		if (driveLetter == '@') {
+        			sb.append("\\\\");
+        		} else {
+        			//Windows notation for drive letters
+        			sb.append(driveLetter).append(":");
+        		}
+        		break;
+        	case CH_SAME_VOLUME:
+        		sb.append(PATH_SEPERATOR);
+        		break;
+        	case CH_DOWN_DIR:
+        		sb.append(PATH_SEPERATOR);
+        		break;
+        	case CH_UP_DIR:
+        		sb.append("..").append(PATH_SEPERATOR);
+        		break;
+        	case CH_LONG_VOLUME:
+        		//Don't known to handle...
+        		logger.log(POILogger.WARN, "Found unexpected key: ChLongVolume - IGNORING");
+        		break;
+        	case CH_STARTUP_DIR:
+        	case CH_ALT_STARTUP_DIR:
+        	case CH_LIB_DIR:
+        		logger.log(POILogger.WARN, "EXCEL.EXE path unkown - using this directoy instead: .");
+        		sb.append(".").append(PATH_SEPERATOR);
+        		break;
+        	default:
+        		sb.append(c);
+        	}
+        }
+        return sb.toString();
     }
 
