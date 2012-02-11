@@ -1,0 +1,48 @@
+   /**
+    * Bug #51498 - Check that CountIf behaves correctly for GTE, LTE
+    *  and NEQ cases
+    */
+	public void testCountifBug51498() throws Exception {
+		final int REF_COL = 4;
+		final int EVAL_COL = 3;
+		
+        HSSFWorkbook workbook = HSSFTestDataSamples.openSampleWorkbook("51498.xls");
+		FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
+		HSSFSheet sheet = workbook.getSheetAt(0);
+
+		// numeric criteria
+        for (int i = 0; i < 8; i++) {
+			CellValue expected = evaluator.evaluate(sheet.getRow(i).getCell(REF_COL));
+			CellValue actual = evaluator.evaluate(sheet.getRow(i).getCell(EVAL_COL));
+			assertEquals(expected.formatAsString(), actual.formatAsString());
+		}
+
+        // boolean criteria
+        for (int i = 0; i < 8; i++) {
+            HSSFCell cellFmla = sheet.getRow(i).getCell(8);
+            HSSFCell cellRef = sheet.getRow(i).getCell(9);
+
+            double expectedValue = cellRef.getNumericCellValue();
+            double actualValue = evaluator.evaluate(cellFmla).getNumberValue();
+
+            assertEquals(
+                    "Problem with a formula at " +
+                            new CellReference(cellFmla).formatAsString() + "[" + cellFmla.getCellFormula()+"] ",
+                    expectedValue, actualValue, 0.0001);
+        }
+
+        // string criteria
+        for (int i = 1; i < 9; i++) {
+            HSSFCell cellFmla = sheet.getRow(i).getCell(13);
+            HSSFCell cellRef = sheet.getRow(i).getCell(14);
+
+            double expectedValue = cellRef.getNumericCellValue();
+            double actualValue = evaluator.evaluate(cellFmla).getNumberValue();
+
+            assertEquals(
+                    "Problem with a formula at " +
+                            new CellReference(cellFmla).formatAsString() + "[" + cellFmla.getCellFormula()+"] ",
+                    expectedValue, actualValue, 0.0001);
+        }
+	}
+
