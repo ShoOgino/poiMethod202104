@@ -1,0 +1,54 @@
+    public void testExceptions() {
+        Function func = new Function() {
+            public ValueEval evaluate(ValueEval[] args, int srcRowIndex, int srcColumnIndex) {
+                return ErrorEval.NA;
+            }
+        };
+        try {
+            FunctionEval.registerFunction("SUM", func);
+            fail("expectecd exception");
+        } catch (IllegalArgumentException e){
+            assertEquals("POI already implememts SUM" +
+                    ". You cannot override POI's implementations of Excel functions", e.getMessage());
+        }
+        try {
+            FunctionEval.registerFunction("SUMXXX", func);
+            fail("expectecd exception");
+        } catch (IllegalArgumentException e){
+            assertEquals("Unknown function: SUMXXX", e.getMessage());
+        }
+        try {
+            FunctionEval.registerFunction("ISODD", func);
+            fail("expectecd exception");
+        } catch (IllegalArgumentException e){
+            assertEquals("ISODD is a function from the Excel Analysis Toolpack. " +
+                    "Use AnalysisToolpack.registerFunction(String name, FreeRefFunction func) instead.", e.getMessage());
+        }
+
+        FreeRefFunction atpFunc = new FreeRefFunction() {
+            public ValueEval evaluate(ValueEval[] args, OperationEvaluationContext ec) {
+                return ErrorEval.NUM_ERROR;
+            }
+        };
+        try {
+            AnalysisToolPak.registerFunction("ISODD", atpFunc);
+            fail("expectecd exception");
+        } catch (IllegalArgumentException e){
+            assertEquals("POI already implememts ISODD" +
+                    ". You cannot override POI's implementations of Excel functions", e.getMessage());
+        }
+        try {
+            AnalysisToolPak.registerFunction("ISODDXXX", atpFunc);
+            fail("expectecd exception");
+        } catch (IllegalArgumentException e){
+            assertEquals("ISODDXXX is not a function from the Excel Analysis Toolpack.", e.getMessage());
+        }
+        try {
+            AnalysisToolPak.registerFunction("SUM", atpFunc);
+            fail("expectecd exception");
+        } catch (IllegalArgumentException e){
+            assertEquals("SUM is a built-in Excel function. " +
+                    "Use FunctoinEval.registerFunction(String name, Function func) instead.", e.getMessage());
+        }
+    }
+

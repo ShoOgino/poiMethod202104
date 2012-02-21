@@ -1,0 +1,44 @@
+	public void testRegisterInRuntime() {
+		HSSFWorkbook wb = new HSSFWorkbook();
+		HSSFSheet sheet = wb.createSheet("Sheet1");
+		HSSFRow row = sheet.createRow(0);
+        HSSFFormulaEvaluator fe = new HSSFFormulaEvaluator(wb);
+
+		HSSFCell cellA = row.createCell(0);
+		cellA.setCellFormula("FISHER(A5)");
+		CellValue cv;
+		try {
+			cv = fe.evaluate(cellA);
+            fail("expectecd exception");
+		} catch (NotImplementedException e) {
+			;
+		}
+
+        FunctionEval.registerFunction("FISHER", new Function() {
+            public ValueEval evaluate(ValueEval[] args, int srcRowIndex, int srcColumnIndex) {
+                return ErrorEval.NA;
+            }
+        });
+
+        cv = fe.evaluate(cellA);
+        assertEquals(ErrorEval.NA.getErrorCode(), cv.getErrorValue());
+
+        HSSFCell cellB = row.createCell(1);
+        cellB.setCellFormula("CUBEMEMBERPROPERTY(A5)");
+        try {
+            cv = fe.evaluate(cellB);
+            fail("expectecd exception");
+        } catch (NotImplementedException e) {
+            ;
+        }
+
+        AnalysisToolPak.registerFunction("CUBEMEMBERPROPERTY", new FreeRefFunction() {
+            public ValueEval evaluate(ValueEval[] args, OperationEvaluationContext ec) {
+                return ErrorEval.NUM_ERROR;
+            }
+        });
+
+        cv = fe.evaluate(cellB);
+        assertEquals(ErrorEval.NUM_ERROR.getErrorCode(), cv.getErrorValue());
+	}
+
