@@ -11,12 +11,27 @@
         if (value instanceof Number) {
             Number num = (Number) value;
             double val = num.doubleValue();
-            if (val > 0)
-                return posNumFmt.apply(value);
-            else if (val < 0)
+            if (val < 0 &&
+                    ((formatPartCount == 2
+                            && !posNumFmt.hasCondition() && !negNumFmt.hasCondition())
+                    || (formatPartCount == 3 && !negNumFmt.hasCondition())
+                    || (formatPartCount == 4 && !negNumFmt.hasCondition()))) {
+                // The negative number format has the negative formatting required,
+                // e.g. minus sign or brackets, so pass a positive value so that
+                // the default leading minus sign is not also output
                 return negNumFmt.apply(-val);
-            else
-                return zeroNumFmt.apply(value);
+            } else {
+                return getApplicableFormatPart(val).apply(val);
+            }
+        } else if (value instanceof java.util.Date) {
+            // Don't know (and can't get) the workbook date windowing (1900 or 1904)
+            // so assume 1900 date windowing
+            Double numericValue = DateUtil.getExcelDate((Date) value);
+            if (DateUtil.isValidExcelDate(numericValue)) {
+                return getApplicableFormatPart(numericValue).apply(value);
+            } else {
+                throw new IllegalArgumentException("value not a valid Excel date");
+            }
         } else {
             return textFmt.apply(value);
         }

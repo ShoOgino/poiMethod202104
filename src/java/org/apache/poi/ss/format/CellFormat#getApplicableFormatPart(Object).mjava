@@ -1,0 +1,50 @@
+    /**
+     * Returns the {@link CellFormatPart} that applies to the value.  Result
+     * depends on how many parts the cell format has, the cell value and any
+     * conditions.  The value must be a {@link Number}.
+     * 
+     * @param value The value.
+     * @return The {@link CellFormatPart} that applies to the value.
+     */
+    private CellFormatPart getApplicableFormatPart(Object value) {
+        
+        if (value instanceof Number) {
+            
+            double val = ((Number) value).doubleValue();
+            
+            if (formatPartCount == 1) {
+                if (!posNumFmt.hasCondition()
+                        || (posNumFmt.hasCondition() && posNumFmt.applies(val))) {
+                    return posNumFmt;
+                } else {
+                    return new CellFormatPart("General");
+                }
+            } else if (formatPartCount == 2) {
+                if ((!posNumFmt.hasCondition() && val >= 0)
+                        || (posNumFmt.hasCondition() && posNumFmt.applies(val))) {
+                    return posNumFmt;
+                } else if (!negNumFmt.hasCondition()
+                        || (negNumFmt.hasCondition() && negNumFmt.applies(val))) {
+                    return negNumFmt;
+                } else {
+                    // Return ###...### (255 #s) to match Excel 2007 behaviour
+                    return new CellFormatPart(QUOTE + INVALID_VALUE_FOR_FORMAT + QUOTE);
+                }
+            } else {
+                if ((!posNumFmt.hasCondition() && val > 0)
+                        || (posNumFmt.hasCondition() && posNumFmt.applies(val))) {
+                    return posNumFmt;
+                } else if ((!negNumFmt.hasCondition() && val < 0)
+                        || (negNumFmt.hasCondition() && negNumFmt.applies(val))) {
+                    return negNumFmt;
+                // Only the first two format parts can have conditions
+                } else {
+                    return zeroNumFmt;
+                }
+            }
+        } else {
+            throw new IllegalArgumentException("value must be a Number");
+        }
+        
+    }
+
