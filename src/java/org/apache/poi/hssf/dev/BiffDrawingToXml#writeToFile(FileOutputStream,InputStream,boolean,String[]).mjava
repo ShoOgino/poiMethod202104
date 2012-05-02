@@ -1,0 +1,30 @@
+    public static void writeToFile(FileOutputStream fos, InputStream xlsWorkbook, boolean excludeWorkbookRecords, String[] params) throws IOException {
+        POIFSFileSystem fs = new POIFSFileSystem(xlsWorkbook);
+        HSSFWorkbook workbook = new HSSFWorkbook(fs);
+        InternalWorkbook internalWorkbook = getInternalWorkbook(workbook);
+        DrawingGroupRecord r = (DrawingGroupRecord) internalWorkbook.findFirstRecordBySid(DrawingGroupRecord.sid);
+        r.decode();
+
+        StringBuilder builder = new StringBuilder();
+        builder.append("<workbook>\n");
+        String tab = "\t";
+        if (!excludeWorkbookRecords) {
+            List<EscherRecord> escherRecords = r.getEscherRecords();
+            for (EscherRecord record : escherRecords) {
+                builder.append(record.toXml(tab));
+            }
+        }
+        List<Integer> sheets = getSheetsIndexes(params, workbook);
+        for (Integer i : sheets) {
+            HSSFPatriarch p = workbook.getSheetAt(i).getDrawingPatriarch();
+            if(p != null ) {
+                builder.append(tab).append("<sheet").append(i).append(">\n");
+                builder.append(getHSSFPatriarchBoundAggregate(p).toXml(tab + "\t"));
+                builder.append(tab).append("</sheet").append(i).append(">\n");
+            }
+        }
+        builder.append("</workbook>\n");
+        fos.write(builder.toString().getBytes());
+        fos.close();
+    }
+
