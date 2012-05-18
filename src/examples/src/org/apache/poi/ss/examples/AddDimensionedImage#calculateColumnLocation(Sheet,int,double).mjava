@@ -18,7 +18,7 @@
      *         left hand corner also defines the bottom right hand corner of
      *         the image and an inset that determines how far the right hand
      *         edge of the image can protrude into the next column - expressed
-     *         as a specific number of co-ordinate positions.
+     *         as a specific number of coordinate positions.
      */
     private ClientAnchorDetail calculateColumnLocation(Sheet sheet,
                                                        int startingColumn,
@@ -64,8 +64,14 @@
             // total number of co-ordinate positions to the third paramater
             // of the ClientAnchorDetail constructor. For no sepcific reason,
             // the latter option is used below.
-            anchorDetail = new ClientAnchorDetail(startingColumn,
+            if(sheet instanceof HSSFSheet) {
+                anchorDetail = new ClientAnchorDetail(startingColumn,
                     toColumn, ConvertImageUnits.TOTAL_COLUMN_COORDINATE_POSITIONS);
+            }
+            else {
+                anchorDetail = new ClientAnchorDetail(startingColumn,
+                    toColumn, (int)reqImageWidthMM * AddDimensionedImage.EMU_PER_MM);
+            }
         }
         // In this case, the image will overlap part of another column and it is
         // necessary to calculate just how much - this will become the inset
@@ -83,13 +89,18 @@
                 overlapMM = 0.0D;
             }
 
-            // Next, from the columns width, calculate how many co-ordinate
-            // positons there are per millimetre
-            coordinatePositionsPerMM = ConvertImageUnits.TOTAL_COLUMN_COORDINATE_POSITIONS /
+            if(sheet instanceof HSSFSheet) {
+                // Next, from the columns width, calculate how many co-ordinate
+                // positons there are per millimetre
+                coordinatePositionsPerMM = ConvertImageUnits.TOTAL_COLUMN_COORDINATE_POSITIONS /
                     colWidthMM;
-            // From this figure, determine how many co-ordinat positions to
-            // inset the left hand or bottom edge of the image.
-            inset = (int)(coordinatePositionsPerMM * overlapMM);
+                // From this figure, determine how many co-ordinat positions to
+                // inset the left hand or bottom edge of the image.
+                inset = (int)(coordinatePositionsPerMM * overlapMM);
+            }
+            else {
+                inset = (int)overlapMM * AddDimensionedImage.EMU_PER_MM;
+            }
 
             // Now create the ClientAnchorDetail object, setting the from and to
             // columns and the inset.

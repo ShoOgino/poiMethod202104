@@ -8,9 +8,9 @@
      * @param sheet A reference to the sheet that will 'contain' the image.
      * @param colNumber A primtive int that contains the index number of a
      *                  column on the sheet.
-     * @param reqImageWidthMM A primtive double that contains the required
+     * @param reqImageWidthMM A primitive double that contains the required
      *                        width of the image in millimetres
-     * @param resizeBehaviour A primitve int whose value will indicate how the
+     * @param resizeBehaviour A primitive int whose value will indicate how the
      *                        width of the column should be adjusted if the
      *                        required width of the image is greater than the
      *                        width of the column.
@@ -21,7 +21,7 @@
      *         left hand corner also defines the bottom right hand corner of
      *         the image and an inset that determines how far the right hand
      *         edge of the image can protrude into the next column - expressed
-     *         as a specific number of co-ordinate positions.
+     *         as a specific number of coordinate positions.
      */
     private ClientAnchorDetail fitImageToColumns(Sheet sheet, int colNumber,
             double reqImageWidthMM, int resizeBehaviour) {
@@ -53,10 +53,16 @@
                 // the required width of the image into co-ordinates. This value
                 // will become the inset for the ClientAnchorDetail class that
                 // is then instantiated.
-                colWidthMM = reqImageWidthMM;
-                colCoordinatesPerMM = ConvertImageUnits.TOTAL_COLUMN_COORDINATE_POSITIONS /
-                    colWidthMM;
-                pictureWidthCoordinates = (int)(reqImageWidthMM * colCoordinatesPerMM);
+                if(sheet instanceof HSSFSheet) {
+                    colWidthMM = reqImageWidthMM;
+                    colCoordinatesPerMM = ConvertImageUnits.TOTAL_COLUMN_COORDINATE_POSITIONS /
+                        colWidthMM;
+                    pictureWidthCoordinates = (int)(reqImageWidthMM * colCoordinatesPerMM);
+
+                }
+                else {
+                    pictureWidthCoordinates = (int)reqImageWidthMM * AddDimensionedImage.EMU_PER_MM;
+                }
                 colClientAnchorDetail = new ClientAnchorDetail(colNumber,
                         colNumber, pictureWidthCoordinates);
             }
@@ -71,11 +77,17 @@
         }
         // If the column is wider than the image.
         else {
-            // Mow many co-ordinate positions are there per millimetre?
-            colCoordinatesPerMM = ConvertImageUnits.TOTAL_COLUMN_COORDINATE_POSITIONS /
+            if(sheet instanceof HSSFSheet) {
+                // Mow many co-ordinate positions are there per millimetre?
+                colCoordinatesPerMM = ConvertImageUnits.TOTAL_COLUMN_COORDINATE_POSITIONS /
                     colWidthMM;
-            // Given the width of the image, what should be it's co-ordinate?
-            pictureWidthCoordinates = (int)(reqImageWidthMM * colCoordinatesPerMM);
+                // Given the width of the image, what should be it's co-ordinate?
+                pictureWidthCoordinates = (int)(reqImageWidthMM * colCoordinatesPerMM);
+            }
+            else {
+                pictureWidthCoordinates = (int)reqImageWidthMM *
+                        AddDimensionedImage.EMU_PER_MM;
+            }
             colClientAnchorDetail = new ClientAnchorDetail(colNumber,
                     colNumber, pictureWidthCoordinates);
         }
