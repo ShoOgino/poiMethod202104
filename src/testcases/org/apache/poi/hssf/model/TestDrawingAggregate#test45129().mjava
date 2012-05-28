@@ -1,0 +1,57 @@
+    /**
+     * test reading drawing aggregate from a test file from Bugzilla 45129
+     */
+    public void test45129() {
+        HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook("45129.xls");
+        HSSFSheet sh = wb.getSheetAt(0);
+
+        InternalWorkbook iworkbook = HSSFTestHelper.getWorkbookForTest(wb);
+        InternalSheet isheet = HSSFTestHelper.getSheetForTest(sh);
+
+        List<RecordBase> records = isheet.getRecords();
+
+        // the sheet's drawing is not aggregated
+        assertEquals("wrong size of sheet records stream", 394, records.size());
+        // the last record before the drawing block
+        assertTrue(
+                "records.get(18) is expected to be RowRecordsAggregate but was " + records.get(18).getClass().getSimpleName(),
+                records.get(18) instanceof RowRecordsAggregate);
+
+        // records to be aggregated
+        List<RecordBase> dgRecords = records.subList(19, 388);
+        for (RecordBase rb : dgRecords) {
+            Record r = (Record) rb;
+            short sid = r.getSid();
+            // we expect that drawing block consists of either
+            // DrawingRecord or ContinueRecord or ObjRecord or TextObjectRecord
+            assertTrue(
+                    sid == DrawingRecord.sid ||
+                            sid == ContinueRecord.sid ||
+                            sid == ObjRecord.sid ||
+                            sid == TextObjectRecord.sid);
+        }
+
+        // the first record after the drawing block
+        assertTrue(
+                "records.get(389) is expected to be Window2",
+                records.get(389) instanceof WindowTwoRecord);
+
+        // aggregate drawing records.
+        // The subrange [19, 388] is expected to be replaced with a EscherAggregate object
+        DrawingManager2 drawingManager = iworkbook.findDrawingGroup();
+        int loc = isheet.aggregateDrawingRecords(drawingManager, false);
+        EscherAggregate ag = (EscherAggregate) records.get(loc);
+
+        assertEquals("wrong size of the aggregated sheet records stream", 25, records.size());
+        assertTrue(
+                "records.get(18) is expected to be RowRecordsAggregate but was " + records.get(18).getClass().getSimpleName(),
+                records.get(18) instanceof RowRecordsAggregate);
+        assertTrue("records.get(19) is expected to be EscherAggregate but was " + records.get(19).getClass().getSimpleName(),
+                records.get(19) instanceof EscherAggregate);
+        assertTrue("records.get(20) is expected to be Window2 but was " + records.get(20).getClass().getSimpleName(),
+                records.get(20) instanceof WindowTwoRecord);
+
+        // TODO figure out why serialization fails
+        // byte[] bytes = ag.serialize();
+    }
+
