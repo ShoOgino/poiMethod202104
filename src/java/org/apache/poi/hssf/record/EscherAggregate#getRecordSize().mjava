@@ -1,21 +1,47 @@
-	public int getRecordSize() {
-		// TODO - convert this to RecordAggregate
-		convertUserModelToRecords();
-		List records = getEscherRecords();
-		int rawEscherSize = getEscherRecordSize( records );
-		int drawingRecordSize = rawEscherSize + ( shapeToObj.size() ) * 4;
-		int objRecordSize = 0;
-		for ( Iterator iterator = shapeToObj.values().iterator(); iterator.hasNext(); )
-		{
-			Record r = (Record) iterator.next();
-			objRecordSize += r.getRecordSize();
-		}
-		int tailRecordSize = 0;
-		for ( Iterator iterator = tailRec.iterator(); iterator.hasNext(); )
-		{
-			Record r = (Record) iterator.next();
-			tailRecordSize += r.getRecordSize();
-		}
-		return drawingRecordSize + objRecordSize + tailRecordSize;
-	}
+    public int getRecordSize() {
+        // TODO - convert this to RecordAggregate
+        convertUserModelToRecords();
+        // To determine size of aggregate record we have to know size of each DrawingRecord because if DrawingRecord
+        // is split into several continue records we have to add header size to total EscherAggregate size
+        int continueRecordsHeadersSize = 0;
+        // Determine buffer size
+        List<EscherRecord> records = getEscherRecords();
+        int rawEscherSize = getEscherRecordSize(records);
+        byte[] buffer = new byte[rawEscherSize];
+        final List<Integer> spEndingOffsets = new ArrayList<Integer>();
+        int pos = 0;
+        for (EscherRecord e : records) {
+            pos += e.serialize(pos, buffer, new EscherSerializationListener() {
+                public void beforeRecordSerialize(int offset, short recordId, EscherRecord record) {
+                }
+
+                public void afterRecordSerialize(int offset, short recordId, int size, EscherRecord record) {
+                    if (recordId == EscherClientDataRecord.RECORD_ID || recordId == EscherTextboxRecord.RECORD_ID) {
+                        spEndingOffsets.add(offset);
+                    }
+                }
+            });
+        }
+        spEndingOffsets.add(0, 0);
+
+        for (int i = 1; i < spEndingOffsets.size(); i++) {
+            if (spEndingOffsets.get(i) - spEndingOffsets.get(i - 1) <= RecordInputStream.MAX_RECORD_DATA_SIZE){
+                continue;
+            }
+            continueRecordsHeadersSize += ((spEndingOffsets.get(i) - spEndingOffsets.get(i - 1)) / RecordInputStream.MAX_RECORD_DATA_SIZE)*4;
+        }
+
+        int drawingRecordSize = rawEscherSize + (shapeToObj.size()) * 4;
+        int objRecordSize = 0;
+        for (Iterator iterator = shapeToObj.values().iterator(); iterator.hasNext(); ) {
+            Record r = (Record) iterator.next();
+            objRecordSize += r.getRecordSize();
+        }
+        int tailRecordSize = 0;
+        for (Iterator iterator = tailRec.iterator(); iterator.hasNext(); ) {
+            Record r = (Record) iterator.next();
+            tailRecordSize += r.getRecordSize();
+        }
+        return drawingRecordSize + objRecordSize + tailRecordSize +continueRecordsHeadersSize;
+    }
 
