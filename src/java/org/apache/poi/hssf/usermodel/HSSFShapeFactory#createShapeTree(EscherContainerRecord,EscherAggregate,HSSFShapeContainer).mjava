@@ -1,0 +1,54 @@
+    public static void createShapeTree(EscherContainerRecord container, EscherAggregate agg, HSSFShapeContainer out){
+        if(container.getRecordId() == EscherContainerRecord.SPGR_CONTAINER){
+            HSSFShapeGroup group = new HSSFShapeGroup(container,
+                    null /* shape containers don't have a associated Obj record*/);
+            List<EscherContainerRecord> children = container.getChildContainers();
+            // skip the first child record, it is group descriptor
+            for(int i = 0; i < children.size(); i++) {
+                EscherContainerRecord spContainer = children.get(i);
+                if(i == 0){
+                    EscherSpgrRecord spgr = (EscherSpgrRecord)spContainer.getChildById(EscherSpgrRecord.RECORD_ID);
+                    group.setCoordinates(
+                            spgr.getRectX1(), spgr.getRectY1(),
+                            spgr.getRectX2(), spgr.getRectY2()
+                    );
+                } else {
+                    createShapeTree(spContainer, agg, group);
+                }
+            }
+            out.addShape(group);
+        } else if (container.getRecordId() == EscherContainerRecord.SP_CONTAINER){
+            Map<EscherRecord, Record> shapeToObj = agg.getShapeToObjMapping();
+            EscherSpRecord spRecord = null;
+            ObjRecord objRecord = null;
+            TextObjectRecord txtRecord = null;
+
+            for(EscherRecord record : container.getChildRecords()) {
+                switch(record.getRecordId()) {
+                    case EscherSpRecord.RECORD_ID:
+                        spRecord = (EscherSpRecord)record;
+                        break;
+                    case EscherClientDataRecord.RECORD_ID:
+                        objRecord = (ObjRecord)shapeToObj.get(record);
+                        break;
+                    case EscherTextboxRecord.RECORD_ID:
+                        txtRecord = (TextObjectRecord)shapeToObj.get(record);
+                        break;
+                }
+            }
+            if (null != objRecord){
+                HSSFShape shape = shapeCreator.createNewShape(spRecord.getShapeType(), container, objRecord);
+                out.addShape(shape);
+            }
+            if (null != txtRecord){
+                //TODO resolve textbox
+//                TextboxShape shape = new TextboxShape(container, txtRecord);
+//                out.a
+            }
+//
+//            //TODO decide what shape to create based on ObjRecord / EscherSpRecord
+//            HSSFShape shape = new HSSFUnknownShape(container, objRecord);
+//            out.addShape(shape);
+        }
+    }
+
