@@ -1,0 +1,35 @@
+        /**
+         * @return aggregate info or null if the sheet does not contain drawing objects
+         */
+        static DrawingAggregateInfo get(HSSFSheet sheet){
+            DrawingAggregateInfo info = null;
+            InternalSheet isheet = HSSFTestHelper.getSheetForTest(sheet);
+            List<RecordBase> records = isheet.getRecords();
+            for(int i = 0; i < records.size(); i++){
+                RecordBase rb = records.get(i);
+                if((rb instanceof DrawingRecord) && info == null) {
+                    info = new DrawingAggregateInfo();
+                    info.startRecordIndex = i;
+                    info.endRecordIndex = i;
+                } else if (info != null && (
+                        rb instanceof DrawingRecord
+                                || rb instanceof ObjRecord
+                                || rb instanceof TextObjectRecord
+                                || rb instanceof ContinueRecord
+                                || rb instanceof NoteRecord
+                )){
+                    info.endRecordIndex = i;
+                } else {
+                    if(rb instanceof EscherAggregate)
+                        throw new IllegalStateException("Drawing data already aggregated. " +
+                                "You should cal this method before the first invocation of HSSFSheet#getDrawingPatriarch()");
+                    if (info != null) break;
+                }
+            }
+            if(info != null){
+                info.aggRecords = new ArrayList<RecordBase>(
+                        records.subList(info.startRecordIndex, info.endRecordIndex + 1));
+            }
+            return info;
+        }
+

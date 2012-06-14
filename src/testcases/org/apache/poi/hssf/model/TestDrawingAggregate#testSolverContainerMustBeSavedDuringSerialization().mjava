@@ -1,7 +1,11 @@
-    public void testSolverContainerMustBeSavedDuringSerialization(){
+    public void testSolverContainerMustBeSavedDuringSerialization() throws IOException{
         HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook("SolverContainerAfterSPGR.xls");
         HSSFSheet sh = wb.getSheetAt(0);
         InternalSheet ish = HSSFTestHelper.getSheetForTest(sh);
+        List<RecordBase> records = ish.getRecords();
+        // records to be aggregated
+        List<RecordBase> dgRecords = records.subList(19, 22);
+        byte[] dgBytes = toByteArray(dgRecords);
         sh.getDrawingPatriarch();
         EscherAggregate agg = (EscherAggregate) ish.findFirstRecordBySid(EscherAggregate.sid);
         assertEquals(agg.getEscherRecords().get(0).getChildRecords().size(), 3);
@@ -14,5 +18,11 @@
         assertEquals(agg.getEscherRecords().get(0).getChildRecords().size(), 3);
         assertEquals(agg.getEscherRecords().get(0).getChild(2).getRecordId(), EscherContainerRecord.SOLVER_CONTAINER);
 
+
+        // collect drawing records into a byte buffer.
+        agg = (EscherAggregate) ish.findFirstRecordBySid(EscherAggregate.sid);
+        byte[] dgBytesAfterSave = agg.serialize();
+        assertEquals("different size of drawing data before and after save", dgBytes.length, dgBytesAfterSave.length);
+        assertTrue("drawing data before and after save is different", Arrays.equals(dgBytes, dgBytesAfterSave));
     }
 
