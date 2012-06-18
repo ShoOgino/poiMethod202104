@@ -1,0 +1,69 @@
+    /**
+     * create a rectangle, save the workbook, read back and verify that all shape properties are there
+     */
+    public void testReadWriteRectangle() throws IOException {
+
+        HSSFWorkbook wb = new HSSFWorkbook();
+        HSSFSheet sheet = wb.createSheet();
+
+        HSSFPatriarch drawing = sheet.createDrawingPatriarch();
+        HSSFClientAnchor anchor = new HSSFClientAnchor(10, 10, 200, 200, (short)2, 2, (short)15, 15);
+        anchor.setAnchorType(2);
+        assertEquals(anchor.getAnchorType(), 2);
+
+        HSSFSimpleShape rectangle = drawing.createSimpleShape(anchor);
+        rectangle.setShapeType(HSSFSimpleShape.OBJECT_TYPE_RECTANGLE);
+        rectangle.setLineWidth(10000);
+        rectangle.setFillColor(777);
+        assertEquals(rectangle.getFillColor(), 777);
+        assertEquals(10000, rectangle.getLineWidth());
+        rectangle.setLineStyle(10);
+        assertEquals(10, rectangle.getLineStyle());
+        rectangle.setLineStyleColor(1111);
+        rectangle.setNoFill(true);
+        assertEquals(rectangle.getLineStyleColor(), 1111);
+        assertEquals(rectangle.isNoFill(), true);
+
+        wb = HSSFTestDataSamples.writeOutAndReadBack(wb);
+        sheet = wb.getSheetAt(0);
+        drawing = sheet.getDrawingPatriarch();
+        assertEquals(1, drawing.getChildren().size());
+
+        HSSFSimpleShape rectangle2 =
+                (HSSFSimpleShape)drawing.getChildren().get(0);
+        assertEquals(HSSFSimpleShape.OBJECT_TYPE_RECTANGLE,
+                rectangle2.getShapeType());
+        assertEquals(10000, rectangle2.getLineWidth());
+        assertEquals(10, rectangle2.getLineStyle());
+        assertEquals(anchor, rectangle2.getAnchor());
+        assertEquals(rectangle2.getLineStyleColor(), 1111);
+        assertEquals(rectangle2.getFillColor(), 777);
+        assertEquals(rectangle2.isNoFill(), true);
+
+        rectangle2.setFillColor(3333);
+        rectangle2.setLineStyle(9);
+        rectangle2.setLineStyleColor(4444);
+        rectangle2.setNoFill(false);
+        rectangle2.setLineWidth(77);
+        rectangle2.getAnchor().setDx1(2);
+        rectangle2.getAnchor().setDx2(3);
+        rectangle2.getAnchor().setDy1(4);
+        rectangle2.getAnchor().setDy2(5);
+
+        wb = HSSFTestDataSamples.writeOutAndReadBack(wb);
+        sheet = wb.getSheetAt(0);
+        drawing = sheet.getDrawingPatriarch();
+        assertEquals(1, drawing.getChildren().size());
+        rectangle2 = (HSSFSimpleShape)drawing.getChildren().get(0);
+        assertEquals(HSSFSimpleShape.OBJECT_TYPE_RECTANGLE, rectangle2.getShapeType());
+        assertEquals(77, rectangle2.getLineWidth());
+        assertEquals(9, rectangle2.getLineStyle());
+        assertEquals(rectangle2.getLineStyleColor(), 4444);
+        assertEquals(rectangle2.getFillColor(), 3333);
+        assertEquals(rectangle2.getAnchor().getDx1(), 2);
+        assertEquals(rectangle2.getAnchor().getDx2(), 3);
+        assertEquals(rectangle2.getAnchor().getDy1(), 4);
+        assertEquals(rectangle2.getAnchor().getDy2(), 5);
+        assertEquals(rectangle2.isNoFill(), false);
+    }
+
