@@ -1,6 +1,42 @@
-    public void setPoints(int[] xPoints, int[] yPoints)
-    {
-        this.xPoints = cloneArray(xPoints);
-        this.yPoints = cloneArray(yPoints);
+    public void setPoints(int[] xPoints, int[] yPoints) {
+        if (xPoints.length != yPoints.length){
+            System.out.println("xPoint.length must be equal to yPoints.length");
+            return;
+        }
+        if (xPoints.length == 0){
+            System.out.println("HSSFPolygon must have at least one point");
+        }
+        EscherArrayProperty verticesProp = new EscherArrayProperty(EscherProperties.GEOMETRY__VERTICES, false, new byte[0] );
+        verticesProp.setNumberOfElementsInArray(xPoints.length+1);
+        verticesProp.setNumberOfElementsInMemory(xPoints.length+1);
+        verticesProp.setSizeOfElements(0xFFF0);
+        for (int i = 0; i < xPoints.length; i++)
+        {
+            byte[] data = new byte[4];
+            LittleEndian.putShort(data, 0, (short)xPoints[i]);
+            LittleEndian.putShort(data, 2, (short)yPoints[i]);
+            verticesProp.setElement(i, data);
+        }
+        int point = xPoints.length;
+        byte[] data = new byte[4];
+        LittleEndian.putShort(data, 0, (short)xPoints[0]);
+        LittleEndian.putShort(data, 2, (short)yPoints[0]);
+        verticesProp.setElement(point, data);
+        setPropertyValue(verticesProp);
+
+        EscherArrayProperty segmentsProp = new EscherArrayProperty(EscherProperties.GEOMETRY__SEGMENTINFO, false, null );
+        segmentsProp.setSizeOfElements(0x0002);
+        segmentsProp.setNumberOfElementsInArray(xPoints.length * 2 + 4);
+        segmentsProp.setNumberOfElementsInMemory(xPoints.length * 2 + 4);
+        segmentsProp.setElement(0, new byte[] { (byte)0x00, (byte)0x40 } );
+        segmentsProp.setElement(1, new byte[] { (byte)0x00, (byte)0xAC } );
+        for (int i = 0; i < xPoints.length; i++)
+        {
+            segmentsProp.setElement(2 + i * 2, new byte[] { (byte)0x01, (byte)0x00 } );
+            segmentsProp.setElement(3 + i * 2, new byte[] { (byte)0x00, (byte)0xAC } );
+        }
+        segmentsProp.setElement(segmentsProp.getNumberOfElementsInArray() - 2, new byte[] { (byte)0x01, (byte)0x60 } );
+        segmentsProp.setElement(segmentsProp.getNumberOfElementsInArray() - 1, new byte[] { (byte)0x00, (byte)0x80 } );
+        setPropertyValue(segmentsProp);
     }
 
