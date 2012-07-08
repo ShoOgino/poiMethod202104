@@ -35,7 +35,12 @@
       // Now try to turn it into id + type
       try {
          int chunkId = Integer.parseInt(ids.substring(0, 4), 16);
-         int type    = Integer.parseInt(ids.substring(4, 8), 16);
+         int typeId  = Integer.parseInt(ids.substring(4, 8), 16);
+         
+         MAPIType type = Types.getById(typeId);
+         if (type == null) {
+            type = Types.createCustom(typeId);
+         }
          
          Chunk chunk = null;
          
@@ -46,19 +51,20 @@
          else {
             // Nothing special about this ID
             // So, do the usual thing which is by type
-            switch(type) {
-            case Types.BINARY:
+            if (type == Types.BINARY) {
                chunk = new ByteChunk(namePrefix, chunkId, type);
-               break;
-            case Types.DIRECTORY:
+            }
+            else if (type == Types.DIRECTORY) {
                if(entry instanceof DirectoryNode) {
                    chunk = new DirectoryChunk((DirectoryNode)entry, namePrefix, chunkId, type);
                }
-               break;
-            case Types.ASCII_STRING:
-            case Types.UNICODE_STRING:
+            }
+            else if (type == Types.ASCII_STRING ||
+                     type == Types.UNICODE_STRING) {
                chunk = new StringChunk(namePrefix, chunkId, type);
-               break;
+            } 
+            else {
+               // Type of an unsupported type! Skipping... 
             }
          }
          
