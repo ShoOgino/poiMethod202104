@@ -73,8 +73,18 @@
         }
 
         // write records that need to be serialized after all drawing group records
-        for (i = 0; i < tailRec.size(); i++) {
-            Record rec = tailRec.get(i);
+        Map<Integer, NoteRecord> tailCopy = new HashMap<Integer, NoteRecord>(tailRec);
+        // at first we should save records in correct order which were already in the file during EscherAggregate.createAggregate()
+        for (Integer id : _tailIds){
+            NoteRecord note = tailCopy.get(id);
+            if (null != note){
+                pos += note.serialize(pos, data);
+                tailCopy.remove(id);
+            }
+        }
+        // Add all other notes which were created after createAggregate()
+        for (i = 0; i < tailCopy.size(); i++) {
+            Record rec = (Record) tailCopy.values().toArray()[i];
             pos += rec.serialize(pos, data);
         }
         int bytesWritten = pos - offset;
