@@ -1,0 +1,42 @@
+    public void testTextForSimpleShape(){
+        HSSFWorkbook wb = new HSSFWorkbook();
+        HSSFSheet sheet = wb.createSheet();
+        HSSFPatriarch patriarch = sheet.createDrawingPatriarch();
+
+        HSSFSimpleShape shape = patriarch.createSimpleShape(new HSSFClientAnchor());
+        shape.setShapeType(HSSFSimpleShape.OBJECT_TYPE_RECTANGLE);
+
+        EscherAggregate agg = HSSFTestHelper.getEscherAggregate(patriarch);
+        assertNull(shape.getEscherContainer().getChildById(EscherTextboxRecord.RECORD_ID));
+        assertEquals(agg.getShapeToObjMapping().size(), 1);
+
+        wb = HSSFTestDataSamples.writeOutAndReadBack(wb);
+        sheet = wb.getSheetAt(0);
+        patriarch = sheet.getDrawingPatriarch();
+
+        shape = (HSSFSimpleShape) patriarch.getChildren().get(0);
+
+        agg = HSSFTestHelper.getEscherAggregate(patriarch);
+        assertNull(shape.getEscherContainer().getChildById(EscherTextboxRecord.RECORD_ID));
+        assertEquals(agg.getShapeToObjMapping().size(), 1);
+
+        shape.setString(new HSSFRichTextString("string1"));
+        assertEquals(shape.getString().getString(), "string1");
+
+        assertNotNull(shape.getEscherContainer().getChildById(EscherTextboxRecord.RECORD_ID));
+        assertEquals(agg.getShapeToObjMapping().size(), 2);
+
+        wb = HSSFTestDataSamples.writeOutAndReadBack(wb);
+
+        wb = HSSFTestDataSamples.writeOutAndReadBack(wb);
+        sheet = wb.getSheetAt(0);
+        patriarch = sheet.getDrawingPatriarch();
+
+        shape = (HSSFSimpleShape) patriarch.getChildren().get(0);
+
+        assertNotNull(shape.getTextObjectRecord());
+        assertEquals(shape.getString().getString(), "string1");
+        assertNotNull(shape.getEscherContainer().getChildById(EscherTextboxRecord.RECORD_ID));
+        assertEquals(agg.getShapeToObjMapping().size(), 2);
+    }
+
