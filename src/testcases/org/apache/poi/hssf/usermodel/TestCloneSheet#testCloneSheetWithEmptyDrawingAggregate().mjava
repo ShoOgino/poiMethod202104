@@ -1,0 +1,35 @@
+    public void testCloneSheetWithEmptyDrawingAggregate(){
+        HSSFWorkbook b = new HSSFWorkbook();
+        HSSFSheet s = b.createSheet("Test");
+        HSSFPatriarch patriarch = s.createDrawingPatriarch();
+
+        EscherAggregate agg1 = patriarch._getBoundAggregate();
+
+        HSSFSheet s2 = s.cloneSheet(b);
+
+        patriarch = s2.getDrawingPatriarch();
+
+        EscherAggregate agg2 = patriarch._getBoundAggregate();
+
+        EscherSpRecord sp1 = (EscherSpRecord) agg1.getEscherContainer().getChild(1).getChild(0).getChild(1);
+        EscherSpRecord sp2 = (EscherSpRecord) agg2.getEscherContainer().getChild(1).getChild(0).getChild(1);
+
+        assertEquals(sp1.getShapeId(), 1024);
+        assertEquals(sp2.getShapeId(), 2048);
+
+        EscherDgRecord dg = (EscherDgRecord) agg2.getEscherContainer().getChild(0);
+
+        assertEquals(dg.getLastMSOSPID(), 2048);
+        assertEquals(dg.getInstance(), 0x2);
+
+        //everything except id and DgRecord.lastMSOSPID and DgRecord.Instance must be the same
+
+        sp2.setShapeId(1024);
+        dg.setLastMSOSPID(1024);
+        dg.setInstance((short) 0x1);
+
+        assertEquals(agg1.serialize().length, agg2.serialize().length);
+        assertEquals(agg1.toXml(""), agg2.toXml(""));
+        assertTrue(Arrays.equals(agg1.serialize(), agg2.serialize()));
+    }
+
