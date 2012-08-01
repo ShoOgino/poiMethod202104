@@ -1,0 +1,33 @@
+    private HSSFPatriarch getPatriarch(boolean createIfMissing) {
+        HSSFPatriarch patriarch = null;
+        if (_patriarch != null) {
+            return _patriarch;
+        }
+        DrawingManager2 dm = _book.findDrawingGroup();
+        if (null == dm) {
+            if (!createIfMissing) {
+                return null;
+            } else {
+                _book.createDrawingGroup();
+                dm = _book.getDrawingManager();
+            }
+        }
+        EscherAggregate agg = (EscherAggregate) _sheet.findFirstRecordBySid(EscherAggregate.sid);
+        if (null == agg) {
+            int pos = _sheet.aggregateDrawingRecords(dm, false);
+            if (-1 == pos) {
+                if (createIfMissing) {
+                    pos = _sheet.aggregateDrawingRecords(dm, true);
+                    agg = (EscherAggregate) _sheet.getRecords().get(pos);
+                    patriarch = new HSSFPatriarch(this, agg);
+                    patriarch.afterCreate();
+                    return patriarch;
+                } else {
+                    return null;
+                }
+            }
+            agg = (EscherAggregate) _sheet.getRecords().get(pos);
+        }
+        return new HSSFPatriarch(this, agg);
+    }
+
