@@ -19,41 +19,26 @@
      * @param endColumn   0 based end of repeating columns.
      * @param startRow    0 based start of repeating rows.
      * @param endRow      0 based end of repeating rows.
+     * 
+     * @deprecated use {@link XSSFSheet#setRepeatingRows(CellRangeAddress)}
+     *        or {@link XSSFSheet#setRepeatingColumns(CellRangeAddress)}
      */
     public void setRepeatingRowsAndColumns(int sheetIndex,
                                            int startColumn, int endColumn,
                                            int startRow, int endRow) {
-        //    Check arguments
-        if ((startColumn == -1 && endColumn != -1) || startColumn < -1 || endColumn < -1 || startColumn > endColumn)
-            throw new IllegalArgumentException("Invalid column range specification");
-        if ((startRow == -1 && endRow != -1) || startRow < -1 || endRow < -1 || startRow > endRow)
-            throw new IllegalArgumentException("Invalid row range specification");
+      XSSFSheet sheet = getSheetAt(sheetIndex);
+      
+      CellRangeAddress rows = null;
+      CellRangeAddress cols = null;
+      
+      if (startRow != -1) {
+        rows = new CellRangeAddress(startRow, endRow, -1, -1);
+      }
+      if (startColumn != -1) {
+        cols = new CellRangeAddress(-1, -1, startColumn, endColumn);
+      }
 
-        XSSFSheet sheet = getSheetAt(sheetIndex);
-        boolean removingRange = startColumn == -1 && endColumn == -1 && startRow == -1 && endRow == -1;
-
-        XSSFName name = getBuiltInName(XSSFName.BUILTIN_PRINT_TITLE, sheetIndex);
-        if (removingRange) {
-            if(name != null)namedRanges.remove(name);
-            return;
-        }
-        if (name == null) {
-            name = createBuiltInName(XSSFName.BUILTIN_PRINT_TITLE, sheetIndex);
-        }
-
-        String reference = getReferenceBuiltInRecord(name.getSheetName(), startColumn, endColumn, startRow, endRow);
-        name.setRefersToFormula(reference);
-
-        // If the print setup isn't currently defined, then add it
-        //  in but without printer defaults
-        // If it's already there, leave it as-is!
-        CTWorksheet ctSheet = sheet.getCTWorksheet();
-        if(ctSheet.isSetPageSetup() && ctSheet.isSetPageMargins()) {
-           // Everything we need is already there
-        } else {
-           // Have initial ones put in place
-           XSSFPrintSetup printSetup = sheet.getPrintSetup();
-           printSetup.setValidSettings(false);
-        }
+      sheet.setRepeatingRows(rows);
+      sheet.setRepeatingColumns(cols);
     }
 

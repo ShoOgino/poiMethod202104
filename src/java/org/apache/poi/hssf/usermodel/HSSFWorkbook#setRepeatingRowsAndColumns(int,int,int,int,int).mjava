@@ -23,79 +23,26 @@
      * @param endColumn     0 based end of repeating columns.
      * @param startRow      0 based start of repeating rows.
      * @param endRow        0 based end of repeating rows.
+     * 
+     * @deprecated use {@link HSSFSheet#setRepeatingRows(CellRangeAddress)}
+     *        or {@link HSSFSheet#setRepeatingColumns(CellRangeAddress)}
      */
     public void setRepeatingRowsAndColumns(int sheetIndex,
                                            int startColumn, int endColumn,
-                                           int startRow, int endRow)
-    {
-        // Check arguments
-        if (startColumn == -1 && endColumn != -1) throw new IllegalArgumentException("Invalid column range specification");
-        if (startRow == -1 && endRow != -1) throw new IllegalArgumentException("Invalid row range specification");
-        if (startColumn < -1 || startColumn >= MAX_COLUMN) throw new IllegalArgumentException("Invalid column range specification");
-        if (endColumn < -1 || endColumn >= MAX_COLUMN) throw new IllegalArgumentException("Invalid column range specification");
-        if (startRow < -1 || startRow > MAX_ROW) throw new IllegalArgumentException("Invalid row range specification");
-        if (endRow < -1 || endRow > MAX_ROW) throw new IllegalArgumentException("Invalid row range specification");
-        if (startColumn > endColumn) throw new IllegalArgumentException("Invalid column range specification");
-        if (startRow > endRow) throw new IllegalArgumentException("Invalid row range specification");
+                                           int startRow, int endRow) {
+      HSSFSheet sheet = getSheetAt(sheetIndex);
 
-        HSSFSheet sheet = getSheetAt(sheetIndex);
-        short externSheetIndex = getWorkbook().checkExternSheet(sheetIndex);
+      CellRangeAddress rows = null;
+      CellRangeAddress cols = null;
 
-        boolean settingRowAndColumn =
-                startColumn != -1 && endColumn != -1 && startRow != -1 && endRow != -1;
-        boolean removingRange =
-                startColumn == -1 && endColumn == -1 && startRow == -1 && endRow == -1;
+      if (startRow != -1) {
+        rows = new CellRangeAddress(startRow, endRow, -1, -1);
+      }
+      if (startColumn != -1) {
+        cols = new CellRangeAddress(-1, -1, startColumn, endColumn);
+      }
 
-        int rowColHeaderNameIndex = findExistingBuiltinNameRecordIdx(sheetIndex, NameRecord.BUILTIN_PRINT_TITLE);
-        if (removingRange) {
-            if (rowColHeaderNameIndex >= 0) {
-                workbook.removeName(rowColHeaderNameIndex);
-            }
-            return;
-        }
-        boolean isNewRecord;
-        NameRecord nameRecord;
-        if (rowColHeaderNameIndex < 0) {
-            //does a lot of the house keeping for builtin records, like setting lengths to zero etc
-            nameRecord = workbook.createBuiltInName(NameRecord.BUILTIN_PRINT_TITLE, sheetIndex+1);
-            isNewRecord = true;
-        } else {
-            nameRecord = workbook.getNameRecord(rowColHeaderNameIndex);
-            isNewRecord = false;
-        }
-
-        List temp = new ArrayList();
-
-        if (settingRowAndColumn) {
-            final int exprsSize = 2 * 11 + 1; // 2 * Area3DPtg.SIZE + UnionPtg.SIZE
-            temp.add(new MemFuncPtg(exprsSize));
-        }
-        if (startColumn >= 0) {
-            Area3DPtg colArea = new Area3DPtg(0, MAX_ROW, startColumn, endColumn,
-                    false, false, false, false, externSheetIndex);
-            temp.add(colArea);
-        }
-        if (startRow >= 0) {
-            Area3DPtg rowArea = new Area3DPtg(startRow, endRow, 0, MAX_COLUMN,
-                    false, false, false, false, externSheetIndex);
-            temp.add(rowArea);
-        }
-        if (settingRowAndColumn) {
-            temp.add(UnionPtg.instance);
-        }
-        Ptg[] ptgs = new Ptg[temp.size()];
-        temp.toArray(ptgs);
-        nameRecord.setNameDefinition(ptgs);
-
-        if (isNewRecord)
-        {
-            HSSFName newName = new HSSFName(this, nameRecord, nameRecord.isBuiltInName() ? null : workbook.getNameCommentRecord(nameRecord));
-            names.add(newName);
-        }
-
-        HSSFPrintSetup printSetup = sheet.getPrintSetup();
-        printSetup.setValidSettings(false);
-
-        sheet.setActive(true);
+      sheet.setRepeatingRows(rows);
+      sheet.setRepeatingColumns(cols);
     }
 
