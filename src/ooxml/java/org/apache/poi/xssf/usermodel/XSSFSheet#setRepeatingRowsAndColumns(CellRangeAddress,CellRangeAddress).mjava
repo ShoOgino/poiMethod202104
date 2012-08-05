@@ -1,0 +1,57 @@
+    private void setRepeatingRowsAndColumns(
+        CellRangeAddress rowDef, CellRangeAddress colDef) {
+      int col1 = -1; 
+      int col2 =  -1;
+      int row1 = -1; 
+      int row2 =  -1;
+      
+      if (rowDef != null) {
+        row1 = rowDef.getFirstRow();
+        row2 = rowDef.getLastRow();
+        if ((row1 == -1 && row2 != -1) 
+            || row1 < -1 || row2 < -1 || row1 > row2) {
+          throw new IllegalArgumentException("Invalid row range specification");
+        }
+      }
+      if (colDef != null) {
+        col1 = colDef.getFirstColumn();
+        col2 = colDef.getLastColumn();
+        if ((col1 == -1 && col2 != -1) 
+            || col1 < -1 || col2 < -1 || col1 > col2) {
+          throw new IllegalArgumentException(
+              "Invalid column range specification");
+        }
+      }
+      
+      int sheetIndex = getWorkbook().getSheetIndex(this);
+
+      boolean removeAll = rowDef == null && colDef == null;
+
+      XSSFName name = getWorkbook().getBuiltInName(
+          XSSFName.BUILTIN_PRINT_TITLE, sheetIndex);
+      if (removeAll) {
+          if (name != null) {
+            getWorkbook().removeName(name);
+          }
+          return;
+      }
+      if (name == null) {
+          name = getWorkbook().createBuiltInName(
+              XSSFName.BUILTIN_PRINT_TITLE, sheetIndex);
+      }
+
+      String reference = getReferenceBuiltInRecord(
+          name.getSheetName(), col1, col2, row1, row2);
+      name.setRefersToFormula(reference);
+
+      // If the print setup isn't currently defined, then add it
+      //  in but without printer defaults
+      // If it's already there, leave it as-is!
+      if (worksheet.isSetPageSetup() && worksheet.isSetPageMargins()) {
+         // Everything we need is already there
+      } else {
+        // Have initial ones put in place
+        getPrintSetup().setValidSettings(false);
+      }
+    }
+

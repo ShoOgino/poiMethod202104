@@ -18,8 +18,8 @@
            colourM = colorPattern.matcher(formatStr);
         }
 
-        // try to extract special characters like currency
-        Matcher m = specialPatternGroup.matcher(formatStr);
+        // Strip off the locale information, we use an instance-wide locale for everything
+        Matcher m = localePatternGroup.matcher(formatStr);
         while(m.find()) {
             String match = m.group();
             String symbol = match.substring(match.indexOf('$') + 1, match.indexOf('-'));
@@ -31,11 +31,19 @@
                 symbol = sb.toString();
             }
             formatStr = m.replaceAll(symbol);
-            m = specialPatternGroup.matcher(formatStr);
+            m = localePatternGroup.matcher(formatStr);
         }
 
+        // Check for special cases
         if(formatStr == null || formatStr.trim().length() == 0) {
             return getDefaultFormat(cellValue);
+        }
+        
+        if ("General".equalsIgnoreCase(formatStr) || "@".equals(formatStr)) {
+           if (isWholeNumber(cellValue)) {
+               return generalWholeNumFormat;
+           }
+           return generalDecimalNumFormat;
         }
 
         if(DateUtil.isADateFormat(formatIndex,formatStr) &&
