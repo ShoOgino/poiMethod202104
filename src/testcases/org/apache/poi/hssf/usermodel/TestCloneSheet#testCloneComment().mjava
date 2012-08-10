@@ -1,0 +1,25 @@
+    public void testCloneComment() throws IOException {
+        HSSFWorkbook wb = new HSSFWorkbook();
+        HSSFSheet sh = wb.createSheet();
+        HSSFPatriarch p = sh.createDrawingPatriarch();
+        HSSFComment c = p.createComment(new HSSFClientAnchor(0,0,100,100, (short) 0,0,(short)5,5));
+        c.setColumn(1);
+        c.setRow(2);
+        c.setString(new HSSFRichTextString("qwertyuio"));
+        
+        HSSFSheet sh2 = wb.cloneSheet(0);
+        HSSFPatriarch p2 = sh2.getDrawingPatriarch();
+        HSSFComment c2 = (HSSFComment) p2.getChildren().get(0);
+        
+        assertTrue(Arrays.equals(c2.getTextObjectRecord().serialize(), c.getTextObjectRecord().serialize()));
+        assertTrue(Arrays.equals(c2.getObjRecord().serialize(), c.getObjRecord().serialize()));
+        assertTrue(Arrays.equals(c2.getNoteRecord().serialize(), c.getNoteRecord().serialize()));
+
+
+        //everything except spRecord.shapeId must be the same
+        assertFalse(Arrays.equals(c2.getEscherContainer().serialize(), c.getEscherContainer().serialize()));
+        EscherSpRecord sp = (EscherSpRecord) c2.getEscherContainer().getChild(0);
+        sp.setShapeId(1025);
+        assertTrue(Arrays.equals(c2.getEscherContainer().serialize(), c.getEscherContainer().serialize()));
+    }
+

@@ -1,0 +1,26 @@
+    public void testBSEPictureRef(){
+        HSSFWorkbook wb = new HSSFWorkbook();
+
+        HSSFSheet sh = wb.createSheet("Pictures");
+        HSSFPatriarch dr = sh.createDrawingPatriarch();
+        HSSFClientAnchor anchor = new HSSFClientAnchor();
+
+        InternalSheet ish = HSSFTestHelper.getSheetForTest(sh);
+
+        //register a picture
+        byte[] data1 = new byte[]{1, 2, 3};
+        int idx1 = wb.addPicture(data1, Workbook.PICTURE_TYPE_JPEG);
+        assertEquals(1, idx1);
+        HSSFPicture p1 = dr.createPicture(anchor, idx1);
+
+        EscherBSERecord bse = wb.getWorkbook().getBSERecord(idx1);
+
+        assertEquals(bse.getRef(), 1);
+        dr.createPicture(new HSSFClientAnchor(), idx1);
+        assertEquals(bse.getRef(), 2);
+
+        HSSFShapeGroup gr = dr.createGroup(new HSSFClientAnchor());
+        gr.createPicture(new HSSFChildAnchor(), idx1);
+        assertEquals(bse.getRef(), 3);
+    }
+

@@ -1,0 +1,31 @@
+    protected HSSFShape cloneShape(HSSFPatriarch patriarch) {
+        EscherContainerRecord spgrContainer = new EscherContainerRecord();
+        spgrContainer.setRecordId(EscherContainerRecord.SPGR_CONTAINER);
+        spgrContainer.setOptions((short) 0x000F);
+        EscherContainerRecord spContainer = new EscherContainerRecord();
+        EscherContainerRecord cont = getEscherContainer().getChildById(EscherContainerRecord.SP_CONTAINER);
+        byte [] inSp = cont.serialize();
+        spContainer.fillFields(inSp, 0, new DefaultEscherRecordFactory());
+
+        spgrContainer.addChildRecord(spContainer);
+        ObjRecord obj = null;
+        if (null != getObjRecord()){
+            obj = (ObjRecord) getObjRecord().cloneViaReserialise();
+        }
+
+        HSSFShapeGroup group = new HSSFShapeGroup(spgrContainer, obj);
+        group.setPatriarch(patriarch);
+
+        for (HSSFShape shape: getChildren()){
+            HSSFShape newShape;
+            if (shape instanceof HSSFShapeGroup){
+                newShape = ((HSSFShapeGroup)shape).cloneShape(patriarch);
+            } else {
+                newShape = shape.cloneShape();
+            }
+            group.addShape(newShape);
+            group.onCreate(newShape);
+        }
+        return group;
+    }
+

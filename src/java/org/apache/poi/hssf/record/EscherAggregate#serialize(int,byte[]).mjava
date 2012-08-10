@@ -1,85 +1,92 @@
-	/**
-	 * Serializes this aggregate to a byte array.  Since this is an aggregate
-	 * record it will effectively serialize the aggregated records.
-	 *
-	 * @param offset	The offset into the start of the array.
-	 * @param data	  The byte array to serialize to.
-	 * @return		  The number of bytes serialized.
-	 */
-	public int serialize( int offset, byte[] data )
-	{
-		convertUserModelToRecords();
+    /**
+     * Serializes this aggregate to a byte array.  Since this is an aggregate
+     * record it will effectively serialize the aggregated records.
+     *
+     * @param offset The offset into the start of the array.
+     * @param data   The byte array to serialize to.
+     * @return The number of bytes serialized.
+     */
+    public int serialize(int offset, byte[] data) {
+        // Determine buffer size
+        List records = getEscherRecords();
+        int size = getEscherRecordSize(records);
+        byte[] buffer = new byte[size];
 
-		// Determine buffer size
-		List records = getEscherRecords();
-		int size = getEscherRecordSize( records );
-		byte[] buffer = new byte[size];
+        // Serialize escher records into one big data structure and keep note of ending offsets.
+        final List spEndingOffsets = new ArrayList();
+        final List shapes = new ArrayList();
+        int pos = 0;
+        for (Iterator iterator = records.iterator(); iterator.hasNext(); ) {
+            EscherRecord e = (EscherRecord) iterator.next();
+            pos += e.serialize(pos, buffer, new EscherSerializationListener() {
+                public void beforeRecordSerialize(int offset, short recordId, EscherRecord record) {
+                }
 
+                public void afterRecordSerialize(int offset, short recordId, int size, EscherRecord record) {
+                    if (recordId == EscherClientDataRecord.RECORD_ID || recordId == EscherTextboxRecord.RECORD_ID) {
+                        spEndingOffsets.add(offset);
+                        shapes.add(record);
+                    }
+                }
+            });
+        }
+        // todo: fix this
+        shapes.add(0, null);
+        spEndingOffsets.add(0, null);
 
-		// Serialize escher records into one big data structure and keep note of ending offsets.
-		final List spEndingOffsets = new ArrayList();
-		final List shapes = new ArrayList();
-		int pos = 0;
-		for ( Iterator iterator = records.iterator(); iterator.hasNext(); )
-		{
-			EscherRecord e = (EscherRecord) iterator.next();
-			pos += e.serialize( pos, buffer, new EscherSerializationListener()
-			{
-				public void beforeRecordSerialize( int offset, short recordId, EscherRecord record )
-				{
-				}
+        // Split escher records into separate MSODRAWING and OBJ, TXO records.  (We don't break on
+        // the first one because it's the patriach).
+        pos = offset;
+        int writtenEscherBytes = 0;
+        int i;
+        for (i = 1; i < shapes.size(); i++) {
+            int endOffset = (Integer) spEndingOffsets.get(i) - 1;
+            int startOffset;
+            if (i == 1)
+                startOffset = 0;
+            else
+                startOffset = (Integer) spEndingOffsets.get(i - 1);
 
-				public void afterRecordSerialize( int offset, short recordId, int size, EscherRecord record )
-				{
-					if ( recordId == EscherClientDataRecord.RECORD_ID || recordId == EscherTextboxRecord.RECORD_ID )
-					{
-						spEndingOffsets.add( Integer.valueOf( offset ) );
-						shapes.add( record );
-					}
-				}
-			} );
-		}
-		// todo: fix this
-		shapes.add( 0, null );
-		spEndingOffsets.add( 0, null );
+            byte[] drawingData = new byte[endOffset - startOffset + 1];
+            System.arraycopy(buffer, startOffset, drawingData, 0, drawingData.length);
+            pos += writeDataIntoDrawingRecord(drawingData, writtenEscherBytes, pos, data, i);
 
-		// Split escher records into separate MSODRAWING and OBJ, TXO records.  (We don't break on
-		// the first one because it's the patriach).
-		pos = offset;
-		for ( int i = 1; i < shapes.size(); i++ )
-		{
-			int endOffset = ( (Integer) spEndingOffsets.get( i ) ).intValue() - 1;
-			int startOffset;
-			if ( i == 1 )
-				startOffset = 0;
-			else
-				startOffset = ( (Integer) spEndingOffsets.get( i - 1 ) ).intValue();
+            writtenEscherBytes += drawingData.length;
 
-			// Create and write a new MSODRAWING record
-			DrawingRecord drawing = new DrawingRecord();
-			byte[] drawingData = new byte[endOffset - startOffset + 1];
-			System.arraycopy( buffer, startOffset, drawingData, 0, drawingData.length );
-			drawing.setData( drawingData );
-			int temp = drawing.serialize( pos, data );
-			pos += temp;
+            // Write the matching OBJ record
+            Record obj = shapeToObj.get(shapes.get(i));
+            pos += obj.serialize(pos, data);
 
-			// Write the matching OBJ record
-			Record obj = shapeToObj.get( shapes.get( i ) );
-			temp = obj.serialize( pos, data );
-			pos += temp;
+            if (i == shapes.size() - 1 && endOffset < buffer.length - 1) {
+                drawingData = new byte[buffer.length - endOffset - 1];
+                System.arraycopy(buffer, endOffset + 1, drawingData, 0, drawingData.length);
+                pos += writeDataIntoDrawingRecord(drawingData, writtenEscherBytes, pos, data, i);
+            }
+        }
+        if ((pos - offset) < buffer.length - 1) {
+            byte[] drawingData = new byte[buffer.length - (pos - offset)];
+            System.arraycopy(buffer, (pos - offset), drawingData, 0, drawingData.length);
+            pos += writeDataIntoDrawingRecord(drawingData, writtenEscherBytes, pos, data, i);
+        }
 
-		}
-
-		// write records that need to be serialized after all drawing group records
-		for ( int i = 0; i < tailRec.size(); i++ )
-		{
-			Record rec = (Record)tailRec.get(i);
-			pos += rec.serialize( pos, data );
-		}
-
-		int bytesWritten = pos - offset;
-		if ( bytesWritten != getRecordSize() )
-			throw new RecordFormatException( bytesWritten + " bytes written but getRecordSize() reports " + getRecordSize() );
-		return bytesWritten;
-	}
+        // write records that need to be serialized after all drawing group records
+        Map<Integer, NoteRecord> tailCopy = new HashMap<Integer, NoteRecord>(tailRec);
+        // at first we should save records in correct order which were already in the file during EscherAggregate.createAggregate()
+        for (Integer id : _tailIds) {
+            NoteRecord note = tailCopy.get(id);
+            if (null != note) {
+                pos += note.serialize(pos, data);
+                tailCopy.remove(id);
+            }
+        }
+        // Add all other notes which were created after createAggregate()
+        for (i = 0; i < tailCopy.size(); i++) {
+            Record rec = (Record) tailCopy.values().toArray()[i];
+            pos += rec.serialize(pos, data);
+        }
+        int bytesWritten = pos - offset;
+        if (bytesWritten != getRecordSize())
+            throw new RecordFormatException(bytesWritten + " bytes written but getRecordSize() reports " + getRecordSize());
+        return bytesWritten;
+    }
 

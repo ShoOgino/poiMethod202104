@@ -2,26 +2,49 @@
      * Sets a particular anchor.  A top-level shape must have an anchor of
      * HSSFClientAnchor.  A child anchor must have an anchor of HSSFChildAnchor
      *
-     * @param anchor    the anchor to use.
-     * @throws IllegalArgumentException     when the wrong anchor is used for
-     *                                      this particular shape.
-     *
+     * @param anchor the anchor to use.
+     * @throws IllegalArgumentException when the wrong anchor is used for
+     *                                  this particular shape.
      * @see HSSFChildAnchor
      * @see HSSFClientAnchor
      */
-    public void setAnchor( HSSFAnchor anchor )
-    {
-        if ( parent == null )
-        {
-            if ( anchor instanceof HSSFChildAnchor )
-                throw new IllegalArgumentException( "Must use client anchors for shapes directly attached to sheet." );
+    public void setAnchor(HSSFAnchor anchor) {
+        int i = 0;
+        int recordId = -1;
+        if (parent == null) {
+            if (anchor instanceof HSSFChildAnchor)
+                throw new IllegalArgumentException("Must use client anchors for shapes directly attached to sheet.");
+            EscherClientAnchorRecord anch = _escherContainer.getChildById(EscherClientAnchorRecord.RECORD_ID);
+            if (null != anch) {
+                for (i=0; i< _escherContainer.getChildRecords().size(); i++){
+                    if (_escherContainer.getChild(i).getRecordId() == EscherClientAnchorRecord.RECORD_ID){
+                        if (i != _escherContainer.getChildRecords().size() -1){
+                            recordId = _escherContainer.getChild(i+1).getRecordId();
+                        }
+                    }
+                }
+                _escherContainer.removeChildRecord(anch);
+            }
+        } else {
+            if (anchor instanceof HSSFClientAnchor)
+                throw new IllegalArgumentException("Must use child anchors for shapes attached to groups.");
+            EscherChildAnchorRecord anch = _escherContainer.getChildById(EscherChildAnchorRecord.RECORD_ID);
+            if (null != anch) {
+                for (i=0; i< _escherContainer.getChildRecords().size(); i++){
+                    if (_escherContainer.getChild(i).getRecordId() == EscherChildAnchorRecord.RECORD_ID){
+                        if (i != _escherContainer.getChildRecords().size() -1){
+                            recordId = _escherContainer.getChild(i+1).getRecordId();
+                        }
+                    }
+                }
+                _escherContainer.removeChildRecord(anch);
+            }
         }
-        else
-        {
-            if ( anchor instanceof HSSFClientAnchor )
-                throw new IllegalArgumentException( "Must use child anchors for shapes attached to groups." );
+        if (-1 == recordId){
+            _escherContainer.addChildRecord(anchor.getEscherAnchor());
+        } else {
+            _escherContainer.addChildBefore(anchor.getEscherAnchor(), recordId);
         }
-
         this.anchor = anchor;
     }
 

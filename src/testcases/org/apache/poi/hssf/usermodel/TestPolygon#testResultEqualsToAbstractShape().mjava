@@ -1,0 +1,43 @@
+    public void testResultEqualsToAbstractShape() throws IOException {
+        HSSFWorkbook wb = new HSSFWorkbook();
+        HSSFSheet sh = wb.createSheet();
+        HSSFPatriarch patriarch = sh.createDrawingPatriarch();
+
+        HSSFPolygon polygon = patriarch.createPolygon(new HSSFClientAnchor());
+        polygon.setPolygonDrawArea( 100, 100 );
+        polygon.setPoints( new int[]{0, 90, 50}, new int[]{5, 5, 44} );
+        PolygonShape polygonShape = HSSFTestModelHelper.createPolygonShape(1024, polygon);
+        polygon.setShapeId(1024);
+
+        assertEquals(polygon.getEscherContainer().getChildRecords().size(), 4);
+        assertEquals(polygonShape.getSpContainer().getChildRecords().size(), 4);
+
+        //sp record
+        byte[] expected = polygonShape.getSpContainer().getChild(0).serialize();
+        byte[] actual = polygon.getEscherContainer().getChild(0).serialize();
+
+        assertEquals(expected.length, actual.length);
+        assertTrue(Arrays.equals(expected, actual));
+
+        expected = polygonShape.getSpContainer().getChild(2).serialize();
+        actual = polygon.getEscherContainer().getChild(2).serialize();
+
+        assertEquals(expected.length, actual.length);
+        assertTrue(Arrays.equals(expected, actual));
+
+        expected = polygonShape.getSpContainer().getChild(3).serialize();
+        actual = polygon.getEscherContainer().getChild(3).serialize();
+
+        assertEquals(expected.length, actual.length);
+        assertTrue(Arrays.equals(expected, actual));
+
+        ObjRecord obj = polygon.getObjRecord();
+        ObjRecord objShape = polygonShape.getObjRecord();
+
+        expected = obj.serialize();
+        actual = objShape.serialize();
+
+        assertEquals(expected.length, actual.length);
+        assertTrue(Arrays.equals(expected, actual));
+    }
+

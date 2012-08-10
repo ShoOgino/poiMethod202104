@@ -1,0 +1,73 @@
+    public void testModify() throws Exception {
+        HSSFWorkbook wb = new HSSFWorkbook();
+
+        // create a sheet with a text box
+        HSSFSheet sheet = wb.createSheet();
+        HSSFPatriarch patriarch = sheet.createDrawingPatriarch();
+
+        HSSFShapeGroup group1 = patriarch.createGroup(new
+                HSSFClientAnchor(0,0,0,0,
+                (short)0, 0, (short)15, 25));
+        group1.setCoordinates(0, 0, 792, 612);
+
+        HSSFTextbox textbox1 = group1.createTextbox(new
+                HSSFChildAnchor(100, 100, 300, 300));
+        HSSFRichTextString rt1 = new HSSFRichTextString("Hello, World!");
+        textbox1.setString(rt1);
+
+        // write, read back and check that our text box is there
+        wb = HSSFTestDataSamples.writeOutAndReadBack(wb);
+        sheet = wb.getSheetAt(0);
+        patriarch = sheet.getDrawingPatriarch();
+        assertEquals(1, patriarch.getChildren().size());
+
+        group1 = (HSSFShapeGroup)patriarch.getChildren().get(0);
+        assertEquals(1, group1.getChildren().size());
+        textbox1 = (HSSFTextbox)group1.getChildren().get(0);
+        assertEquals("Hello, World!", textbox1.getString().getString());
+
+        // modify anchor
+        assertEquals(new HSSFChildAnchor(100, 100, 300, 300),
+                textbox1.getAnchor());
+        HSSFChildAnchor newAnchor = new HSSFChildAnchor(200,200, 400, 400);
+        textbox1.setAnchor(newAnchor);
+        // modify text
+        textbox1.setString(new HSSFRichTextString("Hello, World! (modified)"));
+
+        // add a new text box
+        HSSFTextbox textbox2 = group1.createTextbox(new
+                HSSFChildAnchor(400, 400, 600, 600));
+        HSSFRichTextString rt2 = new HSSFRichTextString("Hello, World-2");
+        textbox2.setString(rt2);
+        assertEquals(2, group1.getChildren().size());
+
+        wb = HSSFTestDataSamples.writeOutAndReadBack(wb);
+        sheet = wb.getSheetAt(0);
+        patriarch = sheet.getDrawingPatriarch();
+        assertEquals(1, patriarch.getChildren().size());
+
+        group1 = (HSSFShapeGroup)patriarch.getChildren().get(0);
+        assertEquals(2, group1.getChildren().size());
+        textbox1 = (HSSFTextbox)group1.getChildren().get(0);
+        assertEquals("Hello, World! (modified)",
+                textbox1.getString().getString());
+        assertEquals(new HSSFChildAnchor(200,200, 400, 400),
+                textbox1.getAnchor());
+
+        textbox2 = (HSSFTextbox)group1.getChildren().get(1);
+        assertEquals("Hello, World-2", textbox2.getString().getString());
+        assertEquals(new HSSFChildAnchor(400, 400, 600, 600),
+                textbox2.getAnchor());
+
+        wb = HSSFTestDataSamples.writeOutAndReadBack(wb);
+        sheet = wb.getSheetAt(0);
+        patriarch = sheet.getDrawingPatriarch();
+        group1 = (HSSFShapeGroup)patriarch.getChildren().get(0);
+        textbox1 = (HSSFTextbox)group1.getChildren().get(0);
+        textbox2 = (HSSFTextbox)group1.getChildren().get(1);
+        HSSFTextbox textbox3 = group1.createTextbox(new
+                HSSFChildAnchor(400,200, 600, 400));
+        HSSFRichTextString rt3 = new HSSFRichTextString("Hello, World-3");
+        textbox3.setString(rt3);
+    }
+

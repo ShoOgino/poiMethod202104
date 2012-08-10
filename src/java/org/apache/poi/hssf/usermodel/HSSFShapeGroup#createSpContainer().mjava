@@ -1,0 +1,45 @@
+    @Override
+    protected EscherContainerRecord createSpContainer() {
+        EscherContainerRecord spgrContainer = new EscherContainerRecord();
+        EscherContainerRecord spContainer = new EscherContainerRecord();
+        EscherSpgrRecord spgr = new EscherSpgrRecord();
+        EscherSpRecord sp = new EscherSpRecord();
+        EscherOptRecord opt = new EscherOptRecord();
+        EscherRecord anchor;
+        EscherClientDataRecord clientData = new EscherClientDataRecord();
+
+        spgrContainer.setRecordId(EscherContainerRecord.SPGR_CONTAINER);
+        spgrContainer.setOptions((short) 0x000F);
+        spContainer.setRecordId(EscherContainerRecord.SP_CONTAINER);
+        spContainer.setOptions((short) 0x000F);
+        spgr.setRecordId(EscherSpgrRecord.RECORD_ID);
+        spgr.setOptions((short) 0x0001);
+        spgr.setRectX1(0);
+        spgr.setRectY1(0);
+        spgr.setRectX2(1023);
+        spgr.setRectY2(255);
+        sp.setRecordId(EscherSpRecord.RECORD_ID);
+        sp.setOptions((short) 0x0002);
+        if (getAnchor() instanceof HSSFClientAnchor) {
+            sp.setFlags(EscherSpRecord.FLAG_GROUP | EscherSpRecord.FLAG_HAVEANCHOR);
+        } else {
+            sp.setFlags(EscherSpRecord.FLAG_GROUP | EscherSpRecord.FLAG_HAVEANCHOR | EscherSpRecord.FLAG_CHILD);
+        }
+        opt.setRecordId(EscherOptRecord.RECORD_ID);
+        opt.setOptions((short) 0x0023);
+        opt.addEscherProperty(new EscherBoolProperty(EscherProperties.PROTECTION__LOCKAGAINSTGROUPING, 0x00040004));
+        opt.addEscherProperty(new EscherBoolProperty(EscherProperties.GROUPSHAPE__PRINT, 0x00080000));
+
+        anchor = getAnchor().getEscherAnchor();
+        clientData.setRecordId(EscherClientDataRecord.RECORD_ID);
+        clientData.setOptions((short) 0x0000);
+
+        spgrContainer.addChildRecord(spContainer);
+        spContainer.addChildRecord(spgr);
+        spContainer.addChildRecord(sp);
+        spContainer.addChildRecord(opt);
+        spContainer.addChildRecord(anchor);
+        spContainer.addChildRecord(clientData);
+        return spgrContainer;
+    }
+

@@ -1,0 +1,27 @@
+    public void testGetPatriarch(){
+        HSSFWorkbook wb = new HSSFWorkbook();
+        HSSFSheet sh = wb.createSheet();
+        assertNull(sh.getDrawingPatriarch());
+
+        HSSFPatriarch patriarch = sh.createDrawingPatriarch();
+        assertNotNull(patriarch);
+        patriarch.createSimpleShape(new HSSFClientAnchor());
+        patriarch.createSimpleShape(new HSSFClientAnchor());
+
+        assertSame(patriarch, sh.getDrawingPatriarch());
+
+        EscherAggregate agg = patriarch._getBoundAggregate();
+
+        EscherDgRecord dg = agg.getEscherContainer().getChildById(EscherDgRecord.RECORD_ID);
+        int lastId = dg.getLastMSOSPID();
+        
+        assertSame(patriarch, sh.createDrawingPatriarch());
+        
+        wb = HSSFTestDataSamples.writeOutAndReadBack(wb);
+        sh = wb.getSheetAt(0);
+        patriarch = sh.createDrawingPatriarch();
+        dg = patriarch._getBoundAggregate().getEscherContainer().getChildById(EscherDgRecord.RECORD_ID);
+
+        assertEquals(lastId, dg.getLastMSOSPID());
+    }
+
