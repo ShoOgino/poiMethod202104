@@ -8,16 +8,16 @@
      */
     public int serialize(int offset, byte[] data) {
         // Determine buffer size
-        List records = getEscherRecords();
+        List <EscherRecord>records = getEscherRecords();
         int size = getEscherRecordSize(records);
         byte[] buffer = new byte[size];
 
         // Serialize escher records into one big data structure and keep note of ending offsets.
-        final List spEndingOffsets = new ArrayList();
-        final List shapes = new ArrayList();
+        final List <Integer>spEndingOffsets = new ArrayList<Integer>();
+        final List <EscherRecord> shapes = new ArrayList<EscherRecord>();
         int pos = 0;
-        for (Iterator iterator = records.iterator(); iterator.hasNext(); ) {
-            EscherRecord e = (EscherRecord) iterator.next();
+        for (Object record : records) {
+            EscherRecord e = (EscherRecord) record;
             pos += e.serialize(pos, buffer, new EscherSerializationListener() {
                 public void beforeRecordSerialize(int offset, short recordId, EscherRecord record) {
                 }
@@ -30,9 +30,8 @@
                 }
             });
         }
-        // todo: fix this
         shapes.add(0, null);
-        spEndingOffsets.add(0, null);
+        spEndingOffsets.add(0, 0);
 
         // Split escher records into separate MSODRAWING and OBJ, TXO records.  (We don't break on
         // the first one because it's the patriach).
@@ -40,12 +39,12 @@
         int writtenEscherBytes = 0;
         int i;
         for (i = 1; i < shapes.size(); i++) {
-            int endOffset = (Integer) spEndingOffsets.get(i) - 1;
+            int endOffset = spEndingOffsets.get(i) - 1;
             int startOffset;
             if (i == 1)
                 startOffset = 0;
             else
-                startOffset = (Integer) spEndingOffsets.get(i - 1);
+                startOffset = spEndingOffsets.get(i - 1);
 
             byte[] drawingData = new byte[endOffset - startOffset + 1];
             System.arraycopy(buffer, startOffset, drawingData, 0, drawingData.length);
@@ -69,19 +68,8 @@
             pos += writeDataIntoDrawingRecord(drawingData, writtenEscherBytes, pos, data, i);
         }
 
-        // write records that need to be serialized after all drawing group records
-        Map<Integer, NoteRecord> tailCopy = new HashMap<Integer, NoteRecord>(tailRec);
-        // at first we should save records in correct order which were already in the file during EscherAggregate.createAggregate()
-        for (Integer id : _tailIds) {
-            NoteRecord note = tailCopy.get(id);
-            if (null != note) {
-                pos += note.serialize(pos, data);
-                tailCopy.remove(id);
-            }
-        }
-        // Add all other notes which were created after createAggregate()
-        for (i = 0; i < tailCopy.size(); i++) {
-            Record rec = (Record) tailCopy.values().toArray()[i];
+        for (i = 0; i < tailRec.size(); i++) {
+            Record rec = (Record) tailRec.values().toArray()[i];
             pos += rec.serialize(pos, data);
         }
         int bytesWritten = pos - offset;

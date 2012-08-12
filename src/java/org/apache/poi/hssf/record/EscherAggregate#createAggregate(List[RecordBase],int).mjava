@@ -3,8 +3,11 @@
      * read Drawing, Obj, TxtObj, Note and Continue records into single byte array,
      * create Escher tree from byte array, create map <EscherRecord, Record>
      *
+     * @param records - list of all records inside sheet
+     * @param locFirstDrawingRecord - location of the first DrawingRecord inside sheet
+     * @return new EscherAggregate create from all aggregated records which belong to drawing layer
      */
-    public static EscherAggregate createAggregate(List records, int locFirstDrawingRecord, DrawingManager2 drawingManager) {
+    public static EscherAggregate createAggregate(List<RecordBase> records, int locFirstDrawingRecord) {
         // Keep track of any shape records created so we can match them back to the object id's.
         // Textbox objects are also treated as shape objects.
         final List<EscherRecord> shapeRecords = new ArrayList<EscherRecord>();
@@ -20,8 +23,7 @@
 
         // Create one big buffer
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-
-        EscherAggregate agg = new EscherAggregate(drawingManager);
+        EscherAggregate agg = new EscherAggregate(false);
         int loc = locFirstDrawingRecord;
         while (loc + 1 < records.size()
                 && (isDrawingLayerRecord(sid(records, loc)))) {
@@ -66,12 +68,10 @@
         }
 
         // any NoteRecords that follow the drawing block must be aggregated and and saved in the tailRec collection
-        // TODO remove this logic. 'tail' records should be inserted in the main record stream
         while (loc < records.size()) {
             if (sid(records, loc) == NoteRecord.sid) {
                 NoteRecord r = (NoteRecord) records.get(loc);
                 agg.tailRec.put(r.getShapeId(), r);
-                agg._tailIds.add(agg._tailIds.size(), r.getShapeId());
             } else {
                 break;
             }
