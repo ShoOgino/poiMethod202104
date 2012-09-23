@@ -13,6 +13,9 @@
         System.arraycopy( data, offset, _grpprlChpx, 0, _lvlf.getCbGrpprlChpx() );
         offset += _lvlf.getCbGrpprlChpx();
 
+        _xst = new Xst( data, offset );
+        offset += _xst.getSize();
+
         /*
          * "If this level uses bullets (see lvlf.nfc), the cch field of this Xst
          * MUST be equal to 0x0001, and this MUST NOT contain any placeholders."
@@ -21,45 +24,12 @@
          */
         if ( _lvlf.getNfc() == 0x17 )
         {
-            int cch = LittleEndian.getUShort( data, offset );
-            offset += LittleEndian.SHORT_SIZE;
-
-            if ( cch != 1 )
+            if ( _xst.getCch() != 1 )
             {
                 logger.log( POILogger.WARN, "LVL at offset ",
                         Integer.valueOf( startOffset ),
                         " has nfc == 0x17 (bullets), but cch != 1 (",
-                        Integer.valueOf( cch ), ")" );
-            }
-
-            _xst = new char[cch];
-            for ( int x = 0; x < cch; x++ )
-            {
-                _xst[x] = (char) LittleEndian.getShort( data, offset );
-                offset += LittleEndian.SHORT_SIZE;
-            }
-        }
-        else
-        {
-            int cch = LittleEndian.getUShort( data, offset );
-            offset += LittleEndian.SHORT_SIZE;
-
-            if ( cch > 0 )
-            {
-                _xst = new char[cch];
-                for ( int x = 0; x < cch; x++ )
-                {
-                    _xst[x] = (char) LittleEndian.getShort( data, offset );
-                    offset += LittleEndian.SHORT_SIZE;
-                }
-            }
-            else
-            {
-                logger.log( POILogger.WARN, "LVL.xst.cch <= 0: ",
-                        Integer.valueOf( cch ) );
-                /* sometimes numberTextLength<0 */
-                /* by derjohng */
-                _xst = new char[] {};
+                        Integer.valueOf( _xst.getCch() ), ")" );
             }
         }
 
