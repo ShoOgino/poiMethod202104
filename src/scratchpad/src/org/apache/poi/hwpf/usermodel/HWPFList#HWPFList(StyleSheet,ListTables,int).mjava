@@ -1,0 +1,31 @@
+    public HWPFList( StyleSheet styleSheet, ListTables listTables, int ilfo )
+    {
+        _listTables = listTables;
+        _styleSheet = styleSheet;
+        _registered = true;
+
+        /* See documentation for sprmPIlfo (0x460B) */
+        if ( ilfo == 0 || ilfo == 0xF801 )
+        {
+            throw new IllegalArgumentException( "Paragraph not in list" );
+        }
+        else if ( 0x0001 <= ilfo && ilfo <= 0x07FE )
+        {
+            _lfo = listTables.getLfo( ilfo );
+            _lfoData = listTables.getLfoData( ilfo );
+        }
+        else if ( 0xF802 <= ilfo && ilfo <= 0xFFFF )
+        {
+            int nilfo = ilfo ^ 0xFFFF;
+            _lfo = listTables.getLfo( nilfo );
+            _lfoData = listTables.getLfoData( nilfo );
+            _ignoreLogicalLeftIdentation = true;
+        }
+        else
+        {
+            throw new IllegalArgumentException( "Incorrect ilfo: " + ilfo );
+        }
+
+        _listData = listTables.getListData( _lfo.getLsid() );
+    }
+
