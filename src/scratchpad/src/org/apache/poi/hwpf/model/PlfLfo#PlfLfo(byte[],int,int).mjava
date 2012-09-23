@@ -1,0 +1,61 @@
+    PlfLfo( byte[] tableStream, int fcPlfLfo, int lcbPlfLfo )
+    {
+        /*
+         * The PlfLfo structure contains the list format override data for the
+         * document. -- Page 424 of 621. [MS-DOC] -- v20110315 Word (.doc)
+         * Binary File Format
+         */
+        int offset = fcPlfLfo;
+
+        /*
+         * lfoMac (4 bytes): An unsigned integer that specifies the count of
+         * elements in both the rgLfo and rgLfoData arrays. -- Page 424 of 621.
+         * [MS-DOC] -- v20110315 Word (.doc) Binary File Format
+         */
+        long lfoMacLong = LittleEndian.getUInt( tableStream, offset );
+        offset += LittleEndian.INT_SIZE;
+
+        if ( lfoMacLong > Integer.MAX_VALUE )
+        {
+            throw new UnsupportedOperationException(
+                    "Apache POI doesn't support rgLfo/rgLfoData size large than "
+                            + Integer.MAX_VALUE + " elements" );
+        }
+
+        this._lfoMac = (int) lfoMacLong;
+        _rgLfo = new LFO[_lfoMac];
+        _rgLfoData = new LFOData[_lfoMac];
+
+        /*
+         * An array of LFO structures. The number of elements in this array is
+         * specified by lfoMac. -- Page 424 of 621. [MS-DOC] -- v20110315 Word
+         * (.doc) Binary File Format
+         */
+        for ( int x = 0; x < _lfoMac; x++ )
+        {
+            LFO lfo = new LFO( tableStream, offset );
+            offset += LFO.getSize();
+            _rgLfo[x] = lfo;
+        }
+
+        /*
+         * An array of LFOData that is parallel to rgLfo. The number of elements
+         * that are contained in this array is specified by lfoMac. -- Page 424
+         * of 621. [MS-DOC] -- v20110315 Word (.doc) Binary File Format
+         */
+        for ( int x = 0; x < _lfoMac; x++ )
+        {
+            LFOData lfoData = new LFOData( tableStream, offset,
+                    _rgLfo[x].getClfolvl() );
+            offset += lfoData.getSizeInBytes();
+            _rgLfoData[x] = lfoData;
+        }
+
+        if ( ( offset - fcPlfLfo ) != lcbPlfLfo )
+        {
+            log.log( POILogger.WARN, "Actual size of PlfLfo is "
+                    + ( offset - fcPlfLfo ) + " bytes, but expected "
+                    + lcbPlfLfo );
+        }
+    }
+

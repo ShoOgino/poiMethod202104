@@ -15,20 +15,31 @@
 
         if ( properties.getIlfo() != 0 && listTables != null )
         {
-            final ListFormatOverride listFormatOverride = listTables
-                    .getOverride( properties.getIlfo() );
-            final ListLevel listLevel = listTables.getLevel(
-                    listFormatOverride.getLsid(), properties.getIlvl() );
-
-            if ( listLevel!=null && listLevel.getGrpprlPapx() != null )
+            LFO lfo = null;
+            try
             {
-                properties = ParagraphSprmUncompressor.uncompressPAP(
-                        properties, listLevel.getGrpprlPapx(), 0 );
-                // reapply style and local PAPX properties
-                properties = newParagraph_applyStyleProperties( styleSheet,
-                        papx, properties );
-                properties = ParagraphSprmUncompressor.uncompressPAP(
-                        properties, papx.getGrpprl(), 2 );
+                lfo = listTables.getLfo( properties.getIlfo() );
+            }
+            catch ( NoSuchElementException exc )
+            {
+                log.log( POILogger.WARN, "Paragraph refers to LFO #",
+                        properties.getIlfo(), " that does not exists" );
+            }
+            if ( lfo != null )
+            {
+                final ListLevel listLevel = listTables.getLevel( lfo.getLsid(),
+                        properties.getIlvl() );
+
+                if ( listLevel != null && listLevel.getGrpprlPapx() != null )
+                {
+                    properties = ParagraphSprmUncompressor.uncompressPAP(
+                            properties, listLevel.getGrpprlPapx(), 0 );
+                    // reapply style and local PAPX properties
+                    properties = newParagraph_applyStyleProperties( styleSheet,
+                            papx, properties );
+                    properties = ParagraphSprmUncompressor.uncompressPAP(
+                            properties, papx.getGrpprl(), 2 );
+                }
             }
         }
 
