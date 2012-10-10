@@ -5,22 +5,13 @@
      * @see #addPicture(byte[], int)
      */
     public List<XSSFPictureData> getAllPictures() {
-        if(pictures == null) {
-            //In OOXML pictures are referred to in sheets,
-            //dive into sheet's relations, select drawings and their images
-            pictures = new ArrayList<XSSFPictureData>();
-            for(XSSFSheet sh : sheets){
-                for(POIXMLDocumentPart dr : sh.getRelations()){
-                    if(dr instanceof XSSFDrawing){
-                        for(POIXMLDocumentPart img : dr.getRelations()){
-                            if(img instanceof XSSFPictureData){
-                                pictures.add((XSSFPictureData)img);
-                            }
-                        }
-                    }
-                }
+        if(pictures == null){
+            List<PackagePart> mediaParts = getPackage().getPartsByName(Pattern.compile("/xl/media/.*?"));
+            pictures = new ArrayList<XSSFPictureData>(mediaParts.size());
+            for(PackagePart part : mediaParts){
+                pictures.add(new XSSFPictureData(part, null));
             }
         }
-        return pictures;
+        return pictures; //YK: should return Collections.unmodifiableList(pictures);
     }
 
