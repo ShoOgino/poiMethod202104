@@ -1,0 +1,41 @@
+   public void dump(PrintStream out) throws IOException {
+      ChunkGroup[] chunkGroups = POIFSChunkParser.parse(fs);
+      for(ChunkGroup chunks : chunkGroups) {
+         out.println(chunks.getClass().getSimpleName());
+         for(Chunk chunk : chunks.getChunks()) {
+            MAPIProperty attr = MAPIProperty.get(chunk.getChunkId());
+            
+            if (chunk instanceof PropertiesChunk) {
+               PropertiesChunk props = (PropertiesChunk)chunk;
+               out.println(
+                     "   Properties - " + props.getProperties().size() + ":"
+               );
+               
+               for (MAPIProperty prop : props.getProperties().keySet()) {
+                  out.println(
+                        "       * " + prop
+                  );
+                  for (PropertyValue v : props.getValues(prop)) {
+                     out.println(
+                           "        = " + v.toString()
+                     );
+                  }
+               }
+            } else {
+               String idName = attr.id + " - " + attr.name;
+               if(attr == MAPIProperty.UNKNOWN) {
+                  idName = chunk.getChunkId() + " - (unknown)";
+               }
+               
+               out.println(
+                     "   " + idName + " - " + chunk.getType().getName()
+               );
+               out.println(
+                     "       " + chunk.toString()
+               );
+            }
+         }
+         out.println();
+      }
+   }
+
