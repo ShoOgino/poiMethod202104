@@ -1,4 +1,66 @@
    protected void readProperties(InputStream value) throws IOException {
-      // TODO
+      boolean going = true;
+      while (going) {
+         try {
+            // Read in the header
+            int typeID = LittleEndian.readUShort(value);
+            int id     = LittleEndian.readUShort(value);
+            long flags = LittleEndian.readUInt(value);
+            
+            // Turn the Type and ID into helper objects
+            MAPIType type = Types.getById(typeID);
+            MAPIProperty prop = MAPIProperty.get(id);
+            if (prop.usualType != type) {
+               // Oh dear, something has gone wrong...
+               logger.log(POILogger.WARN, "Type mismatch, expected ", type, " but got ", prop.usualType);
+               going = false;
+               break;
+            }
+            
+            // Work out how long the "data" is
+            // This might be the actual data, or just a pointer
+            //  to another chunk which holds the data itself
+            boolean isPointer = false;
+            int length = type.getLength();
+            if (! type.isFixedLength()) {
+               isPointer = true;
+               length = 8;
+            }
+            
+            // Grab the data block
+            byte[] data = new byte[length];
+            IOUtils.readFully(value, data);
+            
+            // Skip over any padding
+            if (length < 8) {
+               byte[] padding = new byte[8-length];
+               IOUtils.readFully(value, padding);
+            }
+            
+            // Wrap and store
+            PropertyValue propVal = null;
+            if (isPointer) {
+               // TODO Pointer type which can do lookup
+            }
+            else if (type == Types.LONG_LONG) {
+               propVal = new LongLongPropertyValue(prop, flags, data);
+            }
+            else if (type == Types.TIME) {
+               propVal = new TimePropertyValue(prop, flags, data);
+            }
+            // TODO Add in the rest of the type
+            else {
+               propVal = new PropertyValue(prop, flags, data);
+            }
+            
+            if (properties.get(prop) == null) {
+               properties.put(prop, new ArrayList<PropertyValue>());
+            }
+            properties.get(prop).add(propVal);
+         } catch (BufferUnderrunException e) {
+            // Invalid property, ended short
+            going = false;
+         }
+      }
 	}
 
