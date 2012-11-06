@@ -1,0 +1,74 @@
+    public byte[] serialize()
+    {
+        final byte[] buffer = new byte[getSize()];
+
+        LittleEndian.putShort( buffer, 0, (short) 0xffff );
+
+        if ( _data == null || _data.length == 0 )
+        {
+            if ( _cDataLength == 4 )
+            {
+                LittleEndian.putInt( buffer, 2, 0 );
+                LittleEndian.putUShort( buffer, 6, _cbExtra );
+                return buffer;
+            }
+
+            LittleEndian.putUShort( buffer, 2, 0 );
+            LittleEndian.putUShort( buffer, 4, _cbExtra );
+            return buffer;
+        }
+
+        int offset;
+        if ( _cDataLength == 4 )
+        {
+            LittleEndian.putInt( buffer, 2, _data.length );
+            LittleEndian.putUShort( buffer, 6, _cbExtra );
+            offset = 2 + LittleEndian.INT_SIZE + LittleEndian.SHORT_SIZE;
+        }
+        else
+        {
+            LittleEndian.putUShort( buffer, 2, _data.length );
+            LittleEndian.putUShort( buffer, 4, _cbExtra );
+            offset = 2 + LittleEndian.SHORT_SIZE + LittleEndian.SHORT_SIZE;
+        }
+
+        for ( int i = 0; i < _data.length; i++ )
+        {
+            String entry = _data[i];
+            if ( entry == null )
+            {
+                // is it correct?
+                buffer[offset] = -1;
+                buffer[offset + 1] = 0;
+                offset += 2;
+                continue;
+            }
+
+            if ( _fExtend )
+            {
+                LittleEndian.putUShort( buffer, offset, (int) entry.length() );
+                offset += LittleEndian.SHORT_SIZE;
+
+                StringUtil.putUnicodeLE( entry, buffer, offset );
+                offset += 2 * entry.length();
+            }
+            else
+            {
+                throw new UnsupportedOperationException(
+                        "ANSI STTB is not supported yet" );
+            }
+
+            if ( _cbExtra != 0 )
+            {
+                if ( _extraData[i] != null && _extraData[i].length != 0 )
+                {
+                    System.arraycopy( _extraData[i], 0, buffer, offset,
+                            Math.min( _extraData[i].length, _cbExtra ) );
+                }
+                offset += _cbExtra;
+            }
+        }
+
+        return buffer;
+    }
+
