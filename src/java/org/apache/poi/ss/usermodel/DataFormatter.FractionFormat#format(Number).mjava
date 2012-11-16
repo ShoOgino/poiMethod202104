@@ -1,12 +1,24 @@
        public String format(Number num) {
-          double wholePart = Math.floor(num.doubleValue());
-          double decPart = num.doubleValue() - wholePart;
+    	   
+    	  double doubleValue = num.doubleValue();
+          
+          // Format may be p or p;n or p;n;z (okay we never get a z).
+    	  // Fall back to p when n or z is not specified.
+          String[] formatBits = str.split(";");
+          int f = doubleValue > 0.0 ? 0 : doubleValue < 0.0 ? 1 : 2; 
+          String str = (f < formatBits.length) ? formatBits[f] : formatBits[0];
+          
+          double wholePart = Math.floor(Math.abs(doubleValue));
+          double decPart = Math.abs(doubleValue) - wholePart;
           if (wholePart + decPart == 0) {
              return "0";
           }
-          
+          if (doubleValue < 0.0) {
+        	  wholePart *= -1.0;
+          }
+
           // Split the format string into decimal and fraction parts
-          String[] parts = str.split(" ");
+          String[] parts = str.replaceAll("  *", " ").split(" ");
           String[] fractParts;
           if (parts.length == 2) {
              fractParts = parts[1].split("/");
@@ -20,11 +32,12 @@
           }
 
           if (fractParts.length == 2) {
+         	 int fractPart1Length = Math.min(countHashes(fractParts[1]), 4); // Any more than 3 and we go around the loops for ever
              double minVal = 1.0;
-             double currDenom = Math.pow(10 ,  fractParts[1].length()) - 1d;
+             double currDenom = Math.pow(10 ,  fractPart1Length) - 1d;
              double currNeum = 0;
-             for (int i = (int)(Math.pow(10,  fractParts[1].length())- 1d); i > 0; i--) {
-                for(int i2 = (int)(Math.pow(10,  fractParts[1].length())- 1d); i2 > 0; i2--){
+             for (int i = (int)(Math.pow(10,  fractPart1Length)- 1d); i > 0; i--) {
+                for(int i2 = (int)(Math.pow(10,  fractPart1Length)- 1d); i2 > 0; i2--){
                    if (minVal >=  Math.abs((double)i2/(double)i - decPart)) {
                       currDenom = i;
                       currNeum = i2;
@@ -43,7 +56,7 @@
                 return result;
              }
           } else {
-             throw new IllegalArgumentException("Fraction must have 2 parts, found " + fractParts.length + " for fraction format " + str);
+             throw new IllegalArgumentException("Fraction must have 2 parts, found " + fractParts.length + " for fraction format " + this.str);
           }
        }
 

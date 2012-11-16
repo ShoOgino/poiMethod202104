@@ -52,10 +52,21 @@
         }
         
         // Excel supports fractions in format strings, which Java doesn't
-        if (!formatStr.contains("-") &&
-              (formatStr.indexOf("#/#") >= 0 && formatStr.indexOf("#/#") == formatStr.lastIndexOf("#/#")) ||
-              (formatStr.indexOf("?/?") >= 0 && formatStr.indexOf("?/?") == formatStr.lastIndexOf("?/?"))) {
-            return new FractionFormat(formatStr);
+        if (formatStr.indexOf("#/#") >= 0 || formatStr.indexOf("?/?") >= 0) {
+            // Strip custom text in quotes and escaped characters for now as it can cause performance problems in fractions.
+        	String strippedFormatStr = formatStr.replaceAll("\\\\ ", " ").replaceAll("\\\\.", "").replaceAll("\"[^\"]*\"", " ");
+
+        	boolean ok = true;
+        	for (String part: strippedFormatStr.split(";")) {
+        		int indexOfFraction = indexOfFraction(part);
+        		if (indexOfFraction == -1 || indexOfFraction != lastIndexOfFraction(part)) {
+        			ok = false;
+        			break;
+        		}
+        	}
+            if (ok) {
+                return new FractionFormat(strippedFormatStr);
+            }
         }
         
         if (numPattern.matcher(formatStr).find()) {
