@@ -1,0 +1,40 @@
+    public void testMissingRAttributeBug54288() {
+        // workbook with cells missing the R attribute
+        XSSFWorkbook wb = (XSSFWorkbook)_testDataProvider.openSampleWorkbook("54288.xlsx");
+        // same workbook re-saved in Excel 2010, the R attribute is updated for every cell with the right value.
+        XSSFWorkbook wbRef = (XSSFWorkbook)_testDataProvider.openSampleWorkbook("54288-ref.xlsx");
+
+        XSSFSheet sheet = wb.getSheetAt(0);
+        XSSFSheet sheetRef = wbRef.getSheetAt(0);
+        assertEquals(sheetRef.getPhysicalNumberOfRows(), sheet.getPhysicalNumberOfRows());
+
+        // Test idea: iterate over cells in the reference worksheet, they all have the R attribute set.
+        // For each cell from the reference sheet find the corresponding cell in the problematic file (with missing R)
+        // and assert that POI reads them equally:
+        DataFormatter formater = new DataFormatter();
+        for(Row r : sheetRef){
+            XSSFRow rowRef = (XSSFRow)r;
+            XSSFRow row = sheet.getRow(rowRef.getRowNum());
+
+            assertEquals("number of cells in row["+row.getRowNum()+"]",
+                    rowRef.getPhysicalNumberOfCells(), row.getPhysicalNumberOfCells());
+
+            for(Cell c :  rowRef){
+                XSSFCell cellRef = (XSSFCell)c;
+                XSSFCell cell = row.getCell(cellRef.getColumnIndex());
+
+                assertEquals(cellRef.getColumnIndex(), cell.getColumnIndex());
+                assertEquals(cellRef.getReference(), cell.getReference());
+
+                if(!cell.getCTCell().isSetR()){
+                    assertTrue("R must e set in cellRef", cellRef.getCTCell().isSetR());
+
+                    String valRef = formater.formatCellValue(cellRef);
+                    String val = formater.formatCellValue(cell);
+                    assertEquals(valRef, val);
+                }
+
+            }
+        }
+    }
+
