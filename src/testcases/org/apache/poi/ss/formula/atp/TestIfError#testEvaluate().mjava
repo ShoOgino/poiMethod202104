@@ -1,0 +1,49 @@
+    /**
+     * =IFERROR(210/35,\"Error in calculation\")"  Divides 210 by 35 and returns 6.0
+     * =IFERROR(55/0,\"Error in calculation\")"    Divides 55 by 0 and returns the error text
+     */
+    public static void testEvaluate(){
+        Workbook wb = new HSSFWorkbook();
+        Sheet sh = wb.createSheet();
+        Row row1 = sh.createRow(0);
+        Row row2 = sh.createRow(1);
+
+        // Create cells
+        row1.createCell(0, Cell.CELL_TYPE_NUMERIC);
+        row1.createCell(1, Cell.CELL_TYPE_NUMERIC);
+        row2.createCell(0, Cell.CELL_TYPE_NUMERIC);
+        row2.createCell(1, Cell.CELL_TYPE_NUMERIC);
+
+        // Create references
+        CellReference a1 = new CellReference("A1");
+        CellReference a2 = new CellReference("A2");
+        CellReference b1 = new CellReference("B1");
+        CellReference b2 = new CellReference("B2");
+        
+        // Set values
+        sh.getRow(a1.getRow()).getCell(a1.getCol()).setCellValue(210);
+        sh.getRow(a2.getRow()).getCell(a2.getCol()).setCellValue(55);
+        sh.getRow(b1.getRow()).getCell(b1.getCol()).setCellValue(35);
+        sh.getRow(b2.getRow()).getCell(b2.getCol()).setCellValue(0);
+        
+        Cell cell1 = sh.createRow(3).createCell(0);
+        cell1.setCellFormula("IFERROR(A1/B1,\"Error in calculation\")");
+        Cell cell2 = sh.createRow(3).createCell(0);
+        cell2.setCellFormula("IFERROR(A2/B2,\"Error in calculation\")");
+
+        double accuracy = 1E-9;
+
+        FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
+
+        assertEquals("Checks that the cell is numeric",
+        		Cell.CELL_TYPE_NUMERIC, evaluator.evaluate(cell1).getCellType());
+        assertEquals("Divides 210 by 35 and returns 6.0",
+                6.0, evaluator.evaluate(cell1).getNumberValue(), accuracy);
+        
+        
+        assertEquals("Checks that the cell is numeric",
+        		Cell.CELL_TYPE_STRING, evaluator.evaluate(cell2).getCellType());        
+        assertEquals("Rounds -10 to a nearest multiple of -3 (-9)",
+                "Error in calculation", evaluator.evaluate(cell2).getStringValue());
+    }
+
