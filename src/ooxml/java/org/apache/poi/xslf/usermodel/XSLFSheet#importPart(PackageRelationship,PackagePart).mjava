@@ -1,0 +1,26 @@
+    /**
+     * Import a package part into this sheet.
+     */
+    PackagePart importPart(PackageRelationship srcRel, PackagePart srcPafrt) {
+
+        OPCPackage pkg = getPackagePart().getPackage();
+        if(!pkg.containPart(srcPafrt.getPartName())){
+            PackageRelationship rel = getPackagePart().addRelationship(
+                    srcPafrt.getPartName(), TargetMode.INTERNAL, srcRel.getRelationshipType());
+
+            PackagePart part = pkg.createPart(srcPafrt.getPartName(), srcPafrt.getContentType());
+            OutputStream out = part.getOutputStream();
+            try {
+                InputStream is = srcPafrt.getInputStream();
+                IOUtils.copy(is, out);
+                out.close();
+            } catch (IOException e){
+                throw new POIXMLException(e);
+            }
+            return part;
+        }  else {
+            // already exists
+            return pkg.getPart(srcPafrt.getPartName());
+        }
+    }
+
