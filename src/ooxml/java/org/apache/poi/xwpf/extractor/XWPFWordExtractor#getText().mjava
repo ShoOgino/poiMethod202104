@@ -5,59 +5,11 @@
 		// Start out with all headers
 		extractHeaders(text, hfPolicy);
 		
-		// First up, all our paragraph based text
-		Iterator<XWPFParagraph> i = document.getParagraphsIterator();
-		while(i.hasNext()) {
-			XWPFParagraph paragraph = i.next();
-
-			try {
-				CTSectPr ctSectPr = null;
-				if (paragraph.getCTP().getPPr()!=null) {
-					ctSectPr = paragraph.getCTP().getPPr().getSectPr();
-				}
-
-				XWPFHeaderFooterPolicy headerFooterPolicy = null;
-
-				if (ctSectPr!=null) {
-					headerFooterPolicy = new XWPFHeaderFooterPolicy(document, ctSectPr);
-					extractHeaders(text, headerFooterPolicy);
-				}
-
-				// Do the paragraph text
-				for(XWPFRun run : paragraph.getRuns()) {
-				   text.append(run.toString());
-				   if(run instanceof XWPFHyperlinkRun && fetchHyperlinks) {
-				      XWPFHyperlink link = ((XWPFHyperlinkRun)run).getHyperlink(document);
-				      if(link != null)
-				         text.append(" <" + link.getURL() + ">");
-				   }
-				}
-
-				// Add comments
-				XWPFCommentsDecorator decorator = new XWPFCommentsDecorator(paragraph, null);
-				text.append(decorator.getCommentText()).append('\n');
-				
-				// Do endnotes and footnotes
-				String footnameText = paragraph.getFootnoteText();
-			   if(footnameText != null && footnameText.length() > 0) {
-			      text.append(footnameText + "\n");
-			   }
-
-				if (ctSectPr!=null) {
-					extractFooters(text, headerFooterPolicy);
-				}
-			} catch (IOException e) {
-				throw new POIXMLException(e);
-			} catch (XmlException e) {
-				throw new POIXMLException(e);
-			}
-		}
-
-		// Then our table based text
-		Iterator<XWPFTable> j = document.getTablesIterator();
-		while(j.hasNext()) {
-			text.append(j.next().getText()).append('\n');
-		}
+		// body elements
+      for (IBodyElement e : document.getBodyElements()){
+         appendBodyElementText(text, e);
+         text.append('\n');
+     }
 		
 		// Finish up with all the footers
 		extractFooters(text, hfPolicy);
