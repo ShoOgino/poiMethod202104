@@ -50,23 +50,26 @@
                 DateUtil.isValidExcelDate(cellValue)) {
             return createDateFormat(formatStr, cellValue);
         }
-        
         // Excel supports fractions in format strings, which Java doesn't
-        if (formatStr.indexOf("#/#") >= 0 || formatStr.indexOf("?/?") >= 0) {
-            // Strip custom text in quotes and escaped characters for now as it can cause performance problems in fractions.
-        	String strippedFormatStr = formatStr.replaceAll("\\\\ ", " ").replaceAll("\\\\.", "").replaceAll("\"[^\"]*\"", " ");
-
-        	boolean ok = true;
-        	for (String part: strippedFormatStr.split(";")) {
-        		int indexOfFraction = indexOfFraction(part);
-        		if (indexOfFraction == -1 || indexOfFraction != lastIndexOfFraction(part)) {
-        			ok = false;
-        			break;
-        		}
-        	}
-            if (ok) {
-                return new FractionFormat(strippedFormatStr);
+        if (formatStr.indexOf("#/") >= 0 || formatStr.indexOf("?/") >= 0) {
+            String[] chunks = formatStr.split(";");
+            for (int i = 0; i < chunks.length; i++){
+                String chunk = chunks[i].replaceAll("\\?", "#");
+                Matcher matcher = fractionStripper.matcher(chunk);
+                chunk = matcher.replaceAll(" ");
+                chunk = chunk.replaceAll(" +", " ");
+                Matcher fractionMatcher = fractionPattern.matcher(chunk);
+                //take the first match
+                if (fractionMatcher.find()){
+                    String wholePart = (fractionMatcher.group(1) == null) ? "" : defaultFractionWholePartFormat;
+                    return new FractionFormat(wholePart, fractionMatcher.group(3));
+                }
             }
+            
+            // Strip custom text in quotes and escaped characters for now as it can cause performance problems in fractions.
+            //String strippedFormatStr = formatStr.replaceAll("\\\\ ", " ").replaceAll("\\\\.", "").replaceAll("\"[^\"]*\"", " ").replaceAll("\\?", "#");
+            //System.out.println("formatStr: "+strippedFormatStr);
+            return new FractionFormat(defaultFractionWholePartFormat, defaultFractionFractionPartFormat);
         }
         
         if (numPattern.matcher(formatStr).find()) {

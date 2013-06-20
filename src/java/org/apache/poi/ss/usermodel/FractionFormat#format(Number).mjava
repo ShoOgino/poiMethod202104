@@ -1,0 +1,75 @@
+    public String format(Number num) {
+
+        double doubleValue = num.doubleValue();
+        
+        boolean isNeg = (doubleValue < 0.0f) ? true : false;
+        double absDoubleValue = Math.abs(doubleValue);
+        
+        double wholePart = Math.floor(absDoubleValue);
+        double decPart = absDoubleValue - wholePart;
+        if (wholePart + decPart == 0) {
+            return "0";
+        }
+        
+        //if the absolute value is smaller than 1 over the exact or maxDenom
+        //you can stop here and return "0"
+        if (absDoubleValue < (1/Math.max(exactDenom,  maxDenom))){
+            return "0";
+        }
+        
+        //this is necessary to prevent overflow in the maxDenom calculation
+        //stink1
+        if (wholePart+(int)decPart == wholePart+decPart){
+            
+            StringBuilder sb = new StringBuilder();
+            if (isNeg){
+                sb.append("-");
+            }
+            sb.append(Integer.toString((int)wholePart));
+            return sb.toString();
+        }
+        
+        SimpleFraction fract = null;
+        try{
+            //this should be the case because of the constructor
+            if (exactDenom > 0){
+                fract = calcFractionExactDenom(decPart, exactDenom);
+            } else {
+                fract = calcFractionMaxDenom(decPart, maxDenom);
+            }
+        } catch (SimpleFractionException e){
+            e.printStackTrace();
+            return Double.toString(doubleValue);
+        }
+
+        StringBuilder sb = new StringBuilder();
+        
+        //now format the results
+        if (isNeg){
+            sb.append("-");
+        }
+        
+        //if whole part has to go into the numerator
+        if ("".equals(wholePartFormatString)){
+            int trueNum = (fract.getDenominator()*(int)wholePart)+fract.getNumerator();
+            sb.append(trueNum).append("/").append(fract.getDenominator());
+            return sb.toString();
+        }
+        
+        
+        //short circuit if fraction is 0 or 1
+        if (fract.getNumerator() == 0){
+            sb.append(Integer.toString((int)wholePart));
+            return sb.toString();
+        } else if (fract.getNumerator() == fract.getDenominator()){
+            sb.append(Integer.toString((int)wholePart+1));
+            return sb.toString();
+        }
+       //as mentioned above, this ignores the exact space formatting in Excel
+        if (wholePart > 0){
+            sb.append(Integer.toString((int)wholePart)).append(" ");
+        }
+        sb.append(fract.getNumerator()).append("/").append(fract.getDenominator());
+        return sb.toString();
+    }
+
