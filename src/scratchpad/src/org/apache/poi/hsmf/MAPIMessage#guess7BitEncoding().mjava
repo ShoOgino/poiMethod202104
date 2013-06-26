@@ -1,17 +1,37 @@
    /**
-    * Many messages store their strings as unicode, which is
+    * Tries to identify the correct encoding for 7-bit (non-unicode)
+    *  strings in the file.
+    * <p>Many messages store their strings as unicode, which is
     *  nice and easy. Some use one-byte encodings for their
-    *  strings, but don't easily store the encoding anywhere
-    *  in the file!
-    * This method looks at the headers for the message, and
-    *  tries to use these to guess the correct encoding for
-    *  your file.
-    * Bug #49441 has more on why this is needed
-    * 
-    * TODO Try to also use PR_MESSAGE_CODEPAGE and PR_INTERNET_CPID
-    * Would need to refactor some of the codepage support in HPSF first
+    *  strings, but don't always store the encoding anywhere
+    *  helpful in the file.</p>
+    * <p>This method checks for codepage properties, and failing that
+    *  looks at the headers for the message, and uses these to 
+    *  guess the correct encoding for your file.</p>
+    * <p>Bug #49441 has more on why this is needed</p>
     */
    public void guess7BitEncoding() {
+      // First choice is a codepage property
+      for (MAPIProperty prop : new MAPIProperty[] {
+               MAPIProperty.MESSAGE_CODEPAGE,
+               MAPIProperty.INTERNET_CPID
+      }) {
+        List<PropertyValue> val = mainChunks.getProperties().get(prop);
+        if (val != null && val.size() > 0) {
+           int codepage = ((LongPropertyValue)val.get(0)).getValue();
+           try {
+               String encoding = CodePageUtil.codepageToEncoding(codepage, true);
+               set7BitEncoding(encoding);
+               return;
+            } catch(UnsupportedEncodingException e) {
+               logger.log(POILogger.WARN, "Invalid codepage ID ", codepage, 
+                          " set for the message via ", prop, ", ignoring");
+            }
+         }
+      }
+     
+       
+      // Second choice is a charset on a content type header
       try {
          String[] headers = getHeaders();
          if(headers != null && headers.length > 0) {
