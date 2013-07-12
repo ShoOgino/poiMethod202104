@@ -1,0 +1,30 @@
+    @SuppressWarnings("deprecation")
+    public void testAddMergedRegionWithRegion() {
+        HSSFWorkbook     wb   = new HSSFWorkbook();
+        HSSFSheet        s    = wb.createSheet();
+
+        for (int rownum = 0; rownum < 100; rownum++) {
+            HSSFRow r = s.createRow(rownum);
+
+            for (int cellnum = 0; cellnum < 50; cellnum += 2) {
+                HSSFCell c = r.createCell(cellnum);
+                c.setCellValue(rownum * 10000 + cellnum
+                               + ((( double ) rownum / 1000)
+                                  + (( double ) cellnum / 10000)));
+                c = r.createCell(cellnum + 1);
+                c.setCellValue(new HSSFRichTextString("TEST"));
+            }
+        }
+        s.addMergedRegion(new Region(0, (short)0, 10, (short)10));
+        s.addMergedRegion(new Region(30, (short)5, 40, (short)15));
+        sanityChecker.checkHSSFWorkbook(wb);
+        wb = HSSFTestDataSamples.writeOutAndReadBack(wb);
+
+        s  = wb.getSheetAt(0);
+        CellRangeAddress r1 = s.getMergedRegion(0);
+        CellRangeAddress r2 = s.getMergedRegion(1);
+
+        confirmRegion(new CellRangeAddress(0, 10, 0, 10), r1);
+        confirmRegion(new CellRangeAddress(30, 40,5, 15), r2);
+    }
+
