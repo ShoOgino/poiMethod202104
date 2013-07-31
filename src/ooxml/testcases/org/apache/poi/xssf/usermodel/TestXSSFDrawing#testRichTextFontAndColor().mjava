@@ -1,0 +1,32 @@
+    /**
+     * ensure that font and color rich text attributes defined in a XSSFRichTextString
+     * are passed to XSSFSimpleShape.
+     *
+     * See Bugzilla 54969.
+     */
+    public void testRichTextFontAndColor() {
+    	XSSFWorkbook wb = new XSSFWorkbook();
+        XSSFSheet sheet = wb.createSheet();
+        XSSFDrawing drawing = sheet.createDrawingPatriarch();
+
+        XSSFTextBox shape = drawing.createTextbox(new XSSFClientAnchor(0, 0, 0, 0, 2, 2, 3, 4));
+        XSSFRichTextString rt = new XSSFRichTextString("Test String");
+
+        XSSFFont font = wb.createFont();
+        font.setColor(new XSSFColor(new Color(0, 128, 128)));
+        font.setFontName("Arial");
+        rt.applyFont(font);
+
+        shape.setText(rt);
+
+        CTTextParagraph pr = shape.getCTShape().getTxBody().getPArray(0);
+        assertEquals(1, pr.sizeOfRArray());
+
+        CTTextCharacterProperties rPr = pr.getRArray(0).getRPr();
+        assertEquals("Arial", rPr.getLatin().getTypeface());
+        assertTrue(Arrays.equals(
+                new byte[]{0, (byte)128, (byte)128} ,
+                rPr.getSolidFill().getSrgbClr().getVal()));
+    	
+    }
+
