@@ -1,0 +1,38 @@
+    /**
+     * Returns the vertical line spacing that is to be used within a paragraph.
+     * This may be specified in two different ways, percentage spacing and font point spacing:
+     * <p>
+     * If linespacing >= 0, then linespacing is a percentage of normal line height.
+     * If linespacing < 0, the absolute value of linespacing is the spacing in points
+     * </p>
+     *
+     * @return the vertical line spacing.
+     */
+    public double getLineSpacing(){
+        ParagraphPropertyFetcher<Double> fetcher = new ParagraphPropertyFetcher<Double>(getLevel()){
+            public boolean fetch(CTTextParagraphProperties props){
+                if(props.isSetLnSpc()){
+                    CTTextSpacing spc = props.getLnSpc();
+
+                    if(spc.isSetSpcPct()) setValue( spc.getSpcPct().getVal()*0.001 );
+                    else if (spc.isSetSpcPts()) setValue( -spc.getSpcPts().getVal()*0.01 );
+                    return true;
+                }
+                return false;
+            }
+        };
+        fetchParagraphProperty(fetcher);
+
+        double lnSpc = fetcher.getValue() == null ? 100 : fetcher.getValue();
+        if(lnSpc > 0) {
+            // check if the percentage value is scaled
+            CTTextNormalAutofit normAutofit = _shape.getTxBody().getBodyPr().getNormAutofit();
+            if(normAutofit != null) {
+                double scale = 1 - (double)normAutofit.getLnSpcReduction() / 100000;
+                lnSpc *= scale;
+            }
+        }
+        
+        return lnSpc;
+    }
+
