@@ -1,0 +1,30 @@
+    /**
+     * Tests that POI doesn't produce "col" elements without "width" attribute. 
+     * POI-52186
+     */
+    public void testNoColsWithoutWidthWhenGroupingAndCollapsing() {
+		XSSFWorkbook wb = new XSSFWorkbook();
+		XSSFSheet sheet = wb.createSheet("test");
+
+        sheet.setColumnWidth(4, 5000);
+        sheet.setColumnWidth(5, 5000);
+       
+        sheet.groupColumn((short) 4, (short) 5);
+        
+        sheet.setColumnGroupCollapsed(4, true);
+        
+        CTCols cols = sheet.getCTWorksheet().getColsArray(0);
+        logger.log(POILogger.DEBUG, "test52186_2/cols:" + cols);
+
+        wb = XSSFTestDataSamples.writeOutAndReadBack(wb, "testNoColsWithoutWidthWhenGroupingAndCollapsing");
+        sheet = wb.getSheet("test");
+        
+        for (int i = 4; i <= 5; i++) {
+        	assertEquals("Unexpected width of column "+ i, 5000, sheet.getColumnWidth(i));
+        }
+        cols = sheet.getCTWorksheet().getColsArray(0);
+        for (CTCol col : cols.getColList()) {
+			assertTrue("Col width attribute is unset: " + col.toString(), col.isSetWidth());
+		}
+    }
+
