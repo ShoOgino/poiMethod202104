@@ -1,0 +1,29 @@
+        /**
+         * Returns the shapes associated with this sheet,
+         * an empty list or null if there is an exception
+         */
+        public List<XSSFShape> getShapes() {
+            PackagePart sheetPkg = getSheetPart();
+            List<XSSFShape> shapes= new LinkedList<XSSFShape>();
+           // Do we have a comments relationship? (Only ever one if so)
+           try {
+              PackageRelationshipCollection drawingsList = sheetPkg.getRelationshipsByType(XSSFRelation.DRAWINGS.getRelation());
+              for (int i = 0; i < drawingsList.size(); i++){
+                  PackageRelationship drawings = drawingsList.getRelationship(i);
+                  PackagePartName drawingsName = PackagingURIHelper.createPartName(drawings.getTargetURI());
+                  PackagePart drawingsPart = sheetPkg.getPackage().getPart(drawingsName);
+                  XSSFDrawing drawing = new XSSFDrawing(drawingsPart, drawings);
+                  for (XSSFShape shape : drawing.getShapes()){
+                      shapes.add(shape);
+                  }
+              }
+           } catch (XmlException e){
+               return null;
+           } catch (InvalidFormatException e) {  
+              return null;
+           } catch (IOException e) {
+              return null;
+           }
+           return shapes;
+        }
+
