@@ -1,8 +1,31 @@
     public void testMergeCellRanges() {
-        CellRangeAddress cr1 = CellRangeAddress.valueOf("A1:B1");
-        CellRangeAddress cr2 = CellRangeAddress.valueOf("A2:B2");
-        CellRangeAddress[] cr3 = CellRangeUtil.mergeCellRanges(new CellRangeAddress[]{cr1, cr2});
-        assertEquals(1, cr3.length);
-        assertEquals("A1:B2", cr3[0].formatAsString());
+        // no result on empty
+        cellRangeTest(new String[]{ });
+
+        // various cases with two ranges
+        cellRangeTest(new String[]{"A1:B1", "A2:B2"}, "A1:B2");
+        cellRangeTest(new String[]{"A1:B1" }, "A1:B1");
+        cellRangeTest(new String[]{"A1:B2", "A2:B2"}, "A1:B2");
+        cellRangeTest(new String[]{"A1:B3", "A2:B2"}, "A1:B3");
+        cellRangeTest(new String[]{"A1:C1", "A2:B2"}, new String[] {"A1:C1", "A2:B2"});
+        
+        // cases with three ranges
+        cellRangeTest(new String[]{"A1:A1", "A2:B2", "A1:C1"}, new String[] {"A1:C1", "A2:B2"});
+        cellRangeTest(new String[]{"A1:C1", "A2:B2", "A1:A1"}, new String[] {"A1:C1", "A2:B2"});
+        
+        // "standard" cases
+        // enclose
+        cellRangeTest(new String[]{"A1:D4", "B2:C3"}, new String[] {"A1:D4"});
+        // inside
+        cellRangeTest(new String[]{"B2:C3", "A1:D4"}, new String[] {"A1:D4"});
+        cellRangeTest(new String[]{"B2:C3", "A1:D4"}, new String[] {"A1:D4"});
+        // disjunct
+        cellRangeTest(new String[]{"A1:B2", "C3:D4"}, new String[] {"A1:B2", "C3:D4"});
+        cellRangeTest(new String[]{"A1:B2", "A3:D4"}, new String[] {"A1:B2", "A3:D4"});
+        // overlap that cannot be merged
+        cellRangeTest(new String[]{"C1:D2", "C2:C3"}, new String[] {"C1:D2", "C2:C3"});
+        // overlap which could theoretically be merged, but isn't because the implementation was buggy and therefore was removed
+        cellRangeTest(new String[]{"A1:C3", "B1:D3"}, new String[] {"A1:C3", "B1:D3"}); // could be one region "A1:D3"
+        cellRangeTest(new String[]{"A1:C3", "B1:D1"}, new String[] {"A1:C3", "B1:D1"}); // could be one region "A1:D3"
     }
 
