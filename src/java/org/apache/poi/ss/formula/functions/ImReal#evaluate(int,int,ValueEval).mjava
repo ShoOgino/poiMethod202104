@@ -1,0 +1,42 @@
+    public ValueEval evaluate(int srcRowIndex, int srcColumnIndex, ValueEval inumberVE) {
+        ValueEval veText1;
+        try {
+            veText1 = OperandResolver.getSingleValue(inumberVE, srcRowIndex, srcColumnIndex);
+        } catch (EvaluationException e) {
+            return e.getErrorEval();
+        }
+        String iNumber = OperandResolver.coerceValueToString(veText1);
+
+        Matcher m = Imaginary.COMPLEX_NUMBER_PATTERN.matcher(iNumber);
+        boolean result = m.matches();
+
+        String real = "";
+        if (result == true) {
+            String realGroup = m.group(2);
+            boolean hasRealPart = realGroup.length() != 0;
+
+            if (realGroup.length() == 0) {
+                return new StringEval(String.valueOf(0));
+            }
+
+            if (hasRealPart) {
+                String sign = "";
+                String realSign = m.group(Imaginary.GROUP1_REAL_SIGN);
+                if (realSign.length() != 0 && !(realSign.equals("+"))) {
+                    sign = realSign;
+                }
+
+                String groupRealNumber = m.group(Imaginary.GROUP2_IMAGINARY_INTEGER_OR_DOUBLE);
+                if (groupRealNumber.length() != 0) {
+                    real = sign + groupRealNumber;
+                } else {
+                    real = sign + "1";
+                }
+            }
+        } else {
+            return ErrorEval.NUM_ERROR;
+        }
+
+        return new StringEval(real);
+    }
+
