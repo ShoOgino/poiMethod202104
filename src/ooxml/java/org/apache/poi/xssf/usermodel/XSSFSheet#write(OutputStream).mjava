@@ -1,7 +1,9 @@
     protected void write(OutputStream out) throws IOException {
+    	boolean setToNull = false;
         if(worksheet.sizeOfColsArray() == 1) {
         	CTCols col = worksheet.getColsArray(0);
             if(col.sizeOfColArray() == 0) {
+            	setToNull = true;
             	// this is necessary so that we do not write an empty <cols/> item into the sheet-xml in the xlsx-file
             	// Excel complains about a corrupted file if this shows up there!
                 worksheet.setColsArray(null);
@@ -38,5 +40,10 @@
         xmlOptions.setSaveSuggestedPrefixes(map);
 
         worksheet.save(out, xmlOptions);
+
+        // Bug 52233: Ensure that we have a col-array even if write() removed it
+    	if(setToNull) {
+    		worksheet.addNewCols();
+    	}
     }
 
