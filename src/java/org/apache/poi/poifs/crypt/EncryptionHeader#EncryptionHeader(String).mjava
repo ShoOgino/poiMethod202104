@@ -29,9 +29,9 @@
             else if (blockSize == 32)
                 algorithm = ALGORITHM_AES_256;
             else
-                throw new EncryptedDocumentException("Unsupported key length");
+                throw new EncryptedDocumentException("Unsupported key length " + blockSize);
         } else {
-            throw new EncryptedDocumentException("Unsupported cipher");
+            throw new EncryptedDocumentException("Unsupported cipher " + cipher);
         }
 
         String chaining = keyData.getNamedItem("cipherChaining").getNodeValue();
@@ -41,16 +41,28 @@
         else if ("ChainingModeCFB".equals(chaining))
             cipherMode = MODE_CFB;
         else
-            throw new EncryptedDocumentException("Unsupported chaining mode");
+            throw new EncryptedDocumentException("Unsupported chaining mode " + chaining);
 
         String hashAlg = keyData.getNamedItem("hashAlgorithm").getNodeValue();
         int hashSize = Integer.parseInt(keyData.getNamedItem("hashSize")
                                         .getNodeValue());
 
-        if ("SHA1".equals(hashAlg) && hashSize == 20)
+        if ("SHA1".equals(hashAlg) && hashSize == 20) {
             hashAlgorithm = HASH_SHA1;
-        else
-            throw new EncryptedDocumentException("Unsupported hash algorithm");
+        }
+        else if ("SHA256".equals(hashAlg) && hashSize == 32) {
+            hashAlgorithm = HASH_SHA256;
+        }
+        else if ("SHA384".equals(hashAlg) && hashSize == 64) {
+            hashAlgorithm = HASH_SHA384;
+        }
+        else if ("SHA512".equals(hashAlg) && hashSize == 64) {
+            hashAlgorithm = HASH_SHA512;
+        }
+        else {
+            throw new EncryptedDocumentException("Unsupported hash algorithm: " + 
+                                                  hashAlg + " @ " + hashSize + " bytes");
+        }
 
         String salt = keyData.getNamedItem("saltValue").getNodeValue();
         int saltLength = Integer.parseInt(keyData.getNamedItem("saltSize")
