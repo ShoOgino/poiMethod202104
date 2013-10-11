@@ -1,0 +1,49 @@
+    public ValueEval evaluate(int srcRowIndex, int srcColumnIndex, ValueEval numberVE) {
+        String number = OperandResolver.coerceValueToString(numberVE);
+        if (number.length() > 10) {
+            return ErrorEval.NUM_ERROR;
+        }
+
+        String unsigned;
+        boolean isPositive = false;
+        boolean isNegative = false;
+        if (number.length() < 10) {
+            unsigned = number;
+            isPositive = true;
+        } else {
+            //remove sign bit
+            unsigned = number.substring(1);
+            isNegative =
+                    number.startsWith("8") || number.startsWith("9") ||
+                            number.startsWith("A") || number.startsWith("B") ||
+                            number.startsWith("C") || number.startsWith("D") ||
+                            number.startsWith("E") || number.startsWith("F");
+        }
+
+        long decimal;
+        if (isPositive) {
+            try {
+                decimal = Integer.parseInt(unsigned, 16);
+            } catch (NumberFormatException ee) {
+                // number is not a valid hexadecimal number
+                return ErrorEval.NUM_ERROR;
+            }
+        } else {
+            if (isNegative) {
+                BigInteger temp = new BigInteger(unsigned, 16);
+                BigInteger subtract = BigInteger.ONE.shiftLeft(unsigned.length() * 4);
+                temp = temp.subtract(subtract);
+                decimal = temp.longValue();
+            } else {
+                try {
+                    decimal = Integer.parseInt(unsigned, 16);
+                } catch (NumberFormatException ee) {
+                    // number is not a valid hexadecimal number
+                    return ErrorEval.NUM_ERROR;
+                }
+            }
+        }
+
+        return new NumberEval(decimal);
+    }
+
