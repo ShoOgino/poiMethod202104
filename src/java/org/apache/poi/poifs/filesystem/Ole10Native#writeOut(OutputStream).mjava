@@ -1,0 +1,50 @@
+  /**
+   * Have the contents printer out into an OutputStream, used when writing a
+   * file back out to disk (Normally, atom classes will keep their bytes
+   * around, but non atom classes will just request the bytes from their
+   * children, then chuck on their header and return)
+   */
+  public void writeOut(OutputStream out) throws IOException {
+      byte intbuf[] = new byte[LittleEndianConsts.INT_SIZE];
+      byte shortbuf[] = new byte[LittleEndianConsts.SHORT_SIZE];
+
+      ByteArrayOutputStream bos = new ByteArrayOutputStream();
+      bos.write(intbuf); // total size, will be determined later ..
+
+      LittleEndian.putShort(shortbuf, 0, getFlags1());
+      bos.write(shortbuf);
+
+      bos.write(getLabel().getBytes(ISO1));
+      bos.write(0);
+
+      bos.write(getFileName().getBytes(ISO1));
+      bos.write(0);
+
+      LittleEndian.putShort(shortbuf, 0, getFlags2());
+      bos.write(shortbuf);
+
+      LittleEndian.putShort(shortbuf, 0, getUnknown1());
+      bos.write(shortbuf);
+
+      LittleEndian.putInt(intbuf, 0, getCommand().length()+1);
+      bos.write(intbuf);
+
+      bos.write(getCommand().getBytes(ISO1));
+      bos.write(0);
+
+      LittleEndian.putInt(intbuf, 0, getDataBuffer().length);
+      bos.write(intbuf);
+
+      bos.write(getDataBuffer());
+
+      LittleEndian.putShort(shortbuf, 0, getFlags3());
+      bos.write(shortbuf);
+
+      // update total size - length of length-field (4 bytes)
+      byte data[] = bos.toByteArray();
+      totalSize = data.length - LittleEndianConsts.INT_SIZE;
+      LittleEndian.putInt(data, 0, totalSize);
+
+      out.write(data);
+  }
+

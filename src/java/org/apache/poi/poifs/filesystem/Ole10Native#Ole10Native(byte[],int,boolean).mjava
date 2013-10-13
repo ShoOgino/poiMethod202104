@@ -19,7 +19,7 @@
     if (plain) {
       dataBuffer = new byte[totalSize-4];
       System.arraycopy(data, 4, dataBuffer, 0, dataBuffer.length);
-      dataSize = totalSize - 4;
+      // int dataSize = totalSize - 4;
       
       byte[] oleLabel = new byte[8];
       System.arraycopy(dataBuffer, 0, oleLabel, 0, Math.min(dataBuffer.length, 8));
@@ -29,45 +29,41 @@
     } else {
       flags1 = LittleEndian.getShort(data, ofs);
       ofs += LittleEndianConsts.SHORT_SIZE;
+      
       int len = getStringLength(data, ofs);
       label = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
       ofs += len;
+      
       len = getStringLength(data, ofs);
       fileName = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
       ofs += len;
+      
       flags2 = LittleEndian.getShort(data, ofs);
       ofs += LittleEndianConsts.SHORT_SIZE;
-      len = LittleEndian.getUByte(data, ofs);
-      unknown1 = new byte[len];
-      ofs += len;
-      len = 3;
-      unknown2 = new byte[len];
-      ofs += len;
-      len = getStringLength(data, ofs);
+      
+      unknown1 = LittleEndian.getShort(data, ofs);
+      ofs += LittleEndianConsts.SHORT_SIZE;
+
+      len = LittleEndian.getInt(data, ofs);
+      ofs += LittleEndianConsts.INT_SIZE;
+
       command = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
       ofs += len;
-
-      if (totalSize + LittleEndianConsts.INT_SIZE - ofs > LittleEndianConsts.INT_SIZE) {
-        dataSize = LittleEndian.getInt(data, ofs);
-        ofs += LittleEndianConsts.INT_SIZE;
-
-        if (dataSize > totalSize || dataSize<0) {
+      
+      if (totalSize < ofs) {
           throw new Ole10NativeException("Invalid Ole10Native");
-        }
-
-        dataBuffer = new byte[dataSize];
-        System.arraycopy(data, ofs, dataBuffer, 0, dataSize);
-        ofs += dataSize;
-
-        if (unknown1.length > 0) {
-          flags3 = LittleEndian.getShort(data, ofs);
-          ofs += LittleEndianConsts.SHORT_SIZE;
-        } else {
-          flags3 = 0;
-        }
-      } else {
-        throw new Ole10NativeException("Invalid Ole10Native");
       }
+
+      int dataSize = LittleEndian.getInt(data, ofs);
+      ofs += LittleEndianConsts.INT_SIZE;
+
+      if (dataSize < 0 || totalSize - (ofs - LittleEndianConsts.INT_SIZE) < dataSize) {
+          throw new Ole10NativeException("Invalid Ole10Native");
+      }
+      
+      dataBuffer = new byte[dataSize];
+      System.arraycopy(data, ofs, dataBuffer, 0, dataSize);
+      ofs += dataSize;
     }
   }
 
