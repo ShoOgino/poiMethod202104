@@ -1,0 +1,33 @@
+    protected StandardEncryptionHeader(DocumentInputStream is) throws IOException {
+        setFlags(is.readInt());
+        setSizeExtra(is.readInt());
+        setCipherAlgorithm(CipherAlgorithm.fromEcmaId(is.readInt()));
+        setHashAlgorithm(HashAlgorithm.fromEcmaId(is.readInt()));
+        setKeySize(is.readInt());
+        setBlockSize(getKeySize());
+        setCipherProvider(CipherProvider.fromEcmaId(is.readInt()));
+
+        is.readLong(); // skip reserved
+
+        // CSPName may not always be specified
+        // In some cases, the salt value of the EncryptionVerifier is the next chunk of data
+        is.mark(LittleEndianConsts.INT_SIZE+1);
+        int checkForSalt = is.readInt();
+        is.reset();
+        
+        if (checkForSalt == 16) {
+            setCspName("");
+        } else {
+            StringBuilder builder = new StringBuilder();
+            while (true) {
+                char c = (char) is.readShort();
+                if (c == 0) break;
+                builder.append(c);
+            }
+            setCspName(builder.toString());
+        }
+        
+        setChainingMode(ChainingMode.ecb);
+        setKeySalt(null);
+    }
+

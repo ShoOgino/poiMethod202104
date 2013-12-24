@@ -1,0 +1,23 @@
+    public static DocumentEntry createEncryptionEntry(DirectoryEntry dir, String path, EncryptionRecord out) throws IOException {
+        String parts[] = path.split("/");
+        for (int i=0; i<parts.length-1; i++) {
+            dir = dir.hasEntry(parts[i])
+                ? (DirectoryEntry)dir.getEntry(parts[i])
+                : dir.createDirectory(parts[i]);
+        }
+        
+        final byte buf[] = new byte[5000];        
+        LittleEndianByteArrayOutputStream bos = new LittleEndianByteArrayOutputStream(buf, 0);
+        out.write(bos);
+        
+        return dir.createDocument(parts[parts.length-1], bos.getWriteIndex(), new POIFSWriterListener(){
+            public void processPOIFSWriterEvent(POIFSWriterEvent event) {
+                try {
+                    event.getStream().write(buf, 0, event.getLimit());
+                } catch (IOException e) {
+                    throw new EncryptedDocumentException(e);
+                }
+            }
+        });
+    }   
+

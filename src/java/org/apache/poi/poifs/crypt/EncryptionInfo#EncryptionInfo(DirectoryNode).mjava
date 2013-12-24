@@ -2,26 +2,28 @@
         DocumentInputStream dis = dir.createDocumentInputStream("EncryptionInfo");
         versionMajor = dis.readShort();
         versionMinor = dis.readShort();
-
         encryptionFlags = dis.readInt();
-
-        if (versionMajor == 4 && versionMinor == 4 && encryptionFlags == 0x40) {
-            StringBuilder builder = new StringBuilder();
-            byte[] xmlDescriptor = new byte[dis.available()];
-            dis.read(xmlDescriptor);
-            for (byte b : xmlDescriptor)
-                builder.append((char)b);
-            String descriptor = builder.toString();
-            header = new EncryptionHeader(descriptor);
-            verifier = new EncryptionVerifier(descriptor);
+        
+        EncryptionMode encryptionMode;
+        if (versionMajor == agile.versionMajor
+            && versionMinor == agile.versionMinor
+            && encryptionFlags == agile.encryptionFlags) {
+            encryptionMode = agile;
         } else {
-            int hSize = dis.readInt();
-            header = new EncryptionHeader(dis);
-            if (header.getAlgorithm()==EncryptionHeader.ALGORITHM_RC4) {
-                verifier = new EncryptionVerifier(dis, 20);
-            } else {
-                verifier = new EncryptionVerifier(dis, 32);
-            }
+            encryptionMode = standard;
         }
+        
+        EncryptionInfoBuilder eib;
+        try {
+            eib = getBuilder(encryptionMode);
+        } catch (ReflectiveOperationException e) {
+            throw new IOException(e);
+        }
+
+        eib.initialize(this, dis);
+        header = eib.getHeader();
+        verifier = eib.getVerifier();
+        decryptor = eib.getDecryptor();
+        encryptor = eib.getEncryptor();
     }
 

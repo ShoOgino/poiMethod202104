@@ -1,0 +1,117 @@
+    protected void createEncryptionInfoEntry(DirectoryNode dir) throws IOException {
+        AgileEncryptionVerifier ver = builder.getVerifier();
+        AgileEncryptionHeader header = builder.getHeader();
+        
+        EncryptionDocument ed = EncryptionDocument.Factory.newInstance();
+        CTEncryption edRoot = ed.addNewEncryption();
+        
+        CTKeyData keyData = edRoot.addNewKeyData();
+        CTKeyEncryptors keyEncList = edRoot.addNewKeyEncryptors();
+        CTKeyEncryptor keyEnc = keyEncList.addNewKeyEncryptor();
+        keyEnc.setUri(CTKeyEncryptor.Uri.HTTP_SCHEMAS_MICROSOFT_COM_OFFICE_2006_KEY_ENCRYPTOR_PASSWORD);
+        CTPasswordKeyEncryptor keyPass = keyEnc.addNewEncryptedPasswordKey();
+
+        keyPass.setSpinCount(ver.getSpinCount());
+        
+        keyData.setSaltSize(header.getBlockSize());
+        keyPass.setSaltSize(header.getBlockSize());
+        
+        keyData.setBlockSize(header.getBlockSize());
+        keyPass.setBlockSize(header.getBlockSize());
+
+        keyData.setKeyBits(header.getKeySize());
+        keyPass.setKeyBits(header.getKeySize());
+
+        HashAlgorithm hashAlgo = header.getHashAlgorithmEx();
+        keyData.setHashSize(hashAlgo.hashSize);
+        keyPass.setHashSize(hashAlgo.hashSize);
+
+        STCipherAlgorithm.Enum xmlCipherAlgo = STCipherAlgorithm.Enum.forString(header.getCipherAlgorithm().xmlId);
+        if (xmlCipherAlgo == null) {
+            throw new EncryptedDocumentException("CipherAlgorithm "+header.getCipherAlgorithm()+" not supported.");
+        }
+        keyData.setCipherAlgorithm(xmlCipherAlgo);
+        keyPass.setCipherAlgorithm(xmlCipherAlgo);
+        
+        switch (header.getChainingMode()) {
+        case cbc: 
+            keyData.setCipherChaining(STCipherChaining.CHAINING_MODE_CBC);
+            keyPass.setCipherChaining(STCipherChaining.CHAINING_MODE_CBC);
+            break;
+        case cfb:
+            keyData.setCipherChaining(STCipherChaining.CHAINING_MODE_CFB);
+            keyPass.setCipherChaining(STCipherChaining.CHAINING_MODE_CFB);
+            break;
+        default:
+            throw new EncryptedDocumentException("ChainingMode "+header.getChainingMode()+" not supported.");
+        }
+        
+        STHashAlgorithm.Enum xmlHashAlgo = STHashAlgorithm.Enum.forString(hashAlgo.ecmaString);
+        if (xmlHashAlgo == null) {
+            throw new EncryptedDocumentException("HashAlgorithm "+hashAlgo+" not supported.");
+        }
+        keyData.setHashAlgorithm(xmlHashAlgo);
+        keyPass.setHashAlgorithm(xmlHashAlgo);
+
+        keyData.setSaltValue(header.getKeySalt());
+        keyPass.setSaltValue(ver.getSalt());
+        keyPass.setEncryptedVerifierHashInput(ver.getEncryptedVerifier());
+        keyPass.setEncryptedVerifierHashValue(ver.getEncryptedVerifierHash());
+        keyPass.setEncryptedKeyValue(ver.getEncryptedKey());
+        
+        CTDataIntegrity hmacData = edRoot.addNewDataIntegrity();
+        hmacData.setEncryptedHmacKey(header.getEncryptedHmacKey());
+        hmacData.setEncryptedHmacValue(header.getEncryptedHmacValue());
+        
+        for (AgileCertificateEntry ace : ver.getCertificates()) {
+            keyEnc = keyEncList.addNewKeyEncryptor();
+            keyEnc.setUri(CTKeyEncryptor.Uri.HTTP_SCHEMAS_MICROSOFT_COM_OFFICE_2006_KEY_ENCRYPTOR_CERTIFICATE);
+            CTCertificateKeyEncryptor certData = keyEnc.addNewEncryptedCertificateKey();
+            try {
+                certData.setX509Certificate(ace.x509.getEncoded());
+            } catch (CertificateEncodingException e) {
+                throw new EncryptedDocumentException(e);
+            }
+            certData.setEncryptedKeyValue(ace.encryptedKey);
+            certData.setCertVerifier(ace.certVerifier);
+        }
+
+        XmlOptions xo = new XmlOptions();
+        xo.setCharacterEncoding("UTF-8");
+        Map<String,String> nsMap = new HashMap<String,String>();
+        nsMap.put("http://schemas.microsoft.com/office/2006/keyEncryptor/password","p");
+        nsMap.put("http://schemas.microsoft.com/office/2006/keyEncryptor/certificate", "c");
+        nsMap.put("http://schemas.microsoft.com/office/2006/encryption","");
+        xo.setSaveSuggestedPrefixes(nsMap);
+        xo.setSaveNamespacesFirst();
+        xo.setSaveAggressiveNamespaces();
+        // setting standalone doesn't work with xmlbeans-2.3
+        xo.setSaveNoXmlDecl();
+        
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        bos.write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n".getBytes("UTF-8"));
+        ed.save(bos, xo);
+
+        final byte buf[] = new byte[5000];        
+        LittleEndianByteArrayOutputStream leos = new LittleEndianByteArrayOutputStream(buf, 0);
+        EncryptionInfo info = builder.getInfo();
+
+        // EncryptionVersionInfo (4 bytes): A Version structure (section 2.1.4), where 
+        // Version.vMajor MUST be 0x0004 and Version.vMinor MUST be 0x0004
+        leos.writeShort(info.getVersionMajor());
+        leos.writeShort(info.getVersionMinor());
+        // Reserved (4 bytes): A value that MUST be 0x00000040
+        leos.writeInt(0x40);
+        leos.write(bos.toByteArray());
+        
+        dir.createDocument("EncryptionInfo", leos.getWriteIndex(), new POIFSWriterListener() {
+            public void processPOIFSWriterEvent(POIFSWriterEvent event) {
+                try {
+                    event.getStream().write(buf, 0, event.getLimit());
+                } catch (IOException e) {
+                    throw new EncryptedDocumentException(e);
+                }
+            }
+        });
+    }
+

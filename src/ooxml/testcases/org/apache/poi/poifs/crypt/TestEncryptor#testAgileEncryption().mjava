@@ -1,0 +1,89 @@
+    @Test
+    public void testAgileEncryption() throws Exception {
+        File file = POIDataSamples.getDocumentInstance().getFile("bug53475-password-is-pass.docx");
+        String pass = "pass";
+        NPOIFSFileSystem nfs = new NPOIFSFileSystem(file);
+
+        // Check the encryption details
+        EncryptionInfo infoExpected = new EncryptionInfo(nfs);
+        Decryptor decExpected = Decryptor.getInstance(infoExpected);
+        boolean passed = decExpected.verifyPassword(pass);
+        assertTrue("Unable to process: document is encrypted", passed);
+        
+        // extract the payload
+        InputStream is = decExpected.getDataStream(nfs);
+        byte payloadExpected[] = IOUtils.toByteArray(is);
+        is.close();
+
+        long decPackLenExpected = decExpected.getLength();
+        assertEquals(decPackLenExpected, payloadExpected.length);
+
+        is = nfs.getRoot().createDocumentInputStream("EncryptedPackage");
+        is = new BoundedInputStream(is, is.available()-16); // ignore padding block
+        byte encPackExpected[] = IOUtils.toByteArray(is);
+        is.close();
+        
+        // listDir(nfs.getRoot(), "orig", "");
+        
+        nfs.close();
+
+        // check that same verifier/salt lead to same hashes
+        byte verifierSaltExpected[] = infoExpected.getVerifier().getSalt();
+        byte verifierExpected[] = decExpected.getVerifier();
+        byte keySalt[] = infoExpected.getHeader().getKeySalt();
+        byte keySpec[] = decExpected.getSecretKey().getEncoded();
+        byte integritySalt[] = decExpected.getIntegrityHmacKey();
+        // the hmacs of the file always differ, as we use PKCS5-padding to pad the bytes
+        // whereas office just uses random bytes
+        // byte integrityHash[] = d.getIntegrityHmacValue();
+        
+        POIFSFileSystem fs = new POIFSFileSystem();
+        EncryptionInfo infoActual = new EncryptionInfo(
+              fs, EncryptionMode.agile
+            , infoExpected.getVerifier().getCipherAlgorithm()
+            , infoExpected.getVerifier().getHashAlgorithm()
+            , infoExpected.getHeader().getKeySize()
+            , infoExpected.getHeader().getBlockSize()
+            , infoExpected.getVerifier().getChainingMode()
+        );        
+
+        Encryptor e = Encryptor.getInstance(infoActual);
+        e.confirmPassword(pass, keySpec, keySalt, verifierExpected, verifierSaltExpected, integritySalt);
+    
+        OutputStream os = e.getDataStream(fs);
+        IOUtils.copy(new ByteArrayInputStream(payloadExpected), os);
+        os.close();
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(); 
+        fs.writeFilesystem(bos);
+        
+        nfs = new NPOIFSFileSystem(new ByteArrayInputStream(bos.toByteArray()));
+        infoActual = new EncryptionInfo(nfs.getRoot());
+        Decryptor decActual = Decryptor.getInstance(infoActual);
+        passed = decActual.verifyPassword(pass);        
+        assertTrue("Unable to process: document is encrypted", passed);
+        
+        // extract the payload
+        is = decActual.getDataStream(nfs);
+        byte payloadActual[] = IOUtils.toByteArray(is);
+        is.close();
+        
+        long decPackLenActual = decActual.getLength();
+        
+        is = nfs.getRoot().createDocumentInputStream("EncryptedPackage");
+        is = new BoundedInputStream(is, is.available()-16); // ignore padding block
+        byte encPackActual[] = IOUtils.toByteArray(is);
+        is.close();
+        
+        // listDir(nfs.getRoot(), "copy", "");
+        
+        nfs.close();
+        
+        AgileEncryptionHeader aehExpected = (AgileEncryptionHeader)infoExpected.getHeader();
+        AgileEncryptionHeader aehActual = (AgileEncryptionHeader)infoActual.getHeader();
+        assertThat(aehExpected.getEncryptedHmacKey(), equalTo(aehActual.getEncryptedHmacKey()));
+        assertEquals(decPackLenExpected, decPackLenActual);
+        assertThat(payloadExpected, equalTo(payloadActual));
+        assertThat(encPackExpected, equalTo(encPackActual));
+    }
+

@@ -13,9 +13,18 @@
 
             String cls = arg.replace(".class", "");
             try {
-                @SuppressWarnings("unchecked")
-				Class<? extends TestCase> test = (Class<? extends TestCase>) Class.forName(cls);
-                suite.addTestSuite(test);
+                Class<?> testclass = Class.forName(cls);
+                boolean isTest = TestCase.class.isAssignableFrom(testclass);
+                if (!isTest) {
+                    for (Method m : testclass.getDeclaredMethods()) {
+                        isTest = m.isAnnotationPresent(Test.class);
+                        if (isTest) break;
+                    }
+                }
+                
+                if (isTest) {
+                    suite.addTest(new JUnit4TestAdapter(testclass));
+                }
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }

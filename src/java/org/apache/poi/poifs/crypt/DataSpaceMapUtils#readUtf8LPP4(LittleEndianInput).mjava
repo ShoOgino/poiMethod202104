@@ -1,0 +1,26 @@
+    public static String readUtf8LPP4(LittleEndianInput is) {
+        int length = is.readInt();
+        if (length == 0 || length == 4) {
+            @SuppressWarnings("unused")
+            int skip = is.readInt(); // ignore
+            return length == 0 ? null : "";
+        }
+        
+        byte data[] = new byte[length];
+        is.readFully(data);
+
+        // Padding (variable): A set of bytes that MUST be of correct size such that the size of the UTF-8-LP-P4
+        // structure is a multiple of 4 bytes. If Padding is present, each byte MUST be 0x00. If 
+        // the length is exactly 0x00000000, this specifies a null string, and the entire structure uses 
+        // exactly 4 bytes. If the length is exactly 0x00000004, this specifies an empty string, and the 
+        // entire structure also uses exactly 4 bytes
+        int scratchedBytes = length%4;
+        if (scratchedBytes > 0) {
+            for (int i=0; i<(4-scratchedBytes); i++) {
+                is.readByte();
+            }
+        }
+        Charset cs = Charset.forName("UTF-8");
+        return new String(data, 0, data.length, cs);
+    }
+

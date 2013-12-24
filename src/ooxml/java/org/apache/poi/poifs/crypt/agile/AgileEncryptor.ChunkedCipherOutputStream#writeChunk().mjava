@@ -1,0 +1,28 @@
+        private void writeChunk() throws IOException {
+            EncryptionHeader header = builder.getHeader();
+            int blockSize = header.getBlockSize();
+
+            int posInChunk = (int)(_pos & 0xfff);
+            // normally posInChunk is 0, i.e. on the next chunk (-> index-1)
+            // but if called on close(), posInChunk is somewhere within the chunk data
+            int index = (int)(_pos >> 12);
+            if (posInChunk==0) {
+                index--;
+                posInChunk = 4096;
+            } else {
+                // pad the last chunk
+                _cipher = getCipher(getSecretKey(), header.getCipherAlgorithm(), header.getChainingMode(), null, Cipher.ENCRYPT_MODE, "PKCS5Padding");
+            }
+
+            byte[] blockKey = new byte[4];
+            LittleEndian.putInt(blockKey, 0, index);
+            byte[] iv = generateIv(header.getHashAlgorithmEx(), header.getKeySalt(), blockKey, blockSize);
+            try {
+                _cipher.init(Cipher.ENCRYPT_MODE, getSecretKey(), new IvParameterSpec(iv));
+                int ciLen = _cipher.doFinal(_chunk, 0, posInChunk, _chunk);
+                out.write(_chunk, 0, ciLen);
+            } catch (GeneralSecurityException e) {
+                throw new IOException(e);
+            }
+        }
+

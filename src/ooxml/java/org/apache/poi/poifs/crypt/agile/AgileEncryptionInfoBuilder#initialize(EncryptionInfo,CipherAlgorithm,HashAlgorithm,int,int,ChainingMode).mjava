@@ -1,0 +1,37 @@
+    public void initialize(EncryptionInfo info, CipherAlgorithm cipherAlgorithm, HashAlgorithm hashAlgorithm, int keyBits, int blockSize, ChainingMode chainingMode) {
+        this.info = info;
+
+        if (cipherAlgorithm == null) {
+            cipherAlgorithm = CipherAlgorithm.aes128;
+        }
+        if (cipherAlgorithm == CipherAlgorithm.rc4) {
+            throw new EncryptedDocumentException("RC4 must not be used with agile encryption.");
+        }
+        if (hashAlgorithm == null) {
+            hashAlgorithm = HashAlgorithm.sha1;
+        }
+        if (chainingMode == null) {
+            chainingMode = ChainingMode.cbc;
+        }
+        if (!(chainingMode == ChainingMode.cbc || chainingMode == ChainingMode.cfb)) {
+            throw new EncryptedDocumentException("Agile encryption only supports CBC/CFB chaining.");
+        }
+        if (keyBits == -1) {
+            keyBits = cipherAlgorithm.defaultKeySize;
+        }
+        if (blockSize == -1) {
+            blockSize = cipherAlgorithm.blockSize;
+        }
+        boolean found = false;
+        for (int ks : cipherAlgorithm.allowedKeySize) {
+            found |= (ks == keyBits);
+        }
+        if (!found) {
+            throw new EncryptedDocumentException("KeySize "+keyBits+" not allowed for Cipher "+cipherAlgorithm.toString());
+        }
+        header = new AgileEncryptionHeader(cipherAlgorithm, hashAlgorithm, keyBits, blockSize, chainingMode);
+        verifier = new AgileEncryptionVerifier(cipherAlgorithm, hashAlgorithm, keyBits, blockSize, chainingMode);
+        decryptor = new AgileDecryptor(this);
+        encryptor = new AgileEncryptor(this);
+    }
+
