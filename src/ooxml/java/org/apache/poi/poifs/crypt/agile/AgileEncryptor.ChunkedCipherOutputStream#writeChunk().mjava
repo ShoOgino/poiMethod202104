@@ -18,7 +18,14 @@
             LittleEndian.putInt(blockKey, 0, index);
             byte[] iv = generateIv(header.getHashAlgorithmEx(), header.getKeySalt(), blockKey, blockSize);
             try {
-                _cipher.init(Cipher.ENCRYPT_MODE, getSecretKey(), new IvParameterSpec(iv));
+                AlgorithmParameterSpec aps;
+                if (header.getCipherAlgorithm() == CipherAlgorithm.rc2) {
+                    aps = new RC2ParameterSpec(getSecretKey().getEncoded().length*8, iv);
+                } else {
+                    aps = new IvParameterSpec(iv);
+                }
+                
+                _cipher.init(Cipher.ENCRYPT_MODE, getSecretKey(), aps);
                 int ciLen = _cipher.doFinal(_chunk, 0, posInChunk, _chunk);
                 out.write(_chunk, 0, ciLen);
             } catch (GeneralSecurityException e) {

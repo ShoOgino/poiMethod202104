@@ -4,7 +4,14 @@
             LittleEndian.putInt(blockKey, 0, index);
             EncryptionHeader header = info.getHeader();
             byte[] iv = generateIv(header.getHashAlgorithmEx(), header.getKeySalt(), blockKey, getBlockSizeInBytes());
-            _cipher.init(Cipher.DECRYPT_MODE, getSecretKey(), new IvParameterSpec(iv));
+            AlgorithmParameterSpec aps;
+            if (header.getCipherAlgorithm() == CipherAlgorithm.rc2) {
+                aps = new RC2ParameterSpec(getSecretKey().getEncoded().length*8, iv);
+            } else {
+                aps = new IvParameterSpec(iv);
+            }
+            
+            _cipher.init(Cipher.DECRYPT_MODE, getSecretKey(), aps);
             if (_lastIndex != index)
                 _stream.skip((index - _lastIndex) << 12);
 
