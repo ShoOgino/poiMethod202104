@@ -62,53 +62,10 @@
 
 		// Add the core records for this new Slide to the record tree
 		org.apache.poi.hslf.record.Slide slideRecord = slide.getSlideRecord();
-		int slideRecordPos = _hslfSlideShow.appendRootLevelRecord(slideRecord);
-		_records = _hslfSlideShow.getRecords();
-
-		// Add the new Slide into the PersistPtr stuff
-		int offset = 0;
-		int slideOffset = 0;
-		PersistPtrHolder ptr = null;
-		UserEditAtom usr = null;
-		for (int i = 0; i < _records.length; i++) {
-			Record record = _records[i];
-			ByteArrayOutputStream out = new ByteArrayOutputStream();
-			try {
-				record.writeOut(out);
-			} catch (IOException e) {
-				throw new HSLFException(e);
-			}
-
-			// Grab interesting records as they come past
-			if (_records[i].getRecordType() == RecordTypes.PersistPtrIncrementalBlock.typeID) {
-				ptr = (PersistPtrHolder) _records[i];
-			}
-			if (_records[i].getRecordType() == RecordTypes.UserEditAtom.typeID) {
-				usr = (UserEditAtom) _records[i];
-			}
-
-			if (i == slideRecordPos) {
-				slideOffset = offset;
-			}
-			offset += out.size();
-		}
-
-		// persist ID is UserEditAtom.maxPersistWritten + 1
-		int psrId = usr.getMaxPersistWritten() + 1;
+		int psrId = addPersistentObject(slideRecord);
 		sp.setRefID(psrId);
 		slideRecord.setSheetId(psrId);
-
-		// Last view is now of the slide
-		usr.setLastViewType((short) UserEditAtom.LAST_VIEW_SLIDE_VIEW);
-		usr.setMaxPersistWritten(psrId); // increment the number of persit
-										 // objects
-
-		// Add the new slide into the last PersistPtr
-		// (Also need to tell it where it is)
-		slideRecord.setLastOnDiskOffset(slideOffset);
-		ptr.addSlideLookup(sp.getRefID(), slideOffset);
-		logger.log(POILogger.INFO, "New slide ended up at " + slideOffset);
-
+		
 		slide.setMasterSheet(_masters[0]);
 		// All done and added
 		return slide;

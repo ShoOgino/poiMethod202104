@@ -1,0 +1,71 @@
+	/**
+	 * Add a embedded object to this presentation
+	 *
+	 * @return 0-based index of the embedded object
+	 */
+	public int addEmbed(POIFSFileSystem poiData) {
+        DirectoryNode root = poiData.getRoot();
+        
+        // prepare embedded data
+        if (new ClassID().equals(root.getStorageClsid())) {
+        	// need to set class id
+	        Map<String,ClassID> olemap = getOleMap();
+	        ClassID classID = null;
+	    	for (Map.Entry<String,ClassID> entry : olemap.entrySet()) {
+	    		if (root.hasEntry(entry.getKey())) {
+	    			classID = entry.getValue();
+	    			break;
+	    		}
+	    	}
+	    	if (classID == null) {
+	    		throw new IllegalArgumentException("Unsupported embedded document");    		
+	    	}
+	    	
+	    	root.setStorageClsid(classID);
+        }
+        
+		ExEmbed exEmbed = new ExEmbed();
+        // remove unneccessary infos, so we don't need to specify the type
+        // of the ole object multiple times
+        Record children[] = exEmbed.getChildRecords();
+        exEmbed.removeChild(children[2]);
+        exEmbed.removeChild(children[3]);
+        exEmbed.removeChild(children[4]);
+
+        ExEmbedAtom eeEmbed = exEmbed.getExEmbedAtom();
+        eeEmbed.setCantLockServerB(true);
+
+        ExOleObjAtom eeAtom = exEmbed.getExOleObjAtom();
+        eeAtom.setDrawAspect(ExOleObjAtom.DRAW_ASPECT_VISIBLE);
+        eeAtom.setType(ExOleObjAtom.TYPE_EMBEDDED);
+        // eeAtom.setSubType(ExOleObjAtom.SUBTYPE_EXCEL);
+        // should be ignored?!?, see MS-PPT ExOleObjAtom, but Libre Office sets it ...
+        eeAtom.setOptions(1226240);
+
+        ExOleObjStg exOleObjStg = new ExOleObjStg();
+        try {
+	        final String OLESTREAM_NAME = "\u0001Ole";
+	        if (!root.hasEntry(OLESTREAM_NAME)) {
+	            // the following data was taken from an example libre office document
+	            // beside this "\u0001Ole" record there were several other records, e.g. CompObj,
+	            // OlePresXXX, but it seems, that they aren't neccessary
+	            byte oleBytes[] = { 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+	            poiData.createDocument(new ByteArrayInputStream(oleBytes), OLESTREAM_NAME);
+	        }        
+
+	        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+	        poiData.writeFilesystem(bos);
+	        exOleObjStg.setData(bos.toByteArray());
+        } catch (IOException e) {
+        	throw new HSLFException(e);
+        }
+        
+        int psrId = addPersistentObject(exOleObjStg);
+        exOleObjStg.setPersistId(psrId);
+        eeAtom.setObjStgDataRef(psrId);
+        
+		int objectId = addToObjListAtom(exEmbed);
+		eeAtom.setObjID(objectId);
+		return objectId;
+	}
+
