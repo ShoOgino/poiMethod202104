@@ -1,0 +1,36 @@
+	public void testBug51158() throws IOException {
+        // create a workbook
+        final XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFSheet sheet = workbook.createSheet("Test Sheet");
+        XSSFRow row = sheet.createRow(2);
+        XSSFCell cell = row.createCell(3);
+        cell.setCellValue("test1");
+
+        //XSSFCreationHelper helper = workbook.getCreationHelper();
+        //cell.setHyperlink(helper.createHyperlink(0));
+
+        XSSFComment comment = sheet.createDrawingPatriarch().createCellComment(new XSSFClientAnchor());
+        assertNotNull(comment);
+        comment.setString("some comment");
+
+//        CellStyle cs = workbook.createCellStyle();
+//        cs.setShrinkToFit(false);
+//        row.createCell(0).setCellStyle(cs);
+
+        // write the first excel file
+        XSSFWorkbook readBack = XSSFTestDataSamples.writeOutAndReadBack(workbook);
+        assertNotNull(readBack);
+        assertEquals("test1", readBack.getSheetAt(0).getRow(2).getCell(3).getStringCellValue());
+        assertNull(readBack.getSheetAt(0).getRow(2).getCell(4));
+
+        // add a new cell to the sheet
+        cell = row.createCell(4);
+        cell.setCellValue("test2");
+
+        // write the second excel file
+        readBack = XSSFTestDataSamples.writeOutAndReadBack(workbook);
+        assertNotNull(readBack);
+        assertEquals("test1", readBack.getSheetAt(0).getRow(2).getCell(3).getStringCellValue());
+        assertEquals("test2", readBack.getSheetAt(0).getRow(2).getCell(4).getStringCellValue());
+	}
+
