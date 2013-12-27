@@ -41,32 +41,33 @@
 			_sheetIdToCoreRecordsLookup.put(allIDs[i], i);
 		}
 
+		Map<Integer,Integer> mostRecentByBytesRev = new HashMap<Integer,Integer>(mostRecentByBytes.size());
+		for (Map.Entry<Integer,Integer> me : mostRecentByBytes.entrySet()) {
+		    mostRecentByBytesRev.put(me.getValue(), me.getKey());
+		}
+		
 		// Now convert the byte offsets back into record offsets
 		for (Record record : _hslfSlideShow.getRecords()) {
-			if (record instanceof PositionDependentRecord) {
-				PositionDependentRecord pdr = (PositionDependentRecord) record;
-				int recordAt = pdr.getLastOnDiskOffset();
+			if (!(record instanceof PositionDependentRecord)) continue;
+			
+			PositionDependentRecord pdr = (PositionDependentRecord) record;
+			int recordAt = pdr.getLastOnDiskOffset();
 
-				// Is it one we care about?
-				for (Integer thisID : allIDs) {
-					int thatRecordAt = mostRecentByBytes.get(thisID);
+			Integer thisID = mostRecentByBytesRev.get(recordAt);
+			
+			if (thisID == null) continue;
+			
+			// Bingo. Now, where do we store it?
+			int storeAt = _sheetIdToCoreRecordsLookup.get(thisID);
 
-					if (thatRecordAt == recordAt) {
-						// Bingo. Now, where do we store it?
-						Integer storeAtI = _sheetIdToCoreRecordsLookup.get(thisID);
-						int storeAt = storeAtI.intValue();
-
-						// Tell it its Sheet ID, if it cares
-						if (pdr instanceof PositionDependentRecordContainer) {
-							PositionDependentRecordContainer pdrc = (PositionDependentRecordContainer) record;
-							pdrc.setSheetId(thisID);
-						}
-
-						// Finally, save the record
-						_mostRecentCoreRecords[storeAt] = record;
-					}
-				}
+			// Tell it its Sheet ID, if it cares
+			if (pdr instanceof PositionDependentRecordContainer) {
+				PositionDependentRecordContainer pdrc = (PositionDependentRecordContainer) record;
+				pdrc.setSheetId(thisID);
 			}
+
+			// Finally, save the record
+			_mostRecentCoreRecords[storeAt] = record;
 		}
 
 		// Now look for the interesting records in there
