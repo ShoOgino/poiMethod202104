@@ -6,25 +6,23 @@
 	 */
 	private void findMostRecentCoreRecords() {
 		// To start with, find the most recent in the byte offset domain
-		Hashtable<Integer,Integer> mostRecentByBytes = new Hashtable<Integer,Integer>();
-		for (int i = 0; i < _records.length; i++) {
-			if (_records[i] instanceof PersistPtrHolder) {
-				PersistPtrHolder pph = (PersistPtrHolder) _records[i];
+		Map<Integer,Integer> mostRecentByBytes = new HashMap<Integer,Integer>();
+		for (Record record : _hslfSlideShow.getRecords()) {
+			if (record instanceof PersistPtrHolder) {
+				PersistPtrHolder pph = (PersistPtrHolder) record;
 
 				// If we've already seen any of the "slide" IDs for this
 				// PersistPtr, remove their old positions
 				int[] ids = pph.getKnownSlideIDs();
-				for (int j = 0; j < ids.length; j++) {
-					Integer id = Integer.valueOf(ids[j]);
+				for (int id : ids) {
 					if (mostRecentByBytes.containsKey(id)) {
 						mostRecentByBytes.remove(id);
 					}
 				}
 
 				// Now, update the byte level locations with their latest values
-				Hashtable<Integer,Integer> thisSetOfLocations = pph.getSlideLocationsLookup();
-				for (int j = 0; j < ids.length; j++) {
-					Integer id = Integer.valueOf(ids[j]);
+				Map<Integer,Integer> thisSetOfLocations = pph.getSlideLocationsLookup();
+				for (int id : ids) {
 					mostRecentByBytes.put(id, thisSetOfLocations.get(id));
 				}
 			}
@@ -36,54 +34,48 @@
 
 		// We'll also want to be able to turn the slide IDs into a position
 		// in this array
-		_sheetIdToCoreRecordsLookup = new Hashtable<Integer,Integer>();
-		int[] allIDs = new int[_mostRecentCoreRecords.length];
-		Enumeration<Integer> ids = mostRecentByBytes.keys();
-		for (int i = 0; i < allIDs.length; i++) {
-			Integer id = ids.nextElement();
-			allIDs[i] = id.intValue();
-		}
+		_sheetIdToCoreRecordsLookup = new HashMap<Integer,Integer>();
+		Integer[] allIDs = mostRecentByBytes.keySet().toArray(new Integer[mostRecentByBytes.size()]); 
 		Arrays.sort(allIDs);
 		for (int i = 0; i < allIDs.length; i++) {
-			_sheetIdToCoreRecordsLookup.put(Integer.valueOf(allIDs[i]), Integer.valueOf(i));
+			_sheetIdToCoreRecordsLookup.put(allIDs[i], i);
 		}
 
 		// Now convert the byte offsets back into record offsets
-		for (int i = 0; i < _records.length; i++) {
-			if (_records[i] instanceof PositionDependentRecord) {
-				PositionDependentRecord pdr = (PositionDependentRecord) _records[i];
-				Integer recordAt = Integer.valueOf(pdr.getLastOnDiskOffset());
+		for (Record record : _hslfSlideShow.getRecords()) {
+			if (record instanceof PositionDependentRecord) {
+				PositionDependentRecord pdr = (PositionDependentRecord) record;
+				int recordAt = pdr.getLastOnDiskOffset();
 
 				// Is it one we care about?
-				for (int j = 0; j < allIDs.length; j++) {
-					Integer thisID = Integer.valueOf(allIDs[j]);
-					Integer thatRecordAt = mostRecentByBytes.get(thisID);
+				for (Integer thisID : allIDs) {
+					int thatRecordAt = mostRecentByBytes.get(thisID);
 
-					if (thatRecordAt.equals(recordAt)) {
+					if (thatRecordAt == recordAt) {
 						// Bingo. Now, where do we store it?
 						Integer storeAtI = _sheetIdToCoreRecordsLookup.get(thisID);
 						int storeAt = storeAtI.intValue();
 
 						// Tell it its Sheet ID, if it cares
 						if (pdr instanceof PositionDependentRecordContainer) {
-							PositionDependentRecordContainer pdrc = (PositionDependentRecordContainer) _records[i];
-							pdrc.setSheetId(thisID.intValue());
+							PositionDependentRecordContainer pdrc = (PositionDependentRecordContainer) record;
+							pdrc.setSheetId(thisID);
 						}
 
 						// Finally, save the record
-						_mostRecentCoreRecords[storeAt] = _records[i];
+						_mostRecentCoreRecords[storeAt] = record;
 					}
 				}
 			}
 		}
 
 		// Now look for the interesting records in there
-		for (int i = 0; i < _mostRecentCoreRecords.length; i++) {
+		for (Record record : _mostRecentCoreRecords) {
 			// Check there really is a record at this number
-			if (_mostRecentCoreRecords[i] != null) {
+			if (record != null) {
 				// Find the Document, and interesting things in it
-				if (_mostRecentCoreRecords[i].getRecordType() == RecordTypes.Document.typeID) {
-					_documentRecord = (Document) _mostRecentCoreRecords[i];
+				if (record.getRecordType() == RecordTypes.Document.typeID) {
+					_documentRecord = (Document) record;
 					_fonts = _documentRecord.getEnvironment().getFontCollection();
 				}
 			} else {

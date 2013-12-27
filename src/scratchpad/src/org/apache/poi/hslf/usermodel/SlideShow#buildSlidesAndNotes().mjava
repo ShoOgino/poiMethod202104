@@ -43,9 +43,8 @@
 			ArrayList<SlideMaster> mmr = new ArrayList<SlideMaster>();
 			ArrayList<TitleMaster> tmr = new ArrayList<TitleMaster>();
 
-			for (int i = 0; i < masterSets.length; i++) {
-				Record r = getCoreRecordForSAS(masterSets[i]);
-				SlideAtomsSet sas = masterSets[i];
+			for (SlideAtomsSet sas : masterSets) {
+				Record r = getCoreRecordForSAS(sas);
 				int sheetNo = sas.getSlidePersistAtom().getSlideIdentifier();
 				if (r instanceof org.apache.poi.hslf.record.Slide) {
 					TitleMaster master = new TitleMaster((org.apache.poi.hslf.record.Slide) r,
@@ -60,11 +59,8 @@
 				}
 			}
 
-			_masters = new SlideMaster[mmr.size()];
-			mmr.toArray(_masters);
-
-			_titleMasters = new TitleMaster[tmr.size()];
-			tmr.toArray(_titleMasters);
+			_masters = mmr.toArray(new SlideMaster[mmr.size()]);
+			_titleMasters = tmr.toArray(new TitleMaster[tmr.size()]);
 		}
 
 		// Having sorted out the masters, that leaves the notes and slides
@@ -73,14 +69,14 @@
 		// notesSLWT
 		org.apache.poi.hslf.record.Notes[] notesRecords;
 		SlideAtomsSet[] notesSets = new SlideAtomsSet[0];
-		Hashtable<Integer,Integer> slideIdToNotes = new Hashtable<Integer,Integer>();
+		Map<Integer,Integer> slideIdToNotes = new HashMap<Integer,Integer>();
 		if (notesSLWT == null) {
 			// None
 			notesRecords = new org.apache.poi.hslf.record.Notes[0];
 		} else {
 			// Match up the records and the SlideAtomSets
 			notesSets = notesSLWT.getSlideAtomsSets();
-			ArrayList<org.apache.poi.hslf.record.Notes> notesRecordsL = 
+			List<org.apache.poi.hslf.record.Notes> notesRecordsL = 
 			   new ArrayList<org.apache.poi.hslf.record.Notes>();
 			for (int i = 0; i < notesSets.length; i++) {
 				// Get the right core record
@@ -93,8 +89,8 @@
 
 					// Record the match between slide id and these notes
 					SlidePersistAtom spa = notesSets[i].getSlidePersistAtom();
-					Integer slideId = Integer.valueOf(spa.getSlideIdentifier());
-					slideIdToNotes.put(slideId, Integer.valueOf(i));
+					int slideId = spa.getSlideIdentifier();
+					slideIdToNotes.put(slideId, i);
 				} else {
 					logger.log(POILogger.ERROR, "A Notes SlideAtomSet at " + i
 							+ " said its record was at refID "
