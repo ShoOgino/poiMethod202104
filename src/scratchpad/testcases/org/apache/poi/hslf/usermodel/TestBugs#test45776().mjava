@@ -1,0 +1,27 @@
+    /**
+     * Bug 45776: Fix corrupt file problem using TextRun.setText
+     */
+    public void test45776() throws Exception {
+        InputStream is = _slTests.openResourceAsStream("45776.ppt");
+        SlideShow ppt = new SlideShow(new HSLFSlideShow(is));
+        is.close();
+
+        // get slides
+        for (Slide slide : ppt.getSlides()) {
+            for (Shape shape : slide.getShapes()) {
+                if (!(shape instanceof TextBox)) continue;
+                TextBox tb = (TextBox) shape;
+                // work with TextBox
+                String str = tb.getText();
+
+                if (!str.contains("$$DATE$$")) continue;
+                str = str.replace("$$DATE$$", new Date().toString());
+                tb.setText(str);
+                
+                TextRun tr = tb.getTextRun();
+                assertEquals(str.length()+1,tr.getStyleTextPropAtom().getParagraphStyles().getFirst().getCharactersCovered());
+                assertEquals(str.length()+1,tr.getStyleTextPropAtom().getCharacterStyles().getFirst().getCharactersCovered());
+            }
+        }
+    }
+
