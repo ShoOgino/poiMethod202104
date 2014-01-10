@@ -1,0 +1,56 @@
+    /**
+     * The resolution for bug 45777 assumed that the maximum text length in a header / footer
+     * record was 256 bytes.  This assumption appears to be wrong.  Since the fix for bug 47244,
+     * POI now supports header / footer text lengths beyond 256 bytes.
+     */
+    @Test
+    public void bug45777() {
+        HSSFWorkbook wb = new HSSFWorkbook();
+        HSSFSheet s = wb.createSheet();
+
+        char[] cc248 = new char[248];
+        Arrays.fill(cc248, 'x');
+        String s248 = new String(cc248);
+
+        String s249 = s248 + "1";
+        String s250 = s248 + "12";
+        String s251 = s248 + "123";
+        assertEquals(248, s248.length());
+        assertEquals(249, s249.length());
+        assertEquals(250, s250.length());
+        assertEquals(251, s251.length());
+
+
+        // Try on headers
+        s.getHeader().setCenter(s248);
+        assertEquals(254, s.getHeader().getRawText().length());
+        writeOutAndReadBack(wb);
+
+        s.getHeader().setCenter(s251);
+        assertEquals(257, s.getHeader().getRawText().length());
+        writeOutAndReadBack(wb);
+
+        try {
+            s.getHeader().setCenter(s250); // 256 bytes required
+            s.getHeader().setCenter(s251); // 257 bytes required
+        } catch(IllegalArgumentException e) {
+            fail("Identified bug 47244b - header can be more than 256 bytes");
+        }
+
+        // Now try on footers
+        s.getFooter().setCenter(s248);
+        assertEquals(254, s.getFooter().getRawText().length());
+        writeOutAndReadBack(wb);
+
+        s.getFooter().setCenter(s251);
+        assertEquals(257, s.getFooter().getRawText().length());
+        writeOutAndReadBack(wb);
+
+        try {
+            s.getFooter().setCenter(s250); // 256 bytes required
+            s.getFooter().setCenter(s251); // 257 bytes required
+        } catch(IllegalArgumentException e) {
+            fail("Identified bug 47244b - footer can be more than 256 bytes");
+        }
+    }
+
