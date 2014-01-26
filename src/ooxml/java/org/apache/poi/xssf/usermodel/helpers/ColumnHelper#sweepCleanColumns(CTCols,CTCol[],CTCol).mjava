@@ -1,0 +1,64 @@
+    /**
+     * @see http://en.wikipedia.org/wiki/Sweep_line_algorithm
+     */
+    private void sweepCleanColumns(CTCols cols, CTCol[] flattenedColsArray, CTCol overrideColumn) {
+        List<CTCol> flattenedCols = new ArrayList<CTCol>(Arrays.asList(flattenedColsArray));
+        TreeSet<CTCol> currentElements = new TreeSet<CTCol>(new CTColByMaxComparator());
+        ListIterator<CTCol> flIter = flattenedCols.listIterator();
+        CTCol haveOverrideColumn = null;
+        long lastMaxIndex = 0;
+        long currentMax = 0;
+        while (flIter.hasNext()) {
+            CTCol col = flIter.next();
+            long currentIndex = col.getMin();
+            long nextIndex = (col.getMax() > currentMax) ? col.getMax() : currentMax;
+            if (flIter.hasNext()) {
+                nextIndex = flIter.next().getMin();
+                flIter.previous();
+            }
+            Iterator<CTCol> iter = currentElements.iterator();
+            while (iter.hasNext()) {
+                CTCol elem = iter.next();
+                if (currentIndex <= elem.getMax()) break; // all passed elements have been purged
+                iter.remove();
+            }
+            if (!currentElements.isEmpty() && lastMaxIndex < currentIndex) {
+                // we need to process previous elements first
+                insertCol(cols, lastMaxIndex, currentIndex - 1, currentElements.toArray(new CTCol[]{}), true, haveOverrideColumn);
+            }
+            currentElements.add(col);
+            if (col.getMax() > currentMax) currentMax = col.getMax();
+            if (col.equals(overrideColumn)) haveOverrideColumn = overrideColumn;
+            while (currentIndex <= nextIndex && !currentElements.isEmpty()) {
+                Set<CTCol> currentIndexElements = new HashSet<CTCol>();
+                CTCol currentElem = currentElements.first();
+                long currentElemIndex = currentElem.getMax();
+                currentIndexElements.add(currentElem);
+                while (currentElements.higher(currentElem) != null && currentElements.higher(currentElem).getMax() == currentElemIndex) {
+                    currentElem = currentElements.higher(currentElem);
+                    currentIndexElements.add(currentElem);
+                    if (col.getMax() > currentMax) currentMax = col.getMax();
+                    if (col.equals(overrideColumn)) haveOverrideColumn = overrideColumn;
+                }
+                if (currentElemIndex < nextIndex || !flIter.hasNext()) {
+                    insertCol(cols, currentIndex, currentElemIndex, currentElements.toArray(new CTCol[]{}), true, haveOverrideColumn);
+                    if (flIter.hasNext()) {
+                        if (nextIndex > currentElemIndex) {
+                            currentElements.removeAll(currentIndexElements);
+                            if (currentIndexElements.contains(overrideColumn)) haveOverrideColumn = null;
+                        }
+                    } else {
+                        currentElements.removeAll(currentIndexElements);
+                        if (currentIndexElements.contains(overrideColumn)) haveOverrideColumn = null;
+                    }
+                    lastMaxIndex = currentIndex = currentElemIndex + 1;
+                } else {
+                    lastMaxIndex = currentIndex;
+                    currentIndex = nextIndex + 1;
+                }
+                
+            }        
+        }
+        sortColumns(cols);
+    }
+

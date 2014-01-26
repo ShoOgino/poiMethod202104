@@ -1,80 +1,17 @@
     public CTCols addCleanColIntoCols(CTCols cols, CTCol col) {
-        boolean colOverlaps = false;
-        // a Map to remember overlapping columns
-        Map<Long, Boolean> overlappingCols = new LinkedHashMap<Long, Boolean>();
-        int sizeOfColArray = cols.sizeOfColArray();
-        for (int i = 0; i < sizeOfColArray; i++) {
-            CTCol ithCol = cols.getColArray(i);
-            long[] range1 = { ithCol.getMin(), ithCol.getMax() };
-            long[] range2 = { col.getMin(), col.getMax() };
-            long[] overlappingRange = NumericRanges.getOverlappingRange(range1,
-                    range2);
-            int overlappingType = NumericRanges.getOverlappingType(range1,
-                    range2);
-            // different behavior required for each of the 4 different
-            // overlapping types
-            if (overlappingType == NumericRanges.OVERLAPS_1_MINOR) {
-            	// move the max border of the ithCol 
-            	// and insert a new column within the overlappingRange with merged column attributes
-                ithCol.setMax(overlappingRange[0] - 1);
-                insertCol(cols, overlappingRange[0],
-                        overlappingRange[1], new CTCol[] { ithCol, col });
-                i++;
-            } else if (overlappingType == NumericRanges.OVERLAPS_2_MINOR) {
-            	// move the min border of the ithCol 
-            	// and insert a new column within the overlappingRange with merged column attributes
-                ithCol.setMin(overlappingRange[1] + 1);
-                insertCol(cols, overlappingRange[0],
-                        overlappingRange[1], new CTCol[] { ithCol, col });
-                i++;
-            } else if (overlappingType == NumericRanges.OVERLAPS_2_WRAPS) {
-            	// merge column attributes, no new column is needed
-                setColumnAttributes(col, ithCol);
-            } else if (overlappingType == NumericRanges.OVERLAPS_1_WRAPS) {
-            	// split the ithCol in three columns: before the overlappingRange, overlappingRange, and after the overlappingRange
-            	// before overlappingRange
-                if (col.getMin() != ithCol.getMin()) {
-                    insertCol(cols, ithCol.getMin(), (col
-                            .getMin() - 1), new CTCol[] { ithCol });
-                    i++;
-                }
-                // after the overlappingRange
-                if (col.getMax() != ithCol.getMax()) {
-                    insertCol(cols, (col.getMax() + 1),
-                            ithCol.getMax(), new CTCol[] { ithCol });
-                    i++;
-                }
-                // within the overlappingRange
-                ithCol.setMin(overlappingRange[0]);
-                ithCol.setMax(overlappingRange[1]);
-                setColumnAttributes(col, ithCol);
-            }
-            if (overlappingType != NumericRanges.NO_OVERLAPS) {
-                colOverlaps = true;
-                // remember overlapped columns
-                for (long j = overlappingRange[0]; j <= overlappingRange[1]; j++) {
-                	overlappingCols.put(Long.valueOf(j), Boolean.TRUE);
-                }
-            }
+        CTCols newCols = CTCols.Factory.newInstance();
+        for (CTCol c : cols.getColList()) {
+            cloneCol(newCols, c);
         }
-        if (!colOverlaps) {
-            cloneCol(cols, col);
-        } else {
-            // insert new columns for ranges without overlaps
-        	long colMin = -1;
-        	for (long j = col.getMin(); j <= col.getMax(); j++) {
-        		if (!Boolean.TRUE.equals(overlappingCols.get(Long.valueOf(j)))) {
-        			if (colMin < 0) {
-        				colMin = j;
-        			}
-            		if ((j + 1) > col.getMax() || Boolean.TRUE.equals(overlappingCols.get(Long.valueOf(j + 1)))) {
-            			insertCol(cols, colMin, j, new CTCol[] { col });
-                    	colMin = -1;
-        			}
-        		}
-        	}
-        }
-        sortColumns(cols);
-        return cols;
+        cloneCol(newCols, col);
+        sortColumns(newCols);
+        CTCol[] colArray = new CTCol[newCols.getColList().size()];
+        newCols.getColList().toArray(colArray);
+        CTCols returnCols = CTCols.Factory.newInstance();
+        sweepCleanColumns(returnCols, colArray, col);
+        colArray = new CTCol[returnCols.getColList().size()];
+        returnCols.getColList().toArray(colArray);
+        cols.setColArray(colArray);
+        return returnCols;
     }
 

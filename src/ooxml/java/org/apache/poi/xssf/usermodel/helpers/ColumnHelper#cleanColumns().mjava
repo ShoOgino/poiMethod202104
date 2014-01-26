@@ -1,16 +1,23 @@
-    @SuppressWarnings("deprecation") //YK: getXYZArray() array accessors are deprecated in xmlbeans with JDK 1.5 support
     public void cleanColumns() {
         this.newCols = CTCols.Factory.newInstance();
-        CTCols[] colsArray = worksheet.getColsArray();
-        int i = 0;
-        for (i = 0; i < colsArray.length; i++) {
-            CTCols cols = colsArray[i];
-            CTCol[] colArray = cols.getColArray();
-            for (int y = 0; y < colArray.length; y++) {
-                CTCol col = colArray[y];
-                newCols = addCleanColIntoCols(newCols, col);
+
+        CTCols aggregateCols = CTCols.Factory.newInstance();
+        List<CTCols> colsList = worksheet.getColsList();
+        if (colsList != null) {
+            for (CTCols cols : colsList) {
+                for (CTCol col : cols.getColList()) {
+                    cloneCol(aggregateCols, col);
+                }
             }
         }
+        
+        sortColumns(aggregateCols);
+        
+        CTCol[] colArray = new CTCol[aggregateCols.getColList().size()];
+        aggregateCols.getColList().toArray(colArray);
+        sweepCleanColumns(newCols, colArray, null);
+        
+        int i = colsList.size();
         for (int y = i - 1; y >= 0; y--) {
             worksheet.removeCols(y);
         }
