@@ -1,3 +1,4 @@
+   @Override
    public void startElement(String uri, String localName, String name,
                             Attributes attributes) throws SAXException {
 
@@ -73,14 +74,21 @@
                nextDataType = xssfDataType.SST_STRING;
            else if ("str".equals(cellType))
                nextDataType = xssfDataType.FORMULA;
-           else if (cellStyleStr != null) {
-              // Number, but almost certainly with a special style or format
-               int styleIndex = Integer.parseInt(cellStyleStr);
-               XSSFCellStyle style = stylesTable.getStyleAt(styleIndex);
-               this.formatIndex = style.getDataFormat();
-               this.formatString = style.getDataFormatString();
-               if (this.formatString == null)
-                   this.formatString = BuiltinFormats.getBuiltinFormat(this.formatIndex);
+           else {
+               // Number, but almost certainly with a special style or format
+               XSSFCellStyle style = null;
+               if (cellStyleStr != null) {
+                   int styleIndex = Integer.parseInt(cellStyleStr);
+                   style = stylesTable.getStyleAt(styleIndex);
+               } else if (stylesTable.getNumCellStyles() > 0) {
+                   style = stylesTable.getStyleAt(0);
+               }
+               if (style != null) {
+                   this.formatIndex = style.getDataFormat();
+                   this.formatString = style.getDataFormatString();
+                   if (this.formatString == null)
+                       this.formatString = BuiltinFormats.getBuiltinFormat(this.formatIndex);
+               }
            }
        }
    }
