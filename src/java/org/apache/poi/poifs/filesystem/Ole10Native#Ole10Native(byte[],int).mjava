@@ -1,11 +1,83 @@
-  /**
-   * Creates an instance and fills the fields based on the data in the given buffer.
-   *
-   * @param data   The buffer containing the Ole10Native record
-   * @param offset The start offset of the record in the buffer
-   * @throws Ole10NativeException on invalid or unexcepted data format
-   */
-  public Ole10Native(byte[] data, int offset) throws Ole10NativeException {
-    this(data, offset, false);
-  }
+    /**
+     * Creates an instance and fills the fields based on the data in the given buffer.
+     *
+     * @param data   The buffer containing the Ole10Native record
+     * @param offset The start offset of the record in the buffer
+     * @throws Ole10NativeException on invalid or unexcepted data format
+     */
+    public Ole10Native(byte[] data, int offset) throws Ole10NativeException {
+        int ofs = offset; // current offset, initialized to start
+        
+        if (data.length < offset + 2) {
+            throw new Ole10NativeException("data is too small");
+        }
+        
+        totalSize = LittleEndian.getInt(data, ofs);
+        ofs += LittleEndianConsts.INT_SIZE;
+        
+        mode = EncodingMode.unparsed;
+        if (LittleEndian.getShort(data, ofs) == 2) {
+            // some files like equations don't have a valid filename,
+            // but somehow encode the formula right away in the ole10 header
+            if (Character.isISOControl(data[ofs+LittleEndianConsts.SHORT_SIZE])) {
+                mode = EncodingMode.compact;
+            } else {
+                mode = EncodingMode.parsed;
+            }
+        }
+
+        int dataSize;
+        switch (mode) {
+        case parsed: {
+            flags1 = LittleEndian.getShort(data, ofs);
+            
+            // structured format
+            ofs += LittleEndianConsts.SHORT_SIZE;
+        
+            int len = getStringLength(data, ofs);
+            label = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
+            ofs += len;
+            
+            len = getStringLength(data, ofs);
+            fileName = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
+            ofs += len;
+    
+            flags2 = LittleEndian.getShort(data, ofs);
+            ofs += LittleEndianConsts.SHORT_SIZE;
+            
+            unknown1 = LittleEndian.getShort(data, ofs);
+            ofs += LittleEndianConsts.SHORT_SIZE;
+          
+            len = LittleEndian.getInt(data, ofs);
+            ofs += LittleEndianConsts.INT_SIZE;
+            command = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
+            ofs += len;
+            
+            if (totalSize < ofs) {
+                throw new Ole10NativeException("Invalid Ole10Native");
+            }
+          
+            dataSize = LittleEndian.getInt(data, ofs);
+            ofs += LittleEndianConsts.INT_SIZE;
+          
+            if (dataSize < 0 || totalSize - (ofs - LittleEndianConsts.INT_SIZE) < dataSize) {
+                throw new Ole10NativeException("Invalid Ole10Native");
+            }
+            break;
+        }
+        case compact:
+            flags1 = LittleEndian.getShort(data, ofs);
+            ofs += LittleEndianConsts.SHORT_SIZE;
+            dataSize = totalSize - LittleEndianConsts.SHORT_SIZE;
+            break;
+        default:
+        case unparsed:
+            dataSize = totalSize;
+            break;
+        }
+        
+        dataBuffer = new byte[dataSize];
+        System.arraycopy(data, ofs, dataBuffer, 0, dataSize);
+        ofs += dataSize;
+    }
 
