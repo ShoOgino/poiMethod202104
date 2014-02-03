@@ -1,0 +1,60 @@
+   public void testExportDataTypes() throws Exception {
+       XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("55923.xlsx");
+       
+       Sheet sheet = wb.getSheetAt(0);
+       Row row = sheet.getRow(0);
+       
+       Cell cString = row.createCell(0);
+       cString.setCellValue("somestring");
+       cString.setCellType(XSSFCell.CELL_TYPE_STRING);
+       
+       Cell cBoolean = row.createCell(1);
+       cBoolean.setCellValue(true);
+       cBoolean.setCellType(XSSFCell.CELL_TYPE_BOOLEAN);
+       
+       Cell cError = row.createCell(2);
+       cError.setCellType(XSSFCell.CELL_TYPE_ERROR);
+       
+       Cell cFormulaString = row.createCell(3);
+       cFormulaString.setCellFormula("A1");
+       cFormulaString.setCellType(XSSFCell.CELL_TYPE_FORMULA);
+       
+       Cell cFormulaNumeric = row.createCell(4);
+       cFormulaNumeric.setCellFormula("F1");
+       cFormulaNumeric.setCellType(XSSFCell.CELL_TYPE_FORMULA);
+       
+       Cell cNumeric = row.createCell(5);
+       cNumeric.setCellValue(1.2);
+       cNumeric.setCellType(XSSFCell.CELL_TYPE_NUMERIC);
+       
+       Cell cDate = row.createCell(6);
+       cDate.setCellValue(new Date());
+       cDate.setCellType(XSSFCell.CELL_TYPE_NUMERIC);
+       
+       boolean found = false;
+       for (POIXMLDocumentPart p : wb.getRelations()) {
+
+           if (!(p instanceof MapInfo)) {
+               continue;
+           }
+           MapInfo mapInfo = (MapInfo) p;
+
+           XSSFMap map = mapInfo.getXSSFMapById(4);
+
+           assertNotNull("XSSFMap is null", map);
+
+           XSSFExportToXml exporter = new XSSFExportToXml(map);
+           ByteArrayOutputStream os = new ByteArrayOutputStream();
+           exporter.exportToXML(os, true);
+           String xmlData = os.toString("UTF-8");
+
+           assertNotNull(xmlData);
+           assertFalse(xmlData.equals(""));
+           
+           parseXML(xmlData);
+           
+           found = true;
+       }
+       assertTrue(found);
+   }
+
