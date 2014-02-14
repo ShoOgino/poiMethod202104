@@ -1,0 +1,33 @@
+    @Test
+	public void bug50298() throws Exception {
+		HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook("50298.xls");
+
+		assertSheetOrder(wb, "Invoice", "Invoice1", "Digest", "Deferred", "Received");
+
+		HSSFSheet sheet = wb.cloneSheet(0);
+		
+		assertSheetOrder(wb, "Invoice", "Invoice1", "Digest", "Deferred", "Received", "Invoice (2)");
+
+		wb.setSheetName(wb.getSheetIndex(sheet), "copy");
+
+		assertSheetOrder(wb, "Invoice", "Invoice1", "Digest", "Deferred", "Received", "copy");
+
+		wb.setSheetOrder("copy", 0);
+
+		assertSheetOrder(wb, "copy", "Invoice", "Invoice1", "Digest", "Deferred", "Received");
+
+		wb.removeSheetAt(0);
+		
+		assertSheetOrder(wb, "Invoice", "Invoice1", "Digest", "Deferred", "Received");
+
+		// check that the overall workbook serializes with its correct size
+		int expected = wb.getWorkbook().getSize();
+		int written = wb.getWorkbook().serialize(0, new byte[expected*2]);
+		
+		assertEquals("Did not have the expected size when writing the workbook: written: " + written + ", but expected: " + expected,
+				expected, written);
+		
+		HSSFWorkbook read = HSSFTestDataSamples.writeOutAndReadBack(wb);
+		assertSheetOrder(read, "Invoice", "Invoice1", "Digest", "Deferred", "Received");
+	}
+

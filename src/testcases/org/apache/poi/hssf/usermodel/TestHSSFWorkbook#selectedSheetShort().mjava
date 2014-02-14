@@ -1,0 +1,40 @@
+    @SuppressWarnings("deprecation")
+    @Test
+    public void selectedSheetShort() {
+        HSSFWorkbook wb=new HSSFWorkbook();
+        HSSFSheet sheet1 = wb.createSheet("Sheet1");
+        HSSFSheet sheet2 = wb.createSheet("Sheet2");
+        HSSFSheet sheet3 = wb.createSheet("Sheet3");
+        HSSFSheet sheet4 = wb.createSheet("Sheet4");
+
+        confirmActiveSelected(sheet1, true);
+        confirmActiveSelected(sheet2, false);
+        confirmActiveSelected(sheet3, false);
+        confirmActiveSelected(sheet4, false);
+
+        wb.setSelectedTab((short)1);
+        
+        // see Javadoc, in this case selected means "active"
+        assertEquals(wb.getActiveSheetIndex(), wb.getSelectedTab());
+
+        // Demonstrate bug 44525:
+        // Well... not quite, since isActive + isSelected were also added in the same bug fix
+        if (sheet1.isSelected()) {
+            throw new AssertionFailedError("Identified bug 44523 a");
+        }
+        wb.setActiveSheet(1);
+        if (sheet1.isActive()) {
+            throw new AssertionFailedError("Identified bug 44523 b");
+        }
+
+        confirmActiveSelected(sheet1, false);
+        confirmActiveSelected(sheet2, true);
+        confirmActiveSelected(sheet3, false);
+        confirmActiveSelected(sheet4, false);
+        
+        assertEquals(0, wb.getFirstVisibleTab());
+        wb.setDisplayedTab((short)2);
+        assertEquals(2, wb.getFirstVisibleTab());
+        assertEquals(2, wb.getDisplayedTab());
+    }
+
