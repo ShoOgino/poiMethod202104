@@ -28,14 +28,24 @@
                 break;
             }
             case Cell.CELL_TYPE_STRING: {
-                _out.write(" t=\"inlineStr\">");
-                _out.write("<is><t");
-                if(hasLeadingTrailingSpaces(cell.getStringCellValue())) {
-                    _out.write(" xml:space=\"preserve\"");
+                if (_sharedStringSource != null) {
+                    XSSFRichTextString rt = new XSSFRichTextString(cell.getStringCellValue());
+                    int sRef = _sharedStringSource.addEntry(rt.getCTRst());
+
+                    _out.write(" t=\"" + STCellType.S.toString() + "\">");
+                    _out.write("<v>");
+                    _out.write(String.valueOf(sRef));
+                    _out.write("</v>");
+                } else {
+                    _out.write(" t=\"inlineStr\">");
+                    _out.write("<is><t");
+                    if (hasLeadingTrailingSpaces(cell.getStringCellValue())) {
+                        _out.write(" xml:space=\"preserve\"");
+                    }
+                    _out.write(">");
+                    outputQuotedString(cell.getStringCellValue());
+                    _out.write("</t></is>");
                 }
-                _out.write(">");
-                outputQuotedString(cell.getStringCellValue());
-                _out.write("</t></is>");
                 break;
             }
             case Cell.CELL_TYPE_NUMERIC: {
