@@ -1,49 +1,44 @@
     /**
      * <p>Tests writing and reading back a proper dictionary.</p>
+     * @throws IOException 
+     * @throws HPSFException 
      */
-    public void testDictionary()
+    public void testDictionary() throws IOException, HPSFException
     {
-        try
-        {
-            final File copy = TempFile.createTempFile("Test-HPSF", "ole2");
-            copy.deleteOnExit();
+        final File copy = TempFile.createTempFile("Test-HPSF", "ole2");
+        copy.deleteOnExit();
 
-            /* Write: */
-            final OutputStream out = new FileOutputStream(copy);
-            final POIFSFileSystem poiFs = new POIFSFileSystem();
-            final MutablePropertySet ps1 = new MutablePropertySet();
-            final MutableSection s = (MutableSection) ps1.getSections().get(0);
-            final Map<Long,String> m = new HashMap<Long,String>(3, 1.0f);
-            m.put(Long.valueOf(1), "String 1");
-            m.put(Long.valueOf(2), "String 2");
-            m.put(Long.valueOf(3), "String 3");
-            s.setDictionary(m);
-            s.setFormatID(SectionIDMap.DOCUMENT_SUMMARY_INFORMATION_ID[0]);
-            int codepage = CodePageUtil.CP_UNICODE;
-            s.setProperty(PropertyIDMap.PID_CODEPAGE, Variant.VT_I2,
-                          Integer.valueOf(codepage));
-            poiFs.createDocument(ps1.toInputStream(), "Test");
-            poiFs.writeFilesystem(out);
-            out.close();
+        /* Write: */
+        final OutputStream out = new FileOutputStream(copy);
+        final POIFSFileSystem poiFs = new POIFSFileSystem();
+        final MutablePropertySet ps1 = new MutablePropertySet();
+        final MutableSection s = (MutableSection) ps1.getSections().get(0);
+        final Map<Long,String> m = new HashMap<Long,String>(3, 1.0f);
+        m.put(Long.valueOf(1), "String 1");
+        m.put(Long.valueOf(2), "String 2");
+        m.put(Long.valueOf(3), "String 3");
+        s.setDictionary(m);
+        s.setFormatID(SectionIDMap.DOCUMENT_SUMMARY_INFORMATION_ID[0]);
+        int codepage = CodePageUtil.CP_UNICODE;
+        s.setProperty(PropertyIDMap.PID_CODEPAGE, Variant.VT_I2,
+                      Integer.valueOf(codepage));
+        poiFs.createDocument(ps1.toInputStream(), "Test");
+        poiFs.writeFilesystem(out);
+        out.close();
 
-            /* Read back: */
-            final POIFile[] psf = Util.readPropertySets(copy);
-            Assert.assertEquals(1, psf.length);
-            final byte[] bytes = psf[0].getBytes();
-            final InputStream in = new ByteArrayInputStream(bytes);
-            final PropertySet ps2 = PropertySetFactory.create(in);
+        /* Read back: */
+        final POIFile[] psf = Util.readPropertySets(copy);
+        Assert.assertEquals(1, psf.length);
+        final byte[] bytes = psf[0].getBytes();
+        final InputStream in = new ByteArrayInputStream(bytes);
+        final PropertySet ps2 = PropertySetFactory.create(in);
 
-            /* Check if the result is a DocumentSummaryInformation stream, as
-             * specified. */
-            assertTrue(ps2.isDocumentSummaryInformation());
+        /* Check if the result is a DocumentSummaryInformation stream, as
+         * specified. */
+        assertTrue(ps2.isDocumentSummaryInformation());
 
-            /* Compare the property set stream with the corresponding one
-             * from the origin file and check whether they are equal. */
-            assertEquals(ps1, ps2);
-        }
-        catch (Exception ex)
-        {
-            handle(ex);
-        }
+        /* Compare the property set stream with the corresponding one
+         * from the origin file and check whether they are equal. */
+        assertEquals(ps1, ps2);
     }
 
