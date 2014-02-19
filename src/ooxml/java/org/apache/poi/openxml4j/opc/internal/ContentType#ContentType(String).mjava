@@ -7,19 +7,27 @@
 	 *             If the specified content type is not valid with RFC 2616.
 	 */
 	public ContentType(String contentType) throws InvalidFormatException {
-		Matcher mMediaType = patternMediaType.matcher(contentType);
-		if (!mMediaType.matches())
+		Matcher mMediaType = patternTypeSubType.matcher(contentType);
+		if (!mMediaType.matches()) {
+		    // How about with parameters?
+		    mMediaType = patternTypeSubTypeParams.matcher(contentType);
+		}
+        if (!mMediaType.matches()) {
 			throw new InvalidFormatException(
 					"The specified content type '"
-							+ contentType
-							+ "' is not compliant with RFC 2616: malformed content type.");
+					+ contentType
+					+ "' is not compliant with RFC 2616: malformed content type.");
+        }
 
 		// Type/subtype
 		if (mMediaType.groupCount() >= 2) {
 			this.type = mMediaType.group(1);
 			this.subType = mMediaType.group(2);
+			
 			// Parameters
 			this.parameters = new Hashtable<String, String>(1);
+//System.out.println(mMediaType.groupCount() + " = " + contentType);
+//for (int j=1; j<mMediaType.groupCount(); j++) { System.out.println("  " + j + " - " + mMediaType.group(j)); }
 			for (int i = 4; i <= mMediaType.groupCount()
 					&& (mMediaType.group(i) != null); i += 2) {
 				this.parameters.put(mMediaType.group(i), mMediaType

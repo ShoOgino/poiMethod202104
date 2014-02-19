@@ -1,0 +1,61 @@
+	/**
+	 * Check that we can open a file where there are valid
+	 *  parameters on a content type
+	 */
+	public void DISABLEDtestFileWithContentTypeParams() throws Exception {
+        InputStream is = OpenXML4JTestDataSamples.openSampleStream("ContentTypeHasParameters.ooxml");
+
+        OPCPackage p = OPCPackage.open(is);
+        
+        final String typeResqml = "application/x-resqml+xml";
+        
+        // Check the types on everything
+        for (PackagePart part : p.getParts()) {
+            // _rels type doesn't have any params
+            if (part.isRelationshipPart()) {
+                assertEquals(ContentTypes.RELATIONSHIPS_PART, part.getContentType());
+                assertEquals(ContentTypes.RELATIONSHIPS_PART, part.getContentTypeDetails().toString());
+                assertEquals(false, part.getContentTypeDetails().hasParameters());
+                assertEquals(0, part.getContentTypeDetails().getParameterKeys().length);
+            }
+            // Core type doesn't have any params
+            else if (part.getPartName().toString().equals("/docProps/core.xml")) {
+                assertEquals(ContentTypes.CORE_PROPERTIES_PART, part.getContentType());
+                assertEquals(ContentTypes.CORE_PROPERTIES_PART, part.getContentTypeDetails().toString());
+                assertEquals(false, part.getContentTypeDetails().hasParameters());
+                assertEquals(0, part.getContentTypeDetails().getParameterKeys().length);
+            }
+            // Global Crs types do have params
+            else if (part.getPartName().toString().equals("/global1dCrs.xml")) {
+//System.out.println(part.getContentTypeDetails().toStringWithParameters());
+                assertEquals(typeResqml, part.getContentType());
+                assertEquals(typeResqml, part.getContentTypeDetails().toString());
+                assertEquals(true, part.getContentTypeDetails().hasParameters());
+                assertEquals(2, part.getContentTypeDetails().getParameterKeys().length);
+                assertEquals("2.0", part.getContentTypeDetails().getParameter("version"));
+                assertEquals("obj_global1dCrs", part.getContentTypeDetails().getParameter("type"));
+            }
+            else if (part.getPartName().toString().equals("/global2dCrs.xml")) {
+                assertEquals(typeResqml, part.getContentType());
+                assertEquals(typeResqml, part.getContentTypeDetails().toString());
+                assertEquals(true, part.getContentTypeDetails().hasParameters());
+                assertEquals(2, part.getContentTypeDetails().getParameterKeys().length);
+                assertEquals("2.0", part.getContentTypeDetails().getParameter("version"));
+                assertEquals("obj_global2dCrs", part.getContentTypeDetails().getParameter("type"));
+            }
+            // Other thingy
+            else if (part.getPartName().toString().equals("/myTestingGuid.xml")) {
+                assertEquals(typeResqml, part.getContentType());
+                assertEquals(typeResqml, part.getContentTypeDetails().toString());
+                assertEquals(true, part.getContentTypeDetails().hasParameters());
+                assertEquals(2, part.getContentTypeDetails().getParameterKeys().length);
+                assertEquals("2.0", part.getContentTypeDetails().getParameter("version"));
+                assertEquals("obj_tectonicBoundaryFeature", part.getContentTypeDetails().getParameter("type"));
+            }
+            // That should be it!
+            else {
+                fail("Unexpected part " + part);
+            }
+        }
+	}
+
