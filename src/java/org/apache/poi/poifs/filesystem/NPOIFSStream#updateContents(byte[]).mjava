@@ -5,61 +5,8 @@
     *  need to update the size in the property yourself
     */
    public void updateContents(byte[] contents) throws IOException {
-      // How many blocks are we going to need?
-      int blockSize = blockStore.getBlockStoreBlockSize();
-      int blocks = (int)Math.ceil( ((double)contents.length) / blockSize );
-      
-      // Make sure we don't encounter a loop whilst overwriting
-      //  the existing blocks
-      ChainLoopDetector loopDetector = blockStore.getChainLoopDetector();
-      
-      // Start writing
-      int prevBlock = POIFSConstants.END_OF_CHAIN;
-      int nextBlock = startBlock;
-      for(int i=0; i<blocks; i++) {
-         int thisBlock = nextBlock;
-         
-         // Allocate a block if needed, otherwise figure
-         //  out what the next block will be
-         if(thisBlock == POIFSConstants.END_OF_CHAIN) {
-            thisBlock = blockStore.getFreeBlock();
-            loopDetector.claim(thisBlock);
-            
-            // We're on the end of the chain
-            nextBlock = POIFSConstants.END_OF_CHAIN;
-            
-            // Mark the previous block as carrying on to us if needed
-            if(prevBlock != POIFSConstants.END_OF_CHAIN) {
-               blockStore.setNextBlock(prevBlock, thisBlock);
-            }
-            blockStore.setNextBlock(thisBlock, POIFSConstants.END_OF_CHAIN);
-            
-            // If we've just written the first block on a 
-            //  new stream, save the start block offset
-            if(this.startBlock == POIFSConstants.END_OF_CHAIN) {
-               this.startBlock = thisBlock;
-            }
-         } else {
-            loopDetector.claim(thisBlock);
-            nextBlock = blockStore.getNextBlock(thisBlock);
-         }
-         
-         // Write it
-         ByteBuffer buffer = blockStore.createBlockIfNeeded(thisBlock);
-         int startAt = i*blockSize;
-         int endAt = Math.min(contents.length - startAt, blockSize);
-         buffer.put(contents, startAt, endAt); 
-         
-         // Update pointers
-         prevBlock = thisBlock;
-      }
-      int lastBlock = prevBlock;
-      
-      // If we're overwriting, free any remaining blocks
-      NPOIFSStream toFree = new NPOIFSStream(blockStore, nextBlock);
-      toFree.free(loopDetector);
-      
-      // Mark the end of the stream
-      blockStore.setNextBlock(lastBlock, POIFSConstants.END_OF_CHAIN);
+       OutputStream os = getOutputStream();
+       os.write(contents);
+       os.close();
    }
 
