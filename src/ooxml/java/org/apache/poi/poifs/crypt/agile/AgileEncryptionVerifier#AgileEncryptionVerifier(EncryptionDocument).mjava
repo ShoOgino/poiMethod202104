@@ -1,0 +1,65 @@
+    protected AgileEncryptionVerifier(EncryptionDocument ed) {
+        Iterator<CTKeyEncryptor> encList = ed.getEncryption().getKeyEncryptors().getKeyEncryptorList().iterator();
+        CTPasswordKeyEncryptor keyData;
+        try {
+            keyData = encList.next().getEncryptedPasswordKey();
+            if (keyData == null) {
+                throw new NullPointerException("encryptedKey not set");
+            }
+        } catch (Exception e) {
+            throw new EncryptedDocumentException("Unable to parse keyData", e);
+        }
+        
+        int keyBits = (int)keyData.getKeyBits();
+        
+        CipherAlgorithm ca = CipherAlgorithm.fromXmlId(keyData.getCipherAlgorithm().toString(), keyBits);
+        setCipherAlgorithm(ca);
+
+        int hashSize = keyData.getHashSize();
+
+        HashAlgorithm ha = HashAlgorithm.fromEcmaId(keyData.getHashAlgorithm().toString());
+        setHashAlgorithm(ha);
+
+        if (getHashAlgorithm().hashSize != hashSize) {
+            throw new EncryptedDocumentException("Unsupported hash algorithm: " + 
+                    keyData.getHashAlgorithm() + " @ " + hashSize + " bytes");
+        }
+
+        setSpinCount(keyData.getSpinCount());
+        setEncryptedVerifier(keyData.getEncryptedVerifierHashInput());
+        setSalt(keyData.getSaltValue());
+        setEncryptedKey(keyData.getEncryptedKeyValue()); 
+        setEncryptedVerifierHash(keyData.getEncryptedVerifierHashValue());
+
+        int saltSize = keyData.getSaltSize();
+        if (saltSize != getSalt().length)
+            throw new EncryptedDocumentException("Invalid salt size");
+        
+        switch (keyData.getCipherChaining().intValue()) {
+            case STCipherChaining.INT_CHAINING_MODE_CBC:
+                setChainingMode(ChainingMode.cbc);
+                break;
+            case STCipherChaining.INT_CHAINING_MODE_CFB:
+                setChainingMode(ChainingMode.cfb);
+                break;
+            default:
+                throw new EncryptedDocumentException("Unsupported chaining mode - "+keyData.getCipherChaining().toString());
+        }
+        
+        if (!encList.hasNext()) return;
+        
+        try {
+            CertificateFactory cf = CertificateFactory.getInstance("X.509");
+            while (encList.hasNext()) {
+                CTCertificateKeyEncryptor certKey = encList.next().getEncryptedCertificateKey();
+                AgileCertificateEntry ace = new AgileCertificateEntry();
+                ace.certVerifier = certKey.getCertVerifier();
+                ace.encryptedKey = certKey.getEncryptedKeyValue();
+                ace.x509 = (X509Certificate)cf.generateCertificate(new ByteArrayInputStream(certKey.getX509Certificate()));
+                certList.add(ace);
+            }
+        } catch (GeneralSecurityException e) {
+            throw new EncryptedDocumentException("can't parse X509 certificate", e);
+        }
+    }
+
