@@ -52,12 +52,17 @@
            // We need to buffer the whole file into memory when
            //  working with an InputStream.
            // The max possible size is when each BAT block entry is used
-           int maxSize = BATBlock.calculateMaximumSize(_header); 
-           ByteBuffer data = ByteBuffer.allocate(maxSize);
+           long maxSize = BATBlock.calculateMaximumSize(_header); 
+           if (maxSize > Integer.MAX_VALUE) {
+               throw new IllegalArgumentException("Unable read a >2gb file via an InputStream");
+           }
+           ByteBuffer data = ByteBuffer.allocate((int)maxSize);
+           
            // Copy in the header
            headerBuffer.position(0);
            data.put(headerBuffer);
            data.position(headerBuffer.capacity());
+           
            // Now read the rest of the stream
            IOUtils.readFully(channel, data);
            success = true;
