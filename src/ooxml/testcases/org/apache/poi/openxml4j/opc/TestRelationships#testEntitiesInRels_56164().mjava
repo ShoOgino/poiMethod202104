@@ -1,0 +1,40 @@
+    public void testEntitiesInRels_56164() throws Exception {
+        InputStream is = OpenXML4JTestDataSamples.openSampleStream("PackageRelsHasEntities.ooxml");
+        OPCPackage p = OPCPackage.open(is);
+        is.close();
+
+        // Should have 3 root relationships
+        boolean foundDocRel = false, foundCorePropRel = false, foundExtPropRel = false;
+        for (PackageRelationship pr : p.getRelationships()) {
+            if (pr.getRelationshipType().equals(PackageRelationshipTypes.CORE_DOCUMENT))
+                foundDocRel = true;
+            if (pr.getRelationshipType().equals(PackageRelationshipTypes.CORE_PROPERTIES))
+                foundCorePropRel = true;
+            if (pr.getRelationshipType().equals(PackageRelationshipTypes.EXTENDED_PROPERTIES))
+                foundExtPropRel = true;
+        }
+        assertTrue("Core/Doc Relationship not found in " + p.getRelationships(), foundDocRel);
+        assertTrue("Core Props Relationship not found in " + p.getRelationships(), foundCorePropRel);
+        assertTrue("Ext Props Relationship not found in " + p.getRelationships(), foundExtPropRel);
+        
+        // Should have normal work parts
+        boolean foundCoreProps = false, foundDocument = false, foundTheme1 = false;
+        for (PackagePart part : p.getParts()) {
+            if (part.getPartName().toString().equals("/docProps/core.xml")) {
+                assertEquals(ContentTypes.CORE_PROPERTIES_PART, part.getContentType());
+                foundCoreProps = true;
+            }
+            if (part.getPartName().toString().equals("/word/document.xml")) {
+                assertEquals(XWPFRelation.DOCUMENT.getContentType(), part.getContentType());
+                foundDocument = true;
+            }
+            if (part.getPartName().toString().equals("/word/theme/theme1.xml")) {
+                assertEquals(XWPFRelation.THEME.getContentType(), part.getContentType());
+                foundTheme1 = true;
+            }
+        }
+        assertTrue("Core not found in " + p.getParts(), foundCoreProps);
+        assertTrue("Document not found in " + p.getParts(), foundDocument);
+        assertTrue("Theme1 not found in " + p.getParts(), foundTheme1);
+    }
+
