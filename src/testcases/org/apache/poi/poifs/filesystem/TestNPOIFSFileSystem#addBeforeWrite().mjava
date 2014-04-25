@@ -132,8 +132,47 @@
        
        
        // Add one more stream to each, then save and re-load
+       byte[] mini2 = new byte[] { -42, 0, -1, -2, -3, -4, -42 };
+       testDir.createDocument("Mini2", new ByteArrayInputStream(mini2));
        
-       // Recheck
-       // TODO
+       // Add to the main stream
+       byte[] main4106 = new byte[4106];
+       main4106[0] = 41;
+       main4106[4105] = 42;
+       testDir.createDocument("Normal4106", new ByteArrayInputStream(main4106));
+       
+       
+       // Recheck the data in all 4 streams
+       fs = writeOutAndReadBack(fs);
+       
+       fsRoot = fs.getRoot();
+       assertEquals(1, fsRoot.getEntryCount());
+       
+       parentDir = (DirectoryEntry)fsRoot.getEntry("Parent Directory");
+       assertEquals(1, parentDir.getEntryCount());
+       
+       testDir = (DirectoryEntry)parentDir.getEntry("Test Directory");
+       assertEquals(4, testDir.getEntryCount());
+
+       miniDoc = (DocumentEntry)testDir.getEntry("Mini");
+       inp = new NDocumentInputStream(miniDoc);
+       miniRead = new byte[miniDoc.getSize()];
+       assertEquals(miniDoc.getSize(), inp.read(miniRead));
+       assertThat(mini, equalTo(miniRead));
+       inp.close();
+
+       miniDoc = (DocumentEntry)testDir.getEntry("Mini2");
+       inp = new NDocumentInputStream(miniDoc);
+       miniRead = new byte[miniDoc.getSize()];
+       assertEquals(miniDoc.getSize(), inp.read(miniRead));
+       assertThat(mini2, equalTo(miniRead));
+       inp.close();
+
+       normDoc = (DocumentEntry)testDir.getEntry("Normal4106");
+       inp = new NDocumentInputStream(normDoc);
+       normRead = new byte[normDoc.getSize()];
+       assertEquals(normDoc.getSize(), inp.read(normRead));
+       assertThat(main4106, equalTo(normRead));
+       inp.close();   
    }
 
