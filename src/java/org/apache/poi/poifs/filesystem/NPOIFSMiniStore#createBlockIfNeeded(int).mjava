@@ -2,9 +2,13 @@
      * Load the block, extending the underlying stream if needed
      */
     protected ByteBuffer createBlockIfNeeded(final int offset) throws IOException {
-       // Ensure we have our first block at this point
+       // If we are the first block to be allocated, initialise the stream
        if (_mini_stream.getStartBlock() == POIFSConstants.END_OF_CHAIN) {
-           getFreeBlock();
+           int firstBigBlock = _filesystem.getFreeBlock();
+           _filesystem.createBlockIfNeeded(firstBigBlock);
+           _filesystem.setNextBlock(firstBigBlock, POIFSConstants.END_OF_CHAIN);
+           _filesystem._get_property_table().getRoot().setStartBlock(firstBigBlock);
+           _mini_stream = new NPOIFSStream(_filesystem, firstBigBlock);
        }
         
        // Try to get it without extending the stream
