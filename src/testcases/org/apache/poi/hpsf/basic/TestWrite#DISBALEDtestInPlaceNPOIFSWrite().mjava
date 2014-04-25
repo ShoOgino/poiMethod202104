@@ -1,0 +1,101 @@
+    /**
+     * Tests that when using NPOIFS, we can do an in-place write
+     *  without needing to stream in + out the whole kitchen sink
+     * TODO Finish implementing the logic for this
+     */
+    public void DISBALEDtestInPlaceNPOIFSWrite() throws Exception {
+        NPOIFSFileSystem fs = null;
+        DirectoryEntry root = null;
+        DocumentNode sinfDoc = null;
+        DocumentNode dinfDoc = null;
+        SummaryInformation sinf = null;
+        DocumentSummaryInformation dinf = null;
+        
+        final File copy = TempFile.createTempFile("Test-HPSF", "ole2");
+        copy.deleteOnExit();
+        
+        // Copy a test file over to a temp location
+        InputStream inp = _samples.openResourceAsStream("TestShiftJIS.doc");
+        FileOutputStream out = new FileOutputStream(copy);
+        IOUtils.copy(inp, out);
+        inp.close();
+        out.close();
+        
+        // Open the copy in read/write mode
+        fs = new NPOIFSFileSystem(copy);
+        root = fs.getRoot();
+        
+        // Read the properties in there
+        sinfDoc = (DocumentNode)root.getEntry(SummaryInformation.DEFAULT_STREAM_NAME);
+        sinf = (SummaryInformation)PropertySetFactory.create(new NDocumentInputStream(sinfDoc));
+        assertEquals(131077, sinf.getOSVersion());
+        
+        dinfDoc = (DocumentNode)root.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME);
+        dinf = (DocumentSummaryInformation)PropertySetFactory.create(new NDocumentInputStream(dinfDoc));
+        assertEquals(131077, dinf.getOSVersion());
+        
+        // Check they start as we expect
+        assertEquals("Reiichiro Hori", sinf.getAuthor());
+        assertEquals("Microsoft Word 9.0", sinf.getApplicationName());
+        assertEquals("\u7b2c1\u7ae0", sinf.getTitle());
+        
+        assertEquals("", dinf.getCompany());
+        assertEquals(null, dinf.getManager());
+        
+        // Alter a few of them
+        sinf.setAuthor("Changed Author");
+        sinf.setTitle("Le titre \u00e9tait chang\u00e9");
+        dinf.setManager("Changed Manager");
+        
+        
+        // Save this into the filesystem
+        sinf.write(new NDocumentOutputStream(sinfDoc));
+        dinf.write(new NDocumentOutputStream(dinfDoc));
+        
+        
+        // Read as-is
+        sinfDoc = (DocumentNode)root.getEntry(SummaryInformation.DEFAULT_STREAM_NAME);
+        sinf = (SummaryInformation)PropertySetFactory.create(new NDocumentInputStream(sinfDoc));
+        assertEquals(131077, sinf.getOSVersion());
+        
+        dinfDoc = (DocumentNode)root.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME);
+        dinf = (DocumentSummaryInformation)PropertySetFactory.create(new NDocumentInputStream(dinfDoc));
+        assertEquals(131077, dinf.getOSVersion());
+
+        assertEquals("Changed Author", sinf.getAuthor());
+        assertEquals("Microsoft Word 9.0", sinf.getApplicationName());
+        assertEquals("Le titre \u00e9tait chang\u00e9", sinf.getTitle());
+        
+        assertEquals("", dinf.getCompany());
+        assertEquals("Changed Manager", dinf.getManager());
+
+        
+        // Close, re-load
+        fs.writeFilesystem();
+        fs.close();
+        
+        fs = new NPOIFSFileSystem(copy);
+        root = fs.getRoot();
+        
+        // Re-check on load
+        sinfDoc = (DocumentNode)root.getEntry(SummaryInformation.DEFAULT_STREAM_NAME);
+        sinf = (SummaryInformation)PropertySetFactory.create(new NDocumentInputStream(sinfDoc));
+        assertEquals(131077, sinf.getOSVersion());
+        
+        dinfDoc = (DocumentNode)root.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME);
+        dinf = (DocumentSummaryInformation)PropertySetFactory.create(new NDocumentInputStream(dinfDoc));
+        assertEquals(131077, dinf.getOSVersion());
+
+        assertEquals("Changed Author", sinf.getAuthor());
+        assertEquals("Microsoft Word 9.0", sinf.getApplicationName());
+        assertEquals("Le titre \u00e9tait chang\u00e9", sinf.getTitle());
+        
+        assertEquals("", dinf.getCompany());
+        assertEquals("Changed Manager", dinf.getManager());
+        
+        
+        // Tidy up
+        fs.close();
+        copy.delete();
+    }
+
