@@ -1,0 +1,32 @@
+   /**
+    * Stores the given data for this Document
+    */
+   private int store(InputStream stream) throws IOException {
+       final int bigBlockSize = POIFSConstants.BIG_BLOCK_MINIMUM_DOCUMENT_SIZE;
+       BufferedInputStream bis = new BufferedInputStream(stream, bigBlockSize+1);
+       bis.mark(bigBlockSize);
+
+       // Do we need to store as a mini stream or a full one?
+       if(bis.skip(bigBlockSize) < bigBlockSize) {
+          _stream = new NPOIFSStream(_filesystem.getMiniStore());
+          _block_size = _filesystem.getMiniStore().getBlockStoreBlockSize();
+       } else {
+          _stream = new NPOIFSStream(_filesystem);
+          _block_size = _filesystem.getBlockStoreBlockSize();
+       }
+
+       // start from the beginning 
+       bis.reset();
+       
+       // Store it
+       OutputStream os = _stream.getOutputStream();
+       byte buf[] = new byte[1024];
+       int length = 0;
+       
+       for (int readBytes; (readBytes = bis.read(buf)) != -1; length += readBytes) {
+           os.write(buf, 0, readBytes);
+       }
+       
+       return length;
+   }
+
