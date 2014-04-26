@@ -2,7 +2,9 @@
      * Tests that when using NPOIFS, we can do an in-place write
      *  without needing to stream in + out the whole kitchen sink
      */
-    public void DISABLEDtestInPlaceNPOIFSWrite() throws Exception {
+    @Test
+    @Ignore
+    public void inPlaceNPOIFSWrite() throws Exception {
         NPOIFSFileSystem fs = null;
         DirectoryEntry root = null;
         DocumentNode sinfDoc = null;
@@ -10,19 +12,22 @@
         SummaryInformation sinf = null;
         DocumentSummaryInformation dinf = null;
         
+        // We need to work on a File for in-place changes, so create a temp one
         final File copy = TempFile.createTempFile("Test-HPSF", "ole2");
         copy.deleteOnExit();
         
-        // Copy a test file over to a temp location
+        // Copy a test file over to our temp location
         InputStream inp = _samples.openResourceAsStream("TestShiftJIS.doc");
         FileOutputStream out = new FileOutputStream(copy);
         IOUtils.copy(inp, out);
         inp.close();
         out.close();
         
+        
         // Open the copy in read/write mode
         fs = new NPOIFSFileSystem(copy);
         root = fs.getRoot();
+        
         
         // Read the properties in there
         sinfDoc = (DocumentNode)root.getEntry(SummaryInformation.DEFAULT_STREAM_NAME);
@@ -33,6 +38,7 @@
         dinf = (DocumentSummaryInformation)PropertySetFactory.create(new NDocumentInputStream(dinfDoc));
         assertEquals(131077, dinf.getOSVersion());
         
+        
         // Check they start as we expect
         assertEquals("Reiichiro Hori", sinf.getAuthor());
         assertEquals("Microsoft Word 9.0", sinf.getApplicationName());
@@ -41,7 +47,41 @@
         assertEquals("", dinf.getCompany());
         assertEquals(null, dinf.getManager());
         
-        // Alter a few of them
+        
+        // Have them write themselves in-place with no changes
+        sinf.write(new NDocumentOutputStream(sinfDoc));
+        dinf.write(new NDocumentOutputStream(dinfDoc));
+        
+        // And also write to some bytes for checking
+        ByteArrayOutputStream sinfBytes = new ByteArrayOutputStream();
+        sinf.write(sinfBytes);
+        ByteArrayOutputStream dinfBytes = new ByteArrayOutputStream();
+        dinf.write(dinfBytes);
+        
+        
+        // Check that the filesystem can give us back the same bytes
+        sinfDoc = (DocumentNode)root.getEntry(SummaryInformation.DEFAULT_STREAM_NAME);
+        dinfDoc = (DocumentNode)root.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME);
+
+        // TODO
+
+        
+        // Read back in as-is
+        sinf = (SummaryInformation)PropertySetFactory.create(new NDocumentInputStream(sinfDoc));
+        assertEquals(131077, sinf.getOSVersion());
+        
+        dinf = (DocumentSummaryInformation)PropertySetFactory.create(new NDocumentInputStream(dinfDoc));
+        assertEquals(131077, dinf.getOSVersion());
+        
+        assertEquals("Reiichiro Hori", sinf.getAuthor());
+        assertEquals("Microsoft Word 9.0", sinf.getApplicationName());
+        assertEquals("\u7b2c1\u7ae0", sinf.getTitle());
+        
+        assertEquals("", dinf.getCompany());
+        assertEquals(null, dinf.getManager());
+        
+
+        // Now alter a few of them
         sinf.setAuthor("Changed Author");
         sinf.setTitle("Le titre \u00e9tait chang\u00e9");
         dinf.setManager("Changed Manager");
@@ -52,7 +92,7 @@
         dinf.write(new NDocumentOutputStream(dinfDoc));
         
         
-        // Read as-is
+        // Read them back in again
         sinfDoc = (DocumentNode)root.getEntry(SummaryInformation.DEFAULT_STREAM_NAME);
         sinf = (SummaryInformation)PropertySetFactory.create(new NDocumentInputStream(sinfDoc));
         assertEquals(131077, sinf.getOSVersion());
@@ -69,7 +109,7 @@
         assertEquals("Changed Manager", dinf.getManager());
 
         
-        // Close, re-load
+        // Close the whole filesystem, and open it once more
         fs.writeFilesystem();
         fs.close();
         
