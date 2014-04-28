@@ -3,11 +3,19 @@
       if(position >= size()) {
          throw new IllegalArgumentException("Position " + position + " past the end of the file");
       }
-
-      // Read
-      channel.position(position);
-      ByteBuffer dst = ByteBuffer.allocate(length);
-      int worked = IOUtils.readFully(channel, dst);
+      
+      // Do we read or map (for read/write?
+      ByteBuffer dst;
+      int worked = -1;
+      if (writable) {
+          dst = channel.map(FileChannel.MapMode.READ_WRITE, position, length);
+          worked = 0;
+      } else {
+          // Read
+          channel.position(position);
+          dst = ByteBuffer.allocate(length);
+          worked = IOUtils.readFully(channel, dst);
+      }
 
       // Check
       if(worked == -1) {
