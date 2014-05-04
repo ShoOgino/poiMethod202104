@@ -1,9 +1,18 @@
-    private NPOIFSFileSystem(FileChannel channel, boolean readOnly, boolean closeChannelOnError)
+    private NPOIFSFileSystem(FileChannel channel, File srcFile, boolean readOnly, boolean closeChannelOnError)
          throws IOException
     {
        this(false);
 
        try {
+          // Initialize the datasource
+          if (srcFile != null) {
+              FileBackedDataSource d = new FileBackedDataSource(srcFile, readOnly);
+              channel = d.getChannel();
+              _data = d;
+          } else {
+              _data = new FileBackedDataSource(channel, readOnly);
+          }
+           
           // Get the header
           ByteBuffer headerBuffer = ByteBuffer.allocate(POIFSConstants.SMALLER_BIG_BLOCK_SIZE);
           IOUtils.readFully(channel, headerBuffer);
@@ -12,7 +21,6 @@
           _header = new HeaderBlock(headerBuffer);
           
           // Now process the various entries
-          _data = new FileBackedDataSource(channel, readOnly);
           readCoreContents();
        } catch(IOException e) {
           if(closeChannelOnError) {
