@@ -1,0 +1,33 @@
+    /**
+     * @return <code>true</code> if the keyDigest is compatible with the specified saltData and saltHash
+     */
+    public boolean validate(byte[] verifier, byte[] verifierHash) {
+        check16Bytes(verifier, "verifier");
+        check16Bytes(verifierHash, "verifierHash");
+
+        // validation uses the RC4 for block zero
+        Cipher rc4 = getCipher();
+        initCipherForBlock(rc4, 0);
+        
+        byte[] verifierPrime = verifier.clone();
+        byte[] verifierHashPrime = verifierHash.clone();
+
+        try {
+            rc4.update(verifierPrime, 0, verifierPrime.length, verifierPrime);
+            rc4.update(verifierHashPrime, 0, verifierHashPrime.length, verifierHashPrime);
+        } catch (ShortBufferException e) {
+            throw new EncryptedDocumentException("buffer too short", e);
+        }
+
+        MessageDigest md5 = CryptoFunctions.getMessageDigest(HashAlgorithm.md5);
+        md5.update(verifierPrime);
+        byte[] finalVerifierResult = md5.digest();
+
+        if (log.check(POILogger.DEBUG)) {
+            byte[] verifierHashThatWouldWork = xor(verifierHash, xor(verifierHashPrime, finalVerifierResult));
+            log.log(POILogger.DEBUG, "valid verifierHash value", HexDump.toHex(verifierHashThatWouldWork));
+        }
+
+        return Arrays.equals(verifierHashPrime, finalVerifierResult);
+    }
+

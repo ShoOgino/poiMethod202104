@@ -1,0 +1,28 @@
+    /**
+     * Decrypts a xor obfuscated byte array.
+     * The data is decrypted in-place
+     * 
+     * @see <a href="http://msdn.microsoft.com/en-us/library/dd908506.aspx">2.3.7.3 Binary Document XOR Data Transformation Method 1</a>
+     */
+    public void xor(byte[] buf, int pOffset, int pLen) {
+        if (_shouldSkipEncryptionOnCurrentRecord) {
+            _dataLength += pLen;
+            return;
+        }
+        
+        // The following is taken from the Libre Office implementation
+        // It seems that the encrypt and decrypt method is mixed up
+        // in the MS-OFFCRYPTO docs
+
+        byte xorArray[] = _key._secretKey.getEncoded();
+        
+        for (int i=0; i<pLen; i++) {
+            byte value = buf[pOffset+i];
+            value = rotateLeft(value, 3);
+            value ^= xorArray[_xorArrayIndex];
+            buf[pOffset+i] = value;
+            _xorArrayIndex = (_xorArrayIndex + 1) % 16;
+            _dataLength++;
+        }
+    }
+
