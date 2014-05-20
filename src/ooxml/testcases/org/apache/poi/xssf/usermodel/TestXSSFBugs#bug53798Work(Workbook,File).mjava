@@ -1,0 +1,45 @@
+    private void bug53798Work(Workbook wb, File xlsOutput) throws IOException {
+        Sheet testSheet = wb.getSheetAt(0);
+
+        testSheet.shiftRows(2, 2, 1);
+
+        saveAndReloadReport(wb, xlsOutput);
+
+        // 1) corrupted xlsx (unreadable data in the first row of a shifted group) already comes about
+        // when shifted by less than -1 negative amount (try -2)
+        testSheet.shiftRows(3, 3, -1);
+
+        saveAndReloadReport(wb, xlsOutput);
+
+        testSheet.shiftRows(2, 2, 1);
+
+        saveAndReloadReport(wb, xlsOutput);
+
+        Row newRow = null;
+        Cell newCell = null;
+        // 2) attempt to create a new row IN PLACE of a removed row by a negative shift causes corrupted
+        // xlsx file with  unreadable data in the negative shifted row.
+        // NOTE it's ok to create any other row.
+        newRow = testSheet.createRow(3);
+
+        saveAndReloadReport(wb, xlsOutput);
+
+        newCell = newRow.createCell(0);
+
+        saveAndReloadReport(wb, xlsOutput);
+
+        newCell.setCellValue("new Cell in row "+newRow.getRowNum());
+
+        saveAndReloadReport(wb, xlsOutput);
+
+        // 3) once a negative shift has been made any attempt to shift another group of rows
+        // (note: outside of previously negative shifted rows) by a POSITIVE amount causes POI exception:
+        // org.apache.xmlbeans.impl.values.XmlValueDisconnectedException.
+        // NOTE: another negative shift on another group of rows is successful, provided no new rows in
+        // place of previously shifted rows were attempted to be created as explained above.
+        testSheet.shiftRows(6, 7, 1);   // -- CHANGE the shift to positive once the behaviour of
+                                        // the above has been tested
+
+        saveAndReloadReport(wb, xlsOutput);
+    }
+
