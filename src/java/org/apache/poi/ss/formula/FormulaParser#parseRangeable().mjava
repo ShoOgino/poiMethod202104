@@ -10,6 +10,8 @@
 	 *   'my sheet'!A1
 	 *   .my.sheet!A1
 	 *   my.named..range.
+	 *   'my sheet'!my.named.range
+	 *   .my.sheet!my.named.range
 	 *   foo.bar(123.456, "abc")
 	 *   123.456
 	 *   "abc"
@@ -32,10 +34,21 @@
 		if (part1 == null) {
 			if (sheetIden != null) {
                 if(look == '#'){  // error ref like MySheet!#REF!
-                    return new ParseNode(ErrPtg.valueOf(parseErrorLiteral()));    
+                    return new ParseNode(ErrPtg.valueOf(parseErrorLiteral()));  
                 } else {
-                    throw new FormulaParseException("Cell reference expected after sheet name at index "
-                            + _pointer + ".");
+                    // Is it a named range?
+                    String name = parseAsName();
+                    if (name.length() == 0) {
+                        throw new FormulaParseException("Cell reference or Named Range "
+                                + "expected after sheet name at index " + _pointer + ".");
+                    }
+                    int extIx = getSheetExtIx(sheetIden);
+                    NameXPtg nameXPtg = _book.getNameXPtg(name, extIx);
+                    if (nameXPtg == null) {
+                        throw new FormulaParseException("Specified name '" + name +
+                                "' for sheet " + sheetIden.asFormulaString() + " not found");
+                    }
+                    return new ParseNode(nameXPtg);
                 }
 			}
 			return parseNonRange(savePointer);
