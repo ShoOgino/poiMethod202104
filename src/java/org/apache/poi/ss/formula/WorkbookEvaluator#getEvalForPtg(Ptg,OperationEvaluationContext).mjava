@@ -8,20 +8,23 @@
 		//  consider converting all these (ptg instanceof XxxPtg) expressions to (ptg.getClass() == XxxPtg.class)
 
 		if (ptg instanceof NamePtg) {
-			// named ranges, macro functions
+			// Named ranges, macro functions
 			NamePtg namePtg = (NamePtg) ptg;
 			EvaluationName nameRecord = _workbook.getName(namePtg);
-			if (nameRecord.isFunctionName()) {
-				return new NameEval(nameRecord.getNameText());
-			}
-			if (nameRecord.hasFormula()) {
-				return evaluateNameFormula(nameRecord.getNameDefinition(), ec);
-			}
-
-			throw new RuntimeException("Don't now how to evalate name '" + nameRecord.getNameText() + "'");
+			return getEvalForNameRecord(nameRecord, ec);
 		}
 		if (ptg instanceof NameXPtg) {
-		   return ec.getNameXEval(((NameXPtg) ptg));
+		    // Externally defined named ranges or macro functions
+		    NameXPtg nameXPtg = (NameXPtg)ptg;
+		    ValueEval eval = ec.getNameXEval(nameXPtg);
+		    
+		    if (eval instanceof NameXEval) {
+		        // Could not be directly evaluated, so process as a name
+		        return getEvalForNameX(nameXPtg, ec);
+		    } else {
+		        // Use the evaluated version
+		        return eval;
+		    }
 		}
 
 		if (ptg instanceof IntPtg) {
