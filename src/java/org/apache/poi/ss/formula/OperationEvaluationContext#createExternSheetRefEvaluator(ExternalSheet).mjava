@@ -1,0 +1,24 @@
+    SheetRefEvaluator createExternSheetRefEvaluator(ExternalSheet externalSheet) {
+		WorkbookEvaluator targetEvaluator;
+		int otherSheetIndex;
+		if (externalSheet == null || externalSheet.getWorkbookName() == null) {
+			// sheet is in same workbook
+			otherSheetIndex = _workbook.getSheetIndex(externalSheet.getSheetName());
+			targetEvaluator = _bookEvaluator;
+		} else {
+			// look up sheet by name from external workbook
+			String workbookName = externalSheet.getWorkbookName();
+			try {
+				targetEvaluator = _bookEvaluator.getOtherWorkbookEvaluator(workbookName);
+			} catch (WorkbookNotFoundException e) {
+				throw new RuntimeException(e.getMessage(), e);
+			}
+			otherSheetIndex = targetEvaluator.getSheetIndex(externalSheet.getSheetName());
+			if (otherSheetIndex < 0) {
+				throw new RuntimeException("Invalid sheet name '" + externalSheet.getSheetName()
+						+ "' in bool '" + workbookName + "'.");
+			}
+		}
+		return new SheetRefEvaluator(targetEvaluator, _tracker, otherSheetIndex);
+	}
+
