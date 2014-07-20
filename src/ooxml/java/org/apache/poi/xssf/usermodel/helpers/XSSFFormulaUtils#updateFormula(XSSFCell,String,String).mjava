@@ -1,17 +1,19 @@
     /**
-     * Parse cell formula and re-assemble it back using the specified FormulaRenderingWorkbook.
+     * Parse cell formula and re-assemble it back using the new sheet name
      *
      * @param cell the cell to update
-     * @param frwb the formula rendering workbbok that returns new sheet name
      */
-    private void updateFormula(XSSFCell cell, FormulaRenderingWorkbook frwb) {
+    private void updateFormula(XSSFCell cell, String oldName, String newName) {
         CTCellFormula f = cell.getCTCell().getF();
         if (f != null) {
             String formula = f.getStringValue();
             if (formula != null && formula.length() > 0) {
                 int sheetIndex = _wb.getSheetIndex(cell.getSheet());
                 Ptg[] ptgs = FormulaParser.parse(formula, _fpwb, FormulaType.CELL, sheetIndex);
-                String updatedFormula = FormulaRenderer.toFormulaString(frwb, ptgs);
+                for (Ptg ptg : ptgs) {
+                    updatePtg(ptg, oldName, newName);
+                }
+                String updatedFormula = FormulaRenderer.toFormulaString(_fpwb, ptgs);
                 if (!formula.equals(updatedFormula)) f.setStringValue(updatedFormula);
             }
         }

@@ -1,15 +1,17 @@
     /**
-     * Parse formula in the named range and re-assemble it  back using the specified FormulaRenderingWorkbook.
+     * Parse formula in the named range and re-assemble it back using the new sheet name.
      *
      * @param name the name to update
-     * @param frwb the formula rendering workbbok that returns new sheet name
      */
-    private void updateName(XSSFName name, FormulaRenderingWorkbook frwb) {
+    private void updateName(XSSFName name, String oldName, String newName) {
         String formula = name.getRefersToFormula();
         if (formula != null) {
             int sheetIndex = name.getSheetIndex();
             Ptg[] ptgs = FormulaParser.parse(formula, _fpwb, FormulaType.NAMEDRANGE, sheetIndex);
-            String updatedFormula = FormulaRenderer.toFormulaString(frwb, ptgs);
+            for (Ptg ptg : ptgs) {
+                updatePtg(ptg, oldName, newName);
+            }
+            String updatedFormula = FormulaRenderer.toFormulaString(_fpwb, ptgs);
             if (!formula.equals(updatedFormula)) name.setRefersToFormula(updatedFormula);
         }
     }
