@@ -1,0 +1,55 @@
+   /**
+    * Do a check for, and output, comments in otherwise empty cells.
+    */
+   private void checkForEmptyCellComments(EmptyCellCommentsCheckType type) {
+       if (commentCellRefs != null && !commentCellRefs.isEmpty()) {
+           // If we've reached the end of the sheet data, output any
+           //  comments we haven't yet already handled
+           if (type == EmptyCellCommentsCheckType.END_OF_SHEET_DATA) {
+               while (!commentCellRefs.isEmpty()) {
+                   outputEmptyCellComment(commentCellRefs.remove());
+               }
+               return;
+           }
+
+           // At the end of a row, handle any comments for "missing" rows before us
+           if (this.cellRef == null) {
+               if (type == EmptyCellCommentsCheckType.END_OF_ROW) {
+                   while (!commentCellRefs.isEmpty()) {
+                       if (commentCellRefs.peek().getRow() == rowNum) {
+                           outputEmptyCellComment(commentCellRefs.remove());
+                       } else {
+                           return;
+                       }
+                   }
+                   return;
+               } else {
+                   throw new IllegalStateException("Cell ref should be null only if there are only empty cells in the row; rowNum: " + rowNum);
+               }
+           }
+
+           CellReference nextCommentCellRef;
+           do {
+               CellReference cellRef = new CellReference(this.cellRef);
+               CellReference peekCellRef = commentCellRefs.peek();
+               if (type == EmptyCellCommentsCheckType.CELL && cellRef.equals(peekCellRef)) {
+                   // remove the comment cell ref from the list if we're about to handle it alongside the cell content
+                   commentCellRefs.remove();
+                   return;
+               } else {
+                   // fill in any gaps if there are empty cells with comment mixed in with non-empty cells
+                   int comparison = cellRefComparator.compare(peekCellRef, cellRef);
+                   if (comparison > 0 && type == EmptyCellCommentsCheckType.END_OF_ROW && peekCellRef.getRow() <= rowNum) {
+                       nextCommentCellRef = commentCellRefs.remove();
+                       outputEmptyCellComment(nextCommentCellRef);
+                   } else if (comparison < 0 && type == EmptyCellCommentsCheckType.CELL && peekCellRef.getRow() <= rowNum) {
+                       nextCommentCellRef = commentCellRefs.remove();
+                       outputEmptyCellComment(nextCommentCellRef);
+                   } else {
+                       nextCommentCellRef = null;
+                   }
+               }
+           } while (nextCommentCellRef != null && !commentCellRefs.isEmpty());
+       }
+   }
+

@@ -71,14 +71,25 @@
                    break;
            }
            
+           // Do we have a comment for this cell?
+           checkForEmptyCellComments(EmptyCellCommentsCheckType.CELL);
+           XSSFComment comment = commentsTable != null ? commentsTable.findCellComment(cellRef) : null;
+           
            // Output
-           output.cell(cellRef, thisStr);
+           output.cell(cellRef, thisStr, comment);
        } else if ("f".equals(name)) {
           fIsOpen = false;
        } else if ("is".equals(name)) {
           isIsOpen = false;
        } else if ("row".equals(name)) {
-          output.endRow();
+          // Handle any "missing" cells which had comments attached
+          checkForEmptyCellComments(EmptyCellCommentsCheckType.END_OF_ROW);
+          
+          // Finish up the row
+          output.endRow(rowNum);
+       } else if ("sheetData".equals(name)) {
+           // Handle any "missing" cells which had comments attached
+           checkForEmptyCellComments(EmptyCellCommentsCheckType.END_OF_SHEET_DATA);
        }
        else if("oddHeader".equals(name) || "evenHeader".equals(name) ||
              "firstHeader".equals(name)) {
