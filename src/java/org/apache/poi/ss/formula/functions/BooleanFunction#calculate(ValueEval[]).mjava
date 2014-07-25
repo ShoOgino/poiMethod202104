@@ -7,6 +7,7 @@
 		 * Note: no short-circuit boolean loop exit because any ErrorEvals will override the result
 		 */
 		for (int i=0, iSize=args.length; i<iSize; i++) {
+            Boolean tempVe;
 			ValueEval arg = args[i];
 			if (arg instanceof TwoDEval) {
 				TwoDEval ae = (TwoDEval) arg;
@@ -15,7 +16,7 @@
 				for (int rrIx=0; rrIx<height; rrIx++) {
 					for (int rcIx=0; rcIx<width; rcIx++) {
 						ValueEval ve = ae.getValue(rrIx, rcIx);
-						Boolean tempVe = OperandResolver.coerceValueToBoolean(ve, true);
+						tempVe = OperandResolver.coerceValueToBoolean(ve, true);
 						if (tempVe != null) {
 							result = partialEvaluate(result, tempVe.booleanValue());
 							atleastOneNonBlank = true;
@@ -24,16 +25,24 @@
 				}
 				continue;
 			}
-			Boolean tempVe;
-			if (arg instanceof RefEval) {
-				ValueEval ve = ((RefEval) arg).getInnerValueEval();
-				tempVe = OperandResolver.coerceValueToBoolean(ve, true);
-			} else if (arg == MissingArgEval.instance) {
+            if (arg instanceof RefEval) {
+                RefEval re = (RefEval) arg;
+                for (int sIx = re.getFirstSheetIndex(); sIx <= re.getLastSheetIndex(); sIx++) {
+                    ValueEval ve = re.getInnerValueEval(sIx);
+                    tempVe = OperandResolver.coerceValueToBoolean(ve, true);
+                    if (tempVe != null) {
+                        result = partialEvaluate(result, tempVe.booleanValue());
+                        atleastOneNonBlank = true;
+                    }
+                }
+                continue;
+            }
+			
+			if (arg == MissingArgEval.instance) {
 				tempVe = null;		// you can leave out parameters, they are simply ignored
 			} else {
 				tempVe = OperandResolver.coerceValueToBoolean(arg, false);
 			}
-
 
 			if (tempVe != null) {
 				result = partialEvaluate(result, tempVe.booleanValue());
