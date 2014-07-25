@@ -1,10 +1,16 @@
-    SheetRefEvaluator createExternSheetRefEvaluator(ExternalSheet externalSheet) {
+	SheetRangeEvaluator createExternSheetRefEvaluator(ExternalSheet externalSheet) {
 		WorkbookEvaluator targetEvaluator;
-		int otherSheetIndex;
+		int otherFirstSheetIndex;
+		int otherLastSheetIndex = -1;
 		if (externalSheet == null || externalSheet.getWorkbookName() == null) {
 			// sheet is in same workbook
-			otherSheetIndex = _workbook.getSheetIndex(externalSheet.getSheetName());
 			targetEvaluator = _bookEvaluator;
+			otherFirstSheetIndex = _workbook.getSheetIndex(externalSheet.getSheetName());
+			
+			if (externalSheet instanceof ExternalSheetRange) {
+			    String lastSheetName = ((ExternalSheetRange)externalSheet).getLastSheetName();
+			    otherLastSheetIndex = _workbook.getSheetIndex(lastSheetName);
+			}
 		} else {
 			// look up sheet by name from external workbook
 			String workbookName = externalSheet.getWorkbookName();
@@ -13,12 +19,29 @@
 			} catch (WorkbookNotFoundException e) {
 				throw new RuntimeException(e.getMessage(), e);
 			}
-			otherSheetIndex = targetEvaluator.getSheetIndex(externalSheet.getSheetName());
-			if (otherSheetIndex < 0) {
+			
+			otherFirstSheetIndex = targetEvaluator.getSheetIndex(externalSheet.getSheetName());
+            if (externalSheet instanceof ExternalSheetRange) {
+                String lastSheetName = ((ExternalSheetRange)externalSheet).getLastSheetName();
+                otherLastSheetIndex = targetEvaluator.getSheetIndex(lastSheetName);
+            }
+			
+			if (otherFirstSheetIndex < 0) {
 				throw new RuntimeException("Invalid sheet name '" + externalSheet.getSheetName()
 						+ "' in bool '" + workbookName + "'.");
 			}
 		}
-		return new SheetRefEvaluator(targetEvaluator, _tracker, otherSheetIndex);
+		
+		if (otherLastSheetIndex == -1) {
+		    // Reference to just one sheet
+		    otherLastSheetIndex = otherFirstSheetIndex;
+		}
+		
+		SheetRefEvaluator[] evals = new SheetRefEvaluator[otherLastSheetIndex-otherFirstSheetIndex+1];
+		for (int i=0; i<evals.length; i++) {
+		    int otherSheetIndex = i+otherFirstSheetIndex;
+		    evals[i] = new SheetRefEvaluator(targetEvaluator, _tracker, otherSheetIndex); 
+		}
+		return new SheetRangeEvaluator(otherFirstSheetIndex, otherLastSheetIndex, evals);
 	}
 
