@@ -1,0 +1,43 @@
+    /**
+     * Creates an empty XSSFPivotTable and sets up all its relationships
+     * including: pivotCacheDefinition, pivotCacheRecords
+     * @return returns a pivotTable
+     */
+    @Beta
+    private XSSFPivotTable createPivotTable() {
+        XSSFWorkbook wb = getWorkbook();
+        List<XSSFPivotTable> pivotTables = wb.getPivotTables();
+        int tableId = getWorkbook().getPivotTables().size()+1;
+        //Create relationship between pivotTable and the worksheet
+        XSSFPivotTable pivotTable = (XSSFPivotTable) createRelationship(XSSFRelation.PIVOT_TABLE,
+                XSSFFactory.getInstance(), tableId);
+        pivotTable.setParentSheet(this);
+        pivotTables.add(pivotTable);
+        XSSFWorkbook workbook = getWorkbook();
+
+        //Create relationship between the pivot cache defintion and the workbook
+        XSSFPivotCacheDefinition pivotCacheDefinition = (XSSFPivotCacheDefinition) workbook.
+                createRelationship(XSSFRelation.PIVOT_CACHE_DEFINITION, XSSFFactory.getInstance(), tableId);
+        String rId = workbook.getRelationId(pivotCacheDefinition);
+        //Create relationship between pivotTable and pivotCacheDefinition without creating a new instance
+        PackagePart pivotPackagePart = pivotTable.getPackagePart();
+        pivotPackagePart.addRelationship(pivotCacheDefinition.getPackagePart().getPartName(),
+                TargetMode.INTERNAL, XSSFRelation.PIVOT_CACHE_DEFINITION.getRelation());
+
+        pivotTable.setPivotCacheDefinition(pivotCacheDefinition);
+
+        //Create pivotCache and sets up it's relationship with the workbook
+        pivotTable.setPivotCache(new XSSFPivotCache(workbook.addPivotCache(rId)));
+
+        //Create relationship between pivotcacherecord and pivotcachedefinition
+        XSSFPivotCacheRecords pivotCacheRecords = (XSSFPivotCacheRecords) pivotCacheDefinition.
+                createRelationship(XSSFRelation.PIVOT_CACHE_RECORDS, XSSFFactory.getInstance(), tableId);
+
+        //Set relationships id for pivotCacheDefinition to pivotCacheRecords
+        pivotTable.getPivotCacheDefinition().getCTPivotCacheDefinition().setId(pivotCacheDefinition.getRelationId(pivotCacheRecords));
+
+        wb.setPivotTables(pivotTables);
+
+        return pivotTable;
+    }
+
