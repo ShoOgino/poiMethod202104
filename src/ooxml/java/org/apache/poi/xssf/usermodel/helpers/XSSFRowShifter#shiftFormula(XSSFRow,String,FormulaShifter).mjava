@@ -12,11 +12,18 @@
         XSSFWorkbook wb = sheet.getWorkbook();
         int sheetIndex = wb.getSheetIndex(sheet);
         XSSFEvaluationWorkbook fpb = XSSFEvaluationWorkbook.create(wb);
-        Ptg[] ptgs = FormulaParser.parse(formula, fpb, FormulaType.CELL, sheetIndex);
-        String shiftedFmla = null;
-        if (shifter.adjustFormula(ptgs, sheetIndex)) {
-            shiftedFmla = FormulaRenderer.toFormulaString(fpb, ptgs);
+        
+        try {
+            Ptg[] ptgs = FormulaParser.parse(formula, fpb, FormulaType.CELL, sheetIndex);
+            String shiftedFmla = null;
+            if (shifter.adjustFormula(ptgs, sheetIndex)) {
+                shiftedFmla = FormulaRenderer.toFormulaString(fpb, ptgs);
+            }
+            return shiftedFmla;
+        } catch (FormulaParseException fpe) {
+            // Log, but don't change, rather than breaking
+            logger.log(POILogger.WARN, "Error shifting formula on row ", row.getRowNum(), fpe);
+            return formula;
         }
-        return shiftedFmla;
     }
 
