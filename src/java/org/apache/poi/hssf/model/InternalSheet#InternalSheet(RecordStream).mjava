@@ -9,11 +9,27 @@
         if (rs.peekNextSid() != BOFRecord.sid) {
             throw new RuntimeException("BOF record expected");
         }
+        
         BOFRecord bof = (BOFRecord) rs.getNext();
-        if (bof.getType() != BOFRecord.TYPE_WORKSHEET) {
-            // TODO - fix junit tests throw new RuntimeException("Bad BOF record type");
+        if (bof.getType() == BOFRecord.TYPE_WORKSHEET) {
+            // Good, well supported
+        } else if (bof.getType() == BOFRecord.TYPE_CHART ||
+                   bof.getType() == BOFRecord.TYPE_EXCEL_4_MACRO) {
+            // These aren't really typical sheets... Let it go though,
+            //  we can handle them roughly well enough as a "normal" one
+        } else {
+            // Not a supported type
+            // Skip onto the EOF, then complain
+            while (rs.hasNext()) {
+                Record rec = rs.getNext();
+                if (rec instanceof EOFRecord) {
+                    break;
+                }
+            }
+            throw new UnsupportedBOFType(bof.getType());
         }
         records.add(bof);
+        
         while (rs.hasNext()) {
             int recSid = rs.peekNextSid();
 
