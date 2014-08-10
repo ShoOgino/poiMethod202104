@@ -1,0 +1,34 @@
+    public void postSign(byte[] signatureValue, List<X509Certificate> signingCertificateChain)
+    throws IOException {
+        LOG.log(POILogger.DEBUG, "postSign");
+        SignatureInfo.initXmlProvider();
+
+        /*
+         * Retrieve the intermediate XML signature document from the temporary  
+         * data storage.
+         */
+        SignatureType sigType = sigDoc.getSignature();
+
+        /*
+         * Check ds:Signature node.
+         */
+        if (!signatureId.equals(sigType.getId())) {
+            throw new RuntimeException("ds:Signature not found for @Id: " + signatureId);
+        }
+
+        /*
+         * Insert signature value into the ds:SignatureValue element
+         */
+        SignatureValueType sigVal = sigType.getSignatureValue();
+        sigVal.setByteArrayValue(signatureValue);
+
+        /*
+         * Allow signature facets to inject their own stuff.
+         */
+        for (SignatureFacet signatureFacet : this.signatureFacets) {
+            signatureFacet.postSign(sigType, signingCertificateChain);
+        }
+
+        writeDocument();
+    }
+

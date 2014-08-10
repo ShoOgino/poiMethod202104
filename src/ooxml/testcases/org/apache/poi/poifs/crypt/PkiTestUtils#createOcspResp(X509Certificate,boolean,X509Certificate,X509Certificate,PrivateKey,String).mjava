@@ -1,0 +1,52 @@
+    public static OCSPRespIf createOcspResp(X509Certificate certificate,
+            boolean revoked, X509Certificate issuerCertificate,
+            X509Certificate ocspResponderCertificate,
+            PrivateKey ocspResponderPrivateKey, String signatureAlgorithm)
+            throws Exception {
+        // request
+        OCSPReqGeneratorIf ocspReqGenerator = HorribleProxy.newProxy(OCSPReqGeneratorIf.class);
+        CertificateIDIf certId = HorribleProxy.newProxy(CertificateIDIf.class);
+        certId = HorribleProxy.newProxy(CertificateIDIf.class, certId.HASH_SHA1(),
+                issuerCertificate, certificate.getSerialNumber());
+        ocspReqGenerator.addRequest(certId);
+        OCSPReqIf ocspReq = ocspReqGenerator.generate();
+
+        BasicOCSPRespGeneratorIf basicOCSPRespGenerator = 
+            HorribleProxy.newProxy(BasicOCSPRespGeneratorIf.class, ocspResponderCertificate.getPublicKey());
+
+        // request processing
+        ReqIf[] requestList = ocspReq.getRequestList();
+        for (ReqIf ocspRequest : requestList) {
+            CertificateIDIf certificateID = ocspRequest.getCertID();
+            CertificateStatusIf certificateStatus;
+            if (revoked) {
+                CRLReasonIf crlr = HorribleProxy.newProxy(CRLReasonIf.class);
+                RevokedStatusIf rs = HorribleProxy.newProxy(RevokedStatusIf.class, new Date(), crlr.unspecified());
+                certificateStatus = HorribleProxy.newProxy(CertificateStatusIf.class, rs.getDelegate());
+            } else {
+                CertificateStatusIf cs = HorribleProxy.newProxy(CertificateStatusIf.class);
+                certificateStatus = cs.GOOD();
+            }
+            basicOCSPRespGenerator
+                    .addResponse(certificateID, certificateStatus);
+        }
+
+        // basic response generation
+        X509Certificate[] chain = null;
+        if (!ocspResponderCertificate.equals(issuerCertificate)) {
+            chain = new X509Certificate[] { ocspResponderCertificate,
+                    issuerCertificate };
+        }
+
+        BasicOCSPRespIf basicOCSPResp = basicOCSPRespGenerator.generate(
+                signatureAlgorithm, ocspResponderPrivateKey, chain, new Date(),
+                "BC");
+
+        // response generation
+        OCSPRespGeneratorIf ocspRespGenerator = HorribleProxy.newProxy(OCSPRespGeneratorIf.class);
+        OCSPRespIf ocspResp = ocspRespGenerator.generate(
+                ocspRespGenerator.SUCCESSFUL(), basicOCSPResp);
+
+        return ocspResp;
+    }
+

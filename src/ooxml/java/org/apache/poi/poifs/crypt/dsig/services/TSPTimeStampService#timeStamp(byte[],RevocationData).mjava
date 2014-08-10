@@ -1,0 +1,145 @@
+    public byte[] timeStamp(byte[] data, RevocationData revocationData)
+            throws Exception {
+        // digest the message
+        MessageDigest messageDigest = MessageDigest
+                .getInstance(this.digestAlgo);
+        byte[] digest = messageDigest.digest(data);
+
+        // generate the TSP request
+        BigInteger nonce = new BigInteger(128, new SecureRandom());
+        TimeStampRequestGeneratorIf requestGenerator = HorribleProxy.newProxy(TimeStampRequestGeneratorIf.class);
+        requestGenerator.setCertReq(true);
+        if (null != this.requestPolicy) {
+            requestGenerator.setReqPolicy(this.requestPolicy);
+        }
+        TimeStampRequestIf request = requestGenerator.generate(this.digestAlgoOid, digest, nonce);
+        byte[] encodedRequest = request.getEncoded();
+
+        // create the HTTP POST request
+        Proxy proxy = (this.proxyHost != null)
+            ? new Proxy(Proxy.Type.HTTP, new InetSocketAddress(this.proxyHost, this.proxyPort))
+            : Proxy.NO_PROXY;
+        HttpURLConnection huc = (HttpURLConnection)new URL(this.tspServiceUrl).openConnection(proxy);
+        
+        if (null != this.username) {
+            String userPassword = this.username + ":" + this.password;
+            String encoding = DatatypeConverter.printBase64Binary(userPassword.getBytes(Charset.forName("iso-8859-1")));
+            huc.setRequestProperty("Authorization", "Basic " + encoding);
+        }
+
+        huc.setDoOutput(true); // also sets method to POST.
+        huc.setRequestProperty("User-Agent", this.userAgent);
+        huc.setRequestProperty("Content-Type", "application/timestamp-query;charset=ISO-8859-1");
+        
+        OutputStream hucOut = huc.getOutputStream();
+        hucOut.write(encodedRequest);
+        
+        // invoke TSP service
+        huc.connect();
+        
+        int statusCode = huc.getResponseCode();
+        if (statusCode != 200) {
+            LOG.log(POILogger.ERROR, "Error contacting TSP server ", this.tspServiceUrl);
+            throw new Exception("Error contacting TSP server " + this.tspServiceUrl);
+        }
+
+        // HTTP input validation
+        String contentType = huc.getHeaderField("Content-Type");
+        if (null == contentType) {
+            throw new RuntimeException("missing Content-Type header");
+        }
+        
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        IOUtils.copy(huc.getInputStream(), bos);
+        LOG.log(POILogger.DEBUG, "response content: ", bos.toString());
+        
+        if (!contentType.startsWith("application/timestamp-reply")) {
+            throw new RuntimeException("invalid Content-Type: " + contentType);
+        }
+        
+        if (bos.size() == 0) {
+            throw new RuntimeException("Content-Length is zero");
+        }
+
+        // TSP response parsing and validation
+        TimeStampResponseIf timeStampResponse = HorribleProxy.newProxy(TimeStampResponseIf.class, bos.toByteArray());
+        timeStampResponse.validate(request);
+
+        if (0 != timeStampResponse.getStatus()) {
+            LOG.log(POILogger.DEBUG, "status: " + timeStampResponse.getStatus());
+            LOG.log(POILogger.DEBUG, "status string: " + timeStampResponse.getStatusString());
+            PKIFailureInfoIf failInfo = timeStampResponse.getFailInfo();
+            if (null != failInfo) {
+                LOG.log(POILogger.DEBUG, "fail info int value: " + failInfo.intValue());
+                if (/*PKIFailureInfo.unacceptedPolicy*/(1 << 8) == failInfo.intValue()) {
+                    LOG.log(POILogger.DEBUG, "unaccepted policy");
+                }
+            }
+            throw new RuntimeException("timestamp response status != 0: "
+                    + timeStampResponse.getStatus());
+        }
+        TimeStampTokenIf timeStampToken = timeStampResponse.getTimeStampToken();
+        SignerIdIf signerId = timeStampToken.getSID();
+        BigInteger signerCertSerialNumber = signerId.getSerialNumber();
+        X500Principal signerCertIssuer = signerId.getIssuer();
+        LOG.log(POILogger.DEBUG, "signer cert serial number: " + signerCertSerialNumber);
+        LOG.log(POILogger.DEBUG, "signer cert issuer: " + signerCertIssuer);
+
+        // TSP signer certificates retrieval
+        Collection<Certificate> certificates = timeStampToken.getCertificates().getMatches(null);
+        
+        X509Certificate signerCert = null;
+        Map<String, X509Certificate> certificateMap = new HashMap<String, X509Certificate>();
+        for (Certificate certificate : certificates) {
+            X509Certificate x509Certificate = (X509Certificate) certificate;
+            if (signerCertIssuer.equals(x509Certificate
+                    .getIssuerX500Principal())
+                    && signerCertSerialNumber.equals(x509Certificate
+                            .getSerialNumber())) {
+                signerCert = x509Certificate;
+            }
+            String ski = Hex.encodeHexString(getSubjectKeyId(x509Certificate));
+            certificateMap.put(ski, x509Certificate);
+            LOG.log(POILogger.DEBUG, "embedded certificate: "
+                    + x509Certificate.getSubjectX500Principal() + "; SKI="
+                    + ski);
+        }
+
+        // TSP signer cert path building
+        if (null == signerCert) {
+            throw new RuntimeException(
+                    "TSP response token has no signer certificate");
+        }
+        List<X509Certificate> tspCertificateChain = new LinkedList<X509Certificate>();
+        X509Certificate certificate = signerCert;
+        do {
+            LOG.log(POILogger.DEBUG, "adding to certificate chain: "
+                    + certificate.getSubjectX500Principal());
+            tspCertificateChain.add(certificate);
+            if (certificate.getSubjectX500Principal().equals(
+                    certificate.getIssuerX500Principal())) {
+                break;
+            }
+            String aki = Hex.encodeHexString(getAuthorityKeyId(certificate));
+            certificate = certificateMap.get(aki);
+        } while (null != certificate);
+
+        // verify TSP signer signature
+        X509CertificateHolderIf holder = HorribleProxy.newProxy(X509CertificateHolderIf.class, tspCertificateChain.get(0).getEncoded());
+        DefaultDigestAlgorithmIdentifierFinderIf finder = HorribleProxy.newProxy(DefaultDigestAlgorithmIdentifierFinderIf.class);
+        BcDigestCalculatorProviderIf calculator = HorribleProxy.newProxy(BcDigestCalculatorProviderIf.class);
+        BcRSASignerInfoVerifierBuilderIf verifierBuilder = HorribleProxy.newProxy(BcRSASignerInfoVerifierBuilderIf.class, finder, calculator);
+        SignerInformationVerifierIf verifier = verifierBuilder.build(holder);
+        
+        timeStampToken.validate(verifier);
+
+        // verify TSP signer certificate
+        this.validator.validate(tspCertificateChain, revocationData);
+
+        LOG.log(POILogger.DEBUG, "time-stamp token time: "
+                + timeStampToken.getTimeStampInfo().getGenTime());
+
+        byte[] timestamp = timeStampToken.getEncoded();
+        return timestamp;
+    }
+

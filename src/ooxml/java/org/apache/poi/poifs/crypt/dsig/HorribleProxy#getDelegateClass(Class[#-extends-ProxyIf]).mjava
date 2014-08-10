@@ -1,0 +1,21 @@
+	private static Class<?> getDelegateClass(Class<? extends ProxyIf> proxyClass)
+	throws NoSuchFieldException, IllegalAccessException, ClassNotFoundException {
+	    Field delegateField;
+	    try {
+    	    delegateField = proxyClass.getDeclaredField("delegateClass");
+	    } catch (NoSuchFieldException e) {
+	        // sometimes a proxy interface is returned as proxyClass
+	        // this has to be asked for the real ProxyIf interface
+	        Class<?> ifs[] = proxyClass.getInterfaces();
+	        if (ifs == null || ifs.length != 1) {
+	            throw new IllegalArgumentException();
+	        }
+	        delegateField = ifs[0].getDeclaredField("delegateClass");
+	    }
+
+	    String delegateClassName = (String)delegateField.get(null);
+        ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        Class<?> delegateClass = Class.forName(delegateClassName, true, cl);
+	    return delegateClass;
+	}
+

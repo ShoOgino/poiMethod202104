@@ -1,0 +1,22 @@
+    public static synchronized void initXmlProvider() {
+        if (isInitialized) return;
+        isInitialized = true;
+        
+        try {
+            InitIf init = HorribleProxy.newProxy(InitIf.class);
+            init.init();
+
+            RelationshipTransformService.registerDsigProvider();
+            
+            Provider bcProv = Security.getProvider("BC");
+            if (bcProv == null) {
+                ClassLoader cl = Thread.currentThread().getContextClassLoader();
+                Class<?> c = cl.loadClass("org.bouncycastle.jce.provider.BouncyCastleProvider");
+                bcProv = (Provider)c.newInstance();
+                Security.addProvider(bcProv);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Xml & BouncyCastle-Provider initialization failed", e);
+        }
+    }
+

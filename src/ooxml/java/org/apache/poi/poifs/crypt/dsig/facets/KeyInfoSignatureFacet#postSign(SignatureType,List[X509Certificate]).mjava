@@ -1,0 +1,92 @@
+    public void postSign(SignatureType signatureElement,
+            List<X509Certificate> signingCertificateChain) {
+        LOG.log(POILogger.DEBUG, "postSign");
+
+        List<ObjectType> objList = signatureElement.getObjectList();
+        
+        /*
+         * Make sure we insert right after the ds:SignatureValue element, just
+         * before the first ds:Object element.
+         */
+        Node nextSibling = (objList.isEmpty()) ? null : objList.get(0).getDomNode();
+
+        /*
+         * Construct the ds:KeyInfo element using JSR 105.
+         */
+        String providerName = System.getProperty("jsr105Provider", "org.jcp.xml.dsig.internal.dom.XMLDSigRI");
+        Provider xmlDSigProv;
+        try {
+            xmlDSigProv = (Provider) Class.forName(providerName).newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException("JRE doesn't support default xml signature provider - set jsr105Provider system property!", e);
+        }
+        
+        KeyInfoFactory keyInfoFactory = KeyInfoFactory.getInstance("DOM", xmlDSigProv);
+        List<Object> x509DataObjects = new LinkedList<Object>();
+        X509Certificate signingCertificate = signingCertificateChain.get(0);
+
+        List<Object> keyInfoContent = new LinkedList<Object>();
+
+        if (this.includeKeyValue) {
+            KeyValue keyValue;
+            try {
+                keyValue = keyInfoFactory.newKeyValue(signingCertificate.getPublicKey());
+            } catch (KeyException e) {
+                throw new RuntimeException("key exception: " + e.getMessage(), e);
+            }
+            keyInfoContent.add(keyValue);
+        }
+
+        if (this.includeIssuerSerial) {
+            x509DataObjects.add(keyInfoFactory.newX509IssuerSerial(
+                    signingCertificate.getIssuerX500Principal().toString(),
+                    signingCertificate.getSerialNumber()));
+        }
+
+        if (this.includeEntireCertificateChain) {
+            for (X509Certificate certificate : signingCertificateChain) {
+                x509DataObjects.add(certificate);
+            }
+        } else {
+            x509DataObjects.add(signingCertificate);
+        }
+
+        if (false == x509DataObjects.isEmpty()) {
+            X509Data x509Data = keyInfoFactory.newX509Data(x509DataObjects);
+            keyInfoContent.add(x509Data);
+        }
+        KeyInfo keyInfo = keyInfoFactory.newKeyInfo(keyInfoContent);
+        DOMKeyInfoIf domKeyInfo;
+        try {
+            domKeyInfo = HorribleProxy.newProxy(DOMKeyInfoIf.class, keyInfo);
+        } catch (Exception e) {
+            throw new RuntimeException("DOMKeyInfo instance error: " + e.getMessage(), e);
+        }        
+
+        Key key = new Key() {
+            private static final long serialVersionUID = 1L;
+
+            public String getAlgorithm() {
+                return null;
+            }
+
+            public byte[] getEncoded() {
+                return null;
+            }
+
+            public String getFormat() {
+                return null;
+            }
+        };
+
+        DOMSignContext domSignContext = new DOMSignContext(key, signatureElement.getDomNode());
+        DOMCryptoContext domCryptoContext = domSignContext;
+        String signatureNamespacePrefix = "xd";
+        try {
+            domKeyInfo.marshal(signatureElement.getDomNode(), nextSibling,
+                signatureNamespacePrefix, domCryptoContext);
+        } catch (MarshalException e) {
+            throw new RuntimeException("marshall error: " + e.getMessage(), e);
+        }
+    }
+

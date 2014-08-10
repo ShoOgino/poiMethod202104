@@ -1,0 +1,29 @@
+    public void confirmSignature(Key key, X509Certificate x509, HashAlgorithm hashAlgo)
+    throws NoSuchAlgorithmException, IOException {
+        XmlSignatureService signatureService = createSignatureService(hashAlgo, pkg);
+        
+        // operate
+        List<X509Certificate> x509Chain = Collections.singletonList(x509);
+        DigestInfo digestInfo = signatureService.preSign(null, x509Chain, null, null, null);
+
+        // setup: key material, signature value
+
+        Cipher cipher = CryptoFunctions.getCipher(key, CipherAlgorithm.rsa
+            , ChainingMode.ecb, null, Cipher.ENCRYPT_MODE, "PKCS1Padding");
+        
+        byte[] signatureValue;
+        try {
+            ByteArrayOutputStream digestInfoValueBuf = new ByteArrayOutputStream();
+            digestInfoValueBuf.write(SHA1_DIGEST_INFO_PREFIX);
+            digestInfoValueBuf.write(digestInfo.digestValue);
+            byte[] digestInfoValue = digestInfoValueBuf.toByteArray();
+            signatureValue = cipher.doFinal(digestInfoValue);
+        } catch (Exception e) {
+            throw new EncryptedDocumentException(e);
+        }
+
+        
+        // operate: postSign
+        signatureService.postSign(signatureValue, Collections.singletonList(x509));
+    }
+

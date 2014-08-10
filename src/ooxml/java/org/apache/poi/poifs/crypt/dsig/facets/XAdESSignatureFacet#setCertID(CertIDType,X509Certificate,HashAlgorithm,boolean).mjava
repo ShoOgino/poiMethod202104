@@ -1,0 +1,43 @@
+    /**
+     * Gives back the JAXB CertID data structure.
+     * 
+     * @param certificate
+     * @param xadesObjectFactory
+     * @param xmldsigObjectFactory
+     * @param digestAlgorithm
+     * @return
+     */
+    protected static void setCertID(
+            CertIDType certId,
+            X509Certificate certificate,
+            HashAlgorithm digestAlgorithm, boolean issuerNameNoReverseOrder) {
+        X509IssuerSerialType issuerSerial = certId.addNewIssuerSerial();
+        String issuerName;
+        if (issuerNameNoReverseOrder) {
+            /*
+             * Make sure the DN is encoded using the same order as present
+             * within the certificate. This is an Office2010 work-around.
+             * Should be reverted back.
+             * 
+             * XXX: not correct according to RFC 4514.
+             */
+            // TODO: check if issuerName is different on getTBSCertificate
+            // issuerName = PrincipalUtil.getIssuerX509Principal(certificate).getName().replace(",", ", ");
+            issuerName = certificate.getIssuerDN().getName().replace(",", ", ");
+        } else {
+            issuerName = certificate.getIssuerX500Principal().toString();
+        }
+        issuerSerial.setX509IssuerName(issuerName);
+        issuerSerial.setX509SerialNumber(certificate.getSerialNumber());
+
+        byte[] encodedCertificate;
+        try {
+            encodedCertificate = certificate.getEncoded();
+        } catch (CertificateEncodingException e) {
+            throw new RuntimeException("certificate encoding error: "
+                    + e.getMessage(), e);
+        }
+        DigestAlgAndValueType certDigest = certId.addNewCertDigest(); 
+        setDigestAlgAndValue(certDigest, encodedCertificate, digestAlgorithm);
+    }
+

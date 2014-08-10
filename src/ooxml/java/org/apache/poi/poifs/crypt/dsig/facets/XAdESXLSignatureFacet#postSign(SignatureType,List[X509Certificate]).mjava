@@ -1,0 +1,188 @@
+    public void postSign(SignatureType signatureElement,
+            List<X509Certificate> signingCertificateChain) {
+        LOG.log(POILogger.DEBUG, "XAdES-X-L post sign phase");
+
+        QualifyingPropertiesType qualProps = null;
+        
+        try {
+            // check for XAdES-BES
+            for (ObjectType ot : signatureElement.getObjectList()) {
+                XmlObject xo[] = ot.selectChildren(new QName(XADES_NAMESPACE, "QualifyingProperties"));
+                if (xo != null && xo.length > 0) {
+                    qualProps = QualifyingPropertiesType.Factory.parse(xo[0].getDomNode());
+                    break;
+                }
+            }
+        } catch (XmlException e) {
+            throw new RuntimeException("signature decoding error", e);
+        }
+        
+        if (qualProps == null) {
+            throw new IllegalArgumentException("no XAdES-BES extension present");
+        }
+
+        // create basic XML container structure
+        UnsignedPropertiesType unsignedProps = qualProps.getUnsignedProperties();
+        if (unsignedProps == null) {
+            unsignedProps = qualProps.addNewUnsignedProperties();
+        }
+        UnsignedSignaturePropertiesType unsignedSigProps = unsignedProps.getUnsignedSignatureProperties();
+        if (unsignedSigProps == null) {
+            unsignedSigProps = unsignedProps.addNewUnsignedSignatureProperties();
+        }
+        
+
+        // create the XAdES-T time-stamp
+        SignatureValueType svt = signatureElement.getSignatureValue();
+        
+        RevocationData tsaRevocationDataXadesT = new RevocationData();
+        LOG.log(POILogger.DEBUG, "creating XAdES-T time-stamp");
+        XAdESTimeStampType signatureTimeStamp = createXAdESTimeStamp(
+                Collections.singletonList(svt.getDomNode()),
+                tsaRevocationDataXadesT, this.c14nAlgoId,
+                this.timeStampService);
+
+        // marshal the XAdES-T extension
+        unsignedSigProps.addNewSignatureTimeStamp().set(signatureTimeStamp);
+
+        // xadesv141::TimeStampValidationData
+        if (tsaRevocationDataXadesT.hasRevocationDataEntries()) {
+            ValidationDataType validationData = createValidationData(tsaRevocationDataXadesT);
+            SignatureInfo.insertXChild(unsignedSigProps, validationData);
+        }
+
+        if (null == this.revocationDataService) {
+            /*
+             * Without revocation data service we cannot construct the XAdES-C
+             * extension.
+             */
+            return;
+        }
+
+        // XAdES-C: complete certificate refs
+        CompleteCertificateRefsType completeCertificateRefs = 
+            unsignedSigProps.addNewCompleteCertificateRefs();
+
+        CertIDListType certIdList = completeCertificateRefs.addNewCertRefs();
+        for (int certIdx = 1; certIdx < signingCertificateChain.size(); certIdx++) {
+            /*
+             * We skip the signing certificate itself according to section
+             * 4.4.3.2 of the XAdES 1.4.1 specification.
+             */
+            X509Certificate certificate = signingCertificateChain.get(certIdx);
+            CertIDType certId = certIdList.addNewCert();
+            XAdESSignatureFacet.setCertID(certId, certificate, this.hashAlgo, false);
+        }
+
+        // XAdES-C: complete revocation refs
+        CompleteRevocationRefsType completeRevocationRefs = 
+            unsignedSigProps.addNewCompleteRevocationRefs();
+        RevocationData revocationData = this.revocationDataService
+                .getRevocationData(signingCertificateChain);
+        if (revocationData.hasCRLs()) {
+            CRLRefsType crlRefs = completeRevocationRefs.addNewCRLRefs();
+            completeRevocationRefs.setCRLRefs(crlRefs);
+
+            for (byte[] encodedCrl : revocationData.getCRLs()) {
+                CRLRefType crlRef = crlRefs.addNewCRLRef();
+                X509CRL crl;
+                try {
+                    crl = (X509CRL) this.certificateFactory
+                            .generateCRL(new ByteArrayInputStream(encodedCrl));
+                } catch (CRLException e) {
+                    throw new RuntimeException("CRL parse error: "
+                            + e.getMessage(), e);
+                }
+
+                CRLIdentifierType crlIdentifier = crlRef.addNewCRLIdentifier();
+                String issuerName = crl.getIssuerDN().getName().replace(",", ", ");
+                crlIdentifier.setIssuer(issuerName);
+                Calendar cal = Calendar.getInstance();
+                cal.setTime(crl.getThisUpdate());
+                crlIdentifier.setIssueTime(cal);
+                crlIdentifier.setNumber(getCrlNumber(crl));
+
+                DigestAlgAndValueType digestAlgAndValue = crlRef.addNewDigestAlgAndValue();
+                XAdESSignatureFacet.setDigestAlgAndValue(digestAlgAndValue, encodedCrl, this.hashAlgo);
+            }
+        }
+        if (revocationData.hasOCSPs()) {
+            OCSPRefsType ocspRefs = completeRevocationRefs.addNewOCSPRefs();
+            for (byte[] ocsp : revocationData.getOCSPs()) {
+                try {
+                    OCSPRefType ocspRef = ocspRefs.addNewOCSPRef();
+    
+                    DigestAlgAndValueType digestAlgAndValue = ocspRef.addNewDigestAlgAndValue();
+                    XAdESSignatureFacet.setDigestAlgAndValue(digestAlgAndValue, ocsp, this.hashAlgo);
+    
+                    OCSPIdentifierType ocspIdentifier = ocspRef.addNewOCSPIdentifier();
+                    
+                    OCSPRespIf ocspResp = HorribleProxy.newProxy(OCSPRespIf.class, ocsp);
+                    
+                    BasicOCSPRespIf basicOcspResp = ocspResp.getResponseObject();
+                    
+                    Calendar cal = Calendar.getInstance();
+                    cal.setTime(basicOcspResp.getProducedAt());
+                    ocspIdentifier.setProducedAt(cal);
+    
+                    ResponderIDType responderId = ocspIdentifier.addNewResponderID();
+    
+                    RespIDIf respId = basicOcspResp.getResponderId();
+                    ResponderIDIf ocspResponderId = respId.toASN1Object();
+                    DERTaggedObjectIf derTaggedObject = ocspResponderId.toASN1Object();
+                    if (2 == derTaggedObject.getTagNo()) {
+                        ASN1OctetStringIf keyHashOctetString = derTaggedObject.getObject$String();
+                        byte key[] = keyHashOctetString.getOctets();
+                        responderId.setByKey(key);
+                    } else {
+                        X509NameIf name = HorribleProxy.createProxy(X509NameIf.class, "getInstance", derTaggedObject.getObject$Object());
+                        String nameStr = name.toString$delegate();
+                        responderId.setByName(nameStr);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException("OCSP decoding error: " + e.getMessage(), e);
+                }
+            }
+        }
+
+        // marshal XAdES-C
+
+        // XAdES-X Type 1 timestamp
+        
+        
+        
+        List<Node> timeStampNodesXadesX1 = new LinkedList<Node>();
+        timeStampNodesXadesX1.add(signatureElement.getDomNode());
+        timeStampNodesXadesX1.add(signatureTimeStamp.getDomNode());
+        timeStampNodesXadesX1.add(completeCertificateRefs.getDomNode());
+        timeStampNodesXadesX1.add(completeRevocationRefs.getDomNode());
+
+        RevocationData tsaRevocationDataXadesX1 = new RevocationData();
+        LOG.log(POILogger.DEBUG, "creating XAdES-X time-stamp");
+        XAdESTimeStampType timeStampXadesX1 = createXAdESTimeStamp(
+                timeStampNodesXadesX1, tsaRevocationDataXadesX1,
+                this.c14nAlgoId, this.timeStampService);
+        if (tsaRevocationDataXadesX1.hasRevocationDataEntries()) {
+            ValidationDataType timeStampXadesX1ValidationData = createValidationData(tsaRevocationDataXadesX1);
+            SignatureInfo.insertXChild(unsignedSigProps, timeStampXadesX1ValidationData);
+        }
+
+        // marshal XAdES-X
+
+        // XAdES-X-L
+        CertificateValuesType certificateValues = unsignedSigProps.addNewCertificateValues();
+        for (X509Certificate certificate : signingCertificateChain) {
+            EncapsulatedPKIDataType encapsulatedPKIDataType = certificateValues.addNewEncapsulatedX509Certificate();
+            try {
+                encapsulatedPKIDataType.setByteArrayValue(certificate.getEncoded());
+            } catch (CertificateEncodingException e) {
+                throw new RuntimeException("certificate encoding error: " + e.getMessage(), e);
+            }
+        }
+        
+        RevocationValuesType revocationValues = unsignedSigProps.addNewRevocationValues();
+        createRevocationValues(revocationValues, revocationData);
+
+        // marshal XAdES-X-L
+    }
+

@@ -1,0 +1,112 @@
+    /**
+     * <p>Find an accessible method that matches the given name and has compatible parameters.
+     * Compatible parameters mean that every method parameter is assignable from 
+     * the given parameters.
+     * In other words, it finds a method with the given name 
+     * that will take the parameters given.<p>
+     *
+     * <p>This method is slightly undeterminstic since it loops 
+     * through methods names and return the first matching method.</p>
+     * 
+     * <p>This method is used by 
+     * {@link 
+     * #invokeMethod(Object object,String methodName,Object [] args,Class[] parameterTypes)}.
+     *
+     * <p>This method can match primitive parameter by passing in wrapper classes.
+     * For example, a <code>Boolean</code> will match a primitive <code>boolean</code>
+     * parameter.
+     *
+     * @param clazz find method in this class
+     * @param methodName find method with this name
+     * @param parameterTypes find method with compatible parameters 
+     * @return The accessible method
+     */
+    public static Method getMatchingAccessibleMethod(
+                                                Class clazz,
+                                                String methodName,
+                                                Class[] parameterTypes) {
+        // trace logging
+        Log log = LogFactory.getLog(MethodUtils.class);
+        if (log.isTraceEnabled()) {
+            log.trace("Matching name=" + methodName + " on " + clazz);
+        }
+        MethodDescriptor md = new MethodDescriptor(clazz, methodName, parameterTypes, false);
+        
+        // see if we can find the method directly
+        // most of the time this works and it's much faster
+        try {
+            Method method = clazz.getMethod(methodName, parameterTypes);
+            if (log.isTraceEnabled()) {
+                log.trace("Found straight match: " + method);
+                log.trace("isPublic:" + Modifier.isPublic(method.getModifiers()));
+            }
+            
+            setMethodAccessible(method); // Default access superclass workaround
+
+            return method;
+            
+        } catch (NoSuchMethodException e) { /* SWALLOW */ }
+        
+        // search through all methods 
+        int paramSize = parameterTypes.length;
+        Method bestMatch = null;
+        Method[] methods = clazz.getMethods();
+        float bestMatchCost = Float.MAX_VALUE;
+        float myCost = Float.MAX_VALUE;
+        for (int i = 0, size = methods.length; i < size ; i++) {
+            if (methods[i].getName().equals(methodName)) {
+                // log some trace information
+                if (log.isTraceEnabled()) {
+                    log.trace("Found matching name:");
+                    log.trace(methods[i]);
+                }                
+                
+                // compare parameters
+                Class[] methodsParams = methods[i].getParameterTypes();
+                int methodParamSize = methodsParams.length;
+                if (methodParamSize == paramSize) {          
+                    boolean match = true;
+                    for (int n = 0 ; n < methodParamSize; n++) {
+                        if (log.isTraceEnabled()) {
+                            log.trace("Param=" + parameterTypes[n].getName());
+                            log.trace("Method=" + methodsParams[n].getName());
+                        }
+                        if (!isAssignmentCompatible(methodsParams[n], parameterTypes[n])) {
+                            if (log.isTraceEnabled()) {
+                                log.trace(methodsParams[n] + " is not assignable from " 
+                                            + parameterTypes[n]);
+                            }    
+                            match = false;
+                            break;
+                        }
+                    }
+                    
+                    if (match) {
+                        // get accessible version of method
+                        Method method = getAccessibleMethod(clazz, methods[i]);
+                        if (method != null) {
+                            if (log.isTraceEnabled()) {
+                                log.trace(method + " accessible version of " 
+                                            + methods[i]);
+                            }
+                            setMethodAccessible(method); // Default access superclass workaround
+                            myCost = getTotalTransformationCost(parameterTypes,method.getParameterTypes());
+                            if ( myCost < bestMatchCost ) {
+                               bestMatch = method;
+                               bestMatchCost = myCost;
+                            }
+                        }
+                        
+                        log.trace("Couldn't find accessible method.");
+                    }
+                }
+            }
+        }
+        if ( bestMatch == null ){
+            // didn't find a match
+               log.trace("No match found.");
+        }
+        
+        return bestMatch;                                        
+    }
+

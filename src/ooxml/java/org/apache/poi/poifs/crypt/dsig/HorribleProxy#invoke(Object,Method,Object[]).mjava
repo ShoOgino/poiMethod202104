@@ -1,0 +1,83 @@
+	@SuppressWarnings("unchecked")
+    @Override
+	public Object invoke(Object proxy, Method method, Object[] args)
+			throws Exception {
+        String methodName = method.getName().replaceFirst("\\$.*", "");
+		if (Object.class == method.getDeclaringClass()) {
+	        if ("equals".equals(methodName)) {
+				return proxy == args[0];
+			} else if ("hashCode".equals(methodName)) {
+				return System.identityHashCode(proxy);
+			} else if ("toString".equals(methodName)) {
+				return proxy.getClass().getName() + "@"
+						+ Integer.toHexString(System.identityHashCode(proxy))
+						+ ", with InvocationHandler " + this;
+			} else {
+				throw new IllegalStateException(String.valueOf(method));
+			}
+		}
+
+        if ("getDelegate".equals(methodName)) {
+            initDeferred();
+            return delegateRef;
+        } else if ("setInitDeferred".equals(methodName)) {
+            initDeferred = (Boolean)args[0];
+            return null;
+        }		
+		
+		Class<?> methodParams[] = updateMethodArgs(method.getParameterTypes(), args);
+
+		Object ret = null;
+		boolean isStaticField = false;
+		if (methodParams.length == 0) {
+		    // check for static fields first
+		    try {
+		        Field f = delegateClass.getDeclaredField(methodName);
+		        ret = f.get(delegateRef);
+		        isStaticField = true;
+		    } catch (NoSuchFieldException e) {
+		        LOG.log(POILogger.DEBUG, "No static field '"+methodName+"' in class '"+delegateClass.getCanonicalName()+"' - trying method now.");
+		    }
+		}
+		
+		if (!isStaticField) {
+    		Method methodImpl = null;
+    		try {
+    		    methodImpl = delegateClass.getMethod(methodName, methodParams);
+    		} catch (Exception e) {
+    		    // fallback - if methodName is distinct, try to use it
+    		    // in case we can't provide method declaration in the Proxy interface
+    		    // ... and of course, this is horrible ...
+                methodImpl = MethodUtils.getMatchingAccessibleMethod(delegateClass, methodName, methodParams);
+
+    		    if (methodImpl == null) {
+    		        throw new RuntimeException("There's no method '"+methodName+"' for the given arguments.");
+    		    }
+    		}
+    
+    		if (!Modifier.isStatic(methodImpl.getModifiers())) {
+    		    initDeferred();
+    		}
+    		ret = methodImpl.invoke(delegateRef, args);
+		}
+		
+		Class<?> retType = method.getReturnType();
+		if (retType.isArray()) {
+		    if (ProxyIf.class.isAssignableFrom(retType.getComponentType())) {
+		        Class<? extends ProxyIf> cType = (Class<? extends ProxyIf>)retType.getComponentType();
+		        ProxyIf paRet[] = (ProxyIf[])Array.newInstance(cType, ((Object[])ret).length);
+		        for (int i=0; i<((Object[])ret).length; i++) {
+		            paRet[i] = newProxy(cType, ((Object[])ret)[i]);
+		            paRet[i].setInitDeferred(false);
+		        }
+		        ret = paRet;
+		    }
+		} else if (ProxyIf.class.isAssignableFrom(retType)) {
+		    ProxyIf pRet = newProxy((Class<? extends ProxyIf>)retType, ret);
+            pRet.setInitDeferred(false);
+		    ret = pRet; 
+		}
+		
+		return ret;
+	}
+

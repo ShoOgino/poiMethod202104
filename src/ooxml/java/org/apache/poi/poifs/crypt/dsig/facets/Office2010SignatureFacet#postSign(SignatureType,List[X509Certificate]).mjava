@@ -1,0 +1,31 @@
+    public void postSign(SignatureType signatureElement, List<X509Certificate> signingCertificateChain) {
+        QualifyingPropertiesType qualProps = null;
+        
+        try {
+            // check for XAdES-BES
+            for (ObjectType ot : signatureElement.getObjectList()) {
+                XmlObject xo[] = ot.selectChildren(new QName(XADES_NAMESPACE, "QualifyingProperties"));
+                if (xo != null && xo.length > 0) {
+                    qualProps = QualifyingPropertiesType.Factory.parse(xo[0].getDomNode());
+                    break;
+                }
+            }
+        } catch (XmlException e) {
+            throw new RuntimeException("signature decoding error", e);
+        }        
+        
+        if (qualProps == null) {
+            throw new IllegalArgumentException("no XAdES-BES extension present");
+        }
+
+        // create basic XML container structure
+        UnsignedPropertiesType unsignedProps = qualProps.getUnsignedProperties();
+        if (unsignedProps == null) {
+            unsignedProps = qualProps.addNewUnsignedProperties();
+        }
+        UnsignedSignaturePropertiesType unsignedSigProps = unsignedProps.getUnsignedSignatureProperties();
+        if (unsignedSigProps == null) {
+            unsignedSigProps = unsignedProps.addNewUnsignedSignatureProperties();
+        }
+    }
+

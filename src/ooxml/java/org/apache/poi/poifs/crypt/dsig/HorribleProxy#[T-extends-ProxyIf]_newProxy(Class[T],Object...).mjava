@@ -1,0 +1,46 @@
+	/**
+	 * Create new instance by constructor
+	 *
+	 * @param proxyClass
+	 * @param initargs
+	 * @return
+	 * @throws InvocationTargetException
+	 * @throws IllegalAccessException
+	 * @throws InstantiationException
+	 * @throws NoSuchMethodException
+	 * @throws ClassNotFoundException
+	 */
+    @SuppressWarnings("unchecked")
+    public static <T extends ProxyIf> T newProxy(Class<T> proxyClass, Object ... initargs)
+	throws InvocationTargetException, IllegalAccessException, InstantiationException
+	, NoSuchMethodException, ClassNotFoundException, NoSuchFieldException {
+		ClassLoader cl = Thread.currentThread().getContextClassLoader();
+		
+		Class<?> delegateClass = getDelegateClass(proxyClass);
+		Object delegateRef;
+		if (initargs.length == 0) {
+		    delegateRef = null;
+		} else if (initargs.length == 1 && delegateClass.isAssignableFrom(initargs[0].getClass())) {
+			delegateRef = initargs[0];
+		} else {
+            Class<?> paramTypes[] = updateMethodArgs(null, initargs);
+            Constructor<?> cons = null;
+            try {
+                cons = delegateClass.getConstructor(paramTypes);
+            } catch (Exception e) {
+                // fallback - find constructor with same amount of parameters
+                // horrible et al. ...
+                cons = MethodUtils.getMatchingAccessibleConstructor(delegateClass, paramTypes);
+                
+                if (cons == null) {
+                    throw new RuntimeException("There's no constructor for the given arguments.");
+                }
+            }
+            
+			delegateRef = cons.newInstance(initargs);
+		}
+
+		HorribleProxy hp = new HorribleProxy(delegateClass, delegateRef);
+		return (T)Proxy.newProxyInstance(cl, new Class<?>[]{proxyClass}, hp);
+	}
+

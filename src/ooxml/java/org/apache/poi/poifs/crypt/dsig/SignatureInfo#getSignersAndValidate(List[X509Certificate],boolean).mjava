@@ -1,0 +1,39 @@
+    protected boolean getSignersAndValidate(List<X509Certificate> signers, boolean onlyFirst) {
+        boolean allValid = true;
+        List<PackagePart> signatureParts = getSignatureParts(onlyFirst);
+        if (signatureParts.isEmpty()) {
+            LOG.log(POILogger.DEBUG, "no signature resources");
+            allValid = false;
+        }
+        
+        for (PackagePart signaturePart : signatureParts) {
+            KeyInfoKeySelector keySelector = new KeyInfoKeySelector();
+
+            try {
+                Document doc = SAXHelper.readSAXDocumentW3C(signaturePart.getInputStream());
+                // dummy call to createSignatureService to tweak document afterwards
+                createSignatureService(HashAlgorithm.sha1, pkg).registerIds(doc);
+                
+                DOMValidateContext domValidateContext = new DOMValidateContext(keySelector, doc);
+                domValidateContext.setProperty("org.jcp.xml.dsig.validateManifests", Boolean.TRUE);
+                OOXMLURIDereferencer dereferencer = new OOXMLURIDereferencer(pkg);
+                domValidateContext.setURIDereferencer(dereferencer);
+    
+                XMLSignatureFactory xmlSignatureFactory = getSignatureFactory();
+                XMLSignature xmlSignature = xmlSignatureFactory.unmarshalXMLSignature(domValidateContext);
+                boolean validity = xmlSignature.validate(domValidateContext);
+                allValid &= validity;
+                if (!validity) continue;
+                // TODO: check what has been signed.
+            } catch (Exception e) {
+                LOG.log(POILogger.ERROR, "error in marshalling and validating the signature", e);
+                continue;
+            }
+
+            X509Certificate signer = keySelector.getCertificate();
+            signers.add(signer);
+        }
+        
+        return allValid;
+    }
+

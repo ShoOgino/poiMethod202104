@@ -1,0 +1,56 @@
+    protected void writeDocument() throws IOException {
+        XmlOptions xo = new XmlOptions();
+        Map<String,String> namespaceMap = new HashMap<String,String>();
+        for (SignatureFacet sf : this.signatureFacets) {
+            Map<String,String> sfm = sf.getNamespacePrefixMapping();
+            if (sfm != null) {
+                namespaceMap.putAll(sfm);
+            }
+        }
+        xo.setSaveSuggestedPrefixes(namespaceMap);
+        xo.setUseDefaultNamespace();
+
+        LOG.log(POILogger.DEBUG, "output signed Office OpenXML document");
+
+        /*
+         * Copy the original OOXML content to the signed OOXML package. During
+         * copying some files need to changed.
+         */
+        OPCPackage pkg = this.getOfficeOpenXMLDocument();
+
+        PackagePartName sigPartName, sigsPartName;
+        try {
+            // <Override PartName="/_xmlsignatures/sig1.xml" ContentType="application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml"/>
+            sigPartName = PackagingURIHelper.createPartName("/_xmlsignatures/sig1.xml");
+            // <Default Extension="sigs" ContentType="application/vnd.openxmlformats-package.digital-signature-origin"/>
+            sigsPartName = PackagingURIHelper.createPartName("/_xmlsignatures/origin.sigs");
+        } catch (InvalidFormatException e) {
+            throw new IOException(e);
+        }
+        
+        String sigContentType = "application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml";
+        PackagePart sigPart = pkg.getPart(sigPartName);
+        if (sigPart == null) {
+            sigPart = pkg.createPart(sigPartName, sigContentType);
+        }
+        
+        OutputStream os = sigPart.getOutputStream();
+        sigDoc.save(os, xo);
+        os.close();
+        
+        String sigsContentType = "application/vnd.openxmlformats-package.digital-signature-origin";
+        PackagePart sigsPart = pkg.getPart(sigsPartName);
+        if (sigsPart == null) {
+            // touch empty marker file
+            sigsPart = pkg.createPart(sigsPartName, sigsContentType);
+        }
+        
+        PackageRelationshipCollection relCol = pkg.getRelationshipsByType(PackageRelationshipTypes.DIGITAL_SIGNATURE_ORIGIN);
+        for (PackageRelationship pr : relCol) {
+            pkg.removeRelationship(pr.getId());
+        }
+        pkg.addRelationship(sigsPartName, TargetMode.INTERNAL, PackageRelationshipTypes.DIGITAL_SIGNATURE_ORIGIN);
+        
+        sigsPart.addRelationship(sigPartName, TargetMode.INTERNAL, PackageRelationshipTypes.DIGITAL_SIGNATURE);
+    }
+

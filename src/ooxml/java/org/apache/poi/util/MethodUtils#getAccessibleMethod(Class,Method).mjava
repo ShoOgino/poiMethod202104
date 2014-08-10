@@ -1,0 +1,60 @@
+    /**
+     * <p>Return an accessible method (that is, one that can be invoked via
+     * reflection) that implements the specified Method.  If no such method
+     * can be found, return <code>null</code>.</p>
+     *
+     * @param clazz The class of the object
+     * @param method The method that we wish to call
+     * @return The accessible method
+     */
+    public static Method getAccessibleMethod(Class clazz, Method method) {
+
+        // Make sure we have a method to check
+        if (method == null) {
+            return (null);
+        }
+
+        // If the requested method is not public we cannot call it
+        if (!Modifier.isPublic(method.getModifiers())) {
+            return (null);
+        }
+
+        boolean sameClass = true;
+        if (clazz == null) {
+            clazz = method.getDeclaringClass();
+        } else {
+            sameClass = clazz.equals(method.getDeclaringClass());
+            if (!method.getDeclaringClass().isAssignableFrom(clazz)) {
+                throw new IllegalArgumentException(clazz.getName() +
+                        " is not assignable from " + method.getDeclaringClass().getName());
+            }
+        }
+
+        // If the class is public, we are done
+        if (Modifier.isPublic(clazz.getModifiers())) {
+            if (!sameClass && !Modifier.isPublic(method.getDeclaringClass().getModifiers())) {
+                setMethodAccessible(method); // Default access superclass workaround
+            }
+            return (method);
+        }
+
+        String methodName      = method.getName();
+        Class[] parameterTypes = method.getParameterTypes();
+
+        // Check the implemented interfaces and subinterfaces
+        method =
+                getAccessibleMethodFromInterfaceNest(clazz,
+                        methodName,
+                        parameterTypes);
+
+        // Check the superclass chain
+        if (method == null) {
+            method = getAccessibleMethodFromSuperclass(clazz,
+                        methodName,
+                        parameterTypes);
+        }
+
+        return (method);
+
+    }
+
