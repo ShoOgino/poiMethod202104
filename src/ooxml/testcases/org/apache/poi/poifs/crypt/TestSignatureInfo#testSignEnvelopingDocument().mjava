@@ -1,0 +1,59 @@
+    @Test
+    public void testSignEnvelopingDocument() throws Exception {
+        String testFile = "hello-world-unsigned.xlsx";
+        OPCPackage pkg = OPCPackage.open(copy(testdata.getFile(testFile)), PackageAccess.READ_WRITE);
+
+        // setup
+        EnvelopedSignatureFacet envelopedSignatureFacet = new EnvelopedSignatureFacet();
+        KeyInfoSignatureFacet keyInfoSignatureFacet = new KeyInfoSignatureFacet(true, false, false);
+        SignaturePolicyService signaturePolicyService = null;
+        XAdESSignatureFacet xadesSignatureFacet = new XAdESSignatureFacet(null, null, signaturePolicyService);
+
+        
+        TimeStampService mockTimeStampService = mock(TimeStampService.class);
+        RevocationDataService mockRevocationDataService = mock(RevocationDataService.class);
+
+        XAdESXLSignatureFacet xadesXLSignatureFacet = new XAdESXLSignatureFacet(
+                mockTimeStampService, mockRevocationDataService);
+        XmlSignatureService testedInstance = new XmlSignatureService(HashAlgorithm.sha1, pkg);
+        testedInstance.addSignatureFacet(envelopedSignatureFacet, keyInfoSignatureFacet,
+                xadesSignatureFacet, xadesXLSignatureFacet);
+        
+        initKeyPair("Test", "CN=Test");
+        List<X509Certificate> certificateChain = new ArrayList<X509Certificate>();
+        /*
+         * We need at least 2 certificates for the XAdES-C complete certificate
+         * refs construction.
+         */
+        certificateChain.add(x509);
+        certificateChain.add(x509);
+        
+        RevocationData revocationData = new RevocationData();
+        final X509CRL crl = PkiTestUtils.generateCrl(x509, keyPair.getPrivate());
+        revocationData.addCRL(crl);
+        OCSPRespIf ocspResp = PkiTestUtils.createOcspResp(x509, false,
+                x509, x509, keyPair.getPrivate(), "SHA1withRSA");
+        revocationData.addOCSP(ocspResp.getEncoded());
+        
+        when(mockTimeStampService.timeStamp(any(byte[].class), any(RevocationData.class)))
+        .thenAnswer(new Answer<byte[]>(){
+            public byte[] answer(InvocationOnMock invocation) throws Throwable {
+                Object[] arguments = invocation.getArguments();
+                RevocationData revocationData = (RevocationData) arguments[1];
+                revocationData.addCRL(crl);
+                return "time-stamp-token".getBytes();
+            }            
+        });
+        
+        when(mockRevocationDataService.getRevocationData(eq(certificateChain)))
+        .thenReturn(revocationData);
+        
+        // operate
+        DigestInfo digestInfo = testedInstance.preSign(null, certificateChain, null, null, null);
+
+        // verify
+        assertNotNull(digestInfo);
+        assertEquals("SHA-1", digestInfo.hashAlgo);
+        assertNotNull(digestInfo.digestValue);
+    }
+
