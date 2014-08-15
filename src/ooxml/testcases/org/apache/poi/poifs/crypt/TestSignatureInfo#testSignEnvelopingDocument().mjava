@@ -53,7 +53,51 @@
 
         // verify
         assertNotNull(digestInfo);
-        assertEquals("SHA-1", digestInfo.hashAlgo);
+        assertEquals(HashAlgorithm.sha1, digestInfo.hashAlgo);
         assertNotNull(digestInfo.digestValue);
+        
+        SignatureDocument sigDoc = testedInstance.getSignatureDocument();
+        String certDigestXQuery =
+                "declare namespace xades='http://uri.etsi.org/01903/v1.3.2#'; "
+              + "declare namespace ds='http://www.w3.org/2000/09/xmldsig#'; "
+              + "$this/ds:Signature/ds:Object/xades:QualifyingProperties/xades:SignedProperties/xades:SignedSignatureProperties/xades:SigningCertificate/xades:Cert/xades:CertDigest";
+        XmlObject xoList[] = sigDoc.selectPath(certDigestXQuery);
+        assertEquals(xoList.length, 1);
+        DigestAlgAndValueType certDigest = (DigestAlgAndValueType)xoList[0];
+        assertNotNull(certDigest.getDigestValue());
+
+        // Sign the received XML signature digest value.
+        byte[] signatureValue = SignatureInfo.signDigest(keyPair.getPrivate(), HashAlgorithm.sha1, digestInfo.digestValue);
+
+        // Operate: postSign
+        testedInstance.postSign(signatureValue, certificateChain);
+        
+        // verify
+        verify(mockTimeStampService, times(2)).timeStamp(any(byte[].class), any(RevocationData.class));
+        verify(mockRevocationDataService).getRevocationData(certificateChain);
+        
+        DOMValidateContext domValidateContext = new DOMValidateContext(
+                KeySelector.singletonKeySelector(keyPair.getPublic()),
+                testedInstance.getSignatureDocument().getDomNode());
+        XMLSignatureFactory xmlSignatureFactory = SignatureInfo.getSignatureFactory();
+        XMLSignature xmlSignature = xmlSignatureFactory
+                .unmarshalXMLSignature(domValidateContext);
+        boolean validity = xmlSignature.validate(domValidateContext);
+        assertTrue(validity);
+
+        xoList = sigDoc.selectPath(certDigestXQuery);
+        assertEquals(xoList.length, 1);
+        certDigest = (DigestAlgAndValueType)xoList[0];
+        assertNotNull(certDigest.getDigestValue());
+        
+        String qualPropXQuery =
+                "declare namespace xades='http://uri.etsi.org/01903/v1.3.2#'; "
+              + "declare namespace ds='http://www.w3.org/2000/09/xmldsig#'; "
+              + "$this/ds:Signature/ds:Object/xades:QualifyingProperties";
+        xoList = sigDoc.selectPath(qualPropXQuery);
+        assertEquals(xoList.length, 1);
+        QualifyingPropertiesType qualProp = (QualifyingPropertiesType)xoList[0];
+        boolean qualPropXsdOk = qualProp.validate();
+        assertTrue(qualPropXsdOk);
     }
 
