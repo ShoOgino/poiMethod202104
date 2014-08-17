@@ -1,13 +1,12 @@
     public byte[] timeStamp(byte[] data, RevocationData revocationData)
             throws Exception {
         // digest the message
-        MessageDigest messageDigest = MessageDigest
-                .getInstance(this.digestAlgo);
+        MessageDigest messageDigest = CryptoFunctions.getMessageDigest(this.digestAlgo);
         byte[] digest = messageDigest.digest(data);
 
         // generate the TSP request
         BigInteger nonce = new BigInteger(128, new SecureRandom());
-        TimeStampRequestGeneratorIf requestGenerator = HorribleProxy.newProxy(TimeStampRequestGeneratorIf.class);
+        TimeStampRequestGeneratorIf requestGenerator = newProxy(TimeStampRequestGeneratorIf.class);
         requestGenerator.setCertReq(true);
         if (null != this.requestPolicy) {
             requestGenerator.setReqPolicy(this.requestPolicy);
@@ -29,7 +28,8 @@
 
         huc.setDoOutput(true); // also sets method to POST.
         huc.setRequestProperty("User-Agent", this.userAgent);
-        huc.setRequestProperty("Content-Type", "application/timestamp-query;charset=ISO-8859-1");
+        // "application/timestamp-query;charset=ISO-8859-1"
+        huc.setRequestProperty("Content-Type", "application/timestamp-request");
         
         OutputStream hucOut = huc.getOutputStream();
         hucOut.write(encodedRequest);
@@ -53,7 +53,8 @@
         IOUtils.copy(huc.getInputStream(), bos);
         LOG.log(POILogger.DEBUG, "response content: ", bos.toString());
         
-        if (!contentType.startsWith("application/timestamp-reply")) {
+        // "application/timestamp-reply"
+        if (!contentType.startsWith("application/timestamp-response")) {
             throw new RuntimeException("invalid Content-Type: " + contentType);
         }
         
@@ -62,7 +63,7 @@
         }
 
         // TSP response parsing and validation
-        TimeStampResponseIf timeStampResponse = HorribleProxy.newProxy(TimeStampResponseIf.class, bos.toByteArray());
+        TimeStampResponseIf timeStampResponse = newProxy(TimeStampResponseIf.class, bos.toByteArray());
         timeStampResponse.validate(request);
 
         if (0 != timeStampResponse.getStatus()) {
@@ -125,10 +126,10 @@
         } while (null != certificate);
 
         // verify TSP signer signature
-        X509CertificateHolderIf holder = HorribleProxy.newProxy(X509CertificateHolderIf.class, tspCertificateChain.get(0).getEncoded());
-        DefaultDigestAlgorithmIdentifierFinderIf finder = HorribleProxy.newProxy(DefaultDigestAlgorithmIdentifierFinderIf.class);
-        BcDigestCalculatorProviderIf calculator = HorribleProxy.newProxy(BcDigestCalculatorProviderIf.class);
-        BcRSASignerInfoVerifierBuilderIf verifierBuilder = HorribleProxy.newProxy(BcRSASignerInfoVerifierBuilderIf.class, finder, calculator);
+        X509CertificateHolderIf holder = newProxy(X509CertificateHolderIf.class, tspCertificateChain.get(0).getEncoded());
+        DefaultDigestAlgorithmIdentifierFinderIf finder = newProxy(DefaultDigestAlgorithmIdentifierFinderIf.class);
+        BcDigestCalculatorProviderIf calculator = newProxy(BcDigestCalculatorProviderIf.class);
+        BcRSASignerInfoVerifierBuilderIf verifierBuilder = newProxy(BcRSASignerInfoVerifierBuilderIf.class, finder, calculator);
         SignerInformationVerifierIf verifier = verifierBuilder.build(holder);
         
         timeStampToken.validate(verifier);
