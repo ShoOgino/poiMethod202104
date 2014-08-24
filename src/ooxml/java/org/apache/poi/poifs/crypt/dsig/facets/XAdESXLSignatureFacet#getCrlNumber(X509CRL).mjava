@@ -1,16 +1,16 @@
     private BigInteger getCrlNumber(X509CRL crl) {
         try {
-            X509ExtensionsIf x509ext = newProxy(X509ExtensionsIf.class);
-            byte[] crlNumberExtensionValue = crl.getExtensionValue(x509ext.CRLNumber().getId());
+            byte[] crlNumberExtensionValue = crl.getExtensionValue(Extension.cRLNumber.getId());
             if (null == crlNumberExtensionValue) {
                 return null;
             }
 
-            ASN1InputStreamIf asn1InputStream = HorribleProxy.newProxy(ASN1InputStreamIf.class, crlNumberExtensionValue);
-            ASN1OctetStringIf octetString = asn1InputStream.readObject$ASNString();
+            @SuppressWarnings("resource")
+            ASN1InputStream asn1InputStream = new ASN1InputStream(crlNumberExtensionValue);
+            ASN1OctetString octetString = (ASN1OctetString)asn1InputStream.readObject();
             byte[] octets = octetString.getOctets();
-            asn1InputStream = HorribleProxy.newProxy(ASN1InputStreamIf.class, octets);
-            ASN1IntegerIf integer =  asn1InputStream.readObject$Integer();
+            asn1InputStream = new ASN1InputStream(octets);
+            ASN1Integer integer = (ASN1Integer)asn1InputStream.readObject();
             BigInteger crlNumber = integer.getPositiveValue();
             return crlNumber;
         } catch (Exception e) {

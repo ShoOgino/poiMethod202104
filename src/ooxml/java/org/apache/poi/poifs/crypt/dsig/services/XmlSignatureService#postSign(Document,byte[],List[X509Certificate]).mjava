@@ -1,0 +1,32 @@
+    @Override
+    public void postSign(Document document, byte[] signatureValue, List<X509Certificate> signingCertificateChain)
+    throws IOException, MarshalException, ParserConfigurationException, XmlException {
+        LOG.log(POILogger.DEBUG, "postSign");
+        SignatureInfo.initXmlProvider();
+
+        /*
+         * Check ds:Signature node.
+         */
+        if (!signatureId.equals(document.getDocumentElement().getAttribute("Id"))) {
+            throw new RuntimeException("ds:Signature not found for @Id: " + signatureId);
+        }
+
+        /*
+         * Insert signature value into the ds:SignatureValue element
+         */
+        NodeList sigValNl = document.getElementsByTagNameNS(XmlDSigNS, "SignatureValue");
+        if (sigValNl.getLength() != 1) {
+            throw new RuntimeException("preSign has to be called before postSign");
+        }
+        sigValNl.item(0).setTextContent(Base64.encode(signatureValue));
+
+        /*
+         * Allow signature facets to inject their own stuff.
+         */
+        for (SignatureFacet signatureFacet : this.signatureFacets) {
+            signatureFacet.postSign(document, signingCertificateChain);
+        }
+
+        writeDocument(document);
+    }
+

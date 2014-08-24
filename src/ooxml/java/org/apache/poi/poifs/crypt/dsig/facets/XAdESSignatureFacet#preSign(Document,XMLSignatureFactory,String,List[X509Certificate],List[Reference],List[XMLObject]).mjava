@@ -1,4 +1,6 @@
-    public void preSign(XMLSignatureFactory signatureFactory,
+    @Override
+    public void preSign(Document document,
+            XMLSignatureFactory signatureFactory,
             String signatureId,
             List<X509Certificate> signingCertificateChain,
             List<Reference> references, List<XMLObject> objects)
@@ -12,10 +14,8 @@
         
         // SignedProperties
         SignedPropertiesType signedProperties = qualifyingProperties.addNewSignedProperties();
-        String signedPropertiesId;
-        if (null != this.idSignedProperties) {
-            signedPropertiesId = this.idSignedProperties;
-        } else {
+        String signedPropertiesId = this.idSignedProperties;
+        if (this.idSignedProperties == null) {
             signedPropertiesId = signatureId + "-xades";
         }
         signedProperties.setId(signedPropertiesId);
@@ -103,17 +103,18 @@
         // ((Element)qualifyingProperties.getSignedProperties().getDomNode()).setIdAttribute("Id", true);
 
         // add XAdES ds:Object
-        List<XMLStructure> xadesObjectContent = new LinkedList<XMLStructure>();
-        Element qualDocEl = (Element)qualifyingProperties.getDomNode();
-        qualDocEl.setAttributeNS(Constants.NamespaceSpecNS, "xmlns:xd", "http://uri.etsi.org/01903/v1.3.2#");
-        setPrefix(qualifyingProperties, "http://uri.etsi.org/01903/v1.3.2#", "xd");
+        List<XMLStructure> xadesObjectContent = new ArrayList<XMLStructure>();
+        Element qualDocEl = (Element)document.importNode(qualifyingProperties.getDomNode(), true);
+        XmlSignatureService.registerIdAttribute(qualDocEl.getElementsByTagName("SignedProperties"));
+        qualDocEl.setAttributeNS(XmlNS, "xmlns:xd", "http://uri.etsi.org/01903/v1.3.2#");
+        setPrefix(qualDocEl, "http://uri.etsi.org/01903/v1.3.2#", "xd");
         xadesObjectContent.add(new DOMStructure(qualDocEl));
         XMLObject xadesObject = signatureFactory.newXMLObject(xadesObjectContent, null, null, null);
         objects.add(xadesObject);
 
         // add XAdES ds:Reference
         DigestMethod digestMethod = signatureFactory.newDigestMethod(hashAlgo.xmlSignUri, null);
-        List<Transform> transforms = new LinkedList<Transform>();
+        List<Transform> transforms = new ArrayList<Transform>();
         Transform exclusiveTransform = signatureFactory
                 .newTransform(CanonicalizationMethod.INCLUSIVE,
                         (TransformParameterSpec) null);
