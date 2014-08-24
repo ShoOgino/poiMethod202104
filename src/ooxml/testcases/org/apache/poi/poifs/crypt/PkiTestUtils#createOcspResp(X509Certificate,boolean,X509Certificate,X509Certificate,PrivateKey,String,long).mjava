@@ -1,70 +1,61 @@
-    public static OCSPRespIf createOcspResp(X509Certificate certificate,
+    public static OCSPResp createOcspResp(X509Certificate certificate,
             boolean revoked, X509Certificate issuerCertificate,
             X509Certificate ocspResponderCertificate,
             PrivateKey ocspResponderPrivateKey, String signatureAlgorithm,
             long nonceTimeinMillis)
             throws Exception {
-        CertificateIDIf certId = newProxy(CertificateIDIf.class);
-        DigestCalculatorIf digestCalc =
-            newProxy(JcaDigestCalculatorProviderBuilderIf.class)
-            .setProvider("BC").build().get(certId.HASH_SHA1());
-        X509CertificateHolderIf issuerHolder = newProxy(X509CertificateHolderIf.class, issuerCertificate.getEncoded());
-        certId = newProxy(CertificateIDIf.class, digestCalc, issuerHolder, certificate.getSerialNumber());
+        DigestCalculator digestCalc = new JcaDigestCalculatorProviderBuilder()
+            .setProvider("BC").build().get(CertificateID.HASH_SHA1);
+        X509CertificateHolder issuerHolder = new X509CertificateHolder(issuerCertificate.getEncoded());
+        CertificateID certId = new CertificateID(digestCalc, issuerHolder, certificate.getSerialNumber());
         
         // request
         //create a nonce to avoid replay attack
         BigInteger nonce = BigInteger.valueOf(nonceTimeinMillis);
-        OCSPObjectIdentifiersIf oidIf = newProxy(OCSPObjectIdentifiersIf.class);
-        DEROctetStringIf nonceDer = newProxy(DEROctetStringIf.class, nonce.toByteArray());
-        ExtensionIf ext = newProxy(ExtensionIf.class, oidIf.id_pkix_ocsp_nonce(), true, nonceDer);
-        ExtensionsIf exts = newProxy(ExtensionsIf.class, ext);
+        DEROctetString nonceDer = new DEROctetString(nonce.toByteArray());
+        Extension ext = new Extension(OCSPObjectIdentifiers.id_pkix_ocsp_nonce, true, nonceDer);
+        Extensions exts = new Extensions(ext);
         
-        OCSPReqBuilderIf ocspReqBuilder = newProxy(OCSPReqBuilderIf.class);
+        OCSPReqBuilder ocspReqBuilder = new OCSPReqBuilder();
         ocspReqBuilder.addRequest(certId);
         ocspReqBuilder.setRequestExtensions(exts);
-        OCSPReqIf ocspReq = ocspReqBuilder.build();
+        OCSPReq ocspReq = ocspReqBuilder.build();
 
         
-        SubjectPublicKeyInfoIf keyInfo = newProxy(SubjectPublicKeyInfoIf.class
-            , certId.HASH_SHA1(), ocspResponderCertificate.getPublicKey().getEncoded());
+        SubjectPublicKeyInfo keyInfo = new SubjectPublicKeyInfo
+            (CertificateID.HASH_SHA1, ocspResponderCertificate.getPublicKey().getEncoded());
         
-        BasicOCSPRespBuilderIf basicOCSPRespBuilder = 
-            newProxy(BasicOCSPRespBuilderIf.class, keyInfo, digestCalc);
+        BasicOCSPRespBuilder basicOCSPRespBuilder = new BasicOCSPRespBuilder(keyInfo, digestCalc);
         basicOCSPRespBuilder.setResponseExtensions(exts);
 
         // request processing
-        ReqIf[] requestList = ocspReq.getRequestList();
-        for (ReqIf ocspRequest : requestList) {
-            CertificateIDIf certificateID = ocspRequest.getCertID();
-            CertificateStatusIf certificateStatus;
+        Req[] requestList = ocspReq.getRequestList();
+        for (Req ocspRequest : requestList) {
+            CertificateID certificateID = ocspRequest.getCertID();
+            CertificateStatus certificateStatus = CertificateStatus.GOOD;
             if (revoked) {
-                CRLReasonIf crlr = newProxy(CRLReasonIf.class);
-                RevokedStatusIf rs = newProxy(RevokedStatusIf.class, new Date(), crlr.privilegeWithdrawn());
-                certificateStatus = newProxy(CertificateStatusIf.class, rs.getDelegate());
-            } else {
-                CertificateStatusIf cs = newProxy(CertificateStatusIf.class);
-                certificateStatus = cs.GOOD();
+                certificateStatus = new RevokedStatus(new Date(), CRLReason.privilegeWithdrawn);
             }
             basicOCSPRespBuilder.addResponse(certificateID, certificateStatus);
         }
 
         // basic response generation
-        X509CertificateHolderIf[] chain = null;
+        X509CertificateHolder[] chain = null;
         if (!ocspResponderCertificate.equals(issuerCertificate)) {
             // TODO: HorribleProxy can't convert array input params yet
-            chain = new X509CertificateHolderIf[] {
-                newProxy(X509CertificateHolderIf.class, ocspResponderCertificate),
+            chain = new X509CertificateHolder[] {
+                new X509CertificateHolder(ocspResponderCertificate.getEncoded()),
                 issuerHolder
             };
         }
         
-        ContentSignerIf contentSigner = newProxy(JcaContentSignerBuilderIf.class, "SHA1withRSA")
+        ContentSigner contentSigner = new JcaContentSignerBuilder("SHA1withRSA")
             .setProvider("BC").build(ocspResponderPrivateKey);
-        BasicOCSPRespIf basicOCSPResp = basicOCSPRespBuilder.build(contentSigner, chain, new Date(nonceTimeinMillis));
+        BasicOCSPResp basicOCSPResp = basicOCSPRespBuilder.build(contentSigner, chain, new Date(nonceTimeinMillis));
 
         
-        OCSPRespBuilderIf ocspRespBuilder = newProxy(OCSPRespBuilderIf.class);
-        OCSPRespIf ocspResp = ocspRespBuilder.build(ocspRespBuilder.SUCCESSFUL(), basicOCSPResp);
+        OCSPRespBuilder ocspRespBuilder = new OCSPRespBuilder();
+        OCSPResp ocspResp = ocspRespBuilder.build(OCSPRespBuilder.SUCCESSFUL, basicOCSPResp);
 
         return ocspResp;
     }

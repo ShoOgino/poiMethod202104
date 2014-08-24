@@ -3,9 +3,11 @@
         signatureService.initFacets(cal.getTime());
         initKeyPair(alias, signerDn);
 
+        Document document = SAXHelper.getDocumentBuilder().newDocument();
+
         // operate
         List<X509Certificate> x509Chain = Collections.singletonList(x509);
-        DigestInfo digestInfo = signatureService.preSign(null, x509Chain, null, null, null);
+        DigestInfo digestInfo = signatureService.preSign(document, null, keyPair.getPrivate(), x509Chain, null, null, null);
 
         // verify
         assertNotNull(digestInfo);
@@ -19,7 +21,7 @@
         byte[] signatureValue = SignatureInfo.signDigest(keyPair.getPrivate(), HashAlgorithm.sha1, digestInfo.digestValue);
         
         // operate: postSign
-        signatureService.postSign(signatureValue, Collections.singletonList(x509));
+        signatureService.postSign(document, signatureValue, Collections.singletonList(x509));
 
         // verify: signature
         SignatureInfo si = new SignatureInfo(pkgCopy);

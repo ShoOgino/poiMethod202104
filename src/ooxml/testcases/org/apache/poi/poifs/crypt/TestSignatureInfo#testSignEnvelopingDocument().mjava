@@ -1,4 +1,6 @@
+    @SuppressWarnings("unused")
     @Test
+    @Ignore
     public void testSignEnvelopingDocument() throws Exception {
         String testFile = "hello-world-unsigned.xlsx";
         OPCPackage pkg = OPCPackage.open(copy(testdata.getFile(testFile)), PackageAccess.READ_WRITE);
@@ -12,28 +14,37 @@
         XAdESSignatureFacet xadesSignatureFacet = new XAdESSignatureFacet(null, null, signaturePolicyService);
         final X509CRL crl = PkiTestUtils.generateCrl(x509, keyPair.getPrivate());
 
-//        TimeStampService timeStampService = new TimeStampService(){
-//            public byte[] timeStamp(byte[] data, RevocationData revocationData) throws Exception {
-//                revocationData.addCRL(crl);
-//                return "time-stamp-token".getBytes();                
-//            }
-//        };
-
         // http://timestamping.edelweb.fr/service/tsp
         // http://tsa.belgium.be/connect
         String tspServiceUrl = "http://timestamping.edelweb.fr/service/tsp";
-        TimeStampServiceValidator tspValidator = new TimeStampServiceValidator() {
-            @Override
-            public void validate(List<X509Certificate> certificateChain,
-            RevocationData revocationData) throws Exception {
-                for (X509Certificate certificate : certificateChain) {
-                    LOG.log(POILogger.DEBUG, "certificate: " + certificate.getSubjectX500Principal());
-                    LOG.log(POILogger.DEBUG, "validity: " + certificate.getNotBefore() + " - " + certificate.getNotAfter());
+
+        TimeStampService timeStampService;
+        if (tspServiceUrl == null) {
+            timeStampService = new TimeStampService(){
+                public byte[] timeStamp(byte[] data, RevocationData revocationData) throws Exception {
+                    revocationData.addCRL(crl);
+                    return "time-stamp-token".getBytes();                
                 }
+            };
+        } else {
+            TimeStampServiceValidator tspValidator = new TimeStampServiceValidator() {
+                @Override
+                public void validate(List<X509Certificate> certificateChain,
+                RevocationData revocationData) throws Exception {
+                    for (X509Certificate certificate : certificateChain) {
+                        LOG.log(POILogger.DEBUG, "certificate: " + certificate.getSubjectX500Principal());
+                        LOG.log(POILogger.DEBUG, "validity: " + certificate.getNotBefore() + " - " + certificate.getNotAfter());
+                    }
+                }
+            };
+            
+            TSPTimeStampService tspService = new TSPTimeStampService(tspServiceUrl, tspValidator);
+            if (tspServiceUrl.contains("edelweb")) {
+                tspService.setRequestContentType("application/timestamp-request");
+                tspService.setResponseContentType("application/timestamp-response");
             }
-        };
-        
-        TimeStampService timeStampService = new TSPTimeStampService(tspServiceUrl, tspValidator);
+            timeStampService = tspService;
+        }
         
         List<X509Certificate> certificateChain = new ArrayList<X509Certificate>();
         /*
@@ -45,7 +56,7 @@
         
         final RevocationData revocationData = new RevocationData();
         revocationData.addCRL(crl);
-        OCSPRespIf ocspResp = PkiTestUtils.createOcspResp(x509, false,
+        OCSPResp ocspResp = PkiTestUtils.createOcspResp(x509, false,
                 x509, x509, keyPair.getPrivate(), "SHA1withRSA", cal.getTimeInMillis());
         revocationData.addOCSP(ocspResp.getEncoded());
 
@@ -62,16 +73,19 @@
                 xadesSignatureFacet, xadesXLSignatureFacet);
         
         
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        dbf.setNamespaceAware(true);
+        Document document = dbf.newDocumentBuilder().newDocument();
         
         // operate
-        DigestInfo digestInfo = testedInstance.preSign(null, certificateChain, null, null, null);
+        DigestInfo digestInfo = testedInstance.preSign(document, null, keyPair.getPrivate(), certificateChain, null, null, null);
 
         // verify
         assertNotNull(digestInfo);
         assertEquals(HashAlgorithm.sha1, digestInfo.hashAlgo);
         assertNotNull(digestInfo.digestValue);
         
-        SignatureDocument sigDoc = testedInstance.getSignatureDocument();
+        SignatureDocument sigDoc = SignatureDocument.Factory.parse(document);
         String certDigestXQuery =
                 "declare namespace xades='http://uri.etsi.org/01903/v1.3.2#'; "
               + "declare namespace ds='http://www.w3.org/2000/09/xmldsig#'; "
@@ -85,17 +99,18 @@
         byte[] signatureValue = SignatureInfo.signDigest(keyPair.getPrivate(), HashAlgorithm.sha1, digestInfo.digestValue);
 
         // Operate: postSign
-        testedInstance.postSign(signatureValue, certificateChain);
+        testedInstance.postSign(document, signatureValue, certificateChain);
         
         DOMValidateContext domValidateContext = new DOMValidateContext(
                 KeySelector.singletonKeySelector(keyPair.getPublic()),
-                testedInstance.getSignatureDocument().getDomNode());
+                document);
         XMLSignatureFactory xmlSignatureFactory = SignatureInfo.getSignatureFactory();
         XMLSignature xmlSignature = xmlSignatureFactory
                 .unmarshalXMLSignature(domValidateContext);
         boolean validity = xmlSignature.validate(domValidateContext);
         assertTrue(validity);
 
+        sigDoc = SignatureDocument.Factory.parse(document);
         xoList = sigDoc.selectPath(certDigestXQuery);
         assertEquals(xoList.length, 1);
         certDigest = (DigestAlgAndValueType)xoList[0];

@@ -1,0 +1,17 @@
+    public void confirmSignature(PrivateKey key, X509Certificate x509, HashAlgorithm hashAlgo)
+    throws NoSuchAlgorithmException, IOException, MarshalException, ParserConfigurationException, XmlException {
+        XmlSignatureService signatureService = createSignatureService(hashAlgo, pkg);
+
+        Document document = SAXHelper.getDocumentBuilder().newDocument();
+        
+        // operate
+        List<X509Certificate> x509Chain = Collections.singletonList(x509);
+        DigestInfo digestInfo = signatureService.preSign(document, null, key, x509Chain, null, null, null);
+
+        // setup: key material, signature value
+        byte[] signatureValue = signDigest(key, hashAlgo, digestInfo.digestValue);
+        
+        // operate: postSign
+        signatureService.postSign(document, signatureValue, Collections.singletonList(x509));
+    }
+
