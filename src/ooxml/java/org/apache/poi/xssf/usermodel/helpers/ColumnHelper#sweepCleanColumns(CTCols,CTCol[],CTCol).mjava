@@ -3,7 +3,7 @@
      */
     private void sweepCleanColumns(CTCols cols, CTCol[] flattenedColsArray, CTCol overrideColumn) {
         List<CTCol> flattenedCols = new ArrayList<CTCol>(Arrays.asList(flattenedColsArray));
-        TreeSet<CTCol> currentElements = new TreeSet<CTCol>(new CTColByMaxComparator());
+        TreeSet<CTCol> currentElements = new TreeSet<CTCol>(CTColComparator.BY_MAX);
         ListIterator<CTCol> flIter = flattenedCols.listIterator();
         CTCol haveOverrideColumn = null;
         long lastMaxIndex = 0;
@@ -11,7 +11,8 @@
         while (flIter.hasNext()) {
             CTCol col = flIter.next();
             long currentIndex = col.getMin();
-            long nextIndex = (col.getMax() > currentMax) ? col.getMax() : currentMax;
+            long colMax = col.getMax();
+            long nextIndex = (colMax > currentMax) ? colMax : currentMax;
             if (flIter.hasNext()) {
                 nextIndex = flIter.next().getMin();
                 flIter.previous();
@@ -24,10 +25,10 @@
             }
             if (!currentElements.isEmpty() && lastMaxIndex < currentIndex) {
                 // we need to process previous elements first
-                insertCol(cols, lastMaxIndex, currentIndex - 1, currentElements.toArray(new CTCol[]{}), true, haveOverrideColumn);
+                insertCol(cols, lastMaxIndex, currentIndex - 1, currentElements.toArray(new CTCol[currentElements.size()]), true, haveOverrideColumn);
             }
             currentElements.add(col);
-            if (col.getMax() > currentMax) currentMax = col.getMax();
+            if (colMax > currentMax) currentMax = colMax;
             if (col.equals(overrideColumn)) haveOverrideColumn = overrideColumn;
             while (currentIndex <= nextIndex && !currentElements.isEmpty()) {
                 Set<CTCol> currentIndexElements = new HashSet<CTCol>();
@@ -38,26 +39,21 @@
                     CTCol currentElem = currentElements.first();
                     currentElemIndex = currentElem.getMax();
                     currentIndexElements.add(currentElem);
-                    
-                    for (CTCol cc : currentElements.tailSet(currentElem)) {
-                        if (cc == null || cc.getMax() == currentElemIndex) break;
-                        currentIndexElements.add(cc);
-                        if (col.getMax() > currentMax) currentMax = col.getMax();
+
+                    while (true) {
+                        CTCol higherElem = currentElements.higher(currentElem);
+                        if (higherElem == null || higherElem.getMax() != currentElemIndex)
+                            break;
+                        currentElem = higherElem;
+                        currentIndexElements.add(currentElem);
+                        if (colMax > currentMax) currentMax = colMax;
                         if (col.equals(overrideColumn)) haveOverrideColumn = overrideColumn;
                     }
-
-                    // JDK 6 code
-                    // while (currentElements.higher(currentElem) != null && currentElements.higher(currentElem).getMax() == currentElemIndex) {
-                    //     currentElem = currentElements.higher(currentElem);
-                    //     currentIndexElements.add(currentElem);
-                    //     if (col.getMax() > currentMax) currentMax = col.getMax();
-                    //     if (col.equals(overrideColumn)) haveOverrideColumn = overrideColumn;
-                    // }
                 }
                 
                 
                 if (currentElemIndex < nextIndex || !flIter.hasNext()) {
-                    insertCol(cols, currentIndex, currentElemIndex, currentElements.toArray(new CTCol[]{}), true, haveOverrideColumn);
+                    insertCol(cols, currentIndex, currentElemIndex, currentElements.toArray(new CTCol[currentElements.size()]), true, haveOverrideColumn);
                     if (flIter.hasNext()) {
                         if (nextIndex > currentElemIndex) {
                             currentElements.removeAll(currentIndexElements);
