@@ -1,16 +1,16 @@
-    private void setColumn(int targetColumnIx, Short xfIndex, Integer style,
-            Integer level, Boolean hidden, Boolean collapsed) {
+    @SuppressWarnings("deprecation")
+    private void setColumn(int targetColumnIx, Integer style,
+                           Integer level, Boolean hidden, Boolean collapsed) {
         CTCols cols = worksheet.getColsArray(0);
         CTCol ci = null;
-        int k = 0;
-        for (k = 0; k < cols.sizeOfColArray(); k++) {
-            CTCol tci = cols.getColArray(k);
-            if (tci.getMin() >= targetColumnIx
-                    && tci.getMax() <= targetColumnIx) {
+        for (CTCol tci : cols.getColArray()) {
+            long tciMin = tci.getMin();
+            long tciMax = tci.getMax();
+            if (tciMin >= targetColumnIx && tciMax <= targetColumnIx) {
                 ci = tci;
                 break;
             }
-            if (tci.getMin() > targetColumnIx) {
+            if (tciMin > targetColumnIx) {
                 // call column infos after k are for later columns
                 break; // exit now so k will be the correct insert pos
             }
@@ -27,36 +27,32 @@
             return;
         }
 
-        boolean styleChanged = style != null
-        && ci.getStyle() != style;
-        boolean levelChanged = level != null
-        && ci.getOutlineLevel() != level;
-        boolean hiddenChanged = hidden != null
-        && ci.getHidden() != hidden;
-        boolean collapsedChanged = collapsed != null
-        && ci.getCollapsed() != collapsed;
-        boolean columnChanged = levelChanged || hiddenChanged
-        || collapsedChanged || styleChanged;
+        boolean styleChanged = style != null && ci.getStyle() != style;
+        boolean levelChanged = level != null && ci.getOutlineLevel() != level;
+        boolean hiddenChanged = hidden != null && ci.getHidden() != hidden;
+        boolean collapsedChanged = collapsed != null && ci.getCollapsed() != collapsed;
+        boolean columnChanged = levelChanged || hiddenChanged || collapsedChanged || styleChanged;
         if (!columnChanged) {
             // do nothing...nothing changed.
             return;
         }
 
-        if (ci.getMin() == targetColumnIx && ci.getMax() == targetColumnIx) {
+        long ciMin = ci.getMin();
+        long ciMax = ci.getMax();
+        if (ciMin == targetColumnIx && ciMax == targetColumnIx) {
             // ColumnInfo ci for a single column, the target column
             unsetCollapsed(collapsed, ci);
             return;
         }
 
-        if (ci.getMin() == targetColumnIx || ci.getMax() == targetColumnIx) {
+        if (ciMin == targetColumnIx || ciMax == targetColumnIx) {
             // The target column is at either end of the multi-column ColumnInfo
             // ci
             // we'll just divide the info and create a new one
-            if (ci.getMin() == targetColumnIx) {
+            if (ciMin == targetColumnIx) {
                 ci.setMin(targetColumnIx + 1);
             } else {
                 ci.setMax(targetColumnIx - 1);
-                k++; // adjust insert pos to insert after
             }
             CTCol nci = columnHelper.cloneCol(cols, ci);
             nci.setMin(targetColumnIx);
@@ -65,12 +61,11 @@
 
         } else {
             // split to 3 records
-            CTCol ciStart = ci;
             CTCol ciMid = columnHelper.cloneCol(cols, ci);
             CTCol ciEnd = columnHelper.cloneCol(cols, ci);
-            int lastcolumn = (int) ci.getMax();
+            int lastcolumn = (int) ciMax;
 
-            ciStart.setMax(targetColumnIx - 1);
+            ci.setMax(targetColumnIx - 1);
 
             ciMid.setMin(targetColumnIx);
             ciMid.setMax(targetColumnIx);

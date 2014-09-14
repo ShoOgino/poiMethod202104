@@ -1,27 +1,29 @@
     /**
      * Removes a number of merged regions of cells (hence letting them free)
-     * 
+     *
      * This method can be used to bulk-remove merged regions in a way
-     * much faster than calling removeMergedRegion() for every single 
+     * much faster than calling removeMergedRegion() for every single
      * merged region.
      *
      * @param indices A set of the regions to unmerge
      */
+    @SuppressWarnings("deprecation")
     public void removeMergedRegions(Set<Integer> indices) {
+        if (!worksheet.isSetMergeCells()) return;
+        
         CTMergeCells ctMergeCells = worksheet.getMergeCells();
+        List<CTMergeCell> newMergeCells = new ArrayList<CTMergeCell>(ctMergeCells.sizeOfMergeCellArray());
 
-        int size = ctMergeCells.sizeOfMergeCellArray();
-        CTMergeCell[] mergeCellsArray = new CTMergeCell[size - indices.size()];
-        for (int i = 0, d = 0 ; i < size ; i++) {
-            if(!indices.contains(i)) {
-                mergeCellsArray[d] = ctMergeCells.getMergeCellArray(i);
-                d++;
-            }
+        int idx = 0;
+        for (CTMergeCell mc : ctMergeCells.getMergeCellArray()) {
+            if (!indices.contains(idx++)) newMergeCells.add(mc);
         }
-        if(mergeCellsArray.length > 0){
-            ctMergeCells.setMergeCellArray(mergeCellsArray);
-        } else{
+        
+        if (newMergeCells.isEmpty()) {
             worksheet.unsetMergeCells();
+        } else{
+            CTMergeCell[] newMergeCellsArray = new CTMergeCell[newMergeCells.size()];
+            ctMergeCells.setMergeCellArray(newMergeCells.toArray(newMergeCellsArray));
         }
     }
 
