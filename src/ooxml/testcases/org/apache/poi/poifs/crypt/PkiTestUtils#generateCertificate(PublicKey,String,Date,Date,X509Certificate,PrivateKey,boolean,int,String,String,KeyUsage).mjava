@@ -12,9 +12,15 @@
         } else {
             issuerName = new X500Name(subjectDn);
         }
+        
+        RSAPublicKey rsaPubKey = (RSAPublicKey)subjectPublicKey;
+        RSAKeyParameters rsaSpec = new RSAKeyParameters(false, rsaPubKey.getModulus(), rsaPubKey.getPublicExponent());
 
-        SubjectPublicKeyInfo subjectPublicKeyInfo = new SubjectPublicKeyInfo(
-            ASN1Sequence.getInstance(subjectPublicKey.getEncoded()));
+        SubjectPublicKeyInfo subjectPublicKeyInfo = 
+            SubjectPublicKeyInfoFactory.createSubjectPublicKeyInfo(rsaSpec);
+
+        DigestCalculator digestCalc = new JcaDigestCalculatorProviderBuilder()
+            .setProvider("BC").build().get(CertificateID.HASH_SHA1);
         
         X509v3CertificateBuilder certificateGenerator = new X509v3CertificateBuilder(
               issuerName
@@ -25,8 +31,14 @@
             , subjectPublicKeyInfo
         );
 
-        certificateGenerator.addExtension(Extension.subjectKeyIdentifier, false, createSubjectKeyId(subjectPublicKey));
-        certificateGenerator.addExtension(Extension.authorityKeyIdentifier, false, createAuthorityKeyId(subjectPublicKey));
+        X509ExtensionUtils exUtils = new X509ExtensionUtils(digestCalc);
+        SubjectKeyIdentifier subKeyId = exUtils.createSubjectKeyIdentifier(subjectPublicKeyInfo);
+        AuthorityKeyIdentifier autKeyId = (issuerCertificate != null) 
+            ? exUtils.createAuthorityKeyIdentifier(new X509CertificateHolder(issuerCertificate.getEncoded()))
+            : exUtils.createAuthorityKeyIdentifier(subjectPublicKeyInfo);
+
+        certificateGenerator.addExtension(Extension.subjectKeyIdentifier, false, subKeyId);
+        certificateGenerator.addExtension(Extension.authorityKeyIdentifier, false, autKeyId);
 
         if (caFlag) {
             BasicConstraints bc;

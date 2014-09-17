@@ -1,0 +1,80 @@
+    @SuppressWarnings("deprecation")
+    private void setColumn(int targetColumnIx, Integer style,
+                           Integer level, Boolean hidden, Boolean collapsed) {
+        CTCols cols = worksheet.getColsArray(0);
+        CTCol ci = null;
+        for (CTCol tci : cols.getColArray()) {
+            long tciMin = tci.getMin();
+            long tciMax = tci.getMax();
+            if (tciMin >= targetColumnIx && tciMax <= targetColumnIx) {
+                ci = tci;
+                break;
+            }
+            if (tciMin > targetColumnIx) {
+                // call column infos after k are for later columns
+                break; // exit now so k will be the correct insert pos
+            }
+        }
+
+        if (ci == null) {
+            // okay so there ISN'T a column info record that covers this column
+            // so lets create one!
+            CTCol nci = CTCol.Factory.newInstance();
+            nci.setMin(targetColumnIx);
+            nci.setMax(targetColumnIx);
+            unsetCollapsed(collapsed, nci);
+            this.columnHelper.addCleanColIntoCols(cols, nci);
+            return;
+        }
+
+        boolean styleChanged = style != null && ci.getStyle() != style;
+        boolean levelChanged = level != null && ci.getOutlineLevel() != level;
+        boolean hiddenChanged = hidden != null && ci.getHidden() != hidden;
+        boolean collapsedChanged = collapsed != null && ci.getCollapsed() != collapsed;
+        boolean columnChanged = levelChanged || hiddenChanged || collapsedChanged || styleChanged;
+        if (!columnChanged) {
+            // do nothing...nothing changed.
+            return;
+        }
+
+        long ciMin = ci.getMin();
+        long ciMax = ci.getMax();
+        if (ciMin == targetColumnIx && ciMax == targetColumnIx) {
+            // ColumnInfo ci for a single column, the target column
+            unsetCollapsed(collapsed, ci);
+            return;
+        }
+
+        if (ciMin == targetColumnIx || ciMax == targetColumnIx) {
+            // The target column is at either end of the multi-column ColumnInfo
+            // ci
+            // we'll just divide the info and create a new one
+            if (ciMin == targetColumnIx) {
+                ci.setMin(targetColumnIx + 1);
+            } else {
+                ci.setMax(targetColumnIx - 1);
+            }
+            CTCol nci = columnHelper.cloneCol(cols, ci);
+            nci.setMin(targetColumnIx);
+            unsetCollapsed(collapsed, nci);
+            this.columnHelper.addCleanColIntoCols(cols, nci);
+
+        } else {
+            // split to 3 records
+            CTCol ciMid = columnHelper.cloneCol(cols, ci);
+            CTCol ciEnd = columnHelper.cloneCol(cols, ci);
+            int lastcolumn = (int) ciMax;
+
+            ci.setMax(targetColumnIx - 1);
+
+            ciMid.setMin(targetColumnIx);
+            ciMid.setMax(targetColumnIx);
+            unsetCollapsed(collapsed, ciMid);
+            this.columnHelper.addCleanColIntoCols(cols, ciMid);
+
+            ciEnd.setMin(targetColumnIx + 1);
+            ciEnd.setMax(lastcolumn);
+            this.columnHelper.addCleanColIntoCols(cols, ciEnd);
+        }
+    }
+

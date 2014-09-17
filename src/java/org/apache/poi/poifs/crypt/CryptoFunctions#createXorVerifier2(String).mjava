@@ -15,11 +15,11 @@
         byte[] generatedKey = new byte[4];
 
         //Maximum length of the password is 15 chars.
-        final int intMaxPasswordLength = 15; 
+        final int maxPasswordLength = 15; 
         
         if (!"".equals(password)) {
             // Truncate the password to 15 characters
-            password = password.substring(0, Math.min(password.length(), intMaxPasswordLength));
+            password = password.substring(0, Math.min(password.length(), maxPasswordLength));
 
             // Construct a new NULL-terminated string consisting of single-byte characters:
             //  -- > Get the single-byte values by iterating through the Unicode characters of the truncated Password.
@@ -43,7 +43,7 @@
             //          the most significant, if the bit is set, XOR the keys high-order word with the corresponding word from 
             //          the Encryption Matrix
             for (int i = 0; i < arrByteChars.length; i++) {
-                int tmp = intMaxPasswordLength - arrByteChars.length + i;
+                int tmp = maxPasswordLength - arrByteChars.length + i;
                 for (int intBit = 0; intBit < 7; intBit++) {
                     if ((arrByteChars[i] & (0x0001 << intBit)) != 0) {
                         highOrderWord ^= EncryptionMatrix[tmp][intBit];
@@ -53,22 +53,28 @@
             
             // Compute the low-order word of the new key:
             
-            // Initialize with 0
-            int lowOrderWord = 0;
+            // SET Verifier TO 0x0000
+            short verifier = 0;
 
-            // For each character in the password, going backwards
-            for (int i = arrByteChars.length - 1; i >= 0; i--) {
-                // low-order word = (((low-order word SHR 14) AND 0x0001) OR (low-order word SHL 1) AND 0x7FFF)) XOR character
-                lowOrderWord = (((lowOrderWord >> 14) & 0x0001) | ((lowOrderWord << 1) & 0x7FFF)) ^ arrByteChars[i];
+            // FOR EACH PasswordByte IN PasswordArray IN REVERSE ORDER
+            for (int i = arrByteChars.length-1; i >= 0; i--) {
+                // SET Verifier TO Intermediate3 BITWISE XOR PasswordByte
+                verifier = rotateLeftBase15Bit(verifier);
+                verifier ^= arrByteChars[i];
             }
 
-            // Lastly,low-order word = (((low-order word SHR 14) AND 0x0001) OR (low-order word SHL 1) AND 0x7FFF)) XOR password length XOR 0xCE4B.
-            lowOrderWord = (((lowOrderWord >> 14) & 0x0001) | ((lowOrderWord << 1) & 0x7FFF)) ^ arrByteChars.length ^ 0xCE4B;
+            // as we haven't prepended the password length into the input array
+            // we need to do it now separately ...
+            verifier = rotateLeftBase15Bit(verifier);
+            verifier ^= arrByteChars.length;
+            
+            // RETURN Verifier BITWISE XOR 0xCE4B
+            verifier ^= 0xCE4B; // (0x8000 | ('N' << 8) | 'K')
 
             // The byte order of the result shall be reversed [password "Example": 0x64CEED7E becomes 7EEDCE64],
             // and that value shall be hashed as defined by the attribute values.
             
-            LittleEndian.putShort(generatedKey, 0, (short)lowOrderWord);
+            LittleEndian.putShort(generatedKey, 0, verifier);
             LittleEndian.putShort(generatedKey, 2, (short)highOrderWord);
         }
         

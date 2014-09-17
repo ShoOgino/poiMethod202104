@@ -1,0 +1,41 @@
+    @Test
+    public void testThemesTableColors() throws Exception {
+        XSSFWorkbook workbook = XSSFTestDataSamples.openSampleWorkbook(testFile);
+        String rgbExpected[] = {
+            "ffffff", // Lt1
+            "000000", // Dk1
+            "eeece1", // Lt2
+            "1f497d", // DK2
+            "4f81bd", // Accent1
+            "c0504d", // Accent2
+            "9bbb59", // Accent3
+            "8064a2", // Accent4
+            "4bacc6", // Accent5
+            "f79646", // Accent6
+            "0000ff", // Hlink
+            "800080"  // FolHlink
+        };
+        boolean createFile = false;
+        int i=0;
+        for (Row row : workbook.getSheetAt(0)) {
+            XSSFFont font = ((XSSFRow)row).getCell(0).getCellStyle().getFont();
+            XSSFColor color = font.getXSSFColor();
+            assertEquals("Failed color theme "+i, rgbExpected[i], Hex.encodeHexString(color.getRgb()));
+            long themeIdx = font.getCTFont().getColorArray(0).getTheme();
+            assertEquals("Failed color theme "+i, i, themeIdx);
+            if (createFile) {
+                XSSFCellStyle cs = (XSSFCellStyle)row.getSheet().getWorkbook().createCellStyle();
+                cs.setFillForegroundColor(color);
+                cs.setFillPattern(CellStyle.SOLID_FOREGROUND);
+                row.createCell(1).setCellStyle(cs);
+            }
+            i++;
+        }
+        
+        if (createFile) {
+            FileOutputStream fos = new FileOutputStream("foobaa.xlsx");
+            workbook.write(fos);
+            fos.close();
+        }
+    }
+
