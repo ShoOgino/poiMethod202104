@@ -26,7 +26,7 @@
         // SigningTime
         Calendar xmlGregorianCalendar = Calendar.getInstance();
         xmlGregorianCalendar.setTimeZone(TimeZone.getTimeZone("Z"));
-        xmlGregorianCalendar.setTime(this.clock);
+        xmlGregorianCalendar.setTime(this.signatureConfig.getExecutionTime());
         xmlGregorianCalendar.clear(Calendar.MILLISECOND);
         signedSignatureProperties.setSigningTime(xmlGregorianCalendar);
 
@@ -38,7 +38,7 @@
         CertIDListType signingCertificates = signedSignatureProperties.addNewSigningCertificate();
         CertIDType certId = signingCertificates.addNewCert();
         X509Certificate signingCertificate = signingCertificateChain.get(0);
-        setCertID(certId, signingCertificate, this.hashAlgo, this.issuerNameNoReverseOrder);
+        setCertID(certId, signingCertificate, this.signatureConfig.getDigestAlgo(), this.issuerNameNoReverseOrder);
 
         // ClaimedRole
         if (null != this.role && false == this.role.isEmpty()) {
@@ -52,24 +52,24 @@
         }
 
         // XAdES-EPES
-        if (null != this.signaturePolicyService) {
+        SignaturePolicyService policyService = this.signatureConfig.getSignaturePolicyService();
+        if (policyService != null) {
             SignaturePolicyIdentifierType signaturePolicyIdentifier =
                 signedSignatureProperties.addNewSignaturePolicyIdentifier();
             
             SignaturePolicyIdType signaturePolicyId = signaturePolicyIdentifier.addNewSignaturePolicyId();
 
             ObjectIdentifierType objectIdentifier = signaturePolicyId.addNewSigPolicyId();
-            objectIdentifier.setDescription(this.signaturePolicyService.getSignaturePolicyDescription());
+            objectIdentifier.setDescription(policyService.getSignaturePolicyDescription());
             
             IdentifierType identifier = objectIdentifier.addNewIdentifier();
-            identifier.setStringValue(this.signaturePolicyService.getSignaturePolicyIdentifier());
+            identifier.setStringValue(policyService.getSignaturePolicyIdentifier());
 
-            byte[] signaturePolicyDocumentData = this.signaturePolicyService.getSignaturePolicyDocument();
+            byte[] signaturePolicyDocumentData = policyService.getSignaturePolicyDocument();
             DigestAlgAndValueType sigPolicyHash = signaturePolicyId.addNewSigPolicyHash();
-            setDigestAlgAndValue(sigPolicyHash, signaturePolicyDocumentData, this.hashAlgo);
+            setDigestAlgAndValue(sigPolicyHash, signaturePolicyDocumentData, this.signatureConfig.getDigestAlgo());
 
-            String signaturePolicyDownloadUrl = this.signaturePolicyService
-                    .getSignaturePolicyDownloadUrl();
+            String signaturePolicyDownloadUrl = policyService.getSignaturePolicyDownloadUrl();
             if (null != signaturePolicyDownloadUrl) {
                 SigPolicyQualifiersListType sigPolicyQualifiers = signaturePolicyId.addNewSigPolicyQualifiers(); 
                 AnyType sigPolicyQualifier = sigPolicyQualifiers.addNewSigPolicyQualifier();
@@ -113,7 +113,7 @@
         objects.add(xadesObject);
 
         // add XAdES ds:Reference
-        DigestMethod digestMethod = signatureFactory.newDigestMethod(hashAlgo.xmlSignUri, null);
+        DigestMethod digestMethod = signatureFactory.newDigestMethod(this.signatureConfig.getDigestAlgo().xmlSignUri, null);
         List<Transform> transforms = new ArrayList<Transform>();
         Transform exclusiveTransform = signatureFactory
                 .newTransform(CanonicalizationMethod.INCLUSIVE,

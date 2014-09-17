@@ -1,13 +1,20 @@
     private OPCPackage sign(OPCPackage pkgCopy, String alias, String signerDn, int signerCount) throws Exception {
-        XmlSignatureService signatureService = new XmlSignatureService(HashAlgorithm.sha1, pkgCopy);
-        signatureService.initFacets(cal.getTime());
         initKeyPair(alias, signerDn);
+
+        SignatureInfoConfig signatureConfig = new SignatureInfoConfig();
+        signatureConfig.setKey(keyPair.getPrivate());
+        signatureConfig.setSigningCertificateChain(Collections.singletonList(x509));
+        signatureConfig.setExecutionTime(cal.getTime());
+        signatureConfig.setDigestAlgo(HashAlgorithm.sha1);
+        signatureConfig.setOpcPackage(pkgCopy);
+        signatureConfig.addDefaultFacets();
+        
+        XmlSignatureService signatureService = new XmlSignatureService(signatureConfig);
 
         Document document = DocumentHelper.createDocument();
 
         // operate
-        List<X509Certificate> x509Chain = Collections.singletonList(x509);
-        DigestInfo digestInfo = signatureService.preSign(document, null, keyPair.getPrivate(), x509Chain, null, null, null);
+        DigestInfo digestInfo = signatureService.preSign(document, null);
 
         // verify
         assertNotNull(digestInfo);
@@ -21,7 +28,7 @@
         byte[] signatureValue = SignatureInfo.signDigest(keyPair.getPrivate(), HashAlgorithm.sha1, digestInfo.digestValue);
         
         // operate: postSign
-        signatureService.postSign(document, signatureValue, Collections.singletonList(x509));
+        signatureService.postSign(document, signatureValue);
 
         // verify: signature
         SignatureInfo si = new SignatureInfo(pkgCopy);

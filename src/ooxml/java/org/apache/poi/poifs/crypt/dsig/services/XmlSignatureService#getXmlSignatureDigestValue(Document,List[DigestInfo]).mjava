@@ -1,8 +1,5 @@
     @SuppressWarnings("unchecked")
-    private byte[] getXmlSignatureDigestValue(Document document, HashAlgorithm hashAlgo,
-        List<DigestInfo> digestInfos,
-        PrivateKey privateKey,
-        List<X509Certificate> signingCertificateChain)
+    private byte[] getXmlSignatureDigestValue(Document document, List<DigestInfo> digestInfos)
         throws ParserConfigurationException, NoSuchAlgorithmException,
         InvalidAlgorithmParameterException, MarshalException,
         javax.xml.crypto.dsig.XMLSignatureException,
@@ -33,8 +30,8 @@
         /*
          * Signature context construction.
          */
-        XMLSignContext xmlSignContext = new DOMSignContext(privateKey, document);
-        URIDereferencer uriDereferencer = getURIDereferencer();
+        XMLSignContext xmlSignContext = new DOMSignContext(this.signatureConfig.getKey(), document);
+        URIDereferencer uriDereferencer = this.signatureConfig.getUriDereferencer();
         if (null != uriDereferencer) {
             xmlSignContext.setURIDereferencer(uriDereferencer);
         }
@@ -66,15 +63,15 @@
             localSignatureId = "xmldsig-" + UUID.randomUUID().toString();
         }
         List<XMLObject> objects = new ArrayList<XMLObject>();
-        for (SignatureFacet signatureFacet : this.signatureFacets) {
+        for (SignatureFacet signatureFacet : this.signatureConfig.getSignatureFacets()) {
             LOG.log(POILogger.DEBUG, "invoking signature facet: " + signatureFacet.getClass().getSimpleName());
-            signatureFacet.preSign(document, signatureFactory, localSignatureId, signingCertificateChain, references, objects);
+            signatureFacet.preSign(document, signatureFactory, localSignatureId, this.signatureConfig.getSigningCertificateChain(), references, objects);
         }
 
         /*
          * ds:SignedInfo
          */
-        SignatureMethod signatureMethod = signatureFactory.newSignatureMethod(getSignatureMethod(hashAlgo), null);
+        SignatureMethod signatureMethod = signatureFactory.newSignatureMethod(getSignatureMethod(this.signatureConfig.getDigestAlgo()), null);
         CanonicalizationMethod canonicalizationMethod = signatureFactory
             .newCanonicalizationMethod(getCanonicalizationMethod(),
             (C14NMethodParameterSpec) null);
@@ -144,7 +141,7 @@
          * usage.
          */
 
-        MessageDigest jcaMessageDigest = CryptoFunctions.getMessageDigest(hashAlgo);
+        MessageDigest jcaMessageDigest = CryptoFunctions.getMessageDigest(this.signatureConfig.getDigestAlgo());
         byte[] digestValue = jcaMessageDigest.digest(octets);
         return digestValue;
     }
