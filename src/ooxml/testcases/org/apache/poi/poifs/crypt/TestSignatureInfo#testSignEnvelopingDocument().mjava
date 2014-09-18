@@ -21,7 +21,7 @@
         certificateChain.add(x509);
         signatureConfig.setSigningCertificateChain(certificateChain);
         
-        signatureConfig.addSignatureFacet(new EnvelopedSignatureFacet());
+        signatureConfig.addSignatureFacet(new EnvelopedSignatureFacet(signatureConfig));
         signatureConfig.addSignatureFacet(new KeyInfoSignatureFacet(true, false, false));
         signatureConfig.addSignatureFacet(new XAdESSignatureFacet(signatureConfig));
         
@@ -72,12 +72,13 @@
 
         XAdESXLSignatureFacet xadesXLSignatureFacet = new XAdESXLSignatureFacet(
                 timeStampService, revocationDataService);
-        XmlSignatureService testedInstance = new XmlSignatureService(signatureConfig);
+        SignatureInfo si = new SignatureInfo();
+        si.setSignatureConfig(signatureConfig);
         
         Document document = DocumentHelper.createDocument();
         
         // operate
-        DigestInfo digestInfo = testedInstance.preSign(document, null);
+        DigestInfo digestInfo = si.preSign(document, null);
 
         // verify
         assertNotNull(digestInfo);
@@ -95,10 +96,10 @@
         assertNotNull(certDigest.getDigestValue());
 
         // Sign the received XML signature digest value.
-        byte[] signatureValue = SignatureInfo.signDigest(keyPair.getPrivate(), HashAlgorithm.sha1, digestInfo.digestValue);
+        byte[] signatureValue = si.signDigest(digestInfo.digestValue);
 
         // Operate: postSign
-        testedInstance.postSign(document, signatureValue);
+        si.postSign(document, signatureValue);
         
         DOMValidateContext domValidateContext = new DOMValidateContext(
                 KeySelector.singletonKeySelector(keyPair.getPublic()),

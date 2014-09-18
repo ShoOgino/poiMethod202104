@@ -9,12 +9,13 @@
         signatureConfig.setOpcPackage(pkgCopy);
         signatureConfig.addDefaultFacets();
         
-        XmlSignatureService signatureService = new XmlSignatureService(signatureConfig);
+        SignatureInfo si = new SignatureInfo();
+        si.setSignatureConfig(signatureConfig);
 
         Document document = DocumentHelper.createDocument();
 
         // operate
-        DigestInfo digestInfo = signatureService.preSign(document, null);
+        DigestInfo digestInfo = si.preSign(document, null);
 
         // verify
         assertNotNull(digestInfo);
@@ -25,13 +26,13 @@
         assertNotNull(digestInfo.digestValue);
 
         // setup: key material, signature value
-        byte[] signatureValue = SignatureInfo.signDigest(keyPair.getPrivate(), HashAlgorithm.sha1, digestInfo.digestValue);
+        byte[] signatureValue = si.signDigest(digestInfo.digestValue);
         
         // operate: postSign
-        signatureService.postSign(document, signatureValue);
+        si.postSign(document, signatureValue);
 
         // verify: signature
-        SignatureInfo si = new SignatureInfo(pkgCopy);
+        si.getSignatureConfig().setOpcPackage(pkgCopy);
         List<X509Certificate> signers = si.getSigners();
         assertEquals(signerCount, signers.size());
 

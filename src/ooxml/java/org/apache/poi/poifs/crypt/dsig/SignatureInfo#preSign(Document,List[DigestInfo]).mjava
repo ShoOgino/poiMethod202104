@@ -1,11 +1,12 @@
     @SuppressWarnings("unchecked")
-    private byte[] getXmlSignatureDigestValue(Document document, List<DigestInfo> digestInfos)
+    public DigestInfo preSign(Document document, List<DigestInfo> digestInfos)
         throws ParserConfigurationException, NoSuchAlgorithmException,
         InvalidAlgorithmParameterException, MarshalException,
         javax.xml.crypto.dsig.XMLSignatureException,
         TransformerFactoryConfigurationError, TransformerException,
         IOException, SAXException, NoSuchProviderException, XmlException, URISyntaxException {
-
+        SignatureInfo.initXmlProvider();
+        
         // it's necessary to explicitly set the mdssi namespace, but the sign() method has no
         // normal way to interfere with, so we need to add the namespace under the hand ...
         final EventTarget et = (EventTarget)document;
@@ -30,8 +31,8 @@
         /*
          * Signature context construction.
          */
-        XMLSignContext xmlSignContext = new DOMSignContext(this.signatureConfig.getKey(), document);
-        URIDereferencer uriDereferencer = this.signatureConfig.getUriDereferencer();
+        XMLSignContext xmlSignContext = new DOMSignContext(signatureConfig.getKey(), document);
+        URIDereferencer uriDereferencer = signatureConfig.getUriDereferencer();
         if (null != uriDereferencer) {
             xmlSignContext.setURIDereferencer(uriDereferencer);
         }
@@ -40,11 +41,12 @@
                 "http://schemas.openxmlformats.org/package/2006/digital-signature",
                 "mdssi");
         
-        if (this.signatureNamespacePrefix != null) {
+        String sigNsPrefix = signatureConfig.getSignatureNamespacePrefix();
+        if (sigNsPrefix != null) {
             /*
              * OOo doesn't like ds namespaces so per default prefixing is off.
              */
-            xmlSignContext.putNamespacePrefix(XmlDSigNS, this.signatureNamespacePrefix);
+            xmlSignContext.putNamespacePrefix(XmlDSigNS, sigNsPrefix);
         }
 
         XMLSignatureFactory signatureFactory = SignatureInfo.getSignatureFactory();
@@ -53,27 +55,34 @@
          * Add ds:References that come from signing client local files.
          */
         List<Reference> references = new ArrayList<Reference>();
-        addDigestInfosAsReferences(digestInfos, signatureFactory, references);
+        for (DigestInfo digestInfo : safe(digestInfos)) {
+            byte[] documentDigestValue = digestInfo.digestValue;
+
+            DigestMethod digestMethod = signatureFactory.newDigestMethod(
+                            digestInfo.hashAlgo.xmlSignUri, null);
+
+            String uri = new File(digestInfo.description).getName();
+
+            Reference reference = signatureFactory.newReference
+                (uri, digestMethod, null, null, null, documentDigestValue);
+            references.add(reference);
+        }
 
         /*
          * Invoke the signature facets.
          */
-        String localSignatureId = this.signatureId;
-        if (localSignatureId == null) {
-            localSignatureId = "xmldsig-" + UUID.randomUUID().toString();
-        }
         List<XMLObject> objects = new ArrayList<XMLObject>();
-        for (SignatureFacet signatureFacet : this.signatureConfig.getSignatureFacets()) {
+        for (SignatureFacet signatureFacet : signatureConfig.getSignatureFacets()) {
             LOG.log(POILogger.DEBUG, "invoking signature facet: " + signatureFacet.getClass().getSimpleName());
-            signatureFacet.preSign(document, signatureFactory, localSignatureId, this.signatureConfig.getSigningCertificateChain(), references, objects);
+            signatureFacet.preSign(document, signatureFactory, references, objects);
         }
 
         /*
          * ds:SignedInfo
          */
-        SignatureMethod signatureMethod = signatureFactory.newSignatureMethod(getSignatureMethod(this.signatureConfig.getDigestAlgo()), null);
+        SignatureMethod signatureMethod = signatureFactory.newSignatureMethod(getSignatureMethod(), null);
         CanonicalizationMethod canonicalizationMethod = signatureFactory
-            .newCanonicalizationMethod(getCanonicalizationMethod(),
+            .newCanonicalizationMethod(signatureConfig.getCanonicalizationMethod(),
             (C14NMethodParameterSpec) null);
         SignedInfo signedInfo = signatureFactory.newSignedInfo(
             canonicalizationMethod, signatureMethod, references);
@@ -81,15 +90,15 @@
         /*
          * JSR105 ds:Signature creation
          */
-        String signatureValueId = localSignatureId + "-signature-value";
+        String signatureValueId = signatureConfig.getPackageSignatureId() + "-signature-value";
         javax.xml.crypto.dsig.XMLSignature xmlSignature = signatureFactory
-            .newXMLSignature(signedInfo, null, objects, localSignatureId,
+            .newXMLSignature(signedInfo, null, objects, signatureConfig.getPackageSignatureId(),
             signatureValueId);
 
         /*
          * ds:Signature Marshalling.
          */
-        xmlSignContext.setDefaultNamespacePrefix(this.signatureNamespacePrefix);
+        xmlSignContext.setDefaultNamespacePrefix(signatureConfig.getSignatureNamespacePrefix());
         // xmlSignContext.putNamespacePrefix(PackageNamespaces.DIGITAL_SIGNATURE, "mdssi");
         xmlSignature.sign(xmlSignContext);
 
@@ -141,8 +150,11 @@
          * usage.
          */
 
-        MessageDigest jcaMessageDigest = CryptoFunctions.getMessageDigest(this.signatureConfig.getDigestAlgo());
+        MessageDigest jcaMessageDigest = CryptoFunctions.getMessageDigest(signatureConfig.getDigestAlgo());
         byte[] digestValue = jcaMessageDigest.digest(octets);
-        return digestValue;
+        
+        
+        String description = signatureConfig.getSignatureDescription();
+        return new DigestInfo(digestValue, signatureConfig.getDigestAlgo(), description);
     }
 
