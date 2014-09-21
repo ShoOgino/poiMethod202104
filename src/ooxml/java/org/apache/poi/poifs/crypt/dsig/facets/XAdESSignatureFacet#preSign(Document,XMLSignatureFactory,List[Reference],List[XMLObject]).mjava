@@ -12,11 +12,7 @@
         
         // SignedProperties
         SignedPropertiesType signedProperties = qualifyingProperties.addNewSignedProperties();
-        String signedPropertiesId = this.idSignedProperties;
-        if (this.idSignedProperties == null) {
-            signedPropertiesId = signatureConfig.getPackageSignatureId() + "-xades";
-        }
-        signedProperties.setId(signedPropertiesId);
+        signedProperties.setId(signatureConfig.getXadesSignatureId());
 
         // SignedSignatureProperties
         SignedSignaturePropertiesType signedSignatureProperties = signedProperties.addNewSignedSignatureProperties();
@@ -24,7 +20,7 @@
         // SigningTime
         Calendar xmlGregorianCalendar = Calendar.getInstance();
         xmlGregorianCalendar.setTimeZone(TimeZone.getTimeZone("Z"));
-        xmlGregorianCalendar.setTime(this.signatureConfig.getExecutionTime());
+        xmlGregorianCalendar.setTime(signatureConfig.getExecutionTime());
         xmlGregorianCalendar.clear(Calendar.MILLISECOND);
         signedSignatureProperties.setSigningTime(xmlGregorianCalendar);
 
@@ -35,22 +31,23 @@
         }
         CertIDListType signingCertificates = signedSignatureProperties.addNewSigningCertificate();
         CertIDType certId = signingCertificates.addNewCert();
-        X509Certificate signingCertificate = signatureConfig.getSigningCertificateChain().get(0);
-        setCertID(certId, signingCertificate, this.signatureConfig.getDigestAlgo(), this.issuerNameNoReverseOrder);
+        X509Certificate certificate = signatureConfig.getSigningCertificateChain().get(0);
+        setCertID(certId, signatureConfig, signatureConfig.isXadesIssuerNameNoReverseOrder(), certificate);
 
         // ClaimedRole
-        if (null != this.role && false == this.role.isEmpty()) {
+        String role = signatureConfig.getXadesRole();
+        if (role != null && !role.isEmpty()) {
             SignerRoleType signerRole = signedSignatureProperties.addNewSignerRole();
             signedSignatureProperties.setSignerRole(signerRole);
             ClaimedRolesListType claimedRolesList = signerRole.addNewClaimedRoles();
             AnyType claimedRole = claimedRolesList.addNewClaimedRole();
             XmlString roleString = XmlString.Factory.newInstance();
-            roleString.setStringValue(this.role);
+            roleString.setStringValue(role);
             insertXChild(claimedRole, roleString);
         }
 
         // XAdES-EPES
-        SignaturePolicyService policyService = this.signatureConfig.getSignaturePolicyService();
+        SignaturePolicyService policyService = signatureConfig.getSignaturePolicyService();
         if (policyService != null) {
             SignaturePolicyIdentifierType signaturePolicyIdentifier =
                 signedSignatureProperties.addNewSignaturePolicyIdentifier();
@@ -65,7 +62,7 @@
 
             byte[] signaturePolicyDocumentData = policyService.getSignaturePolicyDocument();
             DigestAlgAndValueType sigPolicyHash = signaturePolicyId.addNewSigPolicyHash();
-            setDigestAlgAndValue(sigPolicyHash, signaturePolicyDocumentData, this.signatureConfig.getDigestAlgo());
+            setDigestAlgAndValue(sigPolicyHash, signaturePolicyDocumentData, signatureConfig.getDigestAlgo());
 
             String signaturePolicyDownloadUrl = policyService.getSignaturePolicyDownloadUrl();
             if (null != signaturePolicyDownloadUrl) {
@@ -75,14 +72,14 @@
                 spUriElement.setStringValue(signaturePolicyDownloadUrl);
                 insertXChild(sigPolicyQualifier, spUriElement);
             }
-        } else if (this.signaturePolicyImplied) {
+        } else if (signatureConfig.isXadesSignaturePolicyImplied()) {
             SignaturePolicyIdentifierType signaturePolicyIdentifier = 
                     signedSignatureProperties.addNewSignaturePolicyIdentifier();
             signaturePolicyIdentifier.addNewSignaturePolicyImplied();
         }
 
         // DataObjectFormat
-        if (false == this.dataObjectFormatMimeTypes.isEmpty()) {
+        if (!dataObjectFormatMimeTypes.isEmpty()) {
             SignedDataObjectPropertiesType signedDataObjectProperties =
                 signedProperties.addNewSignedDataObjectProperties();
 
@@ -111,15 +108,14 @@
         objects.add(xadesObject);
 
         // add XAdES ds:Reference
-        DigestMethod digestMethod = signatureFactory.newDigestMethod(this.signatureConfig.getDigestAlgo().xmlSignUri, null);
+        DigestMethod digestMethod = signatureFactory.newDigestMethod(signatureConfig.getDigestAlgo().xmlSignUri, null);
         List<Transform> transforms = new ArrayList<Transform>();
         Transform exclusiveTransform = signatureFactory
                 .newTransform(CanonicalizationMethod.INCLUSIVE,
                         (TransformParameterSpec) null);
         transforms.add(exclusiveTransform);
-        Reference reference = signatureFactory.newReference("#"
-                + signedPropertiesId, digestMethod, transforms, XADES_TYPE,
-                null);
+        Reference reference = signatureFactory.newReference
+            ("#"+signatureConfig.getXadesSignatureId(), digestMethod, transforms, XADES_TYPE, null);
         references.add(reference);
     }
 

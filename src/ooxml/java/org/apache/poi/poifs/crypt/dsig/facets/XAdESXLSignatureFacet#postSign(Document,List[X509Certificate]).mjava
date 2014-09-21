@@ -35,8 +35,8 @@
         
         RevocationData tsaRevocationDataXadesT = new RevocationData();
         LOG.log(POILogger.DEBUG, "creating XAdES-T time-stamp");
-        XAdESTimeStampType signatureTimeStamp = createXAdESTimeStamp(
-            Collections.singletonList(nlSigVal.item(0)), tsaRevocationDataXadesT, this.c14nAlgoId, this.timeStampService);
+        XAdESTimeStampType signatureTimeStamp = createXAdESTimeStamp
+            (Collections.singletonList(nlSigVal.item(0)), tsaRevocationDataXadesT);
 
         // marshal the XAdES-T extension
         unsignedSigProps.addNewSignatureTimeStamp().set(signatureTimeStamp);
@@ -47,7 +47,7 @@
             insertXChild(unsignedSigProps, validationData);
         }
 
-        if (null == this.revocationDataService) {
+        if (signatureConfig.getRevocationDataService() == null) {
             /*
              * Without revocation data service we cannot construct the XAdES-C
              * extension.
@@ -60,21 +60,23 @@
             unsignedSigProps.addNewCompleteCertificateRefs();
 
         CertIDListType certIdList = completeCertificateRefs.addNewCertRefs();
-        for (int certIdx = 1; certIdx < signingCertificateChain.size(); certIdx++) {
-            /*
-             * We skip the signing certificate itself according to section
-             * 4.4.3.2 of the XAdES 1.4.1 specification.
-             */
-            X509Certificate certificate = signingCertificateChain.get(certIdx);
-            CertIDType certId = certIdList.addNewCert();
-            XAdESSignatureFacet.setCertID(certId, certificate, this.hashAlgo, false);
+        /*
+         * We skip the signing certificate itself according to section
+         * 4.4.3.2 of the XAdES 1.4.1 specification.
+         */
+        int chainSize = signingCertificateChain.size();
+        if (chainSize > 1) {
+            for (X509Certificate cert : signingCertificateChain.subList(1, chainSize)) {
+                CertIDType certId = certIdList.addNewCert();
+                XAdESSignatureFacet.setCertID(certId, signatureConfig, false, cert);
+            }
         }
 
         // XAdES-C: complete revocation refs
         CompleteRevocationRefsType completeRevocationRefs = 
             unsignedSigProps.addNewCompleteRevocationRefs();
-        RevocationData revocationData = this.revocationDataService
-                .getRevocationData(signingCertificateChain);
+        RevocationData revocationData = signatureConfig.getRevocationDataService()
+            .getRevocationData(signingCertificateChain);
         if (revocationData.hasCRLs()) {
             CRLRefsType crlRefs = completeRevocationRefs.addNewCRLRefs();
             completeRevocationRefs.setCRLRefs(crlRefs);
@@ -99,7 +101,7 @@
                 crlIdentifier.setNumber(getCrlNumber(crl));
 
                 DigestAlgAndValueType digestAlgAndValue = crlRef.addNewDigestAlgAndValue();
-                XAdESSignatureFacet.setDigestAlgAndValue(digestAlgAndValue, encodedCrl, this.hashAlgo);
+                XAdESSignatureFacet.setDigestAlgAndValue(digestAlgAndValue, encodedCrl, signatureConfig.getDigestAlgo());
             }
         }
         if (revocationData.hasOCSPs()) {
@@ -109,7 +111,7 @@
                     OCSPRefType ocspRef = ocspRefs.addNewOCSPRef();
     
                     DigestAlgAndValueType digestAlgAndValue = ocspRef.addNewDigestAlgAndValue();
-                    XAdESSignatureFacet.setDigestAlgAndValue(digestAlgAndValue, ocsp, this.hashAlgo);
+                    XAdESSignatureFacet.setDigestAlgAndValue(digestAlgAndValue, ocsp, signatureConfig.getDigestAlgo());
     
                     OCSPIdentifierType ocspIdentifier = ocspRef.addNewOCSPIdentifier();
                     
@@ -152,9 +154,8 @@
 
         RevocationData tsaRevocationDataXadesX1 = new RevocationData();
         LOG.log(POILogger.DEBUG, "creating XAdES-X time-stamp");
-        XAdESTimeStampType timeStampXadesX1 = createXAdESTimeStamp(
-                timeStampNodesXadesX1, tsaRevocationDataXadesX1,
-                this.c14nAlgoId, this.timeStampService);
+        XAdESTimeStampType timeStampXadesX1 = createXAdESTimeStamp
+            (timeStampNodesXadesX1, tsaRevocationDataXadesX1);
         if (tsaRevocationDataXadesX1.hasRevocationDataEntries()) {
             ValidationDataType timeStampXadesX1ValidationData = createValidationData(tsaRevocationDataXadesX1);
             insertXChild(unsignedSigProps, timeStampXadesX1ValidationData);

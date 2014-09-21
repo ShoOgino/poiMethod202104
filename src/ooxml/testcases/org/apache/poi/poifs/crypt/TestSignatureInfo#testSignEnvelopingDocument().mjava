@@ -8,7 +8,7 @@
         final X509CRL crl = PkiTestUtils.generateCrl(x509, keyPair.getPrivate());
         
         // setup
-        SignatureInfoConfig signatureConfig = new SignatureInfoConfig();
+        SignatureConfig signatureConfig = new SignatureConfig();
         signatureConfig.setOpcPackage(pkg);
         signatureConfig.setKey(keyPair.getPrivate());
 
@@ -21,23 +21,26 @@
         certificateChain.add(x509);
         signatureConfig.setSigningCertificateChain(certificateChain);
         
-        signatureConfig.addSignatureFacet(new EnvelopedSignatureFacet(signatureConfig));
-        signatureConfig.addSignatureFacet(new KeyInfoSignatureFacet(true, false, false));
-        signatureConfig.addSignatureFacet(new XAdESSignatureFacet(signatureConfig));
+        signatureConfig.addSignatureFacet(new EnvelopedSignatureFacet());
+        signatureConfig.addSignatureFacet(new KeyInfoSignatureFacet());
+        signatureConfig.addSignatureFacet(new XAdESSignatureFacet());
+        signatureConfig.addSignatureFacet(new XAdESXLSignatureFacet());
         
-
+        boolean mockTsp = false;
         // http://timestamping.edelweb.fr/service/tsp
         // http://tsa.belgium.be/connect
-        String tspServiceUrl = "http://timestamping.edelweb.fr/service/tsp";
+        signatureConfig.setTspUrl("http://timestamping.edelweb.fr/service/tsp");
+        signatureConfig.setTspOldProtocol(true);
 
-        TimeStampService timeStampService;
-        if (tspServiceUrl == null) {
-            timeStampService = new TimeStampService(){
+        if (mockTsp) {
+            TimeStampService tspService = new TimeStampService(){
                 public byte[] timeStamp(byte[] data, RevocationData revocationData) throws Exception {
                     revocationData.addCRL(crl);
                     return "time-stamp-token".getBytes();                
                 }
+                public void setSignatureConfig(SignatureConfig config) {}
             };
+            signatureConfig.setTspService(tspService);
         } else {
             TimeStampServiceValidator tspValidator = new TimeStampServiceValidator() {
                 @Override
@@ -49,13 +52,8 @@
                     }
                 }
             };
-            
-            TSPTimeStampService tspService = new TSPTimeStampService(tspServiceUrl, tspValidator);
-            if (tspServiceUrl.contains("edelweb")) {
-                tspService.setRequestContentType("application/timestamp-request");
-                tspService.setResponseContentType("application/timestamp-response");
-            }
-            timeStampService = tspService;
+            signatureConfig.setTspValidator(tspValidator);
+            signatureConfig.setTspOldProtocol(signatureConfig.getTspUrl().contains("edelweb"));
         }
         
         final RevocationData revocationData = new RevocationData();
@@ -69,9 +67,8 @@
                 return revocationData;
             }
         };
+        signatureConfig.setRevocationDataService(revocationDataService);
 
-        XAdESXLSignatureFacet xadesXLSignatureFacet = new XAdESXLSignatureFacet(
-                timeStampService, revocationDataService);
         SignatureInfo si = new SignatureInfo();
         si.setSignatureConfig(signatureConfig);
         

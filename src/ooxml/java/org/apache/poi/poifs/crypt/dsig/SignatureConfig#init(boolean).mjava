@@ -1,0 +1,41 @@
+    protected void init(boolean onlyValidation) {
+        if (uriDereferencer == null) {
+            throw new EncryptedDocumentException("uriDereferencer is null");
+        }
+        if (opcPackage == null) {
+            throw new EncryptedDocumentException("opcPackage is null");
+        }
+        if (uriDereferencer instanceof SignatureConfigurable) {
+            ((SignatureConfigurable)uriDereferencer).setSignatureConfig(this);
+        }
+        if (onlyValidation) return;
+
+        if (signCreationListener == null) {
+            signCreationListener = new SignCreationListener();
+        }
+        
+        if (signCreationListener instanceof SignatureConfigurable) {
+            ((SignatureConfigurable)signCreationListener).setSignatureConfig(this);
+        }
+
+        
+        if (tspService != null) {
+            tspService.setSignatureConfig(this);
+        }
+        
+        if (xadesSignatureId == null || xadesSignatureId.isEmpty()) {
+            xadesSignatureId = "idSignedProperties";
+        }
+
+        if (signatureFacets.isEmpty()) {
+            addSignatureFacet(new OOXMLSignatureFacet());
+            addSignatureFacet(new KeyInfoSignatureFacet());
+            addSignatureFacet(new XAdESSignatureFacet());
+            addSignatureFacet(new Office2010SignatureFacet());
+        }
+
+        for (SignatureFacet sf : signatureFacets) {
+            sf.setSignatureConfig(this);
+        }
+    }
+

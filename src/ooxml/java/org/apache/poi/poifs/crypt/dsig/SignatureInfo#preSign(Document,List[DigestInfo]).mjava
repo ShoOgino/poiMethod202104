@@ -6,27 +6,18 @@
         TransformerFactoryConfigurationError, TransformerException,
         IOException, SAXException, NoSuchProviderException, XmlException, URISyntaxException {
         SignatureInfo.initXmlProvider();
+        signatureConfig.init(false);
         
         // it's necessary to explicitly set the mdssi namespace, but the sign() method has no
         // normal way to interfere with, so we need to add the namespace under the hand ...
-        final EventTarget et = (EventTarget)document;
-        EventListener myModificationListener = new EventListener() {
-            @Override
-            public void handleEvent(Event e) {
-                if (e instanceof MutationEvent) {
-                    MutationEvent mutEvt = (MutationEvent)e;
-                    if (mutEvt.getTarget() instanceof Element) {
-                        Element el = (Element)mutEvt.getTarget();
-                        if ("idPackageObject".equals(el.getAttribute("Id"))) {
-                            et.removeEventListener("DOMSubtreeModified", this, false);
-                            el.setAttributeNS(XmlNS, "xmlns:mdssi", PackageNamespaces.DIGITAL_SIGNATURE);
-                        }
-                    }
-                }
+        EventTarget target = (EventTarget)document;
+        EventListener creationListener = signatureConfig.getSignCreationListener();
+        if (creationListener != null) {
+            if (creationListener instanceof SignCreationListener) {
+                ((SignCreationListener)creationListener).setEventTarget(target);
             }
-        };
-        
-        et.addEventListener("DOMSubtreeModified", myModificationListener, false);
+            target.addEventListener("DOMSubtreeModified", creationListener, false);
+        }
         
         /*
          * Signature context construction.
