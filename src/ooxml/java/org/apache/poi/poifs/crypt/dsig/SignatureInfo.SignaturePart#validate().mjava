@@ -1,16 +1,5 @@
-    protected boolean getSignersAndValidate(List<X509Certificate> signers, boolean onlyFirst) {
-        signatureConfig.init(true);
-        
-        boolean allValid = true;
-        List<PackagePart> signatureParts = getSignatureParts(onlyFirst);
-        if (signatureParts.isEmpty()) {
-            LOG.log(POILogger.DEBUG, "no signature resources");
-            allValid = false;
-        }
-
-        for (PackagePart signaturePart : signatureParts) {
+        public boolean validate() {
             KeyInfoKeySelector keySelector = new KeyInfoKeySelector();
-
             try {
                 Document doc = DocumentHelper.readDocument(signaturePart.getInputStream());
                 registerIds(doc);
@@ -21,19 +10,16 @@
     
                 XMLSignatureFactory xmlSignatureFactory = getSignatureFactory();
                 XMLSignature xmlSignature = xmlSignatureFactory.unmarshalXMLSignature(domValidateContext);
-                boolean validity = xmlSignature.validate(domValidateContext);
-                allValid &= validity;
-                if (!validity) continue;
-                // TODO: check what has been signed.
+                boolean valid = xmlSignature.validate(domValidateContext);
+
+                if (valid) {
+                    signer = keySelector.getCertificate();
+                }
+                
+                return valid;
             } catch (Exception e) {
                 LOG.log(POILogger.ERROR, "error in marshalling and validating the signature", e);
-                continue;
+                return false;
             }
-
-            X509Certificate signer = keySelector.getCertificate();
-            signers.add(signer);
         }
-        
-        return allValid;
-    }
 

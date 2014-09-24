@@ -1,4 +1,3 @@
-    @SuppressWarnings("unused")
     @Test
     public void testSignEnvelopingDocument() throws Exception {
         String testFile = "hello-world-unsigned.xlsx";
@@ -69,60 +68,45 @@
         };
         signatureConfig.setRevocationDataService(revocationDataService);
 
+        // operate
         SignatureInfo si = new SignatureInfo();
         si.setSignatureConfig(signatureConfig);
+        si.confirmSignature();
         
-        Document document = DocumentHelper.createDocument();
-        
-        // operate
-        DigestInfo digestInfo = si.preSign(document, null);
-
         // verify
-        assertNotNull(digestInfo);
-        assertEquals(HashAlgorithm.sha1, digestInfo.hashAlgo);
-        assertNotNull(digestInfo.digestValue);
+        Iterator<SignaturePart> spIter = si.getSignatureParts().iterator();
+        assertTrue(spIter.hasNext());
+        SignaturePart sp = spIter.next();
+        boolean valid = sp.validate();
+        assertTrue(valid);
         
-        SignatureDocument sigDoc = SignatureDocument.Factory.parse(document);
-        String certDigestXQuery =
-                "declare namespace xades='http://uri.etsi.org/01903/v1.3.2#'; "
-              + "declare namespace ds='http://www.w3.org/2000/09/xmldsig#'; "
-              + "$this/ds:Signature/ds:Object/xades:QualifyingProperties/xades:SignedProperties/xades:SignedSignatureProperties/xades:SigningCertificate/xades:Cert/xades:CertDigest";
+        SignatureDocument sigDoc = sp.getSignatureDocument();
+        String declareNS = 
+            "declare namespace xades='http://uri.etsi.org/01903/v1.3.2#'; "
+          + "declare namespace ds='http://www.w3.org/2000/09/xmldsig#'; ";
+        
+        String digestValXQuery = declareNS +
+            "$this/ds:Signature/ds:SignedInfo/ds:Reference";
+        for (ReferenceType rt : (ReferenceType[])sigDoc.selectPath(digestValXQuery)) {
+            assertNotNull(rt.getDigestValue());
+            assertEquals(HashAlgorithm.sha1.xmlSignUri, rt.getDigestMethod().getAlgorithm());
+        }
+
+        String certDigestXQuery = declareNS +
+            "$this//xades:SigningCertificate/xades:Cert/xades:CertDigest";
         XmlObject xoList[] = sigDoc.selectPath(certDigestXQuery);
         assertEquals(xoList.length, 1);
         DigestAlgAndValueType certDigest = (DigestAlgAndValueType)xoList[0];
         assertNotNull(certDigest.getDigestValue());
 
-        // Sign the received XML signature digest value.
-        byte[] signatureValue = si.signDigest(digestInfo.digestValue);
-
-        // Operate: postSign
-        si.postSign(document, signatureValue);
-        
-        DOMValidateContext domValidateContext = new DOMValidateContext(
-                KeySelector.singletonKeySelector(keyPair.getPublic()),
-                document);
-        XMLSignatureFactory xmlSignatureFactory = SignatureInfo.getSignatureFactory();
-        XMLSignature xmlSignature = xmlSignatureFactory
-                .unmarshalXMLSignature(domValidateContext);
-        boolean validity = xmlSignature.validate(domValidateContext);
-        assertTrue(validity);
-
-        sigDoc = SignatureDocument.Factory.parse(document);
-        xoList = sigDoc.selectPath(certDigestXQuery);
-        assertEquals(xoList.length, 1);
-        certDigest = (DigestAlgAndValueType)xoList[0];
-        assertNotNull(certDigest.getDigestValue());
-        
-        String qualPropXQuery =
-                "declare namespace xades='http://uri.etsi.org/01903/v1.3.2#'; "
-              + "declare namespace ds='http://www.w3.org/2000/09/xmldsig#'; "
-              + "$this/ds:Signature/ds:Object/xades:QualifyingProperties";
+        String qualPropXQuery = declareNS +
+            "$this/ds:Signature/ds:Object/xades:QualifyingProperties";
         xoList = sigDoc.selectPath(qualPropXQuery);
         assertEquals(xoList.length, 1);
         QualifyingPropertiesType qualProp = (QualifyingPropertiesType)xoList[0];
         boolean qualPropXsdOk = qualProp.validate();
         assertTrue(qualPropXsdOk);
-        
+
         pkg.close();
     }
 
