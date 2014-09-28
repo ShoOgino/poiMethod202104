@@ -1,0 +1,46 @@
+    @Test
+    public void testCertChain() throws Exception {
+        KeyStore keystore = KeyStore.getInstance("PKCS12");
+        String password = "test";
+        InputStream is = testdata.openResourceAsStream("chaintest.pfx");
+        keystore.load(is, password.toCharArray());
+        is.close();
+
+        Key key = keystore.getKey("poitest", password.toCharArray());
+        Certificate chainList[] = keystore.getCertificateChain("poitest");
+        List<X509Certificate> certChain = new ArrayList<X509Certificate>();
+        for (Certificate c : chainList) {
+            certChain.add((X509Certificate)c);
+        }
+        x509 = certChain.get(0);
+        keyPair = new KeyPair(x509.getPublicKey(), (PrivateKey)key);
+        
+        String testFile = "hello-world-unsigned.xlsx";
+        OPCPackage pkg = OPCPackage.open(copy(testdata.getFile(testFile)), PackageAccess.READ_WRITE);
+
+        SignatureConfig signatureConfig = new SignatureConfig();
+        signatureConfig.setKey(keyPair.getPrivate());
+        signatureConfig.setSigningCertificateChain(certChain);
+        Calendar cal = Calendar.getInstance();
+        cal.set(2007, 7, 1);
+        signatureConfig.setExecutionTime(cal.getTime());
+        signatureConfig.setDigestAlgo(HashAlgorithm.sha1);
+        signatureConfig.setOpcPackage(pkg);
+        
+        SignatureInfo si = new SignatureInfo();
+        si.setSignatureConfig(signatureConfig);
+
+        si.confirmSignature();
+        
+        for (SignaturePart sp : si.getSignatureParts()){
+            boolean b = sp.validate();
+            assertTrue(b);
+            X509Certificate signer = sp.getSigner();
+            assertNotNull("signer undefined?!", signer);
+            List<X509Certificate> certChainRes = sp.getCertChain();
+            assertEquals(3, certChainRes.size());
+        }
+        
+        pkg.close();
+    }
+

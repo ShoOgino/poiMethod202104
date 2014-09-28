@@ -6,30 +6,25 @@
             throw new KeySelectorException("no ds:KeyInfo present");
         }
         List<XMLStructure> keyInfoContent = keyInfo.getContent();
-        this.certificate = null;
+        certChain.clear();
         for (XMLStructure keyInfoStructure : keyInfoContent) {
-            if (false == (keyInfoStructure instanceof X509Data)) {
+            if (!(keyInfoStructure instanceof X509Data)) {
                 continue;
             }
             X509Data x509Data = (X509Data) keyInfoStructure;
             List<Object> x509DataList = x509Data.getContent();
             for (Object x509DataObject : x509DataList) {
-                if (false == (x509DataObject instanceof X509Certificate)) {
+                if (!(x509DataObject instanceof X509Certificate)) {
                     continue;
                 }
                 X509Certificate certificate = (X509Certificate) x509DataObject;
                 LOG.log(POILogger.DEBUG, "certificate", certificate.getSubjectX500Principal());
-                if (null == this.certificate) {
-                    /*
-                     * The first certificate is presumably the signer.
-                     */
-                    this.certificate = certificate;
-                }
-            }
-            if (null != this.certificate) {
-                return this;
+                certChain.add(certificate);
             }
         }
-        throw new KeySelectorException("No key found!");
+        if (certChain.isEmpty()) {
+            throw new KeySelectorException("No key found!");
+        }
+        return this;
     }
 
