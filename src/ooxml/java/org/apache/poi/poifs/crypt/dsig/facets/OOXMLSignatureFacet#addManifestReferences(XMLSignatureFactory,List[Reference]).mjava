@@ -1,10 +1,9 @@
-    private void addManifestReferences(XMLSignatureFactory signatureFactory, List<Reference> manifestReferences)
-            throws IOException, NoSuchAlgorithmException,
-            InvalidAlgorithmParameterException, URISyntaxException, XmlException {
+    protected void addManifestReferences
+        (XMLSignatureFactory signatureFactory, List<Reference> manifestReferences)
+    throws IOException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, URISyntaxException, XmlException {
 
-        OPCPackage ooxml = this.signatureConfig.getOpcPackage();
+        OPCPackage ooxml = signatureConfig.getOpcPackage();
         List<PackagePart> relsEntryNames = ooxml.getPartsByContentType(ContentTypes.RELATIONSHIPS_PART);
-
 
         DigestMethod digestMethod = signatureFactory.newDigestMethod(signatureConfig.getDigestAlgo().xmlSignUri, null);
         Set<String> digestedPartNames = new HashSet<String>();
@@ -23,12 +22,12 @@
             for (PackageRelationship relationship : prc) {
                 String relationshipType = relationship.getRelationshipType();
                 
+                /*
+                 * ECMA-376 Part 2 - 3rd edition
+                 * 13.2.4.16 Manifest Element
+                 * "The producer shall not create a Manifest element that references any data outside of the package."
+                 */
                 if (TargetMode.EXTERNAL == relationship.getTargetMode()) {
-                    /*
-                     * ECMA-376 Part 2 - 3rd edition
-                     * 13.2.4.16 Manifest Element
-                     * "The producer shall not create a Manifest element that references any data outside of the package."
-                     */
                     continue;
                 }
 
@@ -49,6 +48,7 @@
                 } catch (InvalidFormatException e) {
                     throw new IOException(e);
                 }
+                
                 if (relationshipType.endsWith("customXml")
                     && !(contentType.equals("inkml+xml") || contentType.equals("text/xml"))) {
                     LOG.log(POILogger.DEBUG, "skipping customXml with content type: " + contentType);
@@ -67,11 +67,11 @@
             if (parameterSpec.hasSourceIds()) {
                 List<Transform> transforms = new ArrayList<Transform>();
                 transforms.add(signatureFactory.newTransform(
-                        RelationshipTransformService.TRANSFORM_URI,
-                        parameterSpec));
+                    RelationshipTransformService.TRANSFORM_URI,
+                    parameterSpec));
                 transforms.add(signatureFactory.newTransform(
-                        CanonicalizationMethod.INCLUSIVE,
-                        (TransformParameterSpec) null));
+                    CanonicalizationMethod.INCLUSIVE,
+                    (TransformParameterSpec) null));
                 String uri = pp.getPartName().getName()
                     + "?ContentType=application/vnd.openxmlformats-package.relationships+xml";
                 Reference reference = signatureFactory.newReference(uri, digestMethod, transforms, null, null);
