@@ -1,0 +1,116 @@
+    @Override
+    public void preSign(Document document,
+            XMLSignatureFactory signatureFactory,
+            List<Reference> references, List<XMLObject> objects)
+            throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+        LOG.log(POILogger.DEBUG, "preSign");
+
+        // QualifyingProperties
+        QualifyingPropertiesDocument qualDoc = QualifyingPropertiesDocument.Factory.newInstance();
+        QualifyingPropertiesType qualifyingProperties = qualDoc.addNewQualifyingProperties();
+        qualifyingProperties.setTarget("#" + signatureConfig.getPackageSignatureId());
+        
+        // SignedProperties
+        SignedPropertiesType signedProperties = qualifyingProperties.addNewSignedProperties();
+        signedProperties.setId(signatureConfig.getXadesSignatureId());
+
+        // SignedSignatureProperties
+        SignedSignaturePropertiesType signedSignatureProperties = signedProperties.addNewSignedSignatureProperties();
+
+        // SigningTime
+        Calendar xmlGregorianCalendar = Calendar.getInstance();
+        xmlGregorianCalendar.setTimeZone(TimeZone.getTimeZone("Z"));
+        xmlGregorianCalendar.setTime(signatureConfig.getExecutionTime());
+        xmlGregorianCalendar.clear(Calendar.MILLISECOND);
+        signedSignatureProperties.setSigningTime(xmlGregorianCalendar);
+
+        // SigningCertificate
+        if (signatureConfig.getSigningCertificateChain() == null
+            || signatureConfig.getSigningCertificateChain().isEmpty()) {
+            throw new RuntimeException("no signing certificate chain available");
+        }
+        CertIDListType signingCertificates = signedSignatureProperties.addNewSigningCertificate();
+        CertIDType certId = signingCertificates.addNewCert();
+        X509Certificate certificate = signatureConfig.getSigningCertificateChain().get(0);
+        setCertID(certId, signatureConfig, signatureConfig.isXadesIssuerNameNoReverseOrder(), certificate);
+
+        // ClaimedRole
+        String role = signatureConfig.getXadesRole();
+        if (role != null && !role.isEmpty()) {
+            SignerRoleType signerRole = signedSignatureProperties.addNewSignerRole();
+            signedSignatureProperties.setSignerRole(signerRole);
+            ClaimedRolesListType claimedRolesList = signerRole.addNewClaimedRoles();
+            AnyType claimedRole = claimedRolesList.addNewClaimedRole();
+            XmlString roleString = XmlString.Factory.newInstance();
+            roleString.setStringValue(role);
+            insertXChild(claimedRole, roleString);
+        }
+
+        // XAdES-EPES
+        SignaturePolicyService policyService = signatureConfig.getSignaturePolicyService();
+        if (policyService != null) {
+            SignaturePolicyIdentifierType signaturePolicyIdentifier =
+                signedSignatureProperties.addNewSignaturePolicyIdentifier();
+            
+            SignaturePolicyIdType signaturePolicyId = signaturePolicyIdentifier.addNewSignaturePolicyId();
+
+            ObjectIdentifierType objectIdentifier = signaturePolicyId.addNewSigPolicyId();
+            objectIdentifier.setDescription(policyService.getSignaturePolicyDescription());
+            
+            IdentifierType identifier = objectIdentifier.addNewIdentifier();
+            identifier.setStringValue(policyService.getSignaturePolicyIdentifier());
+
+            byte[] signaturePolicyDocumentData = policyService.getSignaturePolicyDocument();
+            DigestAlgAndValueType sigPolicyHash = signaturePolicyId.addNewSigPolicyHash();
+            setDigestAlgAndValue(sigPolicyHash, signaturePolicyDocumentData, signatureConfig.getDigestAlgo());
+
+            String signaturePolicyDownloadUrl = policyService.getSignaturePolicyDownloadUrl();
+            if (null != signaturePolicyDownloadUrl) {
+                SigPolicyQualifiersListType sigPolicyQualifiers = signaturePolicyId.addNewSigPolicyQualifiers(); 
+                AnyType sigPolicyQualifier = sigPolicyQualifiers.addNewSigPolicyQualifier();
+                XmlString spUriElement = XmlString.Factory.newInstance();
+                spUriElement.setStringValue(signaturePolicyDownloadUrl);
+                insertXChild(sigPolicyQualifier, spUriElement);
+            }
+        } else if (signatureConfig.isXadesSignaturePolicyImplied()) {
+            SignaturePolicyIdentifierType signaturePolicyIdentifier = 
+                    signedSignatureProperties.addNewSignaturePolicyIdentifier();
+            signaturePolicyIdentifier.addNewSignaturePolicyImplied();
+        }
+
+        // DataObjectFormat
+        if (!dataObjectFormatMimeTypes.isEmpty()) {
+            SignedDataObjectPropertiesType signedDataObjectProperties =
+                signedProperties.addNewSignedDataObjectProperties();
+
+            List<DataObjectFormatType> dataObjectFormats = signedDataObjectProperties
+                    .getDataObjectFormatList();
+            for (Map.Entry<String, String> dataObjectFormatMimeType : this.dataObjectFormatMimeTypes
+                    .entrySet()) {
+                DataObjectFormatType dataObjectFormat = DataObjectFormatType.Factory.newInstance();
+                dataObjectFormat.setObjectReference("#" + dataObjectFormatMimeType.getKey());
+                dataObjectFormat.setMimeType(dataObjectFormatMimeType.getValue());
+                dataObjectFormats.add(dataObjectFormat);
+            }
+        }
+
+        // add XAdES ds:Object
+        List<XMLStructure> xadesObjectContent = new ArrayList<XMLStructure>();
+        Element qualDocElSrc = (Element)qualifyingProperties.getDomNode();
+        Element qualDocEl = (Element)document.importNode(qualDocElSrc, true);
+        xadesObjectContent.add(new DOMStructure(qualDocEl));
+        XMLObject xadesObject = signatureFactory.newXMLObject(xadesObjectContent, null, null, null);
+        objects.add(xadesObject);
+
+        // add XAdES ds:Reference
+        DigestMethod digestMethod = signatureFactory.newDigestMethod(signatureConfig.getDigestMethodUri(), null);
+        List<Transform> transforms = new ArrayList<Transform>();
+        Transform exclusiveTransform = signatureFactory
+                .newTransform(CanonicalizationMethod.INCLUSIVE,
+                        (TransformParameterSpec) null);
+        transforms.add(exclusiveTransform);
+        Reference reference = signatureFactory.newReference
+            ("#"+signatureConfig.getXadesSignatureId(), digestMethod, transforms, XADES_TYPE, null);
+        references.add(reference);
+    }
+

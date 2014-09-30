@@ -1,0 +1,83 @@
+    protected void addManifestReferences
+        (XMLSignatureFactory signatureFactory, List<Reference> manifestReferences)
+    throws IOException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, URISyntaxException, XmlException {
+
+        OPCPackage ooxml = signatureConfig.getOpcPackage();
+        List<PackagePart> relsEntryNames = ooxml.getPartsByContentType(ContentTypes.RELATIONSHIPS_PART);
+
+        DigestMethod digestMethod = signatureFactory.newDigestMethod
+            (signatureConfig.getDigestMethodUri(), null);
+        Set<String> digestedPartNames = new HashSet<String>();
+        for (PackagePart pp : relsEntryNames) {
+            String baseUri = pp.getPartName().getName().replaceFirst("(.*)/_rels/.*", "$1");
+
+            PackageRelationshipCollection prc;
+            try {
+                prc = new PackageRelationshipCollection(ooxml);
+                prc.parseRelationshipsPart(pp);
+            } catch (InvalidFormatException e) {
+                throw new IOException("Invalid relationship descriptor: "+pp.getPartName().getName(), e);
+            }
+            
+            RelationshipTransformParameterSpec parameterSpec = new RelationshipTransformParameterSpec();
+            for (PackageRelationship relationship : prc) {
+                String relationshipType = relationship.getRelationshipType();
+                
+                /*
+                 * ECMA-376 Part 2 - 3rd edition
+                 * 13.2.4.16 Manifest Element
+                 * "The producer shall not create a Manifest element that references any data outside of the package."
+                 */
+                if (TargetMode.EXTERNAL == relationship.getTargetMode()) {
+                    continue;
+                }
+
+                if (!isSignedRelationship(relationshipType)) continue;
+
+                parameterSpec.addRelationshipReference(relationship.getId());
+
+                // TODO: find a better way ...
+                String partName = baseUri + relationship.getTargetURI().toString();
+                partName = new URI(partName).normalize().getPath().replace('\\', '/');
+                LOG.log(POILogger.DEBUG, "part name: " + partName);
+                
+                String contentType;
+                try {
+                    PackagePartName relName = PackagingURIHelper.createPartName(partName);
+                    PackagePart pp2 = ooxml.getPart(relName);
+                    contentType = pp2.getContentType();
+                } catch (InvalidFormatException e) {
+                    throw new IOException(e);
+                }
+                
+                if (relationshipType.endsWith("customXml")
+                    && !(contentType.equals("inkml+xml") || contentType.equals("text/xml"))) {
+                    LOG.log(POILogger.DEBUG, "skipping customXml with content type: " + contentType);
+                    continue;
+                }
+                
+                if (!digestedPartNames.contains(partName)) {
+                    // We only digest a part once.
+                    String uri = partName + "?ContentType=" + contentType;
+                    Reference reference = signatureFactory.newReference(uri, digestMethod);
+                    manifestReferences.add(reference);
+                    digestedPartNames.add(partName);
+                }
+            }
+            
+            if (parameterSpec.hasSourceIds()) {
+                List<Transform> transforms = new ArrayList<Transform>();
+                transforms.add(signatureFactory.newTransform(
+                    RelationshipTransformService.TRANSFORM_URI,
+                    parameterSpec));
+                transforms.add(signatureFactory.newTransform(
+                    CanonicalizationMethod.INCLUSIVE,
+                    (TransformParameterSpec) null));
+                String uri = pp.getPartName().getName()
+                    + "?ContentType=application/vnd.openxmlformats-package.relationships+xml";
+                Reference reference = signatureFactory.newReference(uri, digestMethod, transforms, null, null);
+                manifestReferences.add(reference);
+            }
+        }
+    }
+

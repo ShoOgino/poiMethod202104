@@ -1,0 +1,28 @@
+    public Data dereference(URIReference uriReference, XMLCryptoContext context) throws URIReferenceException {
+        if (null == uriReference) {
+            throw new NullPointerException("URIReference cannot be null");
+        }
+        if (null == context) {
+            throw new NullPointerException("XMLCrytoContext cannot be null");
+        }
+
+        URI uri;
+        try {
+            uri = new URI(uriReference.getURI());
+        } catch (URISyntaxException e) {
+            throw new URIReferenceException("could not URL decode the uri: "+uriReference.getURI(), e);
+        }
+
+        PackagePart part = findPart(uri);
+        if (part == null) {
+            LOG.log(POILogger.DEBUG, "cannot resolve, delegating to base DOM URI dereferencer", uri);
+            return this.baseUriDereferencer.dereference(uriReference, context);
+        }
+        
+        try {
+            return new OctetStreamData(part.getInputStream(), uri.toString(), null);
+        } catch (IOException e) {
+            throw new URIReferenceException("I/O error: " + e.getMessage(), e);
+        }
+    }
+

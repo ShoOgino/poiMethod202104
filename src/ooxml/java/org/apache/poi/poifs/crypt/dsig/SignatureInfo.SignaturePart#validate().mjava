@@ -1,0 +1,30 @@
+        public boolean validate() {
+            KeyInfoKeySelector keySelector = new KeyInfoKeySelector();
+            try {
+                Document doc = DocumentHelper.readDocument(signaturePart.getInputStream());
+                XPath xpath = XPathFactory.newInstance().newXPath();
+                NodeList nl = (NodeList)xpath.compile("//*[@Id]").evaluate(doc, XPathConstants.NODESET);
+                for (int i=0; i<nl.getLength(); i++) {
+                    ((Element)nl.item(i)).setIdAttribute("Id", true);
+                }
+                
+                DOMValidateContext domValidateContext = new DOMValidateContext(keySelector, doc);
+                domValidateContext.setProperty("org.jcp.xml.dsig.validateManifests", Boolean.TRUE);
+                domValidateContext.setURIDereferencer(signatureConfig.getUriDereferencer());
+    
+                XMLSignatureFactory xmlSignatureFactory = getSignatureFactory();
+                XMLSignature xmlSignature = xmlSignatureFactory.unmarshalXMLSignature(domValidateContext);
+                boolean valid = xmlSignature.validate(domValidateContext);
+
+                if (valid) {
+                    signer = keySelector.getSigner();
+                    certChain = keySelector.getCertChain();
+                }
+                
+                return valid;
+            } catch (Exception e) {
+                LOG.log(POILogger.ERROR, "error in marshalling and validating the signature", e);
+                return false;
+            }
+        }
+

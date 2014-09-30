@@ -1,0 +1,56 @@
+    public Data transform(Data data, XMLCryptoContext context) throws TransformException {
+        LOG.log(POILogger.DEBUG, "transform(data,context)");
+        LOG.log(POILogger.DEBUG, "data java type: " + data.getClass().getName());
+        OctetStreamData octetStreamData = (OctetStreamData) data;
+        LOG.log(POILogger.DEBUG, "URI: " + octetStreamData.getURI());
+        InputStream octetStream = octetStreamData.getOctetStream();
+        
+        RelationshipsDocument relDoc;
+        try {
+            relDoc = RelationshipsDocument.Factory.parse(octetStream);
+        } catch (Exception e) {
+            throw new TransformException(e.getMessage(), e);
+        }
+        LOG.log(POILogger.DEBUG, "relationships document", relDoc);
+        
+        CTRelationships rels = relDoc.getRelationships();
+        List<CTRelationship> relList = rels.getRelationshipList();
+        Iterator<CTRelationship> relIter = rels.getRelationshipList().iterator();
+        while (relIter.hasNext()) {
+            CTRelationship rel = relIter.next();
+            /*
+             * See: ISO/IEC 29500-2:2008(E) - 13.2.4.24 Relationships Transform
+             * Algorithm.
+             */
+            if (!this.sourceIds.contains(rel.getId())) {
+                LOG.log(POILogger.DEBUG, "removing element: " + rel.getId());
+                relIter.remove();
+            } else {
+                if (!rel.isSetTargetMode()) {
+                    rel.setTargetMode(STTargetMode.INTERNAL);
+                }
+            }
+        }
+        
+        // TODO: remove non element nodes ???
+        LOG.log(POILogger.DEBUG, "# Relationship elements", relList.size());
+        
+        XmlSort.sort(rels, new Comparator<XmlCursor>(){
+            public int compare(XmlCursor c1, XmlCursor c2) {
+                String id1 = ((CTRelationship)c1.getObject()).getId();
+                String id2 = ((CTRelationship)c2.getObject()).getId();
+                return id1.compareTo(id2);
+            }
+        });
+
+        try {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            XmlOptions xo = new XmlOptions();
+            xo.setSaveNoXmlDecl();
+            relDoc.save(bos, xo);
+            return new OctetStreamData(new ByteArrayInputStream(bos.toByteArray()));
+        } catch (IOException e) {
+            throw new TransformException(e.getMessage(), e);
+        }
+    }
+
