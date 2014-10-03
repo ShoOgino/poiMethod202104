@@ -1,14 +1,18 @@
     @Override
     public void postSign(Document document)
-    throws XmlException {
+    throws MarshalException {
         // check for XAdES-BES
         NodeList nl = document.getElementsByTagNameNS(XADES_132_NS, "QualifyingProperties");
         if (nl.getLength() != 1) {
-            throw new IllegalArgumentException("no XAdES-BES extension present");
+            throw new MarshalException("no XAdES-BES extension present");
         }
 
-        QualifyingPropertiesType qualProps =
-                QualifyingPropertiesType.Factory.parse(nl.item(0));
+        QualifyingPropertiesType qualProps;
+        try {
+            qualProps = QualifyingPropertiesType.Factory.parse(nl.item(0));
+        } catch (XmlException e) {
+            throw new MarshalException(e);
+        }
         
         // create basic XML container structure
         UnsignedPropertiesType unsignedProps = qualProps.getUnsignedProperties();

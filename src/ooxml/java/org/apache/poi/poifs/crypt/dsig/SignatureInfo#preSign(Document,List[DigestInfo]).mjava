@@ -4,11 +4,7 @@
      */
     @SuppressWarnings("unchecked")
     public DigestInfo preSign(Document document, List<DigestInfo> digestInfos)
-        throws ParserConfigurationException, NoSuchAlgorithmException,
-        InvalidAlgorithmParameterException, MarshalException,
-        javax.xml.crypto.dsig.XMLSignatureException,
-        TransformerFactoryConfigurationError, TransformerException,
-        IOException, SAXException, NoSuchProviderException, XmlException, URISyntaxException {
+    throws XMLSignatureException, MarshalException {
         signatureConfig.init(false);
         
         // it's necessary to explicitly set the mdssi namespace, but the sign() method has no
@@ -36,7 +32,7 @@
         }
         xmlSignContext.setDefaultNamespacePrefix(""); // signatureConfig.getNamespacePrefixes().get(XML_DIGSIG_NS));
         
-        XMLSignatureFactory signatureFactory = SignatureInfo.getSignatureFactory();
+        XMLSignatureFactory signatureFactory = signatureConfig.getSignatureFactory();
 
         /*
          * Add ds:References that come from signing client local files.
@@ -45,13 +41,9 @@
         for (DigestInfo digestInfo : safe(digestInfos)) {
             byte[] documentDigestValue = digestInfo.digestValue;
 
-            DigestMethod digestMethod = signatureFactory.newDigestMethod
-                (signatureConfig.getDigestMethodUri(), null);
-
             String uri = new File(digestInfo.description).getName();
-
-            Reference reference = signatureFactory.newReference
-                (uri, digestMethod, null, null, null, documentDigestValue);
+            Reference reference = SignatureFacet.newReference
+                (uri, null, null, null, documentDigestValue, signatureConfig);
             references.add(reference);
         }
 
@@ -61,19 +53,24 @@
         List<XMLObject> objects = new ArrayList<XMLObject>();
         for (SignatureFacet signatureFacet : signatureConfig.getSignatureFacets()) {
             LOG.log(POILogger.DEBUG, "invoking signature facet: " + signatureFacet.getClass().getSimpleName());
-            signatureFacet.preSign(document, signatureFactory, references, objects);
+            signatureFacet.preSign(document, references, objects);
         }
 
         /*
          * ds:SignedInfo
          */
-        SignatureMethod signatureMethod = signatureFactory.newSignatureMethod
-            (signatureConfig.getSignatureMethod(), null);
-        CanonicalizationMethod canonicalizationMethod = signatureFactory
-            .newCanonicalizationMethod(signatureConfig.getCanonicalizationMethod(),
-            (C14NMethodParameterSpec) null);
-        SignedInfo signedInfo = signatureFactory.newSignedInfo(
-            canonicalizationMethod, signatureMethod, references);
+        SignedInfo signedInfo;
+        try {
+            SignatureMethod signatureMethod = signatureFactory.newSignatureMethod
+                (signatureConfig.getSignatureMethod(), null);
+            CanonicalizationMethod canonicalizationMethod = signatureFactory
+                .newCanonicalizationMethod(signatureConfig.getCanonicalizationMethod(),
+                (C14NMethodParameterSpec) null);
+            signedInfo = signatureFactory.newSignedInfo(
+                canonicalizationMethod, signatureMethod, references);
+        } catch (GeneralSecurityException e) {
+            throw new XMLSignatureException(e);
+        }
 
         /*
          * JSR105 ds:Signature creation

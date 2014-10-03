@@ -1,4 +1,4 @@
-    protected void writeDocument(Document document) throws IOException, XmlException {
+    protected void writeDocument(Document document) throws MarshalException {
         XmlOptions xo = new XmlOptions();
         Map<String,String> namespaceMap = new HashMap<String,String>();
         for(Map.Entry<String,String> entry : signatureConfig.getNamespacePrefixes().entrySet()){
@@ -22,7 +22,7 @@
             // <Default Extension="sigs" ContentType="application/vnd.openxmlformats-package.digital-signature-origin"/>
             sigsPartName = PackagingURIHelper.createPartName("/_xmlsignatures/origin.sigs");
         } catch (InvalidFormatException e) {
-            throw new IOException(e);
+            throw new MarshalException(e);
         }
         
         PackagePart sigPart = pkg.getPart(sigPartName);
@@ -30,10 +30,14 @@
             sigPart = pkg.createPart(sigPartName, ContentTypes.DIGITAL_SIGNATURE_XML_SIGNATURE_PART);
         }
         
-        OutputStream os = sigPart.getOutputStream();
-        SignatureDocument sigDoc = SignatureDocument.Factory.parse(document);
-        sigDoc.save(os, xo);
-        os.close();
+        try {
+            OutputStream os = sigPart.getOutputStream();
+            SignatureDocument sigDoc = SignatureDocument.Factory.parse(document);
+            sigDoc.save(os, xo);
+            os.close();
+        } catch (Exception e) {
+            throw new MarshalException("Unable to write signature document", e);
+        }
         
         PackagePart sigsPart = pkg.getPart(sigsPartName);
         if (sigsPart == null) {
