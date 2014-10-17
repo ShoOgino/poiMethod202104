@@ -33,11 +33,15 @@
 
         if (mockTsp) {
             TimeStampService tspService = new TimeStampService(){
+                @Override
                 public byte[] timeStamp(byte[] data, RevocationData revocationData) throws Exception {
                     revocationData.addCRL(crl);
                     return "time-stamp-token".getBytes();                
                 }
-                public void setSignatureConfig(SignatureConfig config) {}
+                @Override
+                public void setSignatureConfig(SignatureConfig config) {
+                    // empty on purpose
+                }
             };
             signatureConfig.setTspService(tspService);
         } else {
@@ -62,6 +66,7 @@
         revocationData.addOCSP(ocspResp.getEncoded());
 
         RevocationDataService revocationDataService = new RevocationDataService(){
+            @Override
             public RevocationData getRevocationData(List<X509Certificate> certificateChain) {
                 return revocationData;
             }
@@ -71,7 +76,14 @@
         // operate
         SignatureInfo si = new SignatureInfo();
         si.setSignatureConfig(signatureConfig);
-        si.confirmSignature();
+        try {
+            si.confirmSignature();
+        } catch (RuntimeException e) {
+            // only allow a ConnectException because of timeout, we see this in Jenkins from time to time...
+            assertNotNull("Only allowing ConnectException here, but had: " + e, e.getCause());
+            assertTrue("Only allowing ConnectException here, but had: " + e, e.getCause() instanceof ConnectException);
+            assertTrue("Only allowing ConnectException here, but had: " + e, e.getCause().getMessage().contains("timed out"));
+        }
         
         // verify
         Iterator<SignaturePart> spIter = si.getSignatureParts().iterator();
