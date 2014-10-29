@@ -1,0 +1,43 @@
+    /**
+     * Create a notes master.
+     */ 
+    public void createNotesMaster() {
+
+        _notesMaster = (XSLFNotesMaster) createRelationship(XSLFRelation.NOTES_MASTER, 
+                XSLFFactory.getInstance(), 1);
+        
+        CTNotesMasterIdList notesMasterIdList = _presentation.addNewNotesMasterIdLst();
+        CTNotesMasterIdListEntry notesMasterId = notesMasterIdList.addNewNotesMasterId();
+        notesMasterId.setId(_notesMaster.getPackageRelationship().getId());
+        
+        Integer themeIndex = 1;
+        List<Integer> themeIndexList = new ArrayList<Integer>();
+        for (POIXMLDocumentPart p : getRelations()) {
+            if (p instanceof XSLFTheme) {
+                themeIndexList.add(XSLFRelation.THEME.getFileNameIndex(p));
+            }
+        }
+         
+        if (!themeIndexList.isEmpty()) {
+            Boolean found = false;
+            for (Integer i = 1; i <= themeIndexList.size(); i++) {
+                if (!themeIndexList.contains(i)) {
+                    found = true;
+                    themeIndex = i;
+                }
+            }
+            if (!found) {
+                themeIndex = themeIndexList.size() + 1;
+            }
+        }
+        
+        XSLFTheme theme = (XSLFTheme) createRelationship(XSLFRelation.THEME, 
+                XSLFFactory.getInstance(), themeIndex);
+        theme.importTheme(getSlides()[0].getTheme());
+        
+        _notesMaster.addRelation(theme.getPackageRelationship().getId(), theme);
+        PackagePartName themePackagePartName = theme.getPackagePart().getPartName();
+        _notesMaster.getPackagePart().addRelationship(themePackagePartName, TargetMode.INTERNAL, 
+                theme.getPackageRelationship().getRelationshipType());
+    }
+
