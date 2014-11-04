@@ -1,0 +1,34 @@
+	public int linkExternalWorkbook(String name, Workbook externalWorkbook) {
+        int extBookIndex = getExternalWorkbookIndex(name);
+        if (extBookIndex != -1) {
+            // Already linked!
+            return extBookIndex;
+        }
+        
+        // Create a new SupBookRecord
+        String[] sheetNames = new String[externalWorkbook.getNumberOfSheets()];
+        for (int sn=0; sn<sheetNames.length; sn++) {
+            sheetNames[sn] = externalWorkbook.getSheetName(sn);
+        }
+        String url = "\000" + name;
+        ExternalBookBlock block = new ExternalBookBlock(url, sheetNames);
+        
+        // Add it into the list + records
+        extBookIndex = extendExternalBookBlocks(block);
+
+        // add the created SupBookRecord before ExternSheetRecord
+        int idx = findFirstRecordLocBySid(ExternSheetRecord.sid);
+        if (idx == -1) {
+            idx = _workbookRecordList.size();
+        }
+        _workbookRecordList.add(idx, block.getExternalBookRecord());
+        
+        // Setup links for the sheets
+        for (int sn=0; sn<sheetNames.length; sn++) {
+            _externSheetRecord.addRef(extBookIndex, sn, sn);
+        }
+        
+        // Report where it went
+        return extBookIndex;
+	}
+
