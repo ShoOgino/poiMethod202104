@@ -1,0 +1,29 @@
+    public List<HSSFDataValidation> getDataValidations() {
+        DataValidityTable dvt = _sheet.getOrCreateDataValidityTable();
+        final List<HSSFDataValidation> hssfValidations = new ArrayList<HSSFDataValidation>();
+        RecordVisitor visitor = new RecordVisitor() {
+            private HSSFEvaluationWorkbook book = HSSFEvaluationWorkbook.create(getWorkbook());
+
+            @Override
+            public void visitRecord(Record r) {
+                if (!(r instanceof DVRecord)) {
+                    return;
+                }
+                DVRecord dvRecord = (DVRecord) r;
+                CellRangeAddressList regions = dvRecord.getCellRangeAddress().copy();
+                DVConstraint constraint = DVConstraint.createDVConstraint(dvRecord, book);
+                HSSFDataValidation hssfDataValidation = new HSSFDataValidation(regions, constraint);
+                hssfDataValidation.setErrorStyle(dvRecord.getErrorStyle());
+                hssfDataValidation.setEmptyCellAllowed(dvRecord.getEmptyCellAllowed());
+                hssfDataValidation.setSuppressDropDownArrow(dvRecord.getSuppressDropdownArrow());
+                hssfDataValidation.createPromptBox(dvRecord.getPromptTitle(), dvRecord.getPromptText());
+                hssfDataValidation.setShowPromptBox(dvRecord.getShowPromptOnCellSelected());
+                hssfDataValidation.createErrorBox(dvRecord.getErrorTitle(), dvRecord.getErrorText());
+                hssfDataValidation.setShowErrorBox(dvRecord.getShowErrorOnInvalidValue());
+                hssfValidations.add(hssfDataValidation);
+            }
+        };
+        dvt.visitContainedRecords(visitor);
+        return hssfValidations;
+    }
+

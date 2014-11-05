@@ -1,0 +1,35 @@
+    static DVConstraint createDVConstraint(DVRecord dvRecord, FormulaRenderingWorkbook book) {
+        switch (dvRecord.getDataType()) {
+        case ValidationType.ANY:
+            return new DVConstraint(ValidationType.ANY, dvRecord.getConditionOperator(), null, null, null, null, null);
+        case ValidationType.INTEGER:
+        case ValidationType.DECIMAL:
+        case ValidationType.DATE:
+        case ValidationType.TIME:
+        case ValidationType.TEXT_LENGTH:
+            FormulaValuePair pair1 = toFormulaString(dvRecord.getFormula1(), book);
+            FormulaValuePair pair2 = toFormulaString(dvRecord.getFormula2(), book);
+            return new DVConstraint(dvRecord.getDataType(), dvRecord.getConditionOperator(), pair1.formula(),
+                    pair2.formula(), pair1.value(), pair2.value(), null);
+        case ValidationType.LIST:
+            if (dvRecord.getListExplicitFormula()) {
+                String values = toFormulaString(dvRecord.getFormula1(), book).string();
+                if (values.startsWith("\"")) {
+                    values = values.substring(1);
+                }
+                if (values.endsWith("\"")) {
+                    values = values.substring(0, values.length() - 1);
+                }
+                String[] explicitListValues = values.split(Pattern.quote("\0"));
+                return createExplicitListConstraint(explicitListValues);
+            } else {
+                String listFormula = toFormulaString(dvRecord.getFormula1(), book).string();
+                return createFormulaListConstraint(listFormula);
+            }
+        case ValidationType.FORMULA:
+            return createCustomFormulaConstraint(toFormulaString(dvRecord.getFormula1(), book).string());
+        default:
+            throw new UnsupportedOperationException(MessageFormat.format("validationType={0}", dvRecord.getDataType()));
+        }
+    }
+

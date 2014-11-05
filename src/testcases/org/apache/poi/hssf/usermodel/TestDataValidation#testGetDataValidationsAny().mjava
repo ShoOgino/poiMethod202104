@@ -1,0 +1,44 @@
+    public void testGetDataValidationsAny() {
+        HSSFWorkbook wb = new HSSFWorkbook();
+        HSSFSheet sheet = wb.createSheet();
+        List<HSSFDataValidation> list = sheet.getDataValidations();
+        assertEquals(0, list.size());
+
+        DataValidationHelper dataValidationHelper = sheet.getDataValidationHelper();
+        DataValidationConstraint constraint = dataValidationHelper.createNumericConstraint(ValidationType.ANY,
+                OperatorType.IGNORED, null, null);
+        CellRangeAddressList addressList = new CellRangeAddressList(1, 2, 3, 4);
+        DataValidation validation = dataValidationHelper.createValidation(constraint, addressList);
+        validation.setEmptyCellAllowed(true);
+        validation.createErrorBox("error-title", "error-text");
+        validation.createPromptBox("prompt-title", "prompt-text");
+        sheet.addValidationData(validation);
+
+        list = sheet.getDataValidations(); // <-- works
+        assertEquals(1, list.size());
+
+        HSSFDataValidation dv = list.get(0);
+        {
+            CellRangeAddressList regions = dv.getRegions();
+            assertEquals(1, regions.countRanges());
+
+            CellRangeAddress address = regions.getCellRangeAddress(0);
+            assertEquals(1, address.getFirstRow());
+            assertEquals(2, address.getLastRow());
+            assertEquals(3, address.getFirstColumn());
+            assertEquals(4, address.getLastColumn());
+        }
+        assertEquals(true, dv.getEmptyCellAllowed());
+        assertEquals(false, dv.getSuppressDropDownArrow());
+        assertEquals(true, dv.getShowErrorBox());
+        assertEquals("error-title", dv.getErrorBoxTitle());
+        assertEquals("error-text", dv.getErrorBoxText());
+        assertEquals(true, dv.getShowPromptBox());
+        assertEquals("prompt-title", dv.getPromptBoxTitle());
+        assertEquals("prompt-text", dv.getPromptBoxText());
+
+        DataValidationConstraint c = dv.getValidationConstraint();
+        assertEquals(ValidationType.ANY, c.getValidationType());
+        assertEquals(OperatorType.IGNORED, c.getOperator());
+    }
+
