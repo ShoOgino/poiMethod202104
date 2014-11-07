@@ -1,0 +1,39 @@
+    private ValueEval fixed(
+            ValueEval numberParam, ValueEval placesParam,
+            ValueEval skipThousandsSeparatorParam,
+            int srcRowIndex, int srcColumnIndex) {
+        try {
+            ValueEval numberValueEval =
+                    OperandResolver.getSingleValue(
+                    numberParam, srcRowIndex, srcColumnIndex);
+            BigDecimal number =
+                    new BigDecimal(OperandResolver.coerceValueToDouble(numberValueEval));
+            ValueEval placesValueEval =
+                    OperandResolver.getSingleValue(
+                    placesParam, srcRowIndex, srcColumnIndex);
+            int places = OperandResolver.coerceValueToInt(placesValueEval);
+            ValueEval skipThousandsSeparatorValueEval =
+                    OperandResolver.getSingleValue(
+                    skipThousandsSeparatorParam, srcRowIndex, srcColumnIndex);
+            Boolean skipThousandsSeparator =
+                    OperandResolver.coerceValueToBoolean(
+                    skipThousandsSeparatorValueEval, false);
+            
+            // Round number to respective places.
+            number = number.setScale(places, RoundingMode.HALF_UP);
+            
+            // Format number conditionally using a thousands separator.
+            NumberFormat nf = NumberFormat.getNumberInstance(Locale.US);
+            DecimalFormat formatter = (DecimalFormat)nf;
+            formatter.setGroupingUsed(! skipThousandsSeparator);
+            formatter.setMinimumFractionDigits(places >= 0 ? places : 0);
+            formatter.setMaximumFractionDigits(places >= 0 ? places : 0);
+            String numberString = formatter.format(number.doubleValue());
+
+            // Return the result as a StringEval.
+            return new StringEval(numberString);
+        } catch (EvaluationException e) {
+            return e.getErrorEval();
+        }
+    }
+
