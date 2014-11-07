@@ -24,22 +24,7 @@
             reference = sigFac.newReference(uri, digestMethod, transforms, type, id, digestValue);
         }
         
-        // workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1155012
-        // overwrite standard message digest, if a digest <> SHA1 is used
-        Provider bcProv = Security.getProvider("BC");
-        if (bcProv != null && !DigestMethod.SHA1.equals(digestMethodUri)) {
-            try {
-                Method m = DOMDigestMethod.class.getDeclaredMethod("getMessageDigestAlgorithm");
-                m.setAccessible(true);
-                String mdAlgo = (String)m.invoke(digestMethod);
-                MessageDigest md = MessageDigest.getInstance(mdAlgo, bcProv);
-                Field f = DOMReference.class.getDeclaredField("md");
-                f.setAccessible(true);
-                f.set(reference, md);
-            } catch (Exception e) {
-                LOG.log(POILogger.WARN, "Can't overwrite message digest (workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1155012)", e);
-            }
-        }
+        brokenJvmWorkaround(reference);
 
         return reference;
     }

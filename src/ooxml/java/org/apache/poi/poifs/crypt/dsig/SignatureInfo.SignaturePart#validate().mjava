@@ -14,9 +14,25 @@
                 DOMValidateContext domValidateContext = new DOMValidateContext(keySelector, doc);
                 domValidateContext.setProperty("org.jcp.xml.dsig.validateManifests", Boolean.TRUE);
                 domValidateContext.setURIDereferencer(signatureConfig.getUriDereferencer());
+                brokenJvmWorkaround(domValidateContext);
     
                 XMLSignatureFactory xmlSignatureFactory = signatureConfig.getSignatureFactory();
                 XMLSignature xmlSignature = xmlSignatureFactory.unmarshalXMLSignature(domValidateContext);
+                
+                // TODO: replace with property when xml-sec patch is applied
+                for (Reference ref : (List<Reference>)xmlSignature.getSignedInfo().getReferences()) {
+                    SignatureFacet.brokenJvmWorkaround(ref);
+                }
+                for (XMLObject xo : (List<XMLObject>)xmlSignature.getObjects()) {
+                    for (XMLStructure xs : (List<XMLStructure>)xo.getContent()) {
+                        if (xs instanceof Manifest) {
+                           for (Reference ref : (List<Reference>)((Manifest)xs).getReferences()) {
+                               SignatureFacet.brokenJvmWorkaround(ref);
+                           }
+                        }
+                    }
+                }
+                
                 boolean valid = xmlSignature.validate(domValidateContext);
 
                 if (valid) {
@@ -25,8 +41,6 @@
                 }
                 
                 return valid;
-            } catch (ArrayIndexOutOfBoundsException e) {
-                throw new JvmBrokenException(e);
             } catch (Exception e) {
                 LOG.log(POILogger.ERROR, "error in marshalling and validating the signature", e);
                 return false;
