@@ -1,0 +1,46 @@
+    public static String getAccessError(String destinationUrl, boolean fireRequest, int timeout) {
+        URL url;
+        try {
+            url = new URL(destinationUrl);
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException("Invalid destination URL", e);
+        }
+
+        HttpURLConnection conn = null;
+        try {
+            conn = (HttpURLConnection) url.openConnection();
+
+            // set specified timeout if non-zero
+            if(timeout != 0) {
+                conn.setConnectTimeout(timeout);
+                conn.setReadTimeout(timeout);
+            }
+
+            conn.setDoOutput(false);
+            conn.setDoInput(true);
+
+            /* if connecting is not possible this will throw a connection refused exception */
+            conn.connect();
+
+            if (fireRequest) {
+                InputStream is = null;
+                try {
+                    is = conn.getInputStream();
+                } finally {
+                    IOUtils.closeQuietly(is);
+                }
+
+            }
+            /* if connecting is possible we return true here */
+            return null;
+
+        } catch (IOException e) {
+            /* exception is thrown -> server not available */
+            return e.getClass().getName() + ": " + e.getMessage();
+        } finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
+        }
+    }
+
