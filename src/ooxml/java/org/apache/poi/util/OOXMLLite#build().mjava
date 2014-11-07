@@ -3,23 +3,24 @@
         List<String> lst = new ArrayList<String>();
         //collect unit tests
         System.out.println("Collecting unit tests from " + _testDir);
-        collectTests(_testDir, _testDir, lst, ".+?\\.Test.+?\\.class$", ".+TestUnfixedBugs.class");
-        System.out.println("Found " + lst.size() + " tests");
+        collectTests(_testDir, _testDir, lst, ".+.class$", 
+                ".+(TestUnfixedBugs|MemoryUsage|TestDataProvider|TestDataSamples|All.+Tests|ZipFileAssert|PkiTestUtils|TestCellFormatPart\\$\\d|TestSignatureInfo\\$\\d).class");
+        System.out.println("Found " + lst.size() + " classes");
 
         TestSuite suite = new TestSuite();
         for (String arg : lst) {
             //ignore inner classes defined in tests
-            if (arg.indexOf('$') != -1) continue;
+            if (arg.indexOf('$') != -1) {
+                System.out.println("Inner class " + arg + " not included");
+                continue;
+            }
 
             String cls = arg.replace(".class", "");
             try {
                 Class<?> testclass = Class.forName(cls);
                 boolean isTest = TestCase.class.isAssignableFrom(testclass);
                 if (!isTest) {
-                    for (Method m : testclass.getDeclaredMethods()) {
-                        isTest = m.isAnnotationPresent(Test.class);
-                        if (isTest) break;
-                    }
+                    isTest = checkForTestAnnotation(testclass);
                 }
                 
                 if (isTest) {
@@ -30,8 +31,13 @@
             }
         }
 
+        System.out.println("Resulting TestSuite has " + suite.testCount() + " TestCases");
+        
         //run tests
-        TestRunner.run(suite);
+        TestResult result = TestRunner.run(suite);
+        if(!result.wasSuccessful()) {
+            throw new RuntimeException("Tests did not succeed, cannot build ooxml-lite jar");
+        }
 
         //see what classes from the ooxml-schemas.jar are loaded
         System.out.println("Copying classes to " + _destDest);
@@ -58,13 +64,16 @@
         //finally copy the compiled .xsb files
         System.out.println("Copying .xsb resources");
         JarFile jar = new  JarFile(_ooxmlJar);
-        for(Enumeration<JarEntry> e = jar.entries(); e.hasMoreElements(); ){
-            JarEntry je = e.nextElement();
-            if(je.getName().matches("schemaorg_apache_xmlbeans/system/\\w+/\\w+\\.xsb")) {
-                 File destFile = new File(_destDest, je.getName());
-                 copyFile(jar.getInputStream(je), destFile);
+        try {
+            for(Enumeration<JarEntry> e = jar.entries(); e.hasMoreElements(); ){
+                JarEntry je = e.nextElement();
+                if(je.getName().matches("schemaorg_apache_xmlbeans/system/\\w+/\\w+\\.xsb")) {
+                     File destFile = new File(_destDest, je.getName());
+                     copyFile(jar.getInputStream(je), destFile);
+                }
             }
+        } finally {
+            jar.close();
         }
-        jar.close();
     }
 
