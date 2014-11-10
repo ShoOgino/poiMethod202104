@@ -1,0 +1,35 @@
+    /**
+     * Recursively collect classes from the supplied directory
+     *
+     * @param arg   the directory to search in
+     * @param out   output
+     * @param ptrn  the pattern (regexp) to filter found files
+     */
+    private static void collectTests(File root, File arg, List<Class<?>> out, String ptrn, String exclude)
+    throws ClassNotFoundException {
+        if (arg.isDirectory()) {
+            for (File f : arg.listFiles()) {
+                collectTests(root, f, out, ptrn, exclude);
+            }
+        } else {
+            String path = arg.getAbsolutePath();
+            String prefix = root.getAbsolutePath();
+            String cls = path.substring(prefix.length() + 1).replace(File.separator, ".");
+            if(!cls.matches(ptrn)) return;
+            if (cls.matches(exclude)) return;
+            //ignore inner classes defined in tests
+            if (cls.indexOf('$') != -1) {
+                System.out.println("Inner class " + cls + " not included");
+                return;
+            }
+
+            cls = cls.replace(".class", "");
+
+            Class<?> testclass = Class.forName(cls);
+            if (TestCase.class.isAssignableFrom(testclass)
+                || checkForTestAnnotation(testclass)) {
+                out.add(testclass);
+            };
+        }
+    }
+
