@@ -1,0 +1,55 @@
+    /**
+     * Calculates the dimensions in EMUs for the anchor of the given picture
+     *
+     * @param picture the picture containing the anchor
+     * @return the dimensions in EMUs
+     */
+    public static Dimension getDimensionFromAnchor(Picture picture) {
+        ClientAnchor anchor = picture.getClientAnchor();
+        boolean isHSSF = (anchor instanceof HSSFClientAnchor);
+        Sheet sheet = picture.getSheet();
+
+        double w = 0;
+        int col2 = anchor.getCol1();
+
+        //space in the leftmost cell
+        w = sheet.getColumnWidthInPixels(col2++);
+        if (isHSSF) {
+            w *= 1 - anchor.getDx1()/1024d;
+        } else {
+            w -= anchor.getDx1()/EMU_PER_PIXEL;
+        }
+        
+        while(col2 < anchor.getCol2()){
+            w += sheet.getColumnWidthInPixels(col2++);
+        }
+        
+        if (isHSSF) {
+            w += sheet.getColumnWidthInPixels(col2) * anchor.getDx2()/1024d;
+        } else {
+            w += anchor.getDx2()/EMU_PER_PIXEL;
+        }
+
+        double h = 0;
+        int row2 = anchor.getRow1();
+        
+        h = getRowHeightInPixels(sheet,row2++);
+        if (isHSSF) {
+            h *= 1 - anchor.getDy1()/256d;
+        } else {
+            h -= anchor.getDy1()/EMU_PER_PIXEL;
+        }
+
+        while(row2 < anchor.getRow2()){
+            h += getRowHeightInPixels(sheet,row2++);
+        }
+        
+        if (isHSSF) {
+            h += getRowHeightInPixels(sheet,row2) * anchor.getDy2()/256;
+        } else {
+            h += anchor.getDy2()/EMU_PER_PIXEL;
+        }
+
+        return new Dimension((int)w*EMU_PER_PIXEL, (int)h*EMU_PER_PIXEL);
+    }
+
