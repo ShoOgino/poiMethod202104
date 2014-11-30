@@ -1,0 +1,31 @@
+    /**
+     * @param in the RecordInputstream to read the record from
+     */
+    public OldLabelRecord(RecordInputStream in)
+    {
+        sid = in.getSid();
+
+        field_1_row          = in.readUShort();
+        field_2_column       = in.readShort();
+
+        if (in.getSid() == biff2_sid) {
+            field_3_cell_attrs = in.readUShort() << 8;
+            field_3_cell_attrs += in.readUByte();
+            field_4_string_len  = (short)in.readUByte();
+        } else {
+            field_3_xf_index     = in.readShort();
+            field_4_string_len   = in.readShort();
+        }
+
+        // Can only decode properly later when you know the codepage
+        field_5_bytes = new byte[field_4_string_len];
+        in.read(field_5_bytes, 0, field_4_string_len);
+
+        if (in.remaining() > 0) {
+            logger.log(POILogger.INFO,
+                    "LabelRecord data remains: " + in.remaining() +
+                    " : " + HexDump.toHex(in.readRemainder())
+                    );
+        }
+    }
+
