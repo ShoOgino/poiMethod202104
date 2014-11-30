@@ -3,6 +3,8 @@
      *  for these old file formats
      */
     public String getText() {
+        StringBuffer text = new StringBuffer();
+        
         // Work out what version we're dealing with
         int bofSid = ris.getNextSid();
         switch (bofSid) {
@@ -21,8 +23,10 @@
             default:
                 throw new IllegalArgumentException("File does not begin with a BOF, found sid of " + bofSid); 
         }
+        
+        // To track formats and encodings
+        CodepageRecord codepage = null;
 
-        StringBuffer text = new StringBuffer();
         while (ris.hasNextRecord()) {
             int sid = ris.getNextSid();
             ris.nextRecord();
@@ -32,6 +36,7 @@
                 case OldLabelRecord.biff2_sid:
                 case OldLabelRecord.biff345_sid:
                     OldLabelRecord lr = new OldLabelRecord(ris);
+                    lr.setCodePage(codepage);
                     text.append(lr.getValue());
                     text.append('\n');
                     break;
@@ -39,6 +44,7 @@
                 case OldStringRecord.biff2_sid:
                 case OldStringRecord.biff345_sid:
                     OldStringRecord sr = new OldStringRecord(ris);
+                    sr.setCodePage(codepage);
                     text.append(sr.getString());
                     text.append('\n');
                     break;
@@ -66,6 +72,10 @@
                 case RKRecord.sid:
                     RKRecord rr = new RKRecord(ris);
                     handleNumericCell(text, rr.getRKNumber());
+                    break;
+                    
+                case CodepageRecord.sid:
+                    codepage = new CodepageRecord(ris);
                     break;
                     
                 default:
