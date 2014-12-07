@@ -2,29 +2,26 @@
 	 * Find and read in pictures contained in this presentation.
 	 * This is lazily called as and when we want to touch pictures.
 	 */
+    @SuppressWarnings("unused")
 	private void readPictures() throws IOException {
         _pictures = new ArrayList<PictureData>();
 
-		byte[] pictstream;
+        // if the presentation doesn't contain pictures - will use a null set instead
+        if (!directory.hasEntry("Pictures")) return;
+        
+		DocumentEntry entry = (DocumentEntry)directory.getEntry("Pictures");
+		byte[] pictstream = new byte[entry.getSize()];
+		DocumentInputStream is = directory.createDocumentInputStream(entry);
+		is.read(pictstream);
+		is.close();
 
-		try {
-			DocumentEntry entry = (DocumentEntry)directory.getEntry("Pictures");
-			pictstream = new byte[entry.getSize()];
-			DocumentInputStream is = directory.createDocumentInputStream("Pictures");
-			is.read(pictstream);
-		} catch (FileNotFoundException e){
-			// Silently catch exceptions if the presentation doesn't
-			//  contain pictures - will use a null set instead
-			return;
-		}
-
+		
         int pos = 0;
 		// An empty picture record (length 0) will take up 8 bytes
         while (pos <= (pictstream.length-8)) {
             int offset = pos;
-
+            
             // Image signature
-            @SuppressWarnings("unused")
             int signature = LittleEndian.getUShort(pictstream, pos);
             pos += LittleEndian.SHORT_SIZE;
             // Image type + 0xF018
