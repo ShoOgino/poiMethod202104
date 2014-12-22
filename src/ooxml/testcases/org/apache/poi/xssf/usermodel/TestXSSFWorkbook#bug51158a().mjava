@@ -2,23 +2,27 @@
 	public void bug51158a() throws IOException {
         // create a workbook
         final XSSFWorkbook workbook = new XSSFWorkbook();
-        workbook.createSheet("Test Sheet");
-
-        XSSFSheet sheetBack = workbook.getSheetAt(0);
-
-        // committing twice did add the XML twice without clearing the part in between
-        sheetBack.commit();
-
-        // ensure that a memory based package part does not have lingering data from previous commit() calls
-        if(sheetBack.getPackagePart() instanceof MemoryPackagePart) {
-            ((MemoryPackagePart)sheetBack.getPackagePart()).clear();
+        try {
+            workbook.createSheet("Test Sheet");
+    
+            XSSFSheet sheetBack = workbook.getSheetAt(0);
+    
+            // committing twice did add the XML twice without clearing the part in between
+            sheetBack.commit();
+    
+            // ensure that a memory based package part does not have lingering data from previous commit() calls
+            if(sheetBack.getPackagePart() instanceof MemoryPackagePart) {
+                ((MemoryPackagePart)sheetBack.getPackagePart()).clear();
+            }
+    
+            sheetBack.commit();
+    
+            String str = new String(IOUtils.toByteArray(sheetBack.getPackagePart().getInputStream()));
+            System.out.println(str);
+            
+            assertEquals(1, countMatches(str, "<worksheet"));
+        } finally {
+            workbook.close();
         }
-
-        sheetBack.commit();
-
-        String str = new String(IOUtils.toByteArray(sheetBack.getPackagePart().getInputStream()));
-        System.out.println(str);
-        
-        assertEquals(1, countMatches(str, "<worksheet"));
     }	
 
