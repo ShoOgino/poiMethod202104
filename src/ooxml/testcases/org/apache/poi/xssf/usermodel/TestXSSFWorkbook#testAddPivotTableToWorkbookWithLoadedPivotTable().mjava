@@ -1,16 +1,29 @@
     @Test
     public void testAddPivotTableToWorkbookWithLoadedPivotTable() throws Exception {
-        String fileName = "ooxml-pivottable.xlsx";
+        File file = TempFile.createTempFile("ooxml-pivottable", ".xlsx");
 
         XSSFWorkbook wb = new XSSFWorkbook();
-        setPivotData(wb);
+        try {
+            setPivotData(wb);
+    
+            FileOutputStream fileOut = new FileOutputStream(file);
+            try {
+                wb.write(fileOut);
+            } finally {
+                fileOut.close();
+            }
+        } finally {
+            wb.close();
+        }
 
-        FileOutputStream fileOut = new FileOutputStream(fileName);
-        wb.write(fileOut);
-        fileOut.close();
-
-        XSSFWorkbook wb2 = (XSSFWorkbook) WorkbookFactory.create(new File(fileName));
-        setPivotData(wb2);
-        assertTrue(wb2.getPivotTables().size() == 2);
+        XSSFWorkbook wb2 = (XSSFWorkbook) WorkbookFactory.create(file);
+        try {
+            setPivotData(wb2);
+            assertTrue(wb2.getPivotTables().size() == 2);
+        } finally {
+            wb2.close();
+        }
+        
+        assertTrue(file.delete());
     }
 
