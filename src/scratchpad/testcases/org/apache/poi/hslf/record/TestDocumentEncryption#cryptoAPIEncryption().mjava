@@ -1,0 +1,30 @@
+    @Test
+    public void cryptoAPIEncryption() throws Exception {
+        /* documents with multiple edits need to be normalized for encryption */
+        String pptFile = "57272_corrupted_usereditatom.ppt";
+        NPOIFSFileSystem fs = new NPOIFSFileSystem(slTests.getFile(pptFile), true);
+        HSLFSlideShow hss = new HSLFSlideShow(fs);
+        hss.normalizeRecords();
+        
+        // normalized ppt
+        ByteArrayOutputStream expected = new ByteArrayOutputStream();
+        hss.write(expected);
+        
+        // encrypted
+        Biff8EncryptionKey.setCurrentUserPassword("hello");
+        ByteArrayOutputStream encrypted = new ByteArrayOutputStream();
+        hss.write(encrypted);
+        fs.close();
+
+        // decrypted
+        ByteArrayInputStream bis = new ByteArrayInputStream(encrypted.toByteArray());
+        fs = new NPOIFSFileSystem(bis);
+        hss = new HSLFSlideShow(fs);
+        Biff8EncryptionKey.setCurrentUserPassword(null);
+        ByteArrayOutputStream actual = new ByteArrayOutputStream();
+        hss.write(actual);
+        fs.close();
+        
+        assertArrayEquals(expected.toByteArray(), actual.toByteArray());
+    }    
+

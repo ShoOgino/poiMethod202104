@@ -1,0 +1,51 @@
+    /** 
+     * For a given named property entry, either return it or null if
+     *  if it wasn't found
+     *  
+     *  @param setName The property to read
+     *  @param encryptionInfo the encryption descriptor in case of cryptoAPI encryption
+     *  @return The value of the given property or null if it wasn't found.
+     */
+    protected PropertySet getPropertySet(String setName, EncryptionInfo encryptionInfo) {
+        DirectoryNode dirNode = directory;
+        
+        if (encryptionInfo != null) {
+            try {
+                InputStream is = encryptionInfo.getDecryptor().getDataStream(directory);
+                POIFSFileSystem poifs = new POIFSFileSystem(is);
+                is.close();
+                dirNode = poifs.getRoot();
+            } catch (Exception e) {
+                logger.log(POILogger.ERROR, "Error getting encrypted property set with name " + setName, e);
+                return null;
+            }
+        }
+        
+        //directory can be null when creating new documents
+        if (dirNode == null || !dirNode.hasEntry(setName)) 
+            return null;
+
+        DocumentInputStream dis;
+        try {
+            // Find the entry, and get an input stream for it
+            dis = dirNode.createDocumentInputStream( dirNode.getEntry(setName) );
+        } catch(IOException ie) {
+            // Oh well, doesn't exist
+            logger.log(POILogger.WARN, "Error getting property set with name " + setName + "\n" + ie);
+            return null;
+        }
+
+        try {
+            // Create the Property Set
+            PropertySet set = PropertySetFactory.create(dis);
+            return set;
+        } catch(IOException ie) {
+            // Must be corrupt or something like that
+            logger.log(POILogger.WARN, "Error creating property set with name " + setName + "\n" + ie);
+        } catch(org.apache.poi.hpsf.HPSFException he) {
+            // Oh well, doesn't exist
+            logger.log(POILogger.WARN, "Error creating property set with name " + setName + "\n" + he);
+        }
+        return null;
+    }
+

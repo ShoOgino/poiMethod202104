@@ -1,0 +1,21 @@
+    protected void writeChunk() throws IOException, GeneralSecurityException {
+        int posInChunk = (int)(_pos & chunkMask);
+        // normally posInChunk is 0, i.e. on the next chunk (-> index-1)
+        // but if called on close(), posInChunk is somewhere within the chunk data
+        int index = (int)(_pos >> chunkBits);
+        boolean lastChunk;
+        if (posInChunk==0) {
+            index--;
+            posInChunk = chunkSize;
+            lastChunk = false;
+        } else {
+            // pad the last chunk
+            lastChunk = true;
+        }
+
+        _cipher = initCipherForBlock(_cipher, index, lastChunk);
+
+        int ciLen = _cipher.doFinal(_chunk, 0, posInChunk, _chunk);
+        out.write(_chunk, 0, ciLen);
+    }
+

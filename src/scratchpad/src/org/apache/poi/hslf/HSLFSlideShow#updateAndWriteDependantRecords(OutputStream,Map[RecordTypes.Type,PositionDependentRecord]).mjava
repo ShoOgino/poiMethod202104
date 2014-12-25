@@ -19,55 +19,67 @@
         //   records are going to end up, in the new scheme
         // (Annoyingly, some powerpoint files have PersistPtrHolders
         //  that reference slides after the PersistPtrHolder)
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        UserEditAtom usr = null;
+        PersistPtrHolder ptr = null;
+        CountingOS cos = new CountingOS();
         for (Record record : _records) {
-            if(record instanceof PositionDependentRecord) {
-                PositionDependentRecord pdr = (PositionDependentRecord)record;
-                int oldPos = pdr.getLastOnDiskOffset();
-                int newPos = baos.size();
-                pdr.setLastOnDiskOffset(newPos);
-                if (oldPos != UNSET_OFFSET) {
-                    // new records don't need a mapping, as they aren't in a relation yet
-                    oldToNewPositions.put(Integer.valueOf(oldPos),Integer.valueOf(newPos));
-                }
+            // all top level records are position dependent
+            assert(record instanceof PositionDependentRecord);
+            PositionDependentRecord pdr = (PositionDependentRecord)record;
+            int oldPos = pdr.getLastOnDiskOffset();
+            int newPos = cos.size();
+            pdr.setLastOnDiskOffset(newPos);
+            if (oldPos != UNSET_OFFSET) {
+                // new records don't need a mapping, as they aren't in a relation yet
+                oldToNewPositions.put(oldPos,newPos);
+            }
+
+            // Grab interesting records as they come past
+            // this will only save the very last record of each type
+            RecordTypes.Type saveme = null;
+            int recordType = (int)record.getRecordType();
+            if (recordType == RecordTypes.PersistPtrIncrementalBlock.typeID) {
+                saveme = RecordTypes.PersistPtrIncrementalBlock;
+                ptr = (PersistPtrHolder)pdr;
+            } else if (recordType == RecordTypes.UserEditAtom.typeID) {
+                saveme = RecordTypes.UserEditAtom;
+                usr = (UserEditAtom)pdr;
+            }
+            if (interestingRecords != null && saveme != null) {
+                interestingRecords.put(saveme,pdr);
             }
             
             // Dummy write out, so the position winds on properly
-            record.writeOut(baos);
+            record.writeOut(cos);
         }
-        baos = null;
         
-        // For now, we're only handling PositionDependentRecord's that
-        // happen at the top level.
-        // In future, we'll need the handle them everywhere, but that's
-        // a bit trickier
-	    UserEditAtom usr = null;
-        for (Record record : _records) {
-            if (record instanceof PositionDependentRecord) {
-                // We've already figured out their new location, and
-                // told them that
-                // Tell them of the positions of the other records though
-                PositionDependentRecord pdr = (PositionDependentRecord)record;
-                pdr.updateOtherRecordReferences(oldToNewPositions);
-    
-                // Grab interesting records as they come past
-                // this will only save the very last record of each type
-                RecordTypes.Type saveme = null;
-                int recordType = (int)record.getRecordType();
-                if (recordType == RecordTypes.PersistPtrIncrementalBlock.typeID) {
-                    saveme = RecordTypes.PersistPtrIncrementalBlock;
-                } else if (recordType == RecordTypes.UserEditAtom.typeID) {
-                    saveme = RecordTypes.UserEditAtom;
-                    usr = (UserEditAtom)pdr;
-                }
-                if (interestingRecords != null && saveme != null) {
-                    interestingRecords.put(saveme,pdr);
-                }
-            }
+        assert(usr != null && ptr != null);
+        
+        Map<Integer,Integer> persistIds = new HashMap<Integer,Integer>();
+        for (Map.Entry<Integer,Integer> entry : ptr.getSlideLocationsLookup().entrySet()) {
+            persistIds.put(oldToNewPositions.get(entry.getValue()), entry.getKey());
+        }
+        
+        EncryptedSlideShow encData = new EncryptedSlideShow(getDocumentEncryptionAtom());
+	    
+	    for (Record record : _records) {
+            assert(record instanceof PositionDependentRecord);
+            // We've already figured out their new location, and
+            // told them that
+            // Tell them of the positions of the other records though
+            PositionDependentRecord pdr = (PositionDependentRecord)record;
+            Integer persistId = persistIds.get(pdr.getLastOnDiskOffset());
+            if (persistId == null) persistId = 0;
+            
+            // For now, we're only handling PositionDependentRecord's that
+            // happen at the top level.
+            // In future, we'll need the handle them everywhere, but that's
+            // a bit trickier
+            pdr.updateOtherRecordReferences(oldToNewPositions);
             
             // Whatever happens, write out that record tree
             if (os != null) {
-                record.writeOut(os);
+                record.writeOut(encData.encryptRecord(os, persistId, record));
             }
         }
 

@@ -3,29 +3,19 @@
 	 *  new positions
 	 */
 	public void updateOtherRecordReferences(Hashtable<Integer,Integer> oldToNewReferencesLookup) {
-		int[] slideIDs = getKnownSlideIDs();
-
 		// Loop over all the slides we know about
 		// Find where they used to live, and where they now live
-		// Then, update the right bit of _ptrData with their new location
-		for(int i=0; i<slideIDs.length; i++) {
-			Integer id = Integer.valueOf(slideIDs[i]);
-			Integer oldPos = (Integer)_slideLocations.get(id);
-			Integer newPos = (Integer)oldToNewReferencesLookup.get(oldPos);
+	    for (Map.Entry<Integer,Integer> me : _slideLocations.entrySet()) {
+	        Integer oldPos = me.getValue();
+	        Integer newPos = oldToNewReferencesLookup.get(oldPos);
 
-			if(newPos == null) {
-				logger.log(POILogger.WARN, "Couldn't find the new location of the \"slide\" with id " + id + " that used to be at " + oldPos);
-				logger.log(POILogger.WARN, "Not updating the position of it, you probably won't be able to find it any more (if you ever could!)");
-				newPos = oldPos;
-			}
-
-			// Write out the new location
-			Integer dataOffset = (Integer)_slideOffsetDataLocation.get(id);
-			LittleEndian.putInt(_ptrData,dataOffset.intValue(),newPos.intValue());
-
-			// Update our hashtable
-			_slideLocations.remove(id);
-			_slideLocations.put(id,newPos);
-		}
+            if (newPos == null) {
+                Integer id = me.getKey();
+                logger.log(POILogger.WARN, "Couldn't find the new location of the \"slide\" with id " + id + " that used to be at " + oldPos);
+                logger.log(POILogger.WARN, "Not updating the position of it, you probably won't be able to find it any more (if you ever could!)");
+            } else {
+                me.setValue(newPos);
+            }
+	    }
 	}
 

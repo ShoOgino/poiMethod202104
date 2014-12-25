@@ -1,0 +1,27 @@
+        public void processPOIFSWriterEvent(POIFSWriterEvent event) {
+            try {
+                OutputStream os = event.getStream();
+                byte buf[] = new byte[chunkSize];
+    
+                // StreamSize (8 bytes): An unsigned integer that specifies the number of bytes used by data 
+                // encrypted within the EncryptedData field, not including the size of the StreamSize field. 
+                // Note that the actual size of the \EncryptedPackage stream (1) can be larger than this 
+                // value, depending on the block size of the chosen encryption algorithm
+                LittleEndian.putLong(buf, 0, _pos);
+                os.write(buf, 0, LittleEndian.LONG_SIZE);
+
+                FileInputStream fis = new FileInputStream(fileOut);
+                int readBytes;
+                while ((readBytes = fis.read(buf)) != -1) {
+                    os.write(buf, 0, readBytes);
+                }
+                fis.close();
+
+                os.close();
+                
+                fileOut.delete();
+            } catch (IOException e) {
+                throw new EncryptedDocumentException(e);
+            }
+        }
+

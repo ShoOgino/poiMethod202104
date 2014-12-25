@@ -1,0 +1,48 @@
+	private void normalizePersistDirectory() {
+        TreeMap<Integer,Integer> orderedSlideLocations = new TreeMap<Integer,Integer>(_slideLocations);
+        
+        @SuppressWarnings("resource")
+        BufAccessBAOS bos = new BufAccessBAOS();
+        byte intbuf[] = new byte[4];
+        int lastPersistEntry = -1;
+        int lastSlideId = -1;
+        for (Map.Entry<Integer,Integer> me : orderedSlideLocations.entrySet()) {
+            int nextSlideId = me.getKey();
+            int offset = me.getValue();
+            try {
+                // Building the info block
+                // First 20 bits = offset number = slide ID (persistIdFld, i.e. first slide ID of a continuous group)
+                // Remaining 12 bits = offset count = 1 (cntPersistFld, i.e. continuous entries in a group)
+                
+                if (lastSlideId+1 == nextSlideId) {
+                    // use existing PersistDirectoryEntry, need to increase entry count
+                    assert(lastPersistEntry != -1);
+                    int infoBlock = LittleEndian.getInt(bos.getBuf(), lastPersistEntry);
+                    int entryCnt = cntPersistFld.getValue(infoBlock);
+                    infoBlock = cntPersistFld.setValue(infoBlock, entryCnt+1);
+                    LittleEndian.putInt(bos.getBuf(), lastPersistEntry, infoBlock);
+                } else {
+                    // start new PersistDirectoryEntry
+                    lastPersistEntry = bos.size();
+                    int infoBlock = persistIdFld.setValue(0, nextSlideId);
+                    infoBlock = cntPersistFld.setValue(infoBlock, 1);
+                    LittleEndian.putInt(intbuf, 0, infoBlock);
+                    bos.write(intbuf);
+                }
+                // Add to the ptrData offset lookup hash
+                LittleEndian.putInt(intbuf, 0, offset);
+                bos.write(intbuf);
+                lastSlideId = nextSlideId;
+            } catch (IOException e) {
+                // ByteArrayOutputStream is very unlikely throwing a IO exception (maybe because of OOM ...)
+                throw new RuntimeException(e);
+            }
+        }
+        
+        // Save the new ptr data
+        _ptrData = bos.toByteArray();
+
+        // Update the atom header
+        LittleEndian.putInt(_header,4,bos.size());
+	}
+

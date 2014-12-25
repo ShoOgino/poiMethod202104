@@ -9,6 +9,16 @@
      *           the passed in OutputStream
      */
     public void write(OutputStream out, boolean preserveNodes) throws IOException {
+        // read properties and pictures, with old encryption settings where appropriate 
+        if(_pictures == null) {
+           readPictures();
+        }
+        getDocumentSummaryInformation();
+
+        // set new encryption settings
+        EncryptedSlideShow encryptedSS = new EncryptedSlideShow(getDocumentEncryptionAtom());
+        _records = encryptedSS.updateEncryptionRecord(_records);
+
         // Get a new Filesystem to write into
         POIFSFileSystem outFS = new POIFSFileSystem();
 
@@ -17,8 +27,8 @@
 
         // Write out the Property Streams
         writeProperties(outFS, writtenEntries);
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        
+        BufAccessBAOS baos = new BufAccessBAOS();
 
         // For position dependent records, hold where they were and now are
         // As we go along, update, and hand over, to any Position Dependent
@@ -26,27 +36,28 @@
         updateAndWriteDependantRecords(baos, null);
 
         // Update our cached copy of the bytes that make up the PPT stream
-        _docstream = baos.toByteArray();
+        _docstream = new byte[baos.size()];
+        System.arraycopy(baos.getBuf(), 0, _docstream, 0, baos.size());
 
         // Write the PPT stream into the POIFS layer
-        ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+        ByteArrayInputStream bais = new ByteArrayInputStream(_docstream);
         outFS.createDocument(bais,"PowerPoint Document");
         writtenEntries.add("PowerPoint Document");
+        
+        currentUser.setEncrypted(encryptedSS.getDocumentEncryptionAtom() != null);
         currentUser.writeToFS(outFS);
         writtenEntries.add("Current User");
 
 
-        // Write any pictures, into another stream
-        if(_pictures == null) {
-           readPictures();
-        }
         if (_pictures.size() > 0) {
-            ByteArrayOutputStream pict = new ByteArrayOutputStream();
+            BufAccessBAOS pict = new BufAccessBAOS();
             for (PictureData p : _pictures) {
+                int offset = pict.size();
                 p.write(pict);
+                encryptedSS.encryptPicture(pict.getBuf(), offset);
             }
             outFS.createDocument(
-                new ByteArrayInputStream(pict.toByteArray()), "Pictures"
+                new ByteArrayInputStream(pict.getBuf(), 0, pict.size()), "Pictures"
             );
             writtenEntries.add("Pictures");
         }

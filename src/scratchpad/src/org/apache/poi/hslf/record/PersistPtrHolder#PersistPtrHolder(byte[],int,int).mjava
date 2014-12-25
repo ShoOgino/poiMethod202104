@@ -19,30 +19,27 @@
 		//   count * 32 bit offsets
 		// Repeat as many times as you have data
 		_slideLocations = new Hashtable<Integer,Integer>();
-		_slideOffsetDataLocation = new Hashtable<Integer,Integer>();
 		_ptrData = new byte[len-8];
 		System.arraycopy(source,start+8,_ptrData,0,_ptrData.length);
 
 		int pos = 0;
 		while(pos < _ptrData.length) {
-			// Grab the info field
-			long info = LittleEndian.getUInt(_ptrData,pos);
+		    // Grab the info field
+			int info = LittleEndian.getInt(_ptrData,pos);
 
 			// First 20 bits = offset number
 			// Remaining 12 bits = offset count
-			int offset_count = (int)(info >> 20);
-			int offset_no = (int)(info - (offset_count << 20));
-//System.out.println("Info is " + info + ", count is " + offset_count + ", number is " + offset_no);
-
+            int offset_no = persistIdFld.getValue(info);
+			int offset_count = cntPersistFld.getValue(info);
+			
 			// Wind on by the 4 byte info header
 			pos += 4;
 
 			// Grab the offsets for each of the sheets
 			for(int i=0; i<offset_count; i++) {
 				int sheet_no = offset_no + i;
-				long sheet_offset = LittleEndian.getUInt(_ptrData,pos);
-				_slideLocations.put(Integer.valueOf(sheet_no), Integer.valueOf((int)sheet_offset));
-				_slideOffsetDataLocation.put(Integer.valueOf(sheet_no), Integer.valueOf(pos));
+				int sheet_offset = (int)LittleEndian.getUInt(_ptrData,pos);
+				_slideLocations.put(sheet_no, sheet_offset);
 
 				// Wind on by 4 bytes per sheet found
 				pos += 4;
