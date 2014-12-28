@@ -1,0 +1,51 @@
+    public ValueEval evaluate(int srcRowIndex, int srcColumnIndex,
+            ValueEval database, ValueEval filterColumn, ValueEval conditionDatabase) {
+        // Input processing and error checks.
+        if(!(database instanceof TwoDEval) || !(conditionDatabase instanceof TwoDEval)) {
+            return ErrorEval.VALUE_INVALID;
+        }
+        TwoDEval db = (TwoDEval)database;
+        TwoDEval cdb = (TwoDEval)conditionDatabase;
+
+        int fc;
+        try {
+            fc = getColumnForName(filterColumn, db);
+        }
+        catch (EvaluationException e) {
+            return ErrorEval.VALUE_INVALID;
+        }
+        if(fc == -1) { // column not found
+            return ErrorEval.VALUE_INVALID;
+        }
+
+        // Reset algorithm.
+        algorithm.reset();
+
+        // Iterate over all db entries.
+        for(int row = 1; row < db.getHeight(); ++row) {
+            boolean matches = true;
+            try {
+                matches = fullfillsConditions(db, row, cdb);
+            }
+            catch (EvaluationException e) {
+                return ErrorEval.VALUE_INVALID;
+            }
+            // Filter each entry.
+            if(matches) {
+                try {
+                    ValueEval currentValueEval = solveReference(db.getValue(row, fc));
+                    // Pass the match to the algorithm and conditionally abort the search.
+                    boolean shouldContinue = algorithm.processMatch(currentValueEval);
+                    if(! shouldContinue) {
+                        break;
+                    }
+                } catch (EvaluationException e) {
+                    return e.getErrorEval();
+                }
+            }
+        }
+
+        // Return the result of the algorithm.
+        return algorithm.getResult();
+    }
+
