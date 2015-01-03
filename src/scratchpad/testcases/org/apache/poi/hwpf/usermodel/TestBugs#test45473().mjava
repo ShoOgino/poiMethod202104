@@ -1,16 +1,29 @@
     /**
      * Bug 45473 - HWPF cannot read file after save
+     * @throws IOException 
      */
-    public void test45473()
+    public void test45473() throws IOException
     {
-        HWPFDocument doc1 = HWPFTestDataSamples.openSampleFile( "Bug45473.doc" );
-        String text1 = new WordExtractor( doc1 ).getText().trim();
+        HWPFDocument doc1 = HWPFTestDataSamples.openSampleFile("Bug45473.doc");
+        WordExtractor wordExtractor = new WordExtractor(doc1);
+        final String text1;
+        try {
+            text1 = wordExtractor.getText().trim();
+        } finally {
+            wordExtractor.close();
+        }
 
-        HWPFDocument doc2 = HWPFTestDataSamples.writeOutAndReadBack( doc1 );
-        String text2 = new WordExtractor( doc2 ).getText().trim();
+        HWPFDocument doc2 = HWPFTestDataSamples.writeOutAndReadBack(doc1);
+        WordExtractor wordExtractor2 = new WordExtractor(doc2);
+        final String text2;
+        try {
+            text2 = wordExtractor2.getText().trim();
+        } finally {
+            wordExtractor2.close();
+        }
 
         // the text in the saved document has some differences in line
         // separators but we tolerate that
-        assertEquals( text1.replaceAll( "\n", "" ), text2.replaceAll( "\n", "" ) );
+        assertEqualsIgnoreNewline(text1.replaceAll("\n", "" ), text2.replaceAll("\n", ""));
     }
 

@@ -1,0 +1,71 @@
+    public void testHWPFSections() {
+        HWPFDocument document = null;
+        Paragraph para = null;
+        Section section = null;
+        Range overallRange = null;
+        int numParas = 0;
+        int numSections = 0;
+        document = HWPFTestDataSamples.openSampleFile("Bug53453Section.doc");
+        overallRange = document.getOverallRange();
+        numParas = overallRange.numParagraphs();
+        for(int i = 0; i < numParas; i++) {
+            para = overallRange.getParagraph(i);
+            numSections = para.numSections();
+            for(int j = 0; j < numSections; j++) {
+                section = para.getSection(j);
+                if(para.text().trim().equals("Section1")) {
+                    assertEquals(section1BottomMargin, section.getMarginBottom());
+                    assertEquals(section1LeftMargin, section.getMarginLeft());
+                    assertEquals(section1RightMargin, section.getMarginRight());
+                    assertEquals(section1TopMargin, section.getMarginTop());
+                    assertEquals(section1NumColumns, section.getNumColumns());
+                }
+                else if(para.text().trim().equals("Section2")) {
+                    assertEquals(section2BottomMargin, section.getMarginBottom());
+                    assertEquals(section2LeftMargin, section.getMarginLeft());
+                    assertEquals(section2RightMargin, section.getMarginRight());
+                    assertEquals(section2TopMargin, section.getMarginTop());
+                    assertEquals(section2NumColumns, section.getNumColumns());
+                    
+                    // Change the margin widths
+                    this.section2BottomMargin = (int)(1.5 * AbstractWordUtils.TWIPS_PER_INCH);
+                    this.section2TopMargin = (int)(1.75 * AbstractWordUtils.TWIPS_PER_INCH);
+                    this.section2LeftMargin = (int)(0.5 * AbstractWordUtils.TWIPS_PER_INCH);
+                    this.section2RightMargin = (int)(0.75 * AbstractWordUtils.TWIPS_PER_INCH);
+                    section.setMarginBottom(this.section2BottomMargin);
+                    section.setMarginLeft(this.section2LeftMargin);
+                    section.setMarginRight(this.section2RightMargin);
+                    section.setMarginTop(this.section2TopMargin);
+                }
+            }
+        }
+        
+        // Save away and re-read the document to prove the chages are permanent
+        document = HWPFTestDataSamples.writeOutAndReadBack(document);
+        overallRange = document.getOverallRange();
+        numParas = overallRange.numParagraphs();
+        for(int i = 0; i < numParas; i++) {
+            para = overallRange.getParagraph(i);
+            numSections = para.numSections();
+            for(int j = 0; j < numSections; j++) {
+                section = para.getSection(j);
+                if(para.text().trim().equals("Section1")) {
+                    // No changes to the margins in Section1
+                    assertEquals(section1BottomMargin, section.getMarginBottom());
+                    assertEquals(section1LeftMargin, section.getMarginLeft());
+                    assertEquals(section1RightMargin, section.getMarginRight());
+                    assertEquals(section1TopMargin, section.getMarginTop());
+                    assertEquals(section1NumColumns, section.getNumColumns());
+                }
+                else if(para.text().trim().equals("Section2")) {
+                    // The margins in Section2 have kept the new settings.
+                    assertEquals(section2BottomMargin, section.getMarginBottom());
+                    assertEquals(section2LeftMargin, section.getMarginLeft());
+                    assertEquals(section2RightMargin, section.getMarginRight());
+                    assertEquals(section2TopMargin, section.getMarginTop());
+                    assertEquals(section2NumColumns, section.getNumColumns());
+                }
+            }
+        }
+    }
+

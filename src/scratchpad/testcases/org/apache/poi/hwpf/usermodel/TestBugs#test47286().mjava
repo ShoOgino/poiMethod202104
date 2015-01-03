@@ -6,25 +6,37 @@
      */
     public void test47286() throws IOException
     {
-        HWPFDocument doc1 = HWPFTestDataSamples.openSampleFile( "Bug47286.doc" );
-        String text1 = new WordExtractor( doc1 ).getText().trim();
+        HWPFDocument doc1 = HWPFTestDataSamples.openSampleFile("Bug47286.doc");
+        WordExtractor wordExtractor = new WordExtractor(doc1);
+        final String text1;
+        try {
+            text1 = wordExtractor.getText().trim();
+        } finally {
+            wordExtractor.close();
+        }
 
-        HWPFDocument doc2 = HWPFTestDataSamples.writeOutAndReadBack( doc1 );
-        String text2 = new WordExtractor( doc2 ).getText().trim();
+        HWPFDocument doc2 = HWPFTestDataSamples.writeOutAndReadBack(doc1);
+        WordExtractor wordExtractor2 = new WordExtractor(doc2);
+        final String text2;
+        try {
+            text2 = wordExtractor2.getText().trim();
+        } finally {
+            wordExtractor2.close();
+        }
 
         // the text in the saved document has some differences in line
         // separators but we tolerate that
-        assertEquals( text1.replaceAll( "\n", "" ), text2.replaceAll( "\n", "" ) );
+        assertEqualsIgnoreNewline(text1.replaceAll("\n", "" ), text2.replaceAll("\n", ""));
 
-        assertEquals( doc1.getCharacterTable().getTextRuns().size(), doc2
-                .getCharacterTable().getTextRuns().size() );
+        assertEquals(doc1.getCharacterTable().getTextRuns().size(), doc2
+                .getCharacterTable().getTextRuns().size());
 
         List<PlexOfField> expectedFields = doc1.getFieldsTables()
-                .getFieldsPLCF( FieldsDocumentPart.MAIN );
+                .getFieldsPLCF(FieldsDocumentPart.MAIN);
         List<PlexOfField> actualFields = doc2.getFieldsTables().getFieldsPLCF(
-                FieldsDocumentPart.MAIN );
-        assertEquals( expectedFields.size(), actualFields.size() );
+                FieldsDocumentPart.MAIN);
+        assertEquals(expectedFields.size(), actualFields.size());
 
-        assertTableStructures( doc1.getRange(), doc2.getRange() );
+        assertTableStructures(doc1.getRange(), doc2.getRange());
     }
 
