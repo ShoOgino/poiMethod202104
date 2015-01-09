@@ -1,0 +1,32 @@
+    @Test
+    public void test57196_Formula() {
+        HSSFWorkbook wb = new HSSFWorkbook();
+        Ptg[] ptgs = HSSFFormulaParser.parse("DEC2HEX(HEX2DEC(O8)-O2+D2)", wb, FormulaType.CELL, -1); 
+        assertNotNull("Ptg array should not be null", ptgs);
+        
+        confirmTokenClasses(ptgs,
+            NameXPtg.class, // ??
+            NameXPtg.class, // ??
+            RefPtg.class, // O8
+            FuncVarPtg.class, // HEX2DEC
+            RefPtg.class, // O2
+            SubtractPtg.class,
+            RefPtg.class,   // D2
+            AddPtg.class,
+            FuncVarPtg.class // DEC2HEX
+        );
+
+        RefPtg o8 = (RefPtg) ptgs[2];
+        FuncVarPtg hex2Dec = (FuncVarPtg) ptgs[3];
+        RefPtg o2 = (RefPtg) ptgs[4];
+        RefPtg d2 = (RefPtg) ptgs[6];
+        FuncVarPtg dec2Hex = (FuncVarPtg) ptgs[8];
+
+        assertEquals("O8", o8.toFormulaString());
+        assertEquals(255, hex2Dec.getFunctionIndex());
+        //assertEquals("", hex2Dec.toString());
+        assertEquals("O2", o2.toFormulaString());
+        assertEquals("D2", d2.toFormulaString());
+        assertEquals(255, dec2Hex.getFunctionIndex());
+    }    
+

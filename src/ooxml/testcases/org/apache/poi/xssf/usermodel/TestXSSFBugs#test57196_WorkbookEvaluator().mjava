@@ -1,0 +1,45 @@
+    @Test
+    public void test57196_WorkbookEvaluator() {
+        //System.setProperty("org.apache.poi.util.POILogger", "org.apache.poi.util.SystemOutLogger");
+        //System.setProperty("poi.log.level", "3");
+        try {
+            XSSFWorkbook wb = new XSSFWorkbook();
+            XSSFSheet sheet = wb.createSheet("Sheet1");
+            XSSFRow row = sheet.createRow(0);
+            XSSFCell cell = row.createCell(0);
+
+            // simple formula worked
+            cell.setCellFormula("DEC2HEX(O2+D2)");
+    
+            WorkbookEvaluator workbookEvaluator = new WorkbookEvaluator(XSSFEvaluationWorkbook.create(wb), null, null);
+            workbookEvaluator.setDebugEvaluationOutputForNextEval(true);
+            workbookEvaluator.evaluate(new XSSFEvaluationCell(cell));
+            
+            // this already failed! Hex2Dec did not correctly handle RefEval
+            cell.setCellFormula("HEX2DEC(O8)");
+            workbookEvaluator.clearAllCachedResultValues();
+    
+            workbookEvaluator = new WorkbookEvaluator(XSSFEvaluationWorkbook.create(wb), null, null);
+            workbookEvaluator.setDebugEvaluationOutputForNextEval(true);
+            workbookEvaluator.evaluate(new XSSFEvaluationCell(cell));
+
+            // slightly more complex one failed
+            cell.setCellFormula("HEX2DEC(O8)-O2+D2");
+            workbookEvaluator.clearAllCachedResultValues();
+    
+            workbookEvaluator = new WorkbookEvaluator(XSSFEvaluationWorkbook.create(wb), null, null);
+            workbookEvaluator.setDebugEvaluationOutputForNextEval(true);
+            workbookEvaluator.evaluate(new XSSFEvaluationCell(cell));
+
+            // more complicated failed
+            cell.setCellFormula("DEC2HEX(HEX2DEC(O8)-O2+D2)");
+            workbookEvaluator.clearAllCachedResultValues();
+
+            workbookEvaluator.setDebugEvaluationOutputForNextEval(true);
+            workbookEvaluator.evaluate(new XSSFEvaluationCell(cell));
+        } finally {
+            System.clearProperty("org.apache.poi.util.POILogger");
+            System.clearProperty("poi.log.level");
+        }
+    }
+
