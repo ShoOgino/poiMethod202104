@@ -1,0 +1,60 @@
+    Outline getHeadDecoration(Graphics2D graphics, LineDecoration deco, BasicStroke stroke) {
+        DecorationSize headLength = deco.getHeadLength();
+        DecorationSize headWidth = deco.getHeadWidth();
+    
+        double lineWidth = Math.max(2.5, stroke.getLineWidth());
+    
+        Rectangle2D anchor = getAnchor(graphics, shape);
+        double x1 = anchor.getX(),
+                y1 = anchor.getY();
+    
+        double alpha = Math.atan(anchor.getHeight() / anchor.getWidth());
+    
+        AffineTransform at = new AffineTransform();
+        java.awt.Shape shape = null;
+        Path p = null;
+        Rectangle2D bounds;
+        double scaleY = 1;
+        double scaleX = 1;
+        switch (deco.getHeadShape()) {
+            case OVAL:
+                p = new Path();
+                shape = new Ellipse2D.Double(0, 0, lineWidth * scaleX, lineWidth * scaleY);
+                bounds = shape.getBounds2D();
+                at.translate(x1 - bounds.getWidth() / 2, y1 - bounds.getHeight() / 2);
+                at.rotate(alpha, bounds.getX() + bounds.getWidth() / 2, bounds.getY() + bounds.getHeight() / 2);
+                break;
+            case STEALTH:
+            case ARROW:
+                p = new Path(false, true);
+                GeneralPath arrow = new GeneralPath();
+                arrow.moveTo((float) (lineWidth * 3 * scaleX), (float) (-lineWidth * scaleY * 2));
+                arrow.lineTo(0, 0);
+                arrow.lineTo((float) (lineWidth * 3 * scaleX), (float) (lineWidth * scaleY * 2));
+                shape = arrow;
+                at.translate(x1, y1);
+                at.rotate(alpha);
+                break;
+            case TRIANGLE:
+                p = new Path();
+                scaleY = headWidth.ordinal() + 1;
+                scaleX = headLength.ordinal() + 1;
+                GeneralPath triangle = new GeneralPath();
+                triangle.moveTo((float) (lineWidth * scaleX), (float) (-lineWidth * scaleY / 2));
+                triangle.lineTo(0, 0);
+                triangle.lineTo((float) (lineWidth * scaleX), (float) (lineWidth * scaleY / 2));
+                triangle.closePath();
+                shape = triangle;
+                at.translate(x1, y1);
+                at.rotate(alpha);
+                break;
+            default:
+                break;
+        }
+    
+        if (shape != null) {
+            shape = at.createTransformedShape(shape);
+        }
+        return shape == null ? null : new Outline(shape, p);
+    }
+

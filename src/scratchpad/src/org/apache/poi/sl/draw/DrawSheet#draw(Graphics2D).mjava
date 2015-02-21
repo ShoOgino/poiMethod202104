@@ -1,0 +1,34 @@
+    public void draw(Graphics2D graphics) {
+        DrawFactory drawFact = DrawFactory.getInstance(graphics);
+        MasterSheet master = sheet.getMasterSheet();
+        
+        if(sheet.getFollowMasterGraphics() && master != null) {
+            Drawable drawer = drawFact.getDrawable(master);
+            drawer.draw(graphics);
+        }
+        
+        graphics.setRenderingHint(Drawable.GROUP_TRANSFORM, new AffineTransform());
+
+        for (Shape shape : sheet.getShapes()) {
+            if(!canDraw(shape)) continue;
+            
+            // remember the initial transform and restore it after we are done with drawing
+            AffineTransform at = graphics.getTransform();
+
+            // concrete implementations can make sense of this hint,
+            // for example PSGraphics2D or PDFGraphics2D would call gsave() / grestore
+            graphics.setRenderingHint(Drawable.GSAVE, true);
+
+            // apply rotation and flipping
+            Drawable drawer = drawFact.getDrawable(shape);
+            drawer.applyTransform(graphics);
+            // draw stuff
+            drawer.draw(graphics);
+
+            // restore the coordinate system
+            graphics.setTransform(at);
+
+            graphics.setRenderingHint(Drawable.GRESTORE, true);
+        }
+    }
+

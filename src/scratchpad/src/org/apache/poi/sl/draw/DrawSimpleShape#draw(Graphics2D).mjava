@@ -1,0 +1,47 @@
+    @Override
+    public void draw(Graphics2D graphics) {
+//        RenderableShape rShape = new RenderableShape(this);
+//        rShape.render(graphics);
+
+        DrawPaint drawPaint = DrawFactory.getInstance(graphics).getPaint(shape);
+        Paint fill = drawPaint.getPaint(graphics, shape.getFillStyle().getPaint());
+        Paint line = drawPaint.getPaint(graphics, shape.getStrokeStyle().getPaint());
+        BasicStroke stroke = getStroke(); // the stroke applies both to the shadow and the shape
+        graphics.setStroke(stroke);
+
+        Collection<Outline> elems = computeOutlines(graphics);
+        
+        // first paint the shadow
+        drawShadow(graphics, elems, fill, line);
+        
+        // then fill the shape interior
+        if (fill != null) {
+            graphics.setPaint(fill);
+            for (Outline o : elems) {
+                if (o.getPath().isFilled()){
+                    java.awt.Shape s = o.getOutline();
+                    graphics.setRenderingHint(Drawable.GRADIENT_SHAPE, s);
+                    graphics.fill(s);
+                }                
+            }
+        }
+        
+        // then draw any content within this shape (text, image, etc.)
+        drawContent(graphics);
+
+        // then stroke the shape outline
+        if(line != null) {
+            graphics.setPaint(line);
+            for(Outline o : elems){
+                if(o.getPath().isStroked()){
+                    java.awt.Shape s = o.getOutline();
+                    graphics.setRenderingHint(Drawable.GRADIENT_SHAPE, s);
+                    graphics.draw(s);
+                }
+            }
+        }
+        
+        // draw line decorations
+        drawDecoration(graphics, line, stroke);
+    }
+

@@ -1,0 +1,52 @@
+    /**
+     * paint the paragraphs starting from top left (x,y)
+     *
+     * @return  the vertical advance, i.e. the cumulative space occupied by the text
+     */
+    public double drawParagraphs(Graphics2D graphics, double x, double y) {
+        DrawFactory fact = DrawFactory.getInstance(graphics);
+        Insets2D shapePadding = shape.getInsets();
+
+        double y0 = y;
+        Iterator<TextParagraph> paragraphs = shape.iterator();
+        
+        boolean isFirstLine = true;
+        while (paragraphs.hasNext()){
+            TextParagraph p = paragraphs.next();
+            DrawTextParagraph dp = fact.getDrawable(p);
+            dp.setInsets(shapePadding);
+            dp.breakText(graphics);
+
+            if (!isFirstLine) {
+                // the amount of vertical white space before the paragraph
+                double spaceBefore = p.getSpaceBefore();
+                if(spaceBefore > 0) {
+                    // positive value means percentage spacing of the height of the first line, e.g.
+                    // the higher the first line, the bigger the space before the paragraph
+                    y += spaceBefore*0.01*dp.getFirstLineHeight();
+                } else {
+                    // negative value means the absolute spacing in points
+                    y += -spaceBefore;
+                }
+                isFirstLine = false;
+            }
+            
+            dp.setPosition(x, y);
+            dp.draw(graphics);
+            y += dp.getY();
+
+            if (paragraphs.hasNext()) {
+                double spaceAfter = p.getSpaceAfter();
+                if(spaceAfter > 0) {
+                    // positive value means percentage spacing of the height of the last line, e.g.
+                    // the higher the last line, the bigger the space after the paragraph
+                    y += spaceAfter*0.01*dp.getLastLineHeight();
+                } else {
+                    // negative value means the absolute spacing in points
+                    y += -spaceAfter;
+                }
+            }
+        }
+        return y - y0;
+    }
+

@@ -1,0 +1,139 @@
+    /**
+     * Convert shape fill into java.awt.Paint. The result is either Color or
+     * TexturePaint or GradientPaint or null
+     *
+     * @param graphics  the target graphics
+     * @param obj       the xml to read. Must contain elements from the EG_ColorChoice group:
+     * <code>
+     *     a:scrgbClr    RGB Color Model - Percentage Variant
+     *     a:srgbClr    RGB Color Model - Hex Variant
+     *     a:hslClr    Hue, Saturation, Luminance Color Model
+     *     a:sysClr    System Color
+     *     a:schemeClr    Scheme Color
+     *     a:prstClr    Preset Color
+     *  </code>
+     *
+     * @param phClr     context color
+     * @param parentPart    the parent package part. Any external references (images, etc.) are resolved relative to it.
+     *
+     * @return  the applied Paint or null if none was applied
+     */
+    protected PaintStyle selectPaint(XmlObject obj, final CTSchemeColor phClr, final PackagePart parentPart) {
+        final XSLFTheme theme = getSheet().getTheme();
+
+        if (obj instanceof CTNoFillProperties) {
+            return TRANSPARENT_PAINT;
+        }
+        
+        if (obj instanceof CTSolidColorFillProperties) {
+            CTSolidColorFillProperties solidFill = (CTSolidColorFillProperties) obj;
+            final XSLFColor c = new XSLFColor(solidFill, theme, phClr);
+            return new SolidPaint() {
+                public ColorStyle getSolidColor() {
+                    return c.getColorStyle();
+                }
+            };
+        }
+        
+        if (obj instanceof CTBlipFillProperties) {
+            CTBlipFillProperties blipFill = (CTBlipFillProperties)obj;
+            final CTBlip blip = blipFill.getBlip();
+            return new TexturePaint() {
+                private PackagePart getPart() {
+                    try {
+                        String blipId = blip.getEmbed();
+                        PackageRelationship rel = parentPart.getRelationship(blipId);
+                        return parentPart.getRelatedPart(rel);
+                    } catch (InvalidFormatException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+                
+                public InputStream getImageData() {
+                    try {
+                        return getPart().getInputStream();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+
+                public String getContentType() {
+                    /* TOOD: map content-type */
+                    return getPart().getContentType();
+                }
+
+                public int getAlpha() {
+                    return (blip.sizeOfAlphaModFixArray() > 0)
+                        ? blip.getAlphaModFixArray(0).getAmt()
+                        : 0;
+                }
+            };
+        }
+        
+        if (obj instanceof CTGradientFillProperties) {
+            final CTGradientFillProperties gradFill = (CTGradientFillProperties) obj;
+
+            @SuppressWarnings("deprecation")
+            final CTGradientStop[] gs = gradFill.getGsLst().getGsArray();
+
+            Arrays.sort(gs, new Comparator<CTGradientStop>() {
+                public int compare(CTGradientStop o1, CTGradientStop o2) {
+                    Integer pos1 = o1.getPos();
+                    Integer pos2 = o2.getPos();
+                    return pos1.compareTo(pos2);
+                }
+            });
+
+            final ColorStyle cs[] = new ColorStyle[gs.length];
+            final float fractions[] = new float[gs.length];
+            
+            int i=0;
+            for (CTGradientStop cgs : gs) {
+                cs[i] = new XSLFColor(cgs, theme, phClr).getColorStyle();
+                fractions[i] = cgs.getPos() / 100000.f;
+            }
+            
+            return new GradientPaint() {
+
+                public double getGradientAngle() {
+                    return (gradFill.isSetLin())
+                        ? gradFill.getLin().getAng() / 60000.d
+                        : 0;
+                }
+
+                public ColorStyle[] getGradientColors() {
+                    return cs;
+                }
+
+                public float[] getGradientFractions() {
+                    return fractions;
+                }
+
+                public boolean isRotatedWithShape() {
+                    // TODO: is this correct???
+                    return (gradFill.isSetRotWithShape() || !gradFill.getRotWithShape());
+                }
+
+                public GradientType getGradientType() {
+                    if (gradFill.isSetLin()) {
+                        return GradientType.linear;
+                    }
+                    
+                    if (gradFill.isSetPath()) {
+                        /* TODO: handle rect path */
+                        STPathShadeType.Enum ps = gradFill.getPath().getPath();
+                        if (ps == STPathShadeType.CIRCLE) {
+                            return GradientType.circular;
+                        } else if (ps == STPathShadeType.SHAPE) {
+                            return GradientType.shape;
+                        }
+                    }
+                    
+                    return GradientType.linear;
+                }
+            };
+        }
+        
+        return TRANSPARENT_PAINT;
+    }
+

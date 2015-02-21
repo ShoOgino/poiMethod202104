@@ -1,0 +1,60 @@
+    @Override
+    public void drawContent(Graphics2D graphics) {
+        Rectangle2D anchor = DrawShape.getAnchor(graphics, shape);
+        Insets2D insets = shape.getInsets();
+        double x = anchor.getX() + insets.left;
+        double y = anchor.getY();
+
+        // remember the initial transform
+        AffineTransform tx = graphics.getTransform();
+
+        // Transform of text in flipped shapes is special.
+        // At this point the flip and rotation transform is already applied
+        // (see XSLFShape#applyTransform ), but we need to restore it to avoid painting "upside down".
+        // See Bugzilla 54210.
+
+        if(shape.getFlipVertical()){
+            graphics.translate(anchor.getX(), anchor.getY() + anchor.getHeight());
+            graphics.scale(1, -1);
+            graphics.translate(-anchor.getX(), -anchor.getY());
+
+            // text in vertically flipped shapes is rotated by 180 degrees
+            double centerX = anchor.getX() + anchor.getWidth()/2;
+            double centerY = anchor.getY() + anchor.getHeight()/2;
+            graphics.translate(centerX, centerY);
+            graphics.rotate(Math.toRadians(180));
+            graphics.translate(-centerX, -centerY);
+        }
+
+        // Horizontal flipping applies only to shape outline and not to the text in the shape.
+        // Applying flip second time restores the original not-flipped transform
+        if(shape.getFlipHorizontal()){
+            graphics.translate(anchor.getX() + anchor.getWidth(), anchor.getY());
+            graphics.scale(-1, 1);
+            graphics.translate(-anchor.getX() , -anchor.getY());
+        }
+
+
+        // first dry-run to calculate the total height of the text
+        double textHeight = shape.getTextHeight();
+
+        switch (shape.getVerticalAlignment()){
+            case TOP:
+                y += insets.top;
+                break;
+            case BOTTOM:
+                y += anchor.getHeight() - textHeight - insets.bottom;
+                break;
+            default:
+            case MIDDLE:
+                double delta = anchor.getHeight() - textHeight - insets.top - insets.bottom;
+                y += insets.top + delta/2;
+                break;
+        }
+
+        drawParagraphs(graphics, x, y);
+
+        // restore the transform
+        graphics.setTransform(tx);
+    }
+
