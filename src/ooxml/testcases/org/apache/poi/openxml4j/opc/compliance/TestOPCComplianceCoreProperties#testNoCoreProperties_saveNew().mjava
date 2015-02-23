@@ -1,0 +1,33 @@
+    /**
+     * Document with no core properties - testing at the OPC level,
+     *  saving into a new stream
+     */
+    public void testNoCoreProperties_saveNew() throws Exception {
+        String sampleFileName = "OPCCompliance_NoCoreProperties.xlsx";
+        OPCPackage pkg = null;
+        try {
+            pkg = OPCPackage.open(POIDataSamples.getOpenXML4JInstance().getFile(sampleFileName).getPath());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        // Empty properties
+        assertEquals(0, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
+        assertNotNull(pkg.getPackageProperties());
+        assertNotNull(pkg.getPackageProperties().getLanguageProperty());
+        assertNull(pkg.getPackageProperties().getLanguageProperty().getValue());
+
+        // Save and re-load
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        pkg.save(baos);
+        ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+
+        pkg = OPCPackage.open(bais);
+
+        // An Empty Properties part has been added in the save/load
+        assertEquals(1, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
+        assertNotNull(pkg.getPackageProperties());
+        assertNotNull(pkg.getPackageProperties().getLanguageProperty());
+        assertNull(pkg.getPackageProperties().getLanguageProperty().getValue());
+    }
+
