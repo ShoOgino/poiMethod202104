@@ -1,0 +1,55 @@
+	/**
+	 * Saves the given string to the records. Doesn't
+	 *  touch the stylings.
+	 */
+	private void storeText(String s) {
+		// Store in the appropriate record
+		if(_isUnicode) {
+			// The atom can safely convert to unicode
+			_charAtom.setText(s);
+		} else {
+			// Will it fit in a 8 bit atom?
+			boolean hasMultibyte = StringUtil.hasMultibyte(s);
+			if(! hasMultibyte) {
+				// Fine to go into 8 bit atom
+				byte[] text = new byte[s.length()];
+				StringUtil.putCompressedUnicode(s,text,0);
+				_byteAtom.setText(text);
+			} else {
+				// Need to swap a TextBytesAtom for a TextCharsAtom
+
+				// Build the new TextCharsAtom
+				_charAtom = new TextCharsAtom();
+				_charAtom.setText(s);
+
+				// Use the TextHeaderAtom to do the swap on the parent
+				RecordContainer parent = _headerAtom.getParentRecord();
+				Record[] cr = parent.getChildRecords();
+				for(int i=0; i<cr.length; i++) {
+					// Look for TextBytesAtom
+					if(cr[i].equals(_byteAtom)) {
+						// Found it, so replace, then all done
+						cr[i] = _charAtom;
+						break;
+					}
+				}
+
+				// Flag the change
+				_byteAtom = null;
+				_isUnicode = true;
+			}
+		}
+        /**
+         * If TextSpecInfoAtom is present, we must update the text size in it,
+         * otherwise the ppt will be corrupted
+         */
+        if(_records != null) for (int i = 0; i < _records.length; i++) {
+            if(_records[i] instanceof TextSpecInfoAtom){
+                TextSpecInfoAtom specAtom = (TextSpecInfoAtom)_records[i];
+                if((s.length() + 1) != specAtom.getCharactersCovered()){
+                    specAtom.reset(s.length() + 1);
+                }
+            }
+        }
+	}
+

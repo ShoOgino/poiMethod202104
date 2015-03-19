@@ -1,0 +1,73 @@
+    /**
+     * Writes out the slideshow file the is represented by an instance
+     *  of this class.
+     * If you require all streams to be written out (eg Marcos, embeded
+     *  documents), then set preserveNodes to true
+     * @param out The OutputStream to write to.
+     * @param preserveNodes Should all OLE2 streams be written back out, or only the common ones?
+     * @throws IOException If there is an unexpected IOException from
+     *           the passed in OutputStream
+     */
+    public void write(OutputStream out, boolean preserveNodes) throws IOException {
+        // read properties and pictures, with old encryption settings where appropriate 
+        if(_pictures == null) {
+           readPictures();
+        }
+        getDocumentSummaryInformation();
+
+        // set new encryption settings
+        HSLFSlideShowEncrypted encryptedSS = new HSLFSlideShowEncrypted(getDocumentEncryptionAtom());
+        _records = encryptedSS.updateEncryptionRecord(_records);
+
+        // Get a new Filesystem to write into
+        POIFSFileSystem outFS = new POIFSFileSystem();
+
+        // The list of entries we've written out
+        List<String> writtenEntries = new ArrayList<String>(1);
+
+        // Write out the Property Streams
+        writeProperties(outFS, writtenEntries);
+        
+        BufAccessBAOS baos = new BufAccessBAOS();
+
+        // For position dependent records, hold where they were and now are
+        // As we go along, update, and hand over, to any Position Dependent
+        // records we happen across
+        updateAndWriteDependantRecords(baos, null);
+
+        // Update our cached copy of the bytes that make up the PPT stream
+        _docstream = new byte[baos.size()];
+        System.arraycopy(baos.getBuf(), 0, _docstream, 0, baos.size());
+
+        // Write the PPT stream into the POIFS layer
+        ByteArrayInputStream bais = new ByteArrayInputStream(_docstream);
+        outFS.createDocument(bais,"PowerPoint Document");
+        writtenEntries.add("PowerPoint Document");
+        
+        currentUser.setEncrypted(encryptedSS.getDocumentEncryptionAtom() != null);
+        currentUser.writeToFS(outFS);
+        writtenEntries.add("Current User");
+
+
+        if (_pictures.size() > 0) {
+            BufAccessBAOS pict = new BufAccessBAOS();
+            for (HSLFPictureData p : _pictures) {
+                int offset = pict.size();
+                p.write(pict);
+                encryptedSS.encryptPicture(pict.getBuf(), offset);
+            }
+            outFS.createDocument(
+                new ByteArrayInputStream(pict.getBuf(), 0, pict.size()), "Pictures"
+            );
+            writtenEntries.add("Pictures");
+        }
+
+        // If requested, write out any other streams we spot
+        if(preserveNodes) {
+            EntryUtils.copyNodes(directory.getFileSystem(), outFS, writtenEntries);
+        }
+
+        // Send the POIFSFileSystem object out to the underlying stream
+        outFS.writeFilesystem(out);
+    }
+

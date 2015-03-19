@@ -1,0 +1,26 @@
+	/**
+	 * Fetch the value of the given Paragraph related TextProp.
+	 * Returns -1 if that TextProp isn't present.
+	 * If the TextProp isn't present, the value from the appropriate
+	 *  Master Sheet will apply.
+	 */
+	private int getParaTextPropVal(String propName) {
+		TextProp prop = null;
+		boolean hardAttribute = false;
+		if (paragraphStyle != null){
+			prop = paragraphStyle.findByName(propName);
+
+			BitMaskTextProp maskProp = (BitMaskTextProp)paragraphStyle.findByName(ParagraphFlagsTextProp.NAME);
+			hardAttribute = maskProp != null && maskProp.getValue() == 0;
+		}
+		if (prop == null && !hardAttribute){
+			HSLFSheet sheet = parentParagraph.getSheet();
+			int txtype = parentParagraph.getRunType();
+			HSLFMasterSheet master = sheet.getMasterSheet();
+			if (master != null)
+				prop = master.getStyleAttribute(txtype, getIndentLevel(), propName, false);
+		}
+
+		return prop == null ? -1 : prop.getValue();
+	}
+

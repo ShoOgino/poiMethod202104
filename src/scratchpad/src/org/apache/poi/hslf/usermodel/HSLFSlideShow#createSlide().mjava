@@ -1,0 +1,72 @@
+	/**
+	 * Create a blank <code>Slide</code>.
+	 *
+	 * @return the created <code>Slide</code>
+	 */
+	public HSLFSlide createSlide() {
+		SlideListWithText slist = null;
+
+		// We need to add the records to the SLWT that deals
+		// with Slides.
+		// Add it, if it doesn't exist
+		slist = _documentRecord.getSlideSlideListWithText();
+		if (slist == null) {
+			// Need to add a new one
+			slist = new SlideListWithText();
+			slist.setInstance(SlideListWithText.SLIDES);
+			_documentRecord.addSlideListWithText(slist);
+		}
+
+		// Grab the SlidePersistAtom with the highest Slide Number.
+		// (Will stay as null if no SlidePersistAtom exists yet in
+		// the slide, or only master slide's ones do)
+		SlidePersistAtom prev = null;
+		for (SlideAtomsSet sas : slist.getSlideAtomsSets()) {
+			SlidePersistAtom spa = sas.getSlidePersistAtom();
+			if (spa.getSlideIdentifier() < 0) {
+				// This is for a master slide
+				// Odd, since we only deal with the Slide SLWT
+			} else {
+				// Must be for a real slide
+				if (prev == null) {
+					prev = spa;
+				}
+				if (prev.getSlideIdentifier() < spa.getSlideIdentifier()) {
+					prev = spa;
+				}
+			}
+		}
+
+		// Set up a new SlidePersistAtom for this slide
+		SlidePersistAtom sp = new SlidePersistAtom();
+
+		// First slideId is always 256
+		sp.setSlideIdentifier(prev == null ? 256 : (prev.getSlideIdentifier() + 1));
+
+		// Add this new SlidePersistAtom to the SlideListWithText
+		slist.addSlidePersistAtom(sp);
+
+		// Create a new Slide
+		HSLFSlide slide = new HSLFSlide(sp.getSlideIdentifier(), sp.getRefID(), _slides.length + 1);
+		slide.setSlideShow(this);
+		slide.onCreate();
+
+		// Add in to the list of Slides
+		HSLFSlide[] s = new HSLFSlide[_slides.length + 1];
+		System.arraycopy(_slides, 0, s, 0, _slides.length);
+		s[_slides.length] = slide;
+		_slides = s;
+		logger.log(POILogger.INFO, "Added slide " + _slides.length + " with ref " + sp.getRefID()
+				+ " and identifier " + sp.getSlideIdentifier());
+
+		// Add the core records for this new Slide to the record tree
+		org.apache.poi.hslf.record.Slide slideRecord = slide.getSlideRecord();
+		int psrId = addPersistentObject(slideRecord);
+		sp.setRefID(psrId);
+		slideRecord.setSheetId(psrId);
+		
+		slide.setMasterSheet(_masters[0]);
+		// All done and added
+		return slide;
+	}
+
