@@ -4,17 +4,29 @@
         File inputFile = new File(ROOT_DIR, file);
 
         try {
-            InputStream stream = new BufferedInputStream(new FileInputStream(inputFile),100);
+            InputStream stream = new BufferedInputStream(new FileInputStream(inputFile), 64*1024);
             try {
                 handler.handleFile(stream);
 
                 assertFalse("Expected to fail for file " + file + " and handler " + handler + ", but did not fail!", 
                         EXPECTED_FAILURES.contains(file));
+                assertFalse("Expected to fail for file " + file + " and handler " + handler + ", but did not fail!", 
+                        OLD_FILES.contains(file));
             } finally {
                 stream.close();
             }
 
             handler.handleExtracting(inputFile);
+        } catch (OldWordFileFormatException e) {
+            // for old word files we should still support extracting text
+            if(OLD_FILES.contains(file)) {
+                handler.handleExtracting(inputFile);
+            } else {
+                // check if we expect failure for this file
+                if(!EXPECTED_FAILURES.contains(file) && !AbstractFileHandler.EXPECTED_EXTRACTOR_FAILURES.contains(file)) {
+                    throw new Exception("While handling " + file, e);
+                }
+            }
         } catch (Exception e) {
             // check if we expect failure for this file
             if(!EXPECTED_FAILURES.contains(file) && !AbstractFileHandler.EXPECTED_EXTRACTOR_FAILURES.contains(file)) {
