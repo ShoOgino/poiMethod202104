@@ -1,0 +1,48 @@
+	/**
+	 * Constructs a Slide from the Slide record, and the SlideAtomsSet
+	 *  containing the text.
+	 * Initializes TextRuns, to provide easier access to the text
+	 *
+	 * @param slide the Slide record we're based on
+	 * @param notes the Notes sheet attached to us
+	 * @param atomSet the SlideAtomsSet to get the text from
+	 */
+	public HSLFSlide(org.apache.poi.hslf.record.Slide slide, HSLFNotes notes, SlideAtomsSet atomSet, int slideIdentifier, int slideNumber) {
+        super(slide, slideIdentifier);
+
+		_notes = notes;
+		_atomSet = atomSet;
+		_slideNo = slideNumber;
+
+		// For the text coming in from the SlideAtomsSet:
+		// Build up TextRuns from pairs of TextHeaderAtom and
+		//  one of TextBytesAtom or TextCharsAtom
+		if (_atomSet != null && _atomSet.getSlideRecords().length > 0) {
+		    List<List<HSLFTextParagraph>> llhtp = HSLFTextParagraph.findTextParagraphs(_atomSet.getSlideRecords());
+		    _paragraphs.addAll(llhtp);
+	        if (_paragraphs.isEmpty()) {
+	            throw new RuntimeException("No text records found for slide");
+	        }
+		} else {
+			// No text on the slide, must just be pictures
+		}
+
+		// Grab text from SlideListWithTexts entries
+		for(List<HSLFTextParagraph> ltp : _paragraphs) {
+		    for (HSLFTextParagraph tp : ltp) {
+		        tp.supplySheet(this);
+		    }
+		}
+
+        // Grab the TextRuns from the PPDrawing
+		List<List<HSLFTextParagraph>> llOtherRuns = HSLFTextParagraph.findTextParagraphs(getPPDrawing());
+		for (List<HSLFTextParagraph> otherRuns : llOtherRuns) {
+	        // Grab text from slide's PPDrawing
+	        for(HSLFTextParagraph tp : otherRuns) {
+	            tp.supplySheet(this);
+	            tp.setIndex(-1); // runs found in PPDrawing are not linked with SlideListWithTexts
+	        }
+		}
+        _paragraphs.addAll(llOtherRuns);
+	}
+

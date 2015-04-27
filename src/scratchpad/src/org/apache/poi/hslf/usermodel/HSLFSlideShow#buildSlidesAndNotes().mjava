@@ -40,27 +40,21 @@
 		if (masterSLWT != null) {
 			masterSets = masterSLWT.getSlideAtomsSets();
 
-			ArrayList<SlideMaster> mmr = new ArrayList<SlideMaster>();
-			ArrayList<TitleMaster> tmr = new ArrayList<TitleMaster>();
-
 			for (SlideAtomsSet sas : masterSets) {
 				Record r = getCoreRecordForSAS(sas);
 				int sheetNo = sas.getSlidePersistAtom().getSlideIdentifier();
 				if (r instanceof org.apache.poi.hslf.record.Slide) {
-					TitleMaster master = new TitleMaster((org.apache.poi.hslf.record.Slide) r,
+					HSLFTitleMaster master = new HSLFTitleMaster((org.apache.poi.hslf.record.Slide) r,
 							sheetNo);
 					master.setSlideShow(this);
-					tmr.add(master);
+					_titleMasters.add(master);
 				} else if (r instanceof org.apache.poi.hslf.record.MainMaster) {
-					SlideMaster master = new SlideMaster((org.apache.poi.hslf.record.MainMaster) r,
+					HSLFSlideMaster master = new HSLFSlideMaster((org.apache.poi.hslf.record.MainMaster) r,
 							sheetNo);
 					master.setSlideShow(this);
-					mmr.add(master);
+					_masters.add(master);
 				}
 			}
-
-			_masters = mmr.toArray(new SlideMaster[mmr.size()]);
-			_titleMasters = tmr.toArray(new TitleMaster[tmr.size()]);
 		}
 
 		// Having sorted out the masters, that leaves the notes and slides
@@ -138,16 +132,14 @@
 
 		// Finally, generate model objects for everything
 		// Notes first
-		_notes = new HSLFNotes[notesRecords.length];
-		for (int i = 0; i < _notes.length; i++) {
-		    if (notesRecords[i] != null) {
-    		    _notes[i] = new HSLFNotes(notesRecords[i]);
-    			_notes[i].setSlideShow(this);
-		    }
+		for (org.apache.poi.hslf.record.Notes n : notesRecords) {
+		    if (n == null) continue;
+		    HSLFNotes hn = new HSLFNotes(n);
+		    hn.setSlideShow(this);
+		    _notes.add(hn);
 		}
 		// Then slides
-		_slides = new HSLFSlide[slidesRecords.length];
-		for (int i = 0; i < _slides.length; i++) {
+		for (int i = 0; i < slidesRecords.length; i++) {
 			SlideAtomsSet sas = slidesSets[i];
 			int slideIdentifier = sas.getSlidePersistAtom().getSlideIdentifier();
 
@@ -159,15 +151,16 @@
 			if (noteId != 0) {
 				Integer notesPos = slideIdToNotes.get(noteId);
 				if (notesPos != null) {
-					notes = _notes[notesPos];
+					notes = _notes.get(notesPos);
 				} else {
 					logger.log(POILogger.ERROR, "Notes not found for noteId=" + noteId);
 				}
 			}
 
 			// Now, build our slide
-			_slides[i] = new HSLFSlide(slidesRecords[i], notes, sas, slideIdentifier, (i + 1));
-			_slides[i].setSlideShow(this);
+			HSLFSlide hs = new HSLFSlide(slidesRecords[i], notes, sas, slideIdentifier, (i + 1));
+			hs.setSlideShow(this);
+			_slides.add(hs);
 		}
 	}
 

@@ -1,0 +1,27 @@
+    protected static StyleTextPropAtom ensureStyleAtomPresent(TextHeaderAtom header, TextBytesAtom tbytes, TextCharsAtom tchars) {
+        RecordContainer wrapper = header.getParentRecord();
+        StyleTextPropAtom styleAtom = null;
+        
+        boolean afterHeader = false;
+        for (Record record : wrapper.getChildRecords()) {
+            if (afterHeader && record.getRecordType() == RecordTypes.TextHeaderAtom.typeID) break;
+            afterHeader |= (header == record);
+            if (afterHeader && record.getRecordType() == RecordTypes.StyleTextPropAtom.typeID) {
+                styleAtom = (StyleTextPropAtom)record;
+                break;
+            }
+        }
+        
+        if (styleAtom != null) return styleAtom;
+        
+        String rawText = (tchars != null) ? tchars.getText() : tbytes.getText();
+        
+        // Create a new one at the right size
+        styleAtom = new StyleTextPropAtom(rawText.length()+1);
+
+        // Add the new StyleTextPropAtom after the TextCharsAtom / TextBytesAtom
+        wrapper.addChildAfter(styleAtom, (tbytes == null ? tchars : tbytes));
+
+        return styleAtom;
+    }
+

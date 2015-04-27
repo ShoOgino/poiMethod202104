@@ -11,12 +11,16 @@
 		if (oldSlideNumber < 1 || newSlideNumber < 1) {
 			throw new IllegalArgumentException("Old and new slide numbers must be greater than 0");
 		}
-		if (oldSlideNumber > _slides.length || newSlideNumber > _slides.length) {
+		if (oldSlideNumber > _slides.size() || newSlideNumber > _slides.size()) {
 			throw new IllegalArgumentException(
 					"Old and new slide numbers must not exceed the number of slides ("
-							+ _slides.length + ")");
+							+ _slides.size() + ")");
 		}
 
+		_slides.get(newSlideNumber).setSlideNumber(oldSlideNumber);
+		_slides.get(oldSlideNumber).setSlideNumber(newSlideNumber);
+		Collections.swap(_slides, oldSlideNumber-1, newSlideNumber-1);
+		
 		// The order of slides is defined by the order of slide atom sets in the
 		// SlideListWithText container.
 		SlideListWithText slwt = _documentRecord.getSlideSlideListWithText();
@@ -27,13 +31,9 @@
 		sas[newSlideNumber - 1] = tmp;
 
 		ArrayList<Record> lst = new ArrayList<Record>();
-		for (int i = 0; i < sas.length; i++) {
-			lst.add(sas[i].getSlidePersistAtom());
-			Record[] r = sas[i].getSlideRecords();
-			for (int j = 0; j < r.length; j++) {
-				lst.add(r[j]);
-			}
-			_slides[i].setSlideNumber(i + 1);
+		for (SlideAtomsSet s : sas) {
+			lst.add(s.getSlidePersistAtom());
+			lst.addAll(Arrays.asList(s.getSlideRecords()));
 		}
 		Record[] r = lst.toArray(new Record[lst.size()]);
 		slwt.setChildRecord(r);

@@ -10,7 +10,7 @@
 	 * @return the slide that was removed from the slide show.
 	 */
 	public HSLFSlide removeSlide(int index) {
-		int lastSlideIdx = _slides.length - 1;
+		int lastSlideIdx = _slides.size() - 1;
 		if (index < 0 || index > lastSlideIdx) {
 			throw new IllegalArgumentException("Slide index (" + index + ") is out of range (0.."
 					+ lastSlideIdx + ")");
@@ -19,26 +19,19 @@
 		SlideListWithText slwt = _documentRecord.getSlideSlideListWithText();
 		SlideAtomsSet[] sas = slwt.getSlideAtomsSets();
 
-		HSLFSlide removedSlide = null;
-		ArrayList<Record> records = new ArrayList<Record>();
-		ArrayList<SlideAtomsSet> sa = new ArrayList<SlideAtomsSet>();
-		ArrayList<HSLFSlide> sl = new ArrayList<HSLFSlide>();
+		List<Record> records = new ArrayList<Record>();
+		List<SlideAtomsSet> sa = Arrays.asList(sas);
 
-		ArrayList<HSLFNotes> nt = new ArrayList<HSLFNotes>();
-		for (HSLFNotes notes : getNotes())
-			nt.add(notes);
-
-		for (int i = 0, num = 0; i < _slides.length; i++) {
-			if (i != index) {
-				sl.add(_slides[i]);
-				sa.add(sas[i]);
-				_slides[i].setSlideNumber(num++);
-				records.add(sas[i].getSlidePersistAtom());
-				records.addAll(Arrays.asList(sas[i].getSlideRecords()));
-			} else {
-				removedSlide = _slides[i];
-				nt.remove(_slides[i].getNotesSheet());
-			}
+		HSLFSlide removedSlide = _slides.remove(index);
+		_notes.remove(removedSlide.getNotes());
+		sa.remove(index);
+		
+		int i=0;
+		for (HSLFSlide s : _slides) s.setSlideNumber(i++);
+		
+		for (SlideAtomsSet s : sa) {
+            records.add(s.getSlidePersistAtom());
+            records.addAll(Arrays.asList(s.getSlideRecords()));
 		}
 		if (sa.size() == 0) {
 			_documentRecord.removeSlideListWithText(slwt);
@@ -46,34 +39,29 @@
 			slwt.setSlideAtomsSets(sa.toArray(new SlideAtomsSet[sa.size()]));
 			slwt.setChildRecord(records.toArray(new Record[records.size()]));
 		}
-		_slides = sl.toArray(new HSLFSlide[sl.size()]);
 
 		// if the removed slide had notes - remove references to them too
 
-		if (removedSlide != null) {
-			int notesId = removedSlide.getSlideRecord().getSlideAtom().getNotesID();
-			if (notesId != 0) {
-				SlideListWithText nslwt = _documentRecord.getNotesSlideListWithText();
-				records = new ArrayList<Record>();
-				ArrayList<SlideAtomsSet> na = new ArrayList<SlideAtomsSet>();
-				for (SlideAtomsSet ns : nslwt.getSlideAtomsSets()) {
-					if (ns.getSlidePersistAtom().getSlideIdentifier() != notesId) {
-						na.add(ns);
-						records.add(ns.getSlidePersistAtom());
-						if (ns.getSlideRecords() != null)
-							records.addAll(Arrays.asList(ns.getSlideRecords()));
-					}
+        int notesId = (removedSlide != null) ? removedSlide.getSlideRecord().getSlideAtom().getNotesID() : 0;
+		if (notesId != 0) {
+			SlideListWithText nslwt = _documentRecord.getNotesSlideListWithText();
+			records = new ArrayList<Record>();
+			ArrayList<SlideAtomsSet> na = new ArrayList<SlideAtomsSet>();
+			for (SlideAtomsSet ns : nslwt.getSlideAtomsSets()) {
+				if (ns.getSlidePersistAtom().getSlideIdentifier() == notesId) continue;
+				na.add(ns);
+				records.add(ns.getSlidePersistAtom());
+				if (ns.getSlideRecords() != null) {
+					records.addAll(Arrays.asList(ns.getSlideRecords()));
 				}
-				if (na.size() == 0) {
-					_documentRecord.removeSlideListWithText(nslwt);
-				} else {
-					nslwt.setSlideAtomsSets(na.toArray(new SlideAtomsSet[na.size()]));
-					nslwt.setChildRecord(records.toArray(new Record[records.size()]));
-				}
-
+			}
+			if (na.isEmpty()) {
+				_documentRecord.removeSlideListWithText(nslwt);
+			} else {
+				nslwt.setSlideAtomsSets(na.toArray(new SlideAtomsSet[na.size()]));
+				nslwt.setChildRecord(records.toArray(new Record[records.size()]));
 			}
 		}
-		_notes = nt.toArray(new HSLFNotes[nt.size()]);
 
 		return removedSlide;
 	}

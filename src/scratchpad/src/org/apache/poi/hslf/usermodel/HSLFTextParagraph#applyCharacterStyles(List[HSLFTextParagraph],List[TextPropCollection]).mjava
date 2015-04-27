@@ -1,0 +1,42 @@
+    protected static void applyCharacterStyles(List<HSLFTextParagraph> paragraphs, List<TextPropCollection> charStyles) {
+        int paraIdx = 0, runIdx = 0;
+        for (TextPropCollection p : charStyles) {
+            for (int ccRun = 0, ccStyle = p.getCharactersCovered(); ccRun < ccStyle; ) {
+                HSLFTextParagraph para = paragraphs.get(paraIdx);
+                List<HSLFTextRun> runs = para.getTextRuns();
+                HSLFTextRun trun = runs.get(runIdx);
+                int len = trun.getLength();
+                
+                if (runIdx+1 >= runs.size()) {
+                    // need to add +1 to the last run of the paragraph
+                    len++;
+                }
+                
+                TextPropCollection pCopy = new TextPropCollection(1);
+                pCopy.copy(p);
+                if (ccRun+len <= ccStyle) {
+                    trun.setCharacterStyle(pCopy);
+                    pCopy.updateTextSize(len);
+                    ccRun += len;
+                } else {
+                    String text = trun.getRawText();
+                    trun.setText(text.substring(0,ccStyle-ccRun));
+                    pCopy.updateTextSize(ccStyle-ccRun);
+                    trun.setCharacterStyle(pCopy);
+                    
+                    HSLFTextRun nextRun = new HSLFTextRun(para);
+                    nextRun.setText(text.substring(ccStyle-ccRun));
+                    runs.add(runIdx+1, nextRun);
+                    
+                    ccRun += ccStyle-ccRun;
+                }
+
+                // need to compare it again, in case a run has been added afer
+                if (++runIdx >= runs.size()) {
+                    paraIdx++;
+                    runIdx = 0;
+                }
+            }
+        }
+    }
+

@@ -1,0 +1,101 @@
+   /**
+    * Saves the modified paragraphs/textrun to the records.
+    * Also updates the styles to the correct text length.
+    */
+   protected static void storeText(List<HSLFTextParagraph> paragraphs) {
+       String rawText = toInternalString(getRawText(paragraphs));
+
+       // Will it fit in a 8 bit atom?
+       boolean isUnicode = StringUtil.hasMultibyte(rawText);
+       
+       TextHeaderAtom headerAtom = paragraphs.get(0)._headerAtom;
+       TextBytesAtom byteAtom = paragraphs.get(0)._byteAtom;
+       TextCharsAtom charAtom = paragraphs.get(0)._charAtom;
+
+       // Store in the appropriate record
+       Record oldRecord = null, newRecord = null;
+       if (isUnicode) { 
+           if (byteAtom != null) {
+               oldRecord = byteAtom;
+               newRecord = charAtom = new TextCharsAtom();
+           }
+           charAtom.setText(rawText);
+       } else {
+           if (charAtom != null) {
+               oldRecord = charAtom;
+               newRecord = byteAtom = new TextBytesAtom();
+           }
+           byte[] byteText = new byte[rawText.length()];
+           StringUtil.putCompressedUnicode(rawText,byteText,0);
+           byteAtom.setText(byteText);
+       }
+
+       RecordContainer _txtbox = headerAtom.getParentRecord();
+       
+       if (oldRecord != null) {
+           // swap not appropriated records
+           Record[] cr = _txtbox.getChildRecords();
+           int idx=0;
+           for (Record r : cr) {
+               if(r.equals(oldRecord)) break;
+               idx++;
+           }
+           if (idx >= cr.length) {
+               throw new RuntimeException("child record not found - malformed container record");
+           }
+           cr[idx] = newRecord;
+       }
+
+       // Ensure a StyleTextPropAtom is present, adding if required
+       StyleTextPropAtom styleAtom = ensureStyleAtomPresent(headerAtom, byteAtom, charAtom);
+
+       // Update the text length for its Paragraph and Character stylings
+       // If it's shared:
+       //   * calculate the new length based on the run's old text
+       //   * this should leave in any +1's for the end of block if needed
+       // If it isn't shared:
+       //   * reset the length, to the new string's length
+       //   * add on +1 if the last block
+       // The last run needs its stylings to be 1 longer than the raw
+       //  text is. This is to define the stylings that any new text
+       //  that is added will inherit
+       
+       styleAtom.clearStyles();
+       
+       TextPropCollection lastPTPC = null, lastRTPC = null;
+       for (HSLFTextParagraph para : paragraphs) {
+           TextPropCollection ptpc = para.getParagraphStyle();
+           ptpc.updateTextSize(0);
+           if (!ptpc.equals(lastPTPC)) {
+               lastPTPC = styleAtom.addParagraphTextPropCollection(0);
+               lastPTPC.copy(ptpc);
+           }
+           for (HSLFTextRun tr : para.getTextRuns()) {
+               TextPropCollection rtpc = tr.getCharacterStyle();
+               if (!rtpc.equals(lastRTPC)) {
+                   lastRTPC = styleAtom.addCharacterTextPropCollection(0);
+                   lastRTPC.copy(rtpc);
+               }
+               int len = tr.getLength();
+               ptpc.updateTextSize(ptpc.getCharactersCovered()+len);
+               rtpc.updateTextSize(len);
+               lastPTPC.updateTextSize(lastPTPC.getCharactersCovered()+len);
+               lastRTPC.updateTextSize(lastRTPC.getCharactersCovered()+len);
+           }
+       }
+       
+       assert(lastPTPC != null && lastRTPC != null);
+       lastPTPC.updateTextSize(lastPTPC.getCharactersCovered()+1);
+       lastRTPC.updateTextSize(lastRTPC.getCharactersCovered()+1);
+       
+       /**
+        * If TextSpecInfoAtom is present, we must update the text size in it,
+        * otherwise the ppt will be corrupted
+        */
+       TextSpecInfoAtom specAtom = (TextSpecInfoAtom)_txtbox.findFirstOfType(RecordTypes.TextSpecInfoAtom.typeID);
+       int len = rawText.length() + 1;
+       if(specAtom != null && len != specAtom.getCharactersCovered()) {
+           specAtom.reset(len);
+       }
+   }
+
