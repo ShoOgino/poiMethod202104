@@ -1,0 +1,39 @@
+    /**
+     * Creates the appropriate HSSFWorkbook / XSSFWorkbook from
+     *  the given File, which must exist and be readable, and
+     *  may be password protected
+     * <p>Note that in order to properly release resources the 
+     *  Workbook should be closed after use.
+     * @throws EncryptedDocumentException If the wrong password is given for a protected file
+     */
+    public static Workbook create(File file, String password) throws IOException, InvalidFormatException, EncryptedDocumentException {
+        if (! file.exists()) {
+            throw new FileNotFoundException(file.toString());
+        }
+
+        try {
+            NPOIFSFileSystem fs = new NPOIFSFileSystem(file);
+            return create(fs, password);
+        } catch(OfficeXmlFileException e) {
+            // opening as .xls failed => try opening as .xlsx
+            OPCPackage pkg = OPCPackage.open(file);
+            try {
+                return new XSSFWorkbook(pkg);
+            } catch (IOException ioe) {
+                // ensure that file handles are closed (use revert() to not re-write the file)
+                pkg.revert();
+                //pkg.close();
+                
+                // rethrow exception
+                throw ioe;
+            } catch (IllegalArgumentException ioe) {
+                // ensure that file handles are closed (use revert() to not re-write the file) 
+                pkg.revert();
+                //pkg.close();
+                
+                // rethrow exception
+                throw ioe;
+            }
+        }
+    }
+
