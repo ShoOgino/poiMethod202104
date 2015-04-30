@@ -1,0 +1,37 @@
+   @Test
+   public void test57423() throws IOException {        
+       Workbook wb = XSSFTestDataSamples.openSampleWorkbook("57423.xlsx");
+       
+       Sheet testSheet = wb.getSheetAt(0);
+
+       // row shift (negative or positive) causes corrupted output xlsx file when the shift value is bigger 
+       // than the number of rows being shifted 
+       // Excel 2010 on opening the output file says:
+       // "Excel found unreadable content" and offers recovering the file by removing the unreadable content
+       // This can be observed in cases like the following:
+       // negative shift of 1 row by less than -1
+       // negative shift of 2 rows by less than -2
+       // positive shift of 1 row by 2 or more 
+       // positive shift of 2 rows by 3 or more
+       
+       //testSheet.shiftRows(4, 5, -3);
+       testSheet.shiftRows(10, 10, 2);
+       
+       checkRows57423(testSheet);
+       
+       Workbook wbBack = XSSFTestDataSamples.writeOutAndReadBack(wb);
+
+       /*FileOutputStream stream = new FileOutputStream("C:\\temp\\57423.xlsx");
+       try {
+           wb.write(stream);
+       } finally {
+           stream.close();
+       }*/
+
+       wb.close();
+       
+       checkRows57423(wbBack.getSheetAt(0));
+       
+       wbBack.close();
+   }
+
