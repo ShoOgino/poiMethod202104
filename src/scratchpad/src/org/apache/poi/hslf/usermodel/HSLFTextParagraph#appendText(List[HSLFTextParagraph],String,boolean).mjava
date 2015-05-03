@@ -4,18 +4,42 @@
     * 
     * @param text the text string used by this object.
     */
-   protected static void appendText(List<HSLFTextParagraph> paragraphs, String text, boolean newParagraph) {
+   protected static HSLFTextRun appendText(List<HSLFTextParagraph> paragraphs, String text, boolean newParagraph) {
        text = toInternalString(text);
+
+       // check paragraphs
+       assert(!paragraphs.isEmpty() && !paragraphs.get(0).getTextRuns().isEmpty());
        
-       // init paragraphs
-       assert(!paragraphs.isEmpty());
+       HSLFTextParagraph htp = paragraphs.get(paragraphs.size()-1);
+       HSLFTextRun htr = htp.getTextRuns().get(htp.getTextRuns().size()-1);
+
+       if (newParagraph) {
+           htr.setText(htr.getRawText()+"\n");
+       }
        
-       HSLFTextParagraph lastHTP = paragraphs.get(paragraphs.size()-1);
-       HSLFTextRun lastHTR = lastHTP.getTextRuns().get(lastHTP.getTextRuns().size()-1);
-       HSLFTextParagraph htp = (newParagraph) ? new HSLFTextParagraph(lastHTP) : lastHTP;
-       HSLFTextRun htr = new HSLFTextRun(htp);
-       htr.setText(text);
-       htr.getCharacterStyle().copy(lastHTR.getCharacterStyle());
-       htp.addTextRun(htr);
+       boolean isFirst = !newParagraph;
+       for (String rawText : text.split("(?<=\r)")) {
+           if (!isFirst) {
+               TextPropCollection tpc = htp.getParagraphStyle();
+               HSLFTextParagraph prevHtp = htp;
+               htp = new HSLFTextParagraph(htp._headerAtom, htp._byteAtom, htp._charAtom, htp._styleAtom);
+               htp.getParagraphStyle().copy(tpc);
+               htp.setParentShape(prevHtp.getParentShape());
+               htp.setShapeId(prevHtp.getShapeId());
+               htp.supplySheet(prevHtp.getSheet());
+               paragraphs.add(htp);
+               isFirst = false;
+           }
+           TextPropCollection tpc = htr.getCharacterStyle();
+           // special case, last text run is empty, we will reuse it
+           if (htr.getLength() > 0) {
+               htr = new HSLFTextRun(htp);
+               htr.getCharacterStyle().copy(tpc);
+               htp.addTextRun(htr);
+           }
+           htr.setText(rawText);
+       }
+       
+       return htr;
    }
 

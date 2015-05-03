@@ -1,28 +1,20 @@
     protected static void applyCharacterStyles(List<HSLFTextParagraph> paragraphs, List<TextPropCollection> charStyles) {
         int paraIdx = 0, runIdx = 0;
-        for (TextPropCollection p : charStyles) {
+        HSLFTextRun trun;
+        
+        for (int csIdx=0; csIdx<charStyles.size(); csIdx++) {
+            TextPropCollection p = charStyles.get(csIdx);
             for (int ccRun = 0, ccStyle = p.getCharactersCovered(); ccRun < ccStyle; ) {
                 HSLFTextParagraph para = paragraphs.get(paraIdx);
                 List<HSLFTextRun> runs = para.getTextRuns();
-                HSLFTextRun trun = runs.get(runIdx);
+                trun = runs.get(runIdx);
                 int len = trun.getLength();
                 
-                if (runIdx+1 >= runs.size()) {
-                    // need to add +1 to the last run of the paragraph
-                    len++;
-                }
-                
-                TextPropCollection pCopy = new TextPropCollection(1);
-                pCopy.copy(p);
                 if (ccRun+len <= ccStyle) {
-                    trun.setCharacterStyle(pCopy);
-                    pCopy.updateTextSize(len);
                     ccRun += len;
                 } else {
                     String text = trun.getRawText();
                     trun.setText(text.substring(0,ccStyle-ccRun));
-                    pCopy.updateTextSize(ccStyle-ccRun);
-                    trun.setCharacterStyle(pCopy);
                     
                     HSLFTextRun nextRun = new HSLFTextRun(para);
                     nextRun.setText(text.substring(ccStyle-ccRun));
@@ -31,8 +23,27 @@
                     ccRun += ccStyle-ccRun;
                 }
 
-                // need to compare it again, in case a run has been added afer
-                if (++runIdx >= runs.size()) {
+                TextPropCollection pCopy = new TextPropCollection(0);
+                pCopy.copy(p);
+                trun.setCharacterStyle(pCopy);
+
+                len = trun.getLength();
+                if (paraIdx == paragraphs.size()-1 && runIdx == runs.size()-1) {
+                    if (csIdx < charStyles.size()-1) {
+                        // special case, empty trailing text run
+                        HSLFTextRun nextRun = new HSLFTextRun(para);
+                        nextRun.setText("");
+                        runs.add(nextRun);
+                    } else {
+                        // need to add +1 to the last run of the last paragraph
+                        len++;
+                        ccRun++;
+                    }
+                }
+                pCopy.updateTextSize(len);
+                
+                // need to compare it again, in case a run has been added after
+                if (++runIdx == runs.size()) {
                     paraIdx++;
                     runIdx = 0;
                 }
