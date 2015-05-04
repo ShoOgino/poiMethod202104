@@ -10,14 +10,19 @@
      *  from an InputStream requires more memory than loading
      *  from a File, so prefer {@link #create(File)} where possible.
      * @throws EncryptedDocumentException If the wrong password is given for a protected file
+     * @throws EmptyFileException If an empty stream is given
      */
     public static Workbook create(InputStream inp, String password) throws IOException, InvalidFormatException, EncryptedDocumentException {
         // If clearly doesn't do mark/reset, wrap up
         if (! inp.markSupported()) {
             inp = new PushbackInputStream(inp, 8);
         }
+        
+        // Ensure that there is at least some data there
+        byte[] header8 = IOUtils.peekFirst8Bytes(inp);
 
-        if (POIFSFileSystem.hasPOIFSHeader(inp)) {
+        // Try to create
+        if (POIFSFileSystem.hasPOIFSHeader(header8)) {
             NPOIFSFileSystem fs = new NPOIFSFileSystem(inp);
             return create(fs, password);
         }
