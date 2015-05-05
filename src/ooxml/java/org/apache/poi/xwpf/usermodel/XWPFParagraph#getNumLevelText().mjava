@@ -1,0 +1,50 @@
+    /**
+     * Returns the text that should be used around the paragraph level numbers.
+     *
+     * @return a string (e.g. "%1.") or null if the value is not found.
+     */
+    public String getNumLevelText() {
+        BigInteger numID = getNumID();
+        XWPFNumbering numbering = document.getNumbering();
+        if(numID != null && numbering != null) {
+            XWPFNum num = numbering.getNum(numID);
+            if(num != null) {
+                BigInteger ilvl = getNumIlvl();
+                CTNum ctNum = num.getCTNum();
+                if (ctNum == null)
+                    return null;
+
+                CTDecimalNumber ctDecimalNumber = ctNum.getAbstractNumId();
+                if (ctDecimalNumber == null)
+                    return null;
+
+                BigInteger abstractNumId = ctDecimalNumber.getVal();
+                if (abstractNumId == null)
+                    return null;
+
+                XWPFAbstractNum xwpfAbstractNum = numbering.getAbstractNum(abstractNumId);
+
+                if (xwpfAbstractNum == null)
+                    return null;
+
+                CTAbstractNum anum = xwpfAbstractNum.getCTAbstractNum();
+
+                if (anum == null)
+                    return null;
+
+                CTLvl level = null;
+                for(int i = 0; i < anum.sizeOfLvlArray(); i++) {
+                    CTLvl lvl = anum.getLvlArray(i);
+                    if(lvl != null && lvl.getIlvl() != null && lvl.getIlvl().equals(ilvl)) {
+                        level = lvl;
+                        break;
+                    }
+                }
+                if(level != null && level.getLvlText() != null
+                    && level.getLvlText().getVal() != null)
+                    return level.getLvlText().getVal().toString();
+            }
+        }
+        return null;
+    }
+
