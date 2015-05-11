@@ -9,12 +9,13 @@
     protected PropertySet getPropertySet(String setName, EncryptionInfo encryptionInfo) {
         DirectoryNode dirNode = directory;
         
+        NPOIFSFileSystem encPoifs = null;
         if (encryptionInfo != null) {
             try {
                 InputStream is = encryptionInfo.getDecryptor().getDataStream(directory);
-                NPOIFSFileSystem poifs = new NPOIFSFileSystem(is);
+                encPoifs = new NPOIFSFileSystem(is);
                 is.close();
-                dirNode = poifs.getRoot();
+                dirNode = encPoifs.getRoot();
             } catch (Exception e) {
                 logger.log(POILogger.ERROR, "Error getting encrypted property set with name " + setName, e);
                 return null;
@@ -38,6 +39,11 @@
         try {
             // Create the Property Set
             PropertySet set = PropertySetFactory.create(dis);
+            // Tidy up if needed
+            if (encPoifs != null) {
+                encPoifs.close();
+            }
+            // Return the properties
             return set;
         } catch(IOException ie) {
             // Must be corrupt or something like that
