@@ -3,6 +3,8 @@
     * Also updates the styles to the correct text length.
     */
    protected static void storeText(List<HSLFTextParagraph> paragraphs) {
+       fixLineEndings(paragraphs);
+       
        String rawText = toInternalString(getRawText(paragraphs));
 
        // Will it fit in a 8 bit atom?
@@ -68,16 +70,16 @@
        
        styleAtom.clearStyles();
        
-       TextPropCollection lastPTPC = null, lastRTPC = null;
+       TextPropCollection lastPTPC = null, lastRTPC = null, ptpc = null, rtpc = null;
        for (HSLFTextParagraph para : paragraphs) {
-           TextPropCollection ptpc = para.getParagraphStyle();
+           ptpc = para.getParagraphStyle();
            ptpc.updateTextSize(0);
            if (!ptpc.equals(lastPTPC)) {
                lastPTPC = styleAtom.addParagraphTextPropCollection(0);
                lastPTPC.copy(ptpc);
            }
            for (HSLFTextRun tr : para.getTextRuns()) {
-               TextPropCollection rtpc = tr.getCharacterStyle();
+               rtpc = tr.getCharacterStyle();
                rtpc.updateTextSize(0);
                if (!rtpc.equals(lastRTPC)) {
                    lastRTPC = styleAtom.addCharacterTextPropCollection(0);
@@ -91,7 +93,9 @@
            }
        }
        
-       assert(lastPTPC != null && lastRTPC != null);
+       assert(lastPTPC != null && lastRTPC != null && ptpc != null && rtpc != null);
+       ptpc.updateTextSize(ptpc.getCharactersCovered()+1);
+       rtpc.updateTextSize(rtpc.getCharactersCovered()+1);
        lastPTPC.updateTextSize(lastPTPC.getCharactersCovered()+1);
        lastRTPC.updateTextSize(lastRTPC.getCharactersCovered()+1);
        
