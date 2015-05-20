@@ -2,26 +2,31 @@
      * Updates the cache of the raw contents. Serialised the styles out.
      */
     private void updateRawContents() throws IOException {
-        if(!initialised) {
-            // We haven't groked the styles since creation, so just stick
-            // with what we found
-            return;
+        if (initialised) {
+            // Only update the style bytes, if the styles have been potentially
+            // changed
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    
+            // First up, we need to serialise the paragraph properties
+            for(TextPropCollection tpc : paragraphStyles) {
+                // ensure, that the paragraphs flags exist, no matter if anthing is set
+                tpc.addWithName(ParagraphFlagsTextProp.NAME);
+                tpc.writeOut(baos);
+            }
+    
+            // Now, we do the character ones
+            for(TextPropCollection tpc : charStyles) {
+                // ditto for the char flags
+                tpc.addWithName(CharFlagsTextProp.NAME);
+                tpc.writeOut(baos);
+            }
+    
+            rawContents = baos.toByteArray();
         }
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-        // First up, we need to serialise the paragraph properties
-        for(int i=0; i<paragraphStyles.size(); i++) {
-            TextPropCollection tpc = paragraphStyles.get(i);
-            tpc.writeOut(baos, paragraphTextPropTypes);
-        }
-
-        // Now, we do the character ones
-        for(int i=0; i<charStyles.size(); i++) {
-            TextPropCollection tpc = charStyles.get(i);
-            tpc.writeOut(baos, characterTextPropTypes);
-        }
-
-        rawContents = baos.toByteArray();
+        
+        // Now ensure that the header size is correct
+        int newSize = rawContents.length + reserved.length;
+        LittleEndian.putInt(_header,4,newSize);
     }
 

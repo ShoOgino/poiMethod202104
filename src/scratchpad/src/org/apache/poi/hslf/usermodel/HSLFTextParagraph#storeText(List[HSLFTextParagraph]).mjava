@@ -4,72 +4,77 @@
     */
    protected static void storeText(List<HSLFTextParagraph> paragraphs) {
        fixLineEndings(paragraphs);
-       
+
        String rawText = toInternalString(getRawText(paragraphs));
 
        // Will it fit in a 8 bit atom?
        boolean isUnicode = StringUtil.hasMultibyte(rawText);
-       
+       // isUnicode = true;
+
        TextHeaderAtom headerAtom = paragraphs.get(0)._headerAtom;
        TextBytesAtom byteAtom = paragraphs.get(0)._byteAtom;
        TextCharsAtom charAtom = paragraphs.get(0)._charAtom;
+       StyleTextPropAtom styleAtom = findStyleAtomPresent(headerAtom, rawText.length());
 
        // Store in the appropriate record
        Record oldRecord = null, newRecord = null;
-       if (isUnicode) { 
-           if (byteAtom != null) {
+       if (isUnicode) {
+           if (byteAtom != null || charAtom == null) {
                oldRecord = byteAtom;
-               newRecord = charAtom = new TextCharsAtom();
+               charAtom = new TextCharsAtom();
            }
+           newRecord = charAtom;
            charAtom.setText(rawText);
        } else {
-           if (charAtom != null) {
+           if (charAtom != null || byteAtom == null) {
                oldRecord = charAtom;
-               newRecord = byteAtom = new TextBytesAtom();
+               byteAtom = new TextBytesAtom();
            }
+           newRecord = byteAtom;
            byte[] byteText = new byte[rawText.length()];
            StringUtil.putCompressedUnicode(rawText,byteText,0);
            byteAtom.setText(byteText);
        }
-
-       RecordContainer _txtbox = headerAtom.getParentRecord();
+       assert(newRecord != null);
        
-       if (oldRecord != null) {
-           // swap not appropriated records
-           Record[] cr = _txtbox.getChildRecords();
-           int idx=0;
-           for (Record r : cr) {
-               if(r.equals(oldRecord)) break;
-               idx++;
-           }
-           if (idx >= cr.length) {
-               throw new RuntimeException("child record not found - malformed container record");
-           }
-           cr[idx] = newRecord;
-           
-           if (newRecord == byteAtom) {
-               charAtom = null;
-           } else {
-               byteAtom = null;
-           }
+       RecordContainer _txtbox = headerAtom.getParentRecord();
+       Record[] cr = _txtbox.getChildRecords();
+       int headerIdx = -1, textIdx = -1, styleIdx = -1;
+       for (int i=0; i<cr.length; i++) {
+           Record r = cr[i];
+           if (r == headerAtom) headerIdx = i;
+           else if (r == oldRecord || r == newRecord) textIdx = i;
+           else if (r == styleAtom) styleIdx = i;
        }
 
-       // Ensure a StyleTextPropAtom is present, adding if required
-       StyleTextPropAtom styleAtom = ensureStyleAtomPresent(headerAtom, byteAtom, charAtom);
+       if (textIdx == -1) {
+           // the old record was never registered, ignore it
+           _txtbox.addChildAfter(newRecord, headerAtom);
+           textIdx = headerIdx+1;
+       } else {
+           // swap not appropriated records - noop if unchanged
+           cr[textIdx] = newRecord;
+       }
 
+       if (styleIdx == -1) {
+           // Add the new StyleTextPropAtom after the TextCharsAtom / TextBytesAtom
+           _txtbox.addChildAfter(styleAtom, newRecord);
+       }
+       
+       for (HSLFTextParagraph p : paragraphs) {
+           if (newRecord == byteAtom) {
+               p._charAtom = null;
+           } else {
+               p._byteAtom = null;
+           }
+       }
+       
        // Update the text length for its Paragraph and Character stylings
-       // If it's shared:
-       //   * calculate the new length based on the run's old text
-       //   * this should leave in any +1's for the end of block if needed
-       // If it isn't shared:
        //   * reset the length, to the new string's length
        //   * add on +1 if the last block
-       // The last run needs its stylings to be 1 longer than the raw
-       //  text is. This is to define the stylings that any new text
-       //  that is added will inherit
-       
+
        styleAtom.clearStyles();
-       
+
        TextPropCollection lastPTPC = null, lastRTPC = null, ptpc = null, rtpc = null;
        for (HSLFTextParagraph para : paragraphs) {
            ptpc = para.getParagraphStyle();
@@ -92,13 +97,13 @@
                lastRTPC.updateTextSize(lastRTPC.getCharactersCovered()+len);
            }
        }
-       
+
        assert(lastPTPC != null && lastRTPC != null && ptpc != null && rtpc != null);
        ptpc.updateTextSize(ptpc.getCharactersCovered()+1);
        rtpc.updateTextSize(rtpc.getCharactersCovered()+1);
        lastPTPC.updateTextSize(lastPTPC.getCharactersCovered()+1);
        lastRTPC.updateTextSize(lastRTPC.getCharactersCovered()+1);
-       
+
        /**
         * If TextSpecInfoAtom is present, we must update the text size in it,
         * otherwise the ppt will be corrupted
