@@ -1,15 +1,23 @@
     /**
      * Creates a Workbook from the given NPOIFSFileSystem, which may
      *  be password protected
+     *
+     *  @param fs The {@link NPOIFSFileSystem} to read the document from
+     *  @param password The password that should be used or null if no password is necessary.
+     *
+     *  @return The created Workbook
+     *
+     *  @throws IOException if an error occurs while reading the data
+     *  @throws InvalidFormatException if the contents of the file cannot be parsed into a {@link Workbook}
      */
     private static Workbook create(NPOIFSFileSystem fs, String password) throws IOException, InvalidFormatException {
         DirectoryNode root = fs.getRoot();
-        
+
         // Encrypted OOXML files go inside OLE2 containers, is this one?
         if (root.hasEntry(Decryptor.DEFAULT_POIFS_ENTRY)) {
             EncryptionInfo info = new EncryptionInfo(fs);
             Decryptor d = Decryptor.getInstance(info);
-            
+
             boolean passwordCorrect = false;
             InputStream stream = null;
             try {
@@ -25,18 +33,18 @@
             } catch (GeneralSecurityException e) {
                 throw new IOException(e);
             }
-            
+
             if (! passwordCorrect) {
                 if (password != null)
                     throw new EncryptedDocumentException("Password incorrect");
                 else
                     throw new EncryptedDocumentException("The supplied spreadsheet is protected, but no password was supplied");
             }
-            
+
             OPCPackage pkg = OPCPackage.open(stream);
             return create(pkg);
         }
-        
+
         // If we get here, it isn't an encrypted XLSX file
         // So, treat it as a regular HSSF XLS one
         if (password != null) {
