@@ -3,34 +3,34 @@
 	 *  of slideshow c
 	 */
 	private static void assertMatchesFileC(HSLFSlideShow s) throws Exception {
-		if (true) { // TODO - test is disabled, pending fix of bug #39800
-			// System.err.println("Skipping test, as would be marked as failed due to bug #39800"); //
-			return;
-		}
-if(false) {
 		// Grab the bytes of the file
-		FileInputStream fin = new FileInputStream(filenameC);
-		ByteArrayOutputStream fb = new ByteArrayOutputStream();
-		byte[] b = new byte[4096];
-		int read = 0;
-		while(read != -1) {
-			read = fin.read(b);
-			if(read > 0) {
-				fb.write(b, 0, read);
-			}
-		}
-		byte[] raw_file = fb.toByteArray();
+	    NPOIFSFileSystem fs = new NPOIFSFileSystem(_slTests.getFile(filenameC));
+	    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+	    InputStream is = fs.createDocumentInputStream("PowerPoint Document");
+	    IOUtils.copy(is, baos);
+	    is.close();
+	    fs.close();
+	    byte[] raw_file = baos.toByteArray();
 
 		// Now write out the slideshow
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		baos.reset();
 		s.write(baos);
+		fs = new NPOIFSFileSystem(new ByteArrayInputStream(baos.toByteArray()));
+		baos.reset();
+		is = fs.createDocumentInputStream("PowerPoint Document");
+        IOUtils.copy(is, baos);
+        is.close();
+        fs.close();		
 		byte[] raw_ss = baos.toByteArray();
+		
+		FileOutputStream fos = new FileOutputStream("PowerPoint Document.new.stream");
+		fos.write(raw_ss);
+		fos.close();
 
+		// different paragraph mask, because of sanitizing
+		raw_ss[169030] = 0x0a;
+		
 		// Ensure they're the same
-		assertEquals(raw_file.length, raw_ss.length);
-		for(int i=0; i<raw_file.length; i++) {
-			assertEquals(raw_file[i], raw_ss[i]);
-		}
-}
+		assertArrayEquals(raw_file, raw_ss);
 	}
 

@@ -1,44 +1,53 @@
+    @Test
 	public void testAddText() throws Exception {
 		HSLFSlideShow ppt = new HSLFSlideShow(_slTests.openResourceAsStream("bullets.ppt"));
 		assertTrue("No Exceptions while reading file", true);
 
-		HSLFTextRun rt;
-		HSLFTextParagraph[] txt;
-		HSLFSlide[] slides = ppt.getSlides();
+		HSLFTextParagraph rt;
+		HSLFTextRun tr;
+		List<List<HSLFTextParagraph>> txt;
+		List<HSLFSlide> slides = ppt.getSlides();
 
-		assertEquals(2, slides.length);
-		txt = slides[0].getTextParagraphs();
-		assertEquals(2, txt.length);
+		assertEquals(2, slides.size());
+		txt = slides.get(0).getTextParagraphs();
+		assertEquals(2, txt.size());
 
-		assertEquals("Title text", txt[0].getRawText());
-		assertEquals(1, txt[0].getTextRuns().length);
-		rt = txt[0].getTextRuns()[0];
+		assertEquals("Title text", HSLFTextParagraph.getRawText(txt.get(0)));
+		assertEquals(1, txt.get(0).size());
+		rt = txt.get(0).get(0);
 		assertFalse(rt.isBullet());
 
 		// Add some new text
-		txt[0].appendText("Foo! I'm new!");
-		assertEquals(2, txt[0].getTextRuns().length);
+		HSLFTextParagraph.appendText(txt.get(0), "Foo! I'm new!", true);
+		assertEquals(2, txt.get(0).size());
 
-		rt = txt[0].getTextRuns()[0];
-		assertFalse(rt.isBold());
-		assertEquals("Title text", rt.getRawText());
-		rt = txt[0].getTextRuns()[1];
-		assertFalse(rt.isBold());
-		assertEquals("Foo! I'm new!", rt.getRawText());
-		rt.setBold(true);
+		rt = txt.get(0).get(0);
+		tr = rt.getTextRuns().get(0);
+		assertFalse(tr.isBold());
+		assertEquals("Title text\r", tr.getRawText());
+		rt = txt.get(0).get(1);
+		tr = rt.getTextRuns().get(0);
+		assertFalse(tr.isBold());
+		assertEquals("Foo! I'm new!", tr.getRawText());
+		tr.setBold(true);
+		HSLFTextParagraph.storeText(txt.get(0));
 
-		// And some more
-		txt[0].appendText("Me too!");
-		assertEquals(3, txt[0].getTextRuns().length);
-		rt = txt[0].getTextRuns()[0];
-		assertFalse(rt.isBold());
-		assertEquals("Title text", rt.getRawText());
-		rt = txt[0].getTextRuns()[1];
-		assertTrue(rt.isBold());
-		assertEquals("Foo! I'm new!", rt.getRawText());
-		rt = txt[0].getTextRuns()[2];
-		assertFalse(rt.isBold());
-		assertEquals("Me too!", rt.getRawText());
+		// And some more, attributes will be copied from previous run
+		HSLFTextParagraph.appendText(txt.get(0), "Me too!", true);
+		HSLFTextParagraph.storeText(txt.get(0));
+		assertEquals(3, txt.get(0).size());
+		rt = txt.get(0).get(0);
+		tr = rt.getTextRuns().get(0);
+		assertFalse(tr.isBold());
+		assertEquals("Title text\r", tr.getRawText());
+		rt = txt.get(0).get(1);
+		tr = rt.getTextRuns().get(0);
+		assertTrue(tr.isBold());
+		assertEquals("Foo! I'm new!\r", tr.getRawText());
+		rt = txt.get(0).get(2);
+		tr = rt.getTextRuns().get(0);
+		assertTrue(tr.isBold());
+		assertEquals("Me too!", tr.getRawText());
 
 		// Save and re-open
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -48,20 +57,23 @@
 		ppt = new HSLFSlideShow(new ByteArrayInputStream(out.toByteArray()));
 		slides = ppt.getSlides();
 
-		assertEquals(2, slides.length);
+		assertEquals(2, slides.size());
 
-		txt = slides[0].getTextParagraphs();
-		assertEquals(2, txt.length);
-		assertEquals(3, txt[0].getTextRuns().length);
-		rt = txt[0].getTextRuns()[0];
-		assertFalse(rt.isBold());
-		assertEquals("Title text", rt.getRawText());
-		rt = txt[0].getTextRuns()[1];
-		assertTrue(rt.isBold());
-		assertEquals("Foo! I'm new!", rt.getRawText());
-		rt = txt[0].getTextRuns()[2];
-		assertFalse(rt.isBold());
-		assertEquals("Me too!", rt.getRawText());
+		txt = slides.get(0).getTextParagraphs();
+		assertEquals(2, txt.size());
+		assertEquals(3, txt.get(0).size());
+		rt = txt.get(0).get(0);
+		tr = rt.getTextRuns().get(0);
+		assertFalse(tr.isBold());
+		assertEquals("Title text\r", tr.getRawText());
+		rt = txt.get(0).get(1);
+		tr = rt.getTextRuns().get(0);
+		assertTrue(tr.isBold());
+		assertEquals("Foo! I'm new!\r", tr.getRawText());
+		rt = txt.get(0).get(2);
+		tr = rt.getTextRuns().get(0);
+		assertTrue(tr.isBold());
+		assertEquals("Me too!", tr.getRawText());
 
 //		FileOutputStream fout = new FileOutputStream("/tmp/foo.ppt");
 //		ppt.write(fout);
