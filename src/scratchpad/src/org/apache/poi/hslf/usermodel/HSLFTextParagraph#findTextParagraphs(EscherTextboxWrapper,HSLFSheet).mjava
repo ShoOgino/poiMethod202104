@@ -1,0 +1,79 @@
+   /**
+    * Scans through the supplied record array, looking for
+    * a TextHeaderAtom followed by one of a TextBytesAtom or
+    * a TextCharsAtom. Builds up TextRuns from these
+    *
+    * @param wrapper an EscherTextboxWrapper
+    */
+   protected static List<HSLFTextParagraph> findTextParagraphs(EscherTextboxWrapper wrapper, HSLFSheet sheet) {
+       // propagate parents to parent-aware records
+       RecordContainer.handleParentAwareRecords(wrapper);
+       int shapeId = wrapper.getShapeId();
+       List<HSLFTextParagraph> rv = null;
+       
+       OutlineTextRefAtom ota = (OutlineTextRefAtom)wrapper.findFirstOfType(OutlineTextRefAtom.typeID);
+       if (ota != null) {
+           // if we are based on an outline, there are no further records to be parsed from the wrapper
+           if (sheet == null) {
+               throw new RuntimeException("Outline atom reference can't be solved without a sheet record");
+           }
+           
+           List<List<HSLFTextParagraph>> sheetRuns = sheet.getTextParagraphs();
+           assert(sheetRuns != null);
+           
+           int idx = ota.getTextIndex();
+           for (List<HSLFTextParagraph> r : sheetRuns) {
+               if (r.isEmpty()) continue;
+               int ridx = r.get(0).getIndex();
+               if (ridx > idx) break;
+               if (ridx == idx) {
+                   if (rv == null) {
+                       rv = r;
+                   } else {
+                       // create a new container
+                       // TODO: ... is this case really happening?
+                       rv = new ArrayList<HSLFTextParagraph>(rv);
+                       rv.addAll(r);
+                   }
+               }
+           }
+           if(rv == null || rv.isEmpty()) {
+               logger.log(POILogger.WARN, "text run not found for OutlineTextRefAtom.TextIndex=" + idx);
+           }
+       } else {
+           if (sheet != null) {
+               // check sheet runs first, so we get exactly the same paragraph list
+               List<List<HSLFTextParagraph>> sheetRuns = sheet.getTextParagraphs();
+               assert(sheetRuns != null);
+
+               for (List<HSLFTextParagraph> paras : sheetRuns) {
+                   if (!paras.isEmpty() && paras.get(0)._headerAtom.getParentRecord() == wrapper) {
+                       rv = paras;
+                       break;
+                   }
+               }
+           }
+           
+           if (rv == null) {
+               // if we haven't found the wrapper in the sheet runs, create a new paragraph list from its record
+               List<List<HSLFTextParagraph>> rvl = findTextParagraphs(wrapper.getChildRecords());
+               switch (rvl.size()) {
+               case 0: break; // nothing found
+               case 1: rv = rvl.get(0); break; // normal case
+               default:
+                   throw new RuntimeException("TextBox contains more than one list of paragraphs.");
+               }
+           }
+       }
+       
+       if (rv !=  null) {
+           StyleTextProp9Atom styleTextProp9Atom = wrapper.getStyleTextProp9Atom();
+           
+           for (HSLFTextParagraph htp : rv) {
+               htp.setShapeId(shapeId);
+               htp.setStyleTextProp9Atom(styleTextProp9Atom);
+           }
+       }
+       return rv;
+   }
+
