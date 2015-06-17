@@ -13,7 +13,9 @@
             text.append(runText);
             int endIndex = text.length();
 
-            attList.add(new AttributedStringData(TextAttribute.FOREGROUND, run.getFontColor(), beginIndex, endIndex));
+            Color fgColor = run.getFontColor();
+            if (fgColor == null) fgColor = Color.BLACK;
+            attList.add(new AttributedStringData(TextAttribute.FOREGROUND, fgColor, beginIndex, endIndex));
 
             // user can pass an custom object to convert fonts
             String fontFamily = run.getFontFamily();
@@ -25,10 +27,14 @@
             if(fontHandler != null) {
                 fontFamily = fontHandler.getRendererableFont(fontFamily, run.getPitchAndFamily());
             }
+            if (fontFamily == null) {
+                fontFamily = paragraph.getDefaultFontFamily();
+            }
             attList.add(new AttributedStringData(TextAttribute.FAMILY, fontFamily, beginIndex, endIndex));
 
-            float fontSz = (float)run.getFontSize();
-            attList.add(new AttributedStringData(TextAttribute.SIZE, fontSz, beginIndex, endIndex));
+            Double fontSz = run.getFontSize();
+            if (fontSz == null) fontSz = paragraph.getDefaultFontSize();
+            attList.add(new AttributedStringData(TextAttribute.SIZE, fontSz.floatValue(), beginIndex, endIndex));
 
             if(run.isBold()) {
                 attList.add(new AttributedStringData(TextAttribute.WEIGHT, TextAttribute.WEIGHT_BOLD, beginIndex, endIndex));
@@ -54,9 +60,9 @@
         // ensure that the paragraph contains at least one character
         // We need this trick to correctly measure text
         if (text.length() == 0) {
-            float fontSz = (float)paragraph.getDefaultFontSize();
+            Double fontSz = paragraph.getDefaultFontSize();
             text.append(" ");
-            attList.add(new AttributedStringData(TextAttribute.SIZE, fontSz, 0, 1));
+            attList.add(new AttributedStringData(TextAttribute.SIZE, fontSz.floatValue(), 0, 1));
         }
 
         AttributedString string = new AttributedString(text.toString());

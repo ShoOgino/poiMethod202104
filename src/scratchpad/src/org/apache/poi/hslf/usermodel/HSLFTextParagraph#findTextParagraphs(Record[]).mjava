@@ -1,40 +1,40 @@
-   /**
-    * Scans through the supplied record array, looking for
-    * a TextHeaderAtom followed by one of a TextBytesAtom or
-    * a TextCharsAtom. Builds up TextRuns from these
-    *
-    * @param records the records to build from
-    */
+    /**
+     * Scans through the supplied record array, looking for
+     * a TextHeaderAtom followed by one of a TextBytesAtom or
+     * a TextCharsAtom. Builds up TextRuns from these
+     * 
+     * @param records the records to build from
+     */
     protected static List<List<HSLFTextParagraph>> findTextParagraphs(Record[] records) {
         List<List<HSLFTextParagraph>> paragraphCollection = new ArrayList<List<HSLFTextParagraph>>();
 
-        int[] recordIdx = {0};
-        
+        int[] recordIdx = { 0 };
+
         for (int slwtIndex = 0; recordIdx[0] < records.length; slwtIndex++) {
-            TextHeaderAtom    header = null;
-            TextBytesAtom     tbytes = null;
-            TextCharsAtom     tchars = null;
-            TextRulerAtom     ruler  = null;
+            TextHeaderAtom header = null;
+            TextBytesAtom tbytes = null;
+            TextCharsAtom tchars = null;
+            TextRulerAtom ruler = null;
             MasterTextPropAtom indents = null;
 
             for (Record r : getRecords(records, recordIdx, null)) {
                 long rt = r.getRecordType();
                 if (RecordTypes.TextHeaderAtom.typeID == rt) {
-                    header = (TextHeaderAtom)r;
+                    header = (TextHeaderAtom) r;
                 } else if (RecordTypes.TextBytesAtom.typeID == rt) {
-                    tbytes = (TextBytesAtom)r;
+                    tbytes = (TextBytesAtom) r;
                 } else if (RecordTypes.TextCharsAtom.typeID == rt) {
-                    tchars = (TextCharsAtom)r;
+                    tchars = (TextCharsAtom) r;
                 } else if (RecordTypes.TextRulerAtom.typeID == rt) {
-                    ruler = (TextRulerAtom)r;
+                    ruler = (TextRulerAtom) r;
                 } else if (RecordTypes.MasterTextPropAtom.typeID == rt) {
-                    indents = (MasterTextPropAtom)r;
+                    indents = (MasterTextPropAtom) r;
                 }
                 // don't search for RecordTypes.StyleTextPropAtom.typeID here ... see findStyleAtomPresent below
             }
 
             if (header == null) break;
-            
+
             if (header.getParentRecord() instanceof SlideListWithText) {
                 // runs found in PPDrawing are not linked with SlideListWithTexts
                 header.setIndex(slwtIndex);
@@ -51,7 +51,7 @@
 
             List<HSLFTextParagraph> paragraphs = new ArrayList<HSLFTextParagraph>();
             paragraphCollection.add(paragraphs);
-            
+
             // split, but keep delimiter
             for (String para : rawText.split("(?<=\r)")) {
                 HSLFTextParagraph tpara = new HSLFTextParagraph(header, tbytes, tchars);
@@ -74,7 +74,7 @@
         if (paragraphCollection.isEmpty()) {
             logger.log(POILogger.DEBUG, "No text records found.");
         }
-        
+
         return paragraphCollection;
     }
 
