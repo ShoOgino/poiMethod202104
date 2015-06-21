@@ -20,16 +20,18 @@
      *
      * @param level One of DEBUG, INFO, WARN, ERROR, FATAL
      * @param message The message to log.
-     * @param obj1 The first object to match against.
-     * @param obj2 The second object to match against.
-     * @param obj3 The third object to match against.
+     * @param unflatParams... The objects to match against.
      */
+    public void logFormatted(int level, String message, Object... unflatParams) {
+        if (!check(level)) return;
+        Object[] params = flattenArrays(unflatParams);
+        String msg = StringUtil.format(message, params);
+        msg = msg.replaceAll("[\r\n]+", " "); // log forging escape
 
-    @Override
-    public void logFormatted(final int level, final String message,
-                             final Object obj1, final Object obj2,
-                             final Object obj3)
-    {
-       //do nothing
+        if (params.length > 0 && params[params.length-1] instanceof Throwable) {
+            log(level, msg, (Throwable)params[params.length-1]);
+        } else {
+            log(level, msg);
+        }
     }
 
