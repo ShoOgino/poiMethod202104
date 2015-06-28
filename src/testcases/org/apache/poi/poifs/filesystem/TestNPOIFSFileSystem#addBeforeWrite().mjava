@@ -5,20 +5,20 @@
        DocumentEntry normDoc;
        HeaderBlock hdr;
        
-       // Initially has BAT + Properties but nothing else
-       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(0));
-       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(1));
+       // Initially has Properties + BAT but nothing else
+       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(0));
+       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(1));
        assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(2));
        
        hdr = writeOutAndReadHeader(fs);
        // No mini stream, and no xbats
        // Will have fat then properties stream
        assertEquals(1, hdr.getBATCount());
-       assertEquals(0, hdr.getBATArray()[0]);
-       assertEquals(2, hdr.getPropertyStart());
+       assertEquals(1, hdr.getBATArray()[0]);
+       assertEquals(0, hdr.getPropertyStart());
        assertEquals(POIFSConstants.END_OF_CHAIN, hdr.getSBATStart());
        assertEquals(POIFSConstants.END_OF_CHAIN, hdr.getXBATIndex());
-       assertEquals(POIFSConstants.SMALLER_BIG_BLOCK_SIZE*4, fs.size());
+       assertEquals(POIFSConstants.SMALLER_BIG_BLOCK_SIZE*3, fs.size());
        
        
        // Get a clean filesystem to start with
@@ -41,8 +41,8 @@
 
        
        // Check the mini stream was added, then the main stream
-       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(0));
-       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(1)); 
+       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(0));
+       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(1)); 
        assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(2)); // Mini Fat
        assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(3)); // Mini Stream
        assertEquals(5,                           fs.getNextBlock(4)); // Main Stream
@@ -72,15 +72,15 @@
        // Check the header details - will have the sbat near the start,
        //  then the properties at the end
        assertEquals(1, hdr.getBATCount());
-       assertEquals(0, hdr.getBATArray()[0]);
+       assertEquals(1, hdr.getBATArray()[0]);
        assertEquals(2, hdr.getSBATStart());
-       assertEquals(12, hdr.getPropertyStart());
+       assertEquals(0, hdr.getPropertyStart());
        assertEquals(POIFSConstants.END_OF_CHAIN, hdr.getXBATIndex());
        
        // Check the block allocation is unchanged, other than
        //  the properties stream going in at the end
-       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(0));
-       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(1));
+       assertEquals(12,                          fs.getNextBlock(0)); // Properties
+       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(1));
        assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(2));
        assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(3));
        assertEquals(5,                           fs.getNextBlock(4));
@@ -91,10 +91,9 @@
        assertEquals(10,                          fs.getNextBlock(9));
        assertEquals(11,                          fs.getNextBlock(10));
        assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(11));
-       assertEquals(13,                          fs.getNextBlock(12));
-       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(13));
-       assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(14));
-       assertEquals(POIFSConstants.SMALLER_BIG_BLOCK_SIZE*15, fs.size());
+       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(12));
+       assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(13));
+       assertEquals(POIFSConstants.SMALLER_BIG_BLOCK_SIZE*14, fs.size());
        
        
        // Check the data
