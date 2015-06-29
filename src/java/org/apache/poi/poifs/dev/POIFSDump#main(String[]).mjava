@@ -1,5 +1,18 @@
     public static void main(String[] args) throws Exception {
+        if (args.length == 0) {
+            System.err.println("Must specify at least one file to dump");
+            System.exit(1);
+        }
+        
+        boolean withProps = false;
         for (int i = 0; i < args.length; i++) {
+            if (args[i].equalsIgnoreCase("-dumprops") ||
+                args[i].equalsIgnoreCase("-dump-props") ||
+                args[i].equalsIgnoreCase("-dump-properties")) {
+                withProps = true;
+                continue;
+            }
+            
             System.out.println("Dumping " + args[i]);
             FileInputStream is = new FileInputStream(args[i]);
             NPOIFSFileSystem fs = new NPOIFSFileSystem(is);
@@ -10,6 +23,13 @@
             file.mkdir();
 
             dump(root, file);
+            
+            if (withProps) {
+                Field headerF = NPOIFSFileSystem.class.getDeclaredField("_header");
+                headerF.setAccessible(true);
+                HeaderBlock header = (HeaderBlock)headerF.get(fs);
+                dump(fs, header.getPropertyStart(), file);
+            }
         }
    }
 
