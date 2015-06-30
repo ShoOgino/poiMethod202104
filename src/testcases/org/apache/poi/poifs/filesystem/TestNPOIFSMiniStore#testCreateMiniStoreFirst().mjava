@@ -1,6 +1,8 @@
    public void testCreateMiniStoreFirst() throws Exception {
        NPOIFSFileSystem fs = new NPOIFSFileSystem();
        NPOIFSMiniStore ministore = fs.getMiniStore();
+       DocumentInputStream dis;
+       DocumentEntry entry;
 
        // Initially has Properties + BAT but nothing else
        assertEquals(POIFSConstants.END_OF_CHAIN,     fs.getNextBlock(0));
@@ -40,6 +42,23 @@
        assertEquals(POIFSConstants.END_OF_CHAIN,    ministore.getNextBlock(0));
        assertEquals(POIFSConstants.END_OF_CHAIN,    ministore.getNextBlock(1));
        assertEquals(POIFSConstants.UNUSED_BLOCK,    ministore.getNextBlock(2));
+       
+       // Check the data is unchanged and the right length
+       entry = (DocumentEntry)fs.getRoot().getEntry("mini");
+       assertEquals(data.length, entry.getSize());
+       byte[] rdata = new byte[data.length];
+       dis = new DocumentInputStream(entry);
+       IOUtils.readFully(dis, rdata);
+       assertEquals(data, rdata);
+       dis.close();
+       
+       entry = (DocumentEntry)fs.getRoot().getEntry("mini2");
+       assertEquals(data.length, entry.getSize());
+       rdata = new byte[data.length];
+       dis = new DocumentInputStream(entry);
+       IOUtils.readFully(dis, rdata);
+       assertEquals(data, rdata);
+       dis.close();
 
        // Done
        fs.close();
