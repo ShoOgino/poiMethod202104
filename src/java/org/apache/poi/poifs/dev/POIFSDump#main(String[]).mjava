@@ -4,12 +4,19 @@
             System.exit(1);
         }
         
-        boolean withProps = false;
+        boolean dumpProps = false, dumpMini = false;
         for (int i = 0; i < args.length; i++) {
             if (args[i].equalsIgnoreCase("-dumprops") ||
                 args[i].equalsIgnoreCase("-dump-props") ||
                 args[i].equalsIgnoreCase("-dump-properties")) {
-                withProps = true;
+                dumpProps = true;
+                continue;
+            }
+            if (args[i].equalsIgnoreCase("-dumpmini") ||
+                args[i].equalsIgnoreCase("-dump-mini") ||
+                args[i].equalsIgnoreCase("-dump-ministream") ||
+                args[i].equalsIgnoreCase("-dump-mini-stream")) {
+                dumpMini = true;
                 continue;
             }
             
@@ -24,11 +31,18 @@
 
             dump(root, file);
             
-            if (withProps) {
-                Field headerF = NPOIFSFileSystem.class.getDeclaredField("_header");
-                headerF.setAccessible(true);
-                HeaderBlock header = (HeaderBlock)headerF.get(fs);
-                dump(fs, header.getPropertyStart(), file);
+            if (dumpProps) {
+                HeaderBlock header = getHeaderBlock(fs);
+                dump(fs, header.getPropertyStart(), "properties", file);
+            }
+            if (dumpMini) {
+                NPropertyTable props = getPropertyTable(fs);
+                int startBlock = props.getRoot().getStartBlock(); 
+                if (startBlock == POIFSConstants.END_OF_CHAIN) {
+                    System.err.println("No Mini Stream in file");
+                } else {
+                    dump(fs, startBlock, "mini-stream", file);
+                }
             }
         }
    }
