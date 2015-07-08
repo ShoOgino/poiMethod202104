@@ -7,35 +7,32 @@
     public Rectangle2D getAnchor2D(){
         EscherSpRecord spRecord = getEscherChild(EscherSpRecord.RECORD_ID);
         int flags = spRecord.getFlags();
-        Rectangle2D anchor;
-        if ((flags & EscherSpRecord.FLAG_CHILD) != 0){
-            EscherChildAnchorRecord rec = getEscherChild(EscherChildAnchorRecord.RECORD_ID);
-            if(rec == null){
-                logger.log(POILogger.WARN, "EscherSpRecord.FLAG_CHILD is set but EscherChildAnchorRecord was not found");
-                EscherClientAnchorRecord clrec = getEscherChild(EscherClientAnchorRecord.RECORD_ID);
-                anchor = new Rectangle2D.Float(
-                    (float)clrec.getCol1()*POINT_DPI/MASTER_DPI,
-                    (float)clrec.getFlag()*POINT_DPI/MASTER_DPI,
-                    (float)(clrec.getDx1()-clrec.getCol1())*POINT_DPI/MASTER_DPI,
-                    (float)(clrec.getRow1()-clrec.getFlag())*POINT_DPI/MASTER_DPI
-                );
-            } else {
-                anchor = new Rectangle2D.Float(
-                    (float)rec.getDx1()*POINT_DPI/MASTER_DPI,
-                    (float)rec.getDy1()*POINT_DPI/MASTER_DPI,
-                    (float)(rec.getDx2()-rec.getDx1())*POINT_DPI/MASTER_DPI,
-                    (float)(rec.getDy2()-rec.getDy1())*POINT_DPI/MASTER_DPI
-                );
-            }
+        int x,y,w,h;
+        EscherChildAnchorRecord childRec = getEscherChild(EscherChildAnchorRecord.RECORD_ID);
+        boolean useChildRec = ((flags & EscherSpRecord.FLAG_CHILD) != 0);
+        if (useChildRec && childRec != null){
+            x = childRec.getDx1();
+            y = childRec.getDy1();
+            w = childRec.getDx2()-childRec.getDx1();
+            h = childRec.getDy2()-childRec.getDy1();
         } else {
-            EscherClientAnchorRecord rec = getEscherChild(EscherClientAnchorRecord.RECORD_ID);
-            anchor = new Rectangle2D.Float(
-                (float)rec.getCol1()*POINT_DPI/MASTER_DPI,
-                (float)rec.getFlag()*POINT_DPI/MASTER_DPI,
-                (float)(rec.getDx1()-rec.getCol1())*POINT_DPI/MASTER_DPI,
-                (float)(rec.getRow1()-rec.getFlag())*POINT_DPI/MASTER_DPI
-            );
+            if (useChildRec) {
+                logger.log(POILogger.WARN, "EscherSpRecord.FLAG_CHILD is set but EscherChildAnchorRecord was not found");
+            }
+            EscherClientAnchorRecord clientRec = getEscherChild(EscherClientAnchorRecord.RECORD_ID);
+            x = clientRec.getFlag();
+            y = clientRec.getCol1();
+            w = clientRec.getDx1()-clientRec.getFlag();
+            h = clientRec.getRow1()-clientRec.getCol1();
         }
+
+        Rectangle2D anchor = new Rectangle2D.Float(
+            (float)Units.masterToPoints(x),
+            (float)Units.masterToPoints(y),
+            (float)Units.masterToPoints(w),
+            (float)Units.masterToPoints(h)
+        );
+        
         return anchor;
     }
 

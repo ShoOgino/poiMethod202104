@@ -16,28 +16,29 @@
                 defaultStyleSelector = "bodyStyle";
                 break;
         }
-        int level = getLevel();
+        int level = getIndentLevel();
 
         // wind up and find the root master sheet which must be slide master
-        XSLFSheet masterSheet = _shape.getSheet();
-        for (XSLFSheet m = masterSheet; m != null; m = (XSLFSheet)m.getMasterSheet()) {
-            masterSheet = m;
-        }
-
-        String nsDecl =
+        final String nsDecl =
             "declare namespace p='http://schemas.openxmlformats.org/presentationml/2006/main' " +
             "declare namespace a='http://schemas.openxmlformats.org/drawingml/2006/main' ";
-        String xpaths[] = {
+        final String xpaths[] = {
             nsDecl+".//p:txStyles/p:" + defaultStyleSelector +"/a:lvl" +(level+1)+ "pPr",
             nsDecl+".//p:notesStyle/a:lvl" +(level+1)+ "pPr"
         };
-        XmlObject xo = masterSheet.getXmlObject();
-        for (String xpath : xpaths) {
-            XmlObject[] o = xo.selectPath(xpath);
-            if (o.length == 1) {
-                return (CTTextParagraphProperties)o[0];
+        XSLFSheet masterSheet = _shape.getSheet();
+        for (XSLFSheet m = masterSheet; m != null; m = (XSLFSheet)m.getMasterSheet()) {
+            masterSheet = m;
+
+            XmlObject xo = masterSheet.getXmlObject();
+            for (String xpath : xpaths) {
+                XmlObject[] o = xo.selectPath(xpath);
+                if (o.length == 1) {
+                    return (CTTextParagraphProperties)o[0];
+                }
             }
         }
+
         
 //        for (CTTextBody txBody : (CTTextBody[])xo.selectPath(nsDecl+".//p:txBody")) {
 //            CTTextParagraphProperties defaultPr = null, lastPr = null;
