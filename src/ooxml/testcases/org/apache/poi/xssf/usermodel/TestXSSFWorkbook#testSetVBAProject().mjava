@@ -1,0 +1,50 @@
+    /**
+     * Tests that we can save a workbook with macros and reload it.
+     */
+    @Test
+    public void testSetVBAProject() throws Exception {
+        XSSFWorkbook workbook = null;
+        OutputStream out = null;
+        File file;
+        final byte[] allBytes = new byte[256];
+        for (int i = 0; i < 256; i++) {
+            allBytes[i] = (byte) (i - 128);
+        }
+        try {
+            workbook = new XSSFWorkbook();
+            workbook.createSheet();
+            workbook.setVBAProject(new ByteArrayInputStream(allBytes));
+            file = TempFile.createTempFile("poi-", ".xlsm");
+            out = new FileOutputStream(file);
+            workbook.write(out);
+        }
+        finally {
+            IOUtils.closeQuietly(out);
+            IOUtils.closeQuietly(workbook);
+        }
+
+        try {
+            // Check the package contains what we'd expect it to
+            OPCPackage pkg = OPCPackage.open(file.toString());
+            PackagePart wbPart = pkg.getPart(PackagingURIHelper.createPartName("/xl/workbook.xml"));
+            assertTrue(wbPart.hasRelationships());
+            final PackageRelationshipCollection relationships = wbPart.getRelationships().getRelationships(XSSFRelation.VBA_MACROS.getRelation());
+            assertEquals(1, relationships.size());
+            assertEquals(XSSFRelation.VBA_MACROS.getDefaultFileName(), relationships.getRelationship(0).getTargetURI().toString());
+            PackagePart vbaPart = pkg.getPart(PackagingURIHelper.createPartName(XSSFRelation.VBA_MACROS.getDefaultFileName()));
+            assertNotNull(vbaPart);
+            assertFalse(vbaPart.isRelationshipPart());
+            assertEquals(XSSFRelation.VBA_MACROS.getContentType(), vbaPart.getContentType());
+            final byte[] fromFile = IOUtils.toByteArray(vbaPart.getInputStream());
+            assertArrayEquals(allBytes, fromFile);
+
+            // Load back the XSSFWorkbook just to check nothing explodes
+            workbook = new XSSFWorkbook(pkg);
+            assertEquals(1, workbook.getNumberOfSheets());
+            assertEquals(XSSFWorkbookType.XLSM, workbook.getWorkbookType());
+        }
+        finally {
+            IOUtils.closeQuietly(workbook);
+        }
+    }
+
