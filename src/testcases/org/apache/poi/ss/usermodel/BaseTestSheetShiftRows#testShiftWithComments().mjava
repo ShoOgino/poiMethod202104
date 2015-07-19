@@ -1,5 +1,4 @@
-    public void testShiftWithComments() { // TODO - enable XSSF test
-
+    public void testShiftWithComments() {
         Workbook wb = _testDataProvider.openSampleWorkbook("comments." + _testDataProvider.getStandardFileNameExtension());
 
         Sheet sheet = wb.getSheet("Sheet1");
@@ -17,6 +16,8 @@
         assertEquals(comment3,"comment top row3 (index2)\n");
         String comment4 = sheet.getCellComment(3,0).getString().getString();
         assertEquals(comment4,"comment top row4 (index3)\n");
+
+        //Workbook wbBack = _testDataProvider.writeOutAndReadBack(wb);
 
         // Shifting all but first line down to test comments shifting
         sheet.shiftRows(1, sheet.getLastRowNum(), 1, true, true);
@@ -55,5 +56,25 @@
         assertEquals(comment3,comment3_shifted);
         comment4_shifted = sheet.getCellComment(4,0).getString().getString();
         assertEquals(comment4,comment4_shifted);
+
+        // Shifting back up again, now two rows
+        sheet.shiftRows(2, sheet.getLastRowNum(), -2, true, true);
+
+        // TODO: it seems HSSFSheet does not correctly remove comments from rows that are overwritten
+        // by shifting rows...
+        if(!(wb instanceof HSSFWorkbook)) {
+        	assertEquals(2, sheet.getLastRowNum());
+        	
+        	// Verify comments are in the position expected
+        	assertNull("Had: " + (sheet.getCellComment(0,0) == null ? "null" : sheet.getCellComment(0,0).getString()),
+        			sheet.getCellComment(0,0));
+        	assertNotNull(sheet.getCellComment(1,0));
+        	assertNotNull(sheet.getCellComment(2,0));
+        }
+
+        comment1 = sheet.getCellComment(1,0).getString().getString();
+        assertEquals(comment1,"comment top row3 (index2)\n");
+        String comment2 = sheet.getCellComment(2,0).getString().getString();
+        assertEquals(comment2,"comment top row4 (index3)\n");
     }
 

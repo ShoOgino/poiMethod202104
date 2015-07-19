@@ -1,0 +1,21 @@
+    public static ThresholdInputStream addThreshold(InputStream zipIS) throws IOException {
+        ThresholdInputStream newInner;
+        if (zipIS instanceof InflaterInputStream) {
+            try {
+                Field f = FilterInputStream.class.getDeclaredField("in");
+                f.setAccessible(true);
+                InputStream oldInner = (InputStream)f.get(zipIS);
+                newInner = new ThresholdInputStream(oldInner, null);
+                f.set(zipIS, newInner);
+            } catch (Exception ex) {
+                logger.log(POILogger.WARN, "SecurityManager doesn't allow manipulation via reflection for zipbomb detection - continue with original input stream", ex);
+                newInner = null;
+            }
+        } else {
+            // the inner stream is a ZipFileInputStream, i.e. the data wasn't compressed
+            newInner = null;
+        }
+
+        return new ThresholdInputStream(zipIS, newInner);
+    }
+

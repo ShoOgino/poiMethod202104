@@ -1,0 +1,51 @@
+    // TODO Fix this test to work for HSSF
+    public void DISABLEDtestCreateIconFormatting() {
+        Workbook workbook = _testDataProvider.createWorkbook();
+        Sheet sheet = workbook.createSheet();
+
+        SheetConditionalFormatting sheetCF = sheet.getSheetConditionalFormatting();
+        ConditionalFormattingRule rule1 = 
+                sheetCF.createConditionalFormattingRule(IconSet.GYRB_4_TRAFFIC_LIGHTS);
+        IconMultiStateFormatting iconFmt = rule1.getMultiStateFormatting();
+        
+        assertEquals(IconSet.GYRB_4_TRAFFIC_LIGHTS, iconFmt.getIconSet());
+        assertEquals(4, iconFmt.getThresholds().length);
+        assertEquals(false, iconFmt.isIconOnly());
+        assertEquals(false, iconFmt.isReversed());
+        
+        iconFmt.setIconOnly(true);
+        iconFmt.getThresholds()[0].setRangeType(RangeType.MIN);
+        iconFmt.getThresholds()[1].setRangeType(RangeType.NUMBER);
+        iconFmt.getThresholds()[1].setValue(10d);
+        iconFmt.getThresholds()[2].setRangeType(RangeType.PERCENT);
+        iconFmt.getThresholds()[2].setValue(75d);
+        iconFmt.getThresholds()[3].setRangeType(RangeType.MAX);
+        
+        CellRangeAddress [] regions = { CellRangeAddress.valueOf("A1:A5") };
+        sheetCF.addConditionalFormatting(regions, rule1);
+        
+        // Save, re-load and re-check
+        workbook = _testDataProvider.writeOutAndReadBack(workbook);
+        sheetCF = sheet.getSheetConditionalFormatting();
+        assertEquals(1, sheetCF.getNumConditionalFormattings());
+        
+        ConditionalFormatting cf = sheetCF.getConditionalFormattingAt(0);
+        assertEquals(1, cf.getNumberOfRules());
+        rule1 = cf.getRule(0);
+        iconFmt = rule1.getMultiStateFormatting();
+        
+        assertEquals(IconSet.GYRB_4_TRAFFIC_LIGHTS, iconFmt.getIconSet());
+        assertEquals(4, iconFmt.getThresholds().length);
+        assertEquals(true, iconFmt.isIconOnly());
+        assertEquals(false, iconFmt.isReversed());
+
+        assertEquals(RangeType.MIN,    iconFmt.getThresholds()[0].getRangeType());
+        assertEquals(RangeType.NUMBER, iconFmt.getThresholds()[1].getRangeType());
+        assertEquals(RangeType.PERCENT,iconFmt.getThresholds()[2].getRangeType());
+        assertEquals(RangeType.MAX,    iconFmt.getThresholds()[3].getRangeType());
+        assertEquals(null, iconFmt.getThresholds()[0].getValue());
+        assertEquals(10d,  iconFmt.getThresholds()[1].getValue());
+        assertEquals(75d,  iconFmt.getThresholds()[2].getValue());
+        assertEquals(null, iconFmt.getThresholds()[3].getValue());
+    }
+

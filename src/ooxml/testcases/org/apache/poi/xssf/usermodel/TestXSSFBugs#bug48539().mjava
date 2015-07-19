@@ -8,38 +8,38 @@
      */
     @Test
     public void bug48539() throws Exception {
-       XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("48539.xlsx");
-       assertEquals(3, wb.getNumberOfSheets());
-       assertEquals(0, wb.getNumberOfNames());
-       
-       // Try each cell individually
-       XSSFFormulaEvaluator eval = new XSSFFormulaEvaluator(wb);
-       for(int i=0; i<wb.getNumberOfSheets(); i++) {
-          Sheet s = wb.getSheetAt(i);
-          for(Row r : s) {
-             for(Cell c : r) {
-                if(c.getCellType() == Cell.CELL_TYPE_FORMULA) {
-                    String formula = c.getCellFormula();
-                    CellValue cv;
-                    try {
-                        cv = eval.evaluate(c);
-                    } catch (Exception e) {
-                        throw new RuntimeException("Can't evaluate formula: " + formula, e);
-                    }
-                    
-                    if(cv.getCellType() == Cell.CELL_TYPE_NUMERIC) {
-                        // assert that the calculated value agrees with
-                        // the cached formula result calculated by Excel
-                        double cachedFormulaResult = c.getNumericCellValue();
-                        double evaluatedFormulaResult = cv.getNumberValue();
-                        assertEquals(c.getCellFormula(), cachedFormulaResult, evaluatedFormulaResult, 1E-7);
+        XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("48539.xlsx");
+        assertEquals(3, wb.getNumberOfSheets());
+        assertEquals(0, wb.getNumberOfNames());
+
+        // Try each cell individually
+        XSSFFormulaEvaluator eval = new XSSFFormulaEvaluator(wb);
+        for(int i=0; i<wb.getNumberOfSheets(); i++) {
+            Sheet s = wb.getSheetAt(i);
+            for(Row r : s) {
+                for(Cell c : r) {
+                    if(c.getCellType() == Cell.CELL_TYPE_FORMULA) {
+                        String formula = c.getCellFormula();
+                        CellValue cv;
+                        try {
+                            cv = eval.evaluate(c);
+                        } catch (Exception e) {
+                            throw new RuntimeException("Can't evaluate formula: " + formula, e);
+                        }
+
+                        if(cv.getCellType() == Cell.CELL_TYPE_NUMERIC) {
+                            // assert that the calculated value agrees with
+                            // the cached formula result calculated by Excel
+                            double cachedFormulaResult = c.getNumericCellValue();
+                            double evaluatedFormulaResult = cv.getNumberValue();
+                            assertEquals(c.getCellFormula(), cachedFormulaResult, evaluatedFormulaResult, 1E-7);
+                        }
                     }
                 }
-             }
-          }
-       }
-       
-       // Now all of them
+            }
+        }
+
+        // Now all of them
         XSSFFormulaEvaluator.evaluateAllFormulaCells(wb);
     }
 

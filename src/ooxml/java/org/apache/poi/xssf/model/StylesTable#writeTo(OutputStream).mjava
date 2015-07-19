@@ -1,103 +1,104 @@
-	/**
-	 * Write this table out as XML.
-	 *
-	 * @param out The stream to write to.
-	 * @throws IOException if an error occurs while writing.
-	 */
-	public void writeTo(OutputStream out) throws IOException {
-		XmlOptions options = new XmlOptions(DEFAULT_XML_OPTIONS);
+    /**
+     * Write this table out as XML.
+     *
+     * @param out The stream to write to.
+     * @throws IOException if an error occurs while writing.
+     */
+    public void writeTo(OutputStream out) throws IOException {
+        XmlOptions options = new XmlOptions(DEFAULT_XML_OPTIONS);
 
-		// Work on the current one
-		// Need to do this, as we don't handle
-		//  all the possible entries yet
-		CTStylesheet styleSheet = doc.getStyleSheet();
+        // Work on the current one
+        // Need to do this, as we don't handle
+        //  all the possible entries yet
+        CTStylesheet styleSheet = doc.getStyleSheet();
 
-		// Formats
-		CTNumFmts formats = CTNumFmts.Factory.newInstance();
-		formats.setCount(numberFormats.size());
-		for (Entry<Integer, String> fmt : numberFormats.entrySet()) {
-			CTNumFmt ctFmt = formats.addNewNumFmt();
-			ctFmt.setNumFmtId(fmt.getKey());
-			ctFmt.setFormatCode(fmt.getValue());
-		}
-		styleSheet.setNumFmts(formats);
+        // Formats
+        CTNumFmts formats = CTNumFmts.Factory.newInstance();
+        formats.setCount(numberFormats.size());
+        for (int fmtId=0; fmtId<usedNumberFormats.length; fmtId++) {
+            if (usedNumberFormats[fmtId]) {
+                CTNumFmt ctFmt = formats.addNewNumFmt();
+                ctFmt.setNumFmtId(fmtId);
+                ctFmt.setFormatCode(numberFormats.get(fmtId));
+            }
+        }
+        styleSheet.setNumFmts(formats);
 
-		int idx;
-		// Fonts
-		CTFonts ctFonts = styleSheet.getFonts();
-		if (ctFonts == null) {
-			ctFonts = CTFonts.Factory.newInstance();
-		}
-		ctFonts.setCount(fonts.size());
-		CTFont[] ctfnt = new CTFont[fonts.size()];
-		idx = 0;
-		for(XSSFFont f : fonts) ctfnt[idx++] = f.getCTFont();
-		ctFonts.setFontArray(ctfnt);
-		styleSheet.setFonts(ctFonts);
+        int idx;
+        // Fonts
+        CTFonts ctFonts = styleSheet.getFonts();
+        if (ctFonts == null) {
+            ctFonts = CTFonts.Factory.newInstance();
+        }
+        ctFonts.setCount(fonts.size());
+        CTFont[] ctfnt = new CTFont[fonts.size()];
+        idx = 0;
+        for(XSSFFont f : fonts) ctfnt[idx++] = f.getCTFont();
+        ctFonts.setFontArray(ctfnt);
+        styleSheet.setFonts(ctFonts);
 
-		// Fills
-		CTFills ctFills = styleSheet.getFills();
-		if (ctFills == null) {
-			ctFills = CTFills.Factory.newInstance();
-		}
-		ctFills.setCount(fills.size());
-		CTFill[] ctf = new CTFill[fills.size()];
-		idx = 0;
-		for(XSSFCellFill f : fills) ctf[idx++] = f.getCTFill();
-		ctFills.setFillArray(ctf);
-		styleSheet.setFills(ctFills);
+        // Fills
+        CTFills ctFills = styleSheet.getFills();
+        if (ctFills == null) {
+            ctFills = CTFills.Factory.newInstance();
+        }
+        ctFills.setCount(fills.size());
+        CTFill[] ctf = new CTFill[fills.size()];
+        idx = 0;
+        for(XSSFCellFill f : fills) ctf[idx++] = f.getCTFill();
+        ctFills.setFillArray(ctf);
+        styleSheet.setFills(ctFills);
 
-		// Borders
-		CTBorders ctBorders = styleSheet.getBorders();
-		if (ctBorders == null) {
-			ctBorders = CTBorders.Factory.newInstance();
-		}
-		ctBorders.setCount(borders.size());
-		CTBorder[] ctb = new CTBorder[borders.size()];
-		idx = 0;
-		for(XSSFCellBorder b : borders) ctb[idx++] = b.getCTBorder();
-		ctBorders.setBorderArray(ctb);
-		styleSheet.setBorders(ctBorders);
+        // Borders
+        CTBorders ctBorders = styleSheet.getBorders();
+        if (ctBorders == null) {
+            ctBorders = CTBorders.Factory.newInstance();
+        }
+        ctBorders.setCount(borders.size());
+        CTBorder[] ctb = new CTBorder[borders.size()];
+        idx = 0;
+        for(XSSFCellBorder b : borders) ctb[idx++] = b.getCTBorder();
+        ctBorders.setBorderArray(ctb);
+        styleSheet.setBorders(ctBorders);
 
-		// Xfs
-		if(xfs.size() > 0) {
-			CTCellXfs ctXfs = styleSheet.getCellXfs();
-			if (ctXfs == null) {
-				ctXfs = CTCellXfs.Factory.newInstance();
-			}
-			ctXfs.setCount(xfs.size());
-			ctXfs.setXfArray(
-					xfs.toArray(new CTXf[xfs.size()])
-			);
-			styleSheet.setCellXfs(ctXfs);
-		}
+        // Xfs
+        if(xfs.size() > 0) {
+            CTCellXfs ctXfs = styleSheet.getCellXfs();
+            if (ctXfs == null) {
+                ctXfs = CTCellXfs.Factory.newInstance();
+            }
+            ctXfs.setCount(xfs.size());
+            ctXfs.setXfArray(
+                    xfs.toArray(new CTXf[xfs.size()])
+            );
+            styleSheet.setCellXfs(ctXfs);
+        }
 
-		// Style xfs
-		if(styleXfs.size() > 0) {
-			CTCellStyleXfs ctSXfs = styleSheet.getCellStyleXfs();
-			if (ctSXfs == null) {
-				ctSXfs = CTCellStyleXfs.Factory.newInstance();
-			}
-			ctSXfs.setCount(styleXfs.size());
-			ctSXfs.setXfArray(
-					styleXfs.toArray(new CTXf[styleXfs.size()])
-			);
-			styleSheet.setCellStyleXfs(ctSXfs);
-		}
+        // Style xfs
+        if(styleXfs.size() > 0) {
+            CTCellStyleXfs ctSXfs = styleSheet.getCellStyleXfs();
+            if (ctSXfs == null) {
+                ctSXfs = CTCellStyleXfs.Factory.newInstance();
+            }
+            ctSXfs.setCount(styleXfs.size());
+            ctSXfs.setXfArray(
+                    styleXfs.toArray(new CTXf[styleXfs.size()])
+            );
+            styleSheet.setCellStyleXfs(ctSXfs);
+        }
 
-		// Style dxfs
-		if(dxfs.size() > 0) {
-			CTDxfs ctDxfs = styleSheet.getDxfs();
-			if (ctDxfs == null) {
-				ctDxfs = CTDxfs.Factory.newInstance();
-			}
-			ctDxfs.setCount(dxfs.size());
-			ctDxfs.setDxfArray(dxfs.toArray(new CTDxf[dxfs.size()])
-			);
-			styleSheet.setDxfs(ctDxfs);
-		}
+        // Style dxfs
+        if(dxfs.size() > 0) {
+            CTDxfs ctDxfs = styleSheet.getDxfs();
+            if (ctDxfs == null) {
+                ctDxfs = CTDxfs.Factory.newInstance();
+            }
+            ctDxfs.setCount(dxfs.size());
+            ctDxfs.setDxfArray(dxfs.toArray(new CTDxf[dxfs.size()]));
+            styleSheet.setDxfs(ctDxfs);
+        }
 
-		// Save
-		doc.save(out, options);
-	}
+        // Save
+        doc.save(out, options);
+    }
 

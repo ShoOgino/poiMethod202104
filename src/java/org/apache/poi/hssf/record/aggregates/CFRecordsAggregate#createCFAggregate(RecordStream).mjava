@@ -1,23 +1,25 @@
-	/**
-	 * Create CFRecordsAggregate from a list of CF Records
-	 * @param rs - the stream to read from
-	 * @return CFRecordsAggregate object
-	 */
-	public static CFRecordsAggregate createCFAggregate(RecordStream rs) {
-		Record rec = rs.getNext();
-		if (rec.getSid() != CFHeaderRecord.sid) {
-			throw new IllegalStateException("next record sid was " + rec.getSid() 
-					+ " instead of " + CFHeaderRecord.sid + " as expected");
-		}
+    /**
+     * Create CFRecordsAggregate from a list of CF Records
+     * @param rs - the stream to read from
+     * @return CFRecordsAggregate object
+     */
+    public static CFRecordsAggregate createCFAggregate(RecordStream rs) {
+        Record rec = rs.getNext();
+        if (rec.getSid() != CFHeaderRecord.sid &&
+            rec.getSid() != CFHeader12Record.sid) {
+            throw new IllegalStateException("next record sid was " + rec.getSid() 
+                    + " instead of " + CFHeaderRecord.sid + " or " +
+                    CFHeader12Record.sid + " as expected");
+        }
 
-		CFHeaderRecord header = (CFHeaderRecord)rec;
-		int nRules = header.getNumberOfConditionalFormats();
+        CFHeaderBase header = (CFHeaderBase)rec;
+        int nRules = header.getNumberOfConditionalFormats();
 
-		CFRuleRecord[] rules = new CFRuleRecord[nRules];
-		for (int i = 0; i < rules.length; i++) {
-			rules[i] = (CFRuleRecord) rs.getNext();
-		}
-		
-		return new CFRecordsAggregate(header, rules);
-	}
+        CFRuleBase[] rules = new CFRuleBase[nRules];
+        for (int i = 0; i < rules.length; i++) {
+            rules[i] = (CFRuleBase) rs.getNext();
+        }
+
+        return new CFRecordsAggregate(header, rules);
+    }
 

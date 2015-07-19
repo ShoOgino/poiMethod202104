@@ -1,0 +1,34 @@
+    private void createBitmaps(ByteArrayOutputStream out) throws IOException {
+        XMLSlideShow ppt = new XMLSlideShow(new ByteArrayInputStream(out.toByteArray()));
+        Dimension pgsize = ppt.getPageSize();
+        for (XSLFSlide xmlSlide : ppt.getSlides()) {
+//            System.out.println("slide-" + (i + 1));
+//            System.out.println("" + xmlSlide[i].getTitle());
+
+            BufferedImage img = new BufferedImage(pgsize.width, pgsize.height, BufferedImage.TYPE_INT_RGB);
+            Graphics2D graphics = img.createGraphics();
+
+            // draw stuff
+            xmlSlide.draw(graphics);
+
+            // Also try to read notes
+            XSLFNotes notes = xmlSlide.getNotes();
+            if(notes != null) {
+                for (XSLFShape note : notes) {
+                    DrawFactory df = DrawFactory.getInstance(graphics);
+                    Drawable d = df.getDrawable(note);
+                    d.draw(graphics);
+                    
+                    if (note instanceof XSLFTextShape) {
+                        XSLFTextShape txShape = (XSLFTextShape) note;
+                        for (XSLFTextParagraph xslfParagraph : txShape.getTextParagraphs()) {
+                            xslfParagraph.getText();
+                        }
+                    }
+                }
+            }
+        }
+        
+        ppt.close();
+    }
+

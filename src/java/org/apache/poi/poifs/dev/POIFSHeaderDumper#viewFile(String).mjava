@@ -1,35 +1,40 @@
-	public static void viewFile(final String filename) throws Exception {
-		InputStream inp = new FileInputStream(filename);
-		
-		// Header
-		HeaderBlock header_block = new HeaderBlock(inp);
-		displayHeader(header_block);
-		
-		// Raw blocks
-      POIFSBigBlockSize bigBlockSize = header_block.getBigBlockSize();
-      RawDataBlockList data_blocks = new RawDataBlockList(inp, bigBlockSize);
-      displayRawBlocksSummary(data_blocks);
-      
-      // Main FAT Table
-      BlockAllocationTableReader batReader =
-         new BlockAllocationTableReader(
-            header_block.getBigBlockSize(),
-            header_block.getBATCount(),
-            header_block.getBATArray(),
-            header_block.getXBATCount(),
-            header_block.getXBATIndex(),
-            data_blocks);
-      displayBATReader(batReader);
+    public static void viewFile(final String filename) throws Exception {
+        System.out.println("Dumping headers from: " + filename);
+        InputStream inp = new FileInputStream(filename);
 
-      // Properties Table
-      PropertyTable properties =
-         new PropertyTable(header_block, data_blocks);
-      
-      // Mini Fat
-      BlockList sbat = 
-         SmallBlockTableReader.getSmallDocumentBlocks(
-               bigBlockSize, data_blocks, properties.getRoot(),
-               header_block.getSBATStart()
-         );
-   }
+        // Header
+        HeaderBlock header_block = new HeaderBlock(inp);
+        displayHeader(header_block);
+
+        // Raw blocks
+        POIFSBigBlockSize bigBlockSize = header_block.getBigBlockSize();
+        RawDataBlockList data_blocks = new RawDataBlockList(inp, bigBlockSize);
+        displayRawBlocksSummary(data_blocks);
+
+        // Main FAT Table
+        BlockAllocationTableReader batReader =
+                new BlockAllocationTableReader(
+                        header_block.getBigBlockSize(),
+                        header_block.getBATCount(),
+                        header_block.getBATArray(),
+                        header_block.getXBATCount(),
+                        header_block.getXBATIndex(),
+                        data_blocks);
+        displayBATReader("Big Blocks", batReader);
+
+        // Properties Table
+        PropertyTable properties =
+                new PropertyTable(header_block, data_blocks);
+
+        // Mini Fat
+        BlockAllocationTableReader sbatReader = 
+                SmallBlockTableReader._getSmallDocumentBlockReader(
+                        bigBlockSize, data_blocks, properties.getRoot(),
+                        header_block.getSBATStart()
+                        );
+        displayBATReader("Small Blocks", sbatReader);
+
+        // Summary of the properties
+        displayPropertiesSummary(properties);
+    }
 

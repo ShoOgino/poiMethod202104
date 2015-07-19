@@ -5,10 +5,9 @@
      * @param defaultCharWidth the width of a single character
      * @param formatter formatter used to prepare the text to be measured
      * @param useMergedCells    whether to use merged cells
-     * @return  the width in pixels
+     * @return  the width in pixels or -1 if cell is empty
      */
     public static double getCellWidth(Cell cell, int defaultCharWidth, DataFormatter formatter, boolean useMergedCells) {
-
         Sheet sheet = cell.getSheet();
         Workbook wb = sheet.getWorkbook();
         Row row = cell.getRow();
@@ -35,9 +34,6 @@
 
         Font font = wb.getFontAt(style.getFontIndex());
 
-        AttributedString str;
-        TextLayout layout;
-
         double width = -1;
         if (cellType == Cell.CELL_TYPE_STRING) {
             RichTextString rt = cell.getRichStringCellValue();
@@ -45,30 +41,14 @@
             for (int i = 0; i < lines.length; i++) {
                 String txt = lines[i] + defaultChar;
 
-                str = new AttributedString(txt);
+                AttributedString str = new AttributedString(txt);
                 copyAttributes(font, str, 0, txt.length());
 
                 if (rt.numFormattingRuns() > 0) {
                     // TODO: support rich text fragments
                 }
 
-                layout = new TextLayout(str.getIterator(), fontRenderContext);
-                if(style.getRotation() != 0){
-                    /*
-                     * Transform the text using a scale so that it's height is increased by a multiple of the leading,
-                     * and then rotate the text before computing the bounds. The scale results in some whitespace around
-                     * the unrotated top and bottom of the text that normally wouldn't be present if unscaled, but
-                     * is added by the standard Excel autosize.
-                     */
-                    AffineTransform trans = new AffineTransform();
-                    trans.concatenate(AffineTransform.getRotateInstance(style.getRotation()*2.0*Math.PI/360.0));
-                    trans.concatenate(
-                    AffineTransform.getScaleInstance(1, fontHeightMultiple)
-                    );
-                    width = Math.max(width, ((layout.getOutline(trans).getBounds().getWidth() / colspan) / defaultCharWidth) + cell.getCellStyle().getIndention());
-                } else {
-                    width = Math.max(width, ((layout.getBounds().getWidth() / colspan) / defaultCharWidth) + cell.getCellStyle().getIndention());
-                }
+                width = getCellWidth(defaultCharWidth, colspan, style, width, str);
             }
         } else {
             String sval = null;
@@ -84,26 +64,10 @@
             }
             if(sval != null) {
                 String txt = sval + defaultChar;
-                str = new AttributedString(txt);
+                AttributedString str = new AttributedString(txt);
                 copyAttributes(font, str, 0, txt.length());
 
-                layout = new TextLayout(str.getIterator(), fontRenderContext);
-                if(style.getRotation() != 0){
-                    /*
-                     * Transform the text using a scale so that it's height is increased by a multiple of the leading,
-                     * and then rotate the text before computing the bounds. The scale results in some whitespace around
-                     * the unrotated top and bottom of the text that normally wouldn't be present if unscaled, but
-                     * is added by the standard Excel autosize.
-                     */
-                    AffineTransform trans = new AffineTransform();
-                    trans.concatenate(AffineTransform.getRotateInstance(style.getRotation()*2.0*Math.PI/360.0));
-                    trans.concatenate(
-                    AffineTransform.getScaleInstance(1, fontHeightMultiple)
-                    );
-                    width = Math.max(width, ((layout.getOutline(trans).getBounds().getWidth() / colspan) / defaultCharWidth) + cell.getCellStyle().getIndention());
-                } else {
-                    width = Math.max(width, ((layout.getBounds().getWidth() / colspan) / defaultCharWidth) + cell.getCellStyle().getIndention());
-                }
+                width = getCellWidth(defaultCharWidth, colspan, style, width, str);
             }
         }
         return width;

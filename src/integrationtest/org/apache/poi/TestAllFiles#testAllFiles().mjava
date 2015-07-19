@@ -1,19 +1,40 @@
     @Test
     public void testAllFiles() throws Exception {
-		assertNotNull("Unknown file extension for file: " + file + ": " + getExtension(file), handler);
-		InputStream stream = new BufferedInputStream(new FileInputStream(new File(ROOT_DIR, file)),100);
-		try {
-			handler.handleFile(stream);
-			
-			assertFalse("Expected to fail for file " + file + " and handler " + handler + ", but did not fail!", 
-			        EXPECTED_FAILURES.contains(file));
-		} catch (Exception e) {
-		    // check if we expect failure for this file
-			if(!EXPECTED_FAILURES.contains(file)) {
-			    throw new Exception("While handling " + file, e);
-			}
-		} finally {
-			stream.close();
-		}
-	}
+        assertNotNull("Unknown file extension for file: " + file + ": " + getExtension(file), handler);
+        File inputFile = new File(ROOT_DIR, file);
+
+        try {
+            InputStream stream = new BufferedInputStream(new FileInputStream(inputFile), 64*1024);
+            try {
+                handler.handleFile(stream);
+
+                assertFalse("Expected to fail for file " + file + " and handler " + handler + ", but did not fail!", 
+                        OLD_FILES.contains(file));
+            } finally {
+                stream.close();
+            }
+
+            handler.handleExtracting(inputFile);
+
+            assertFalse("Expected to fail for file " + file + " and handler " + handler + ", but did not fail!", 
+                    EXPECTED_FAILURES.contains(file));
+        } catch (OldWordFileFormatException e) {
+            // for old word files we should still support extracting text
+            if(OLD_FILES.contains(file)) {
+                handler.handleExtracting(inputFile);
+            } else {
+                // check if we expect failure for this file
+                if(!EXPECTED_FAILURES.contains(file) && !AbstractFileHandler.EXPECTED_EXTRACTOR_FAILURES.contains(file)) {
+                    System.out.println("Failed: " + file);
+                    throw new Exception("While handling " + file, e);
+                }
+            }
+        } catch (Exception e) {
+            // check if we expect failure for this file
+            if(!EXPECTED_FAILURES.contains(file) && !AbstractFileHandler.EXPECTED_EXTRACTOR_FAILURES.contains(file)) {
+                System.out.println("Failed: " + file);
+                throw new Exception("While handling " + file, e);
+            }
+        }
+    }
 

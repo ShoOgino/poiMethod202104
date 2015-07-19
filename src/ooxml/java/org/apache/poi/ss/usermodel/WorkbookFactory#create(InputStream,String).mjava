@@ -1,0 +1,43 @@
+    /**
+     * Creates the appropriate HSSFWorkbook / XSSFWorkbook from
+     *  the given InputStream, which may be password protected.
+     * <p>Your input stream MUST either support mark/reset, or
+     *  be wrapped as a {@link PushbackInputStream}! Note that
+     *  using an {@link InputStream} has a higher memory footprint
+     *  than using a {@link File}.</p>
+     *
+     * <p>Note that in order to properly release resources the
+     *  Workbook should be closed after use. Note also that loading
+     *  from an InputStream requires more memory than loading
+     *  from a File, so prefer {@link #create(File)} where possible.</p>
+     *
+     *  @param inp The {@link InputStream} to read data from.
+     *  @param password The password that should be used or null if no password is necessary.
+     *
+     *  @return The created Workbook
+     *
+     *  @throws IOException if an error occurs while reading the data
+     *  @throws InvalidFormatException if the contents of the file cannot be parsed into a {@link Workbook}
+     *  @throws EncryptedDocumentException If the wrong password is given for a protected file
+     *  @throws EmptyFileException If an empty stream is given
+     */
+    public static Workbook create(InputStream inp, String password) throws IOException, InvalidFormatException, EncryptedDocumentException {
+        // If clearly doesn't do mark/reset, wrap up
+        if (! inp.markSupported()) {
+            inp = new PushbackInputStream(inp, 8);
+        }
+
+        // Ensure that there is at least some data there
+        byte[] header8 = IOUtils.peekFirst8Bytes(inp);
+
+        // Try to create
+        if (NPOIFSFileSystem.hasPOIFSHeader(header8)) {
+            NPOIFSFileSystem fs = new NPOIFSFileSystem(inp);
+            return create(fs, password);
+        }
+        if (POIXMLDocument.hasOOXMLHeader(inp)) {
+            return new XSSFWorkbook(OPCPackage.open(inp));
+        }
+        throw new IllegalArgumentException("Your InputStream was neither an OLE2 stream, nor an OOXML stream");
+    }
+
