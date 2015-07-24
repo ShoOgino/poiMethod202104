@@ -1,0 +1,45 @@
+    protected Paint createLinearGradientPaint(GradientPaint fill, Graphics2D graphics) {
+        double angle = fill.getGradientAngle();
+        Rectangle2D anchor = DrawShape.getAnchor(graphics, shape);
+
+        AffineTransform at = AffineTransform.getRotateInstance(
+            Math.toRadians(angle),
+            anchor.getX() + anchor.getWidth() / 2,
+            anchor.getY() + anchor.getHeight() / 2);
+
+        double diagonal = Math.sqrt(anchor.getHeight() * anchor.getHeight() + anchor.getWidth() * anchor.getWidth());
+        Point2D p1 = new Point2D.Double(anchor.getX() + anchor.getWidth() / 2 - diagonal / 2,
+                anchor.getY() + anchor.getHeight() / 2);
+        p1 = at.transform(p1, null);
+
+        Point2D p2 = new Point2D.Double(anchor.getX() + anchor.getWidth(), anchor.getY() + anchor.getHeight() / 2);
+        p2 = at.transform(p2, null);
+
+        snapToAnchor(p1, anchor);
+        snapToAnchor(p2, anchor);
+
+        float[] fractions = fill.getGradientFractions();
+        Color[] colors = new Color[fractions.length];
+        
+        int i = 0;
+        for (ColorStyle fc : fill.getGradientColors()) {
+            colors[i++] = applyColorTransform(fc);
+        }
+
+        AffineTransform grAt  = new AffineTransform();
+        if(fill.isRotatedWithShape()) {
+            double rotation = shape.getRotation();
+            if (rotation != 0.) {
+                double centerX = anchor.getX() + anchor.getWidth() / 2;
+                double centerY = anchor.getY() + anchor.getHeight() / 2;
+
+                grAt.translate(centerX, centerY);
+                grAt.rotate(Math.toRadians(-rotation));
+                grAt.translate(-centerX, -centerY);
+            }
+        }
+
+        return new LinearGradientPaint
+            (p1, p2, fractions, colors, CycleMethod.NO_CYCLE, ColorSpaceType.SRGB, grAt);
+    }
+

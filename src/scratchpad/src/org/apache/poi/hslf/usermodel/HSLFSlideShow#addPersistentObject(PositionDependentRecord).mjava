@@ -1,0 +1,37 @@
+    protected int addPersistentObject(PositionDependentRecord slideRecord) {
+    	slideRecord.setLastOnDiskOffset(HSLFSlideShowImpl.UNSET_OFFSET);
+		_hslfSlideShow.appendRootLevelRecord((Record)slideRecord);
+
+        // For position dependent records, hold where they were and now are
+        // As we go along, update, and hand over, to any Position Dependent
+        // records we happen across
+		Map<RecordTypes.Type,PositionDependentRecord> interestingRecords =
+                new HashMap<RecordTypes.Type,PositionDependentRecord>();
+
+		try {
+            _hslfSlideShow.updateAndWriteDependantRecords(null,interestingRecords);
+        } catch (IOException e) {
+            throw new HSLFException(e);
+        }
+		
+		PersistPtrHolder ptr = (PersistPtrHolder)interestingRecords.get(RecordTypes.PersistPtrIncrementalBlock);
+		UserEditAtom usr = (UserEditAtom)interestingRecords.get(RecordTypes.UserEditAtom);
+
+		// persist ID is UserEditAtom.maxPersistWritten + 1
+		int psrId = usr.getMaxPersistWritten() + 1;
+
+		// Last view is now of the slide
+		usr.setLastViewType((short) UserEditAtom.LAST_VIEW_SLIDE_VIEW);
+		// increment the number of persistent objects
+		usr.setMaxPersistWritten(psrId);
+
+		// Add the new slide into the last PersistPtr
+		// (Also need to tell it where it is)
+		int slideOffset = slideRecord.getLastOnDiskOffset();
+		slideRecord.setLastOnDiskOffset(slideOffset);
+		ptr.addSlideLookup(psrId, slideOffset);
+		logger.log(POILogger.INFO, "New slide/object ended up at " + slideOffset);
+
+		return psrId;
+    }
+

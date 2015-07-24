@@ -1,0 +1,76 @@
+    @Override
+    public GeneralPath getPath(){
+        EscherOptRecord opt = getEscherOptRecord();
+        opt.addEscherProperty(new EscherSimpleProperty(EscherProperties.GEOMETRY__SHAPEPATH, 0x4));
+
+        EscherArrayProperty verticesProp = getEscherProperty(opt, (short)(EscherProperties.GEOMETRY__VERTICES + 0x4000));
+        if(verticesProp == null) verticesProp = getEscherProperty(opt, EscherProperties.GEOMETRY__VERTICES);
+
+        EscherArrayProperty segmentsProp = getEscherProperty(opt, (short)(EscherProperties.GEOMETRY__SEGMENTINFO + 0x4000));
+        if(segmentsProp == null) segmentsProp = getEscherProperty(opt, EscherProperties.GEOMETRY__SEGMENTINFO);
+
+        // return empty path if either GEOMETRY__VERTICES or GEOMETRY__SEGMENTINFO is missing, see Bugzilla 54188
+        GeneralPath path = new GeneralPath();
+
+        //sanity check
+        if(verticesProp == null) {
+            logger.log(POILogger.WARN, "Freeform is missing GEOMETRY__VERTICES ");
+            return path;
+        }
+        if(segmentsProp == null) {
+            logger.log(POILogger.WARN, "Freeform is missing GEOMETRY__SEGMENTINFO ");
+            return path;
+        }
+
+        int numPoints = verticesProp.getNumberOfElementsInArray();
+        int numSegments = segmentsProp.getNumberOfElementsInArray();
+        for (int i = 0, j = 0; i < numSegments && j < numPoints; i++) {
+            byte[] elem = segmentsProp.getElement(i);
+            if(Arrays.equals(elem, SEGMENTINFO_MOVETO)){
+                byte[] p = verticesProp.getElement(j++);
+                short x = LittleEndian.getShort(p, 0);
+                short y = LittleEndian.getShort(p, 2);
+                path.moveTo(Units.masterToPoints(x), Units.masterToPoints(y));
+            } else if (Arrays.equals(elem, SEGMENTINFO_CUBICTO) || Arrays.equals(elem, SEGMENTINFO_CUBICTO2)){
+                i++;
+                byte[] p1 = verticesProp.getElement(j++);
+                short x1 = LittleEndian.getShort(p1, 0);
+                short y1 = LittleEndian.getShort(p1, 2);
+                byte[] p2 = verticesProp.getElement(j++);
+                short x2 = LittleEndian.getShort(p2, 0);
+                short y2 = LittleEndian.getShort(p2, 2);
+                byte[] p3 = verticesProp.getElement(j++);
+                short x3 = LittleEndian.getShort(p3, 0);
+                short y3 = LittleEndian.getShort(p3, 2);
+                path.curveTo(
+                    Units.masterToPoints(x1), Units.masterToPoints(y1),
+                    Units.masterToPoints(x2), Units.masterToPoints(y2),
+                    Units.masterToPoints(x3), Units.masterToPoints(y3));
+
+            } else if (Arrays.equals(elem, SEGMENTINFO_LINETO)){
+                i++;
+                byte[] pnext = segmentsProp.getElement(i);
+                if(Arrays.equals(pnext, SEGMENTINFO_ESCAPE)){
+                    if(j + 1 < numPoints){
+                        byte[] p = verticesProp.getElement(j++);
+                        short x = LittleEndian.getShort(p, 0);
+                        short y = LittleEndian.getShort(p, 2);
+                        path.lineTo(Units.masterToPoints(x), Units.masterToPoints(y));
+                    }
+                } else if (Arrays.equals(pnext, SEGMENTINFO_CLOSE)){
+                    path.closePath();
+                }
+            }
+        }
+        
+        Rectangle2D anchor = getAnchor2D();
+        Rectangle2D bounds = path.getBounds2D();
+        AffineTransform at = new AffineTransform();
+        at.translate(anchor.getX(), anchor.getY());
+        at.scale(
+                anchor.getWidth()/bounds.getWidth(),
+                anchor.getHeight()/bounds.getHeight()
+        );
+        return new GeneralPath(at.createTransformedShape(path));
+    }
+

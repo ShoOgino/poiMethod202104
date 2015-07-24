@@ -1,0 +1,56 @@
+    protected PaintStyle getLinePaint() {
+        PropertyFetcher<PaintStyle> fetcher = new PropertyFetcher<PaintStyle>() {
+            public boolean fetch(XSLFShape shape) {
+                CTLineProperties spPr = shape.getSpPr().getLn();
+                if (spPr != null) {
+                    if (spPr.isSetNoFill()) {
+                        setValue(TRANSPARENT_PAINT); // use it as 'nofill' value
+                        return true;
+                    }
+                    
+                    PaintStyle paint = null;
+                    PackagePart pp = getSheet().getPackagePart();
+                    for (XmlObject obj : spPr.selectPath("*")) {
+                        paint = selectPaint(obj, null, pp);
+                        if (paint != null) {
+                            setValue(paint);
+                            return true;
+                        }
+                    }
+
+                    CTShapeStyle style = shape.getSpStyle();
+                    if (style != null) {
+                        paint = selectPaint(style.getLnRef());
+                        if (paint != null) {
+                            setValue(paint);
+                            return true;
+                        }
+                    }
+                }
+                return false;
+
+            }
+        };
+        fetchShapeProperty(fetcher);
+
+        PaintStyle paint = fetcher.getValue();
+        if (paint != null) return paint;
+        
+        // line color was not found, check if it is defined in the theme
+        CTShapeStyle style = getSpStyle();
+        if (style == null) return TRANSPARENT_PAINT;
+        
+        // get a reference to a line style within the style matrix.
+        CTStyleMatrixReference lnRef = style.getLnRef();
+        int idx = (int)lnRef.getIdx();
+        CTSchemeColor phClr = lnRef.getSchemeClr();
+        if(idx > 0){
+            XSLFTheme theme = getSheet().getTheme();
+            XmlObject lnProps = theme.getXmlObject().
+                    getThemeElements().getFmtScheme().getLnStyleLst().selectPath("*")[idx - 1];
+            paint = getPaint(lnProps, phClr);
+        }
+
+        return paint == null ? TRANSPARENT_PAINT : paint;
+    }
+

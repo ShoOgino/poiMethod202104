@@ -1,0 +1,27 @@
+    protected Paint getTexturePaint(TexturePaint fill, Graphics2D graphics) {
+        InputStream is = fill.getImageData();
+        if (is == null) return TRANSPARENT_PAINT.getSolidColor().getColor();
+        assert(graphics != null);
+        
+        ImageRenderer renderer = (ImageRenderer)graphics.getRenderingHint(Drawable.IMAGE_RENDERER);
+        if (renderer == null) renderer = new ImageRenderer();
+
+        try {
+            renderer.loadImage(fill.getImageData(), fill.getContentType());
+        } catch (IOException e) {
+            LOG.log(POILogger.ERROR, "Can't load image data - using transparent color", e);
+            return TRANSPARENT_PAINT.getSolidColor().getColor();
+        }
+
+        int alpha = fill.getAlpha();
+        if (alpha != -1) {
+            renderer.setAlpha(alpha/100000.f);
+        }
+        
+        Dimension dim = renderer.getDimension();
+        Rectangle2D textAnchor = new Rectangle2D.Double(0, 0, dim.getWidth(), dim.getHeight());
+        Paint paint = new java.awt.TexturePaint(renderer.getImage(), textAnchor);
+
+        return paint;
+    }
+

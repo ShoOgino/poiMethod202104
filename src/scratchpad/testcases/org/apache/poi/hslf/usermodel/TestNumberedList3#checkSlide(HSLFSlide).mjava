@@ -1,0 +1,45 @@
+	private void checkSlide(final HSLFSlide s) {
+		final StyleTextProp9Atom[] numberedListArray = s.getNumberedListInfo();
+		assertNotNull(numberedListArray);
+		assertEquals(1, numberedListArray.length);
+		final StyleTextProp9Atom numberedListInfoForTextBox = numberedListArray[0];
+		assertNotNull(numberedListInfoForTextBox);
+		final TextPFException9[] autoNumbersOfTextBox0 = numberedListInfoForTextBox.getAutoNumberTypes();
+		assertEquals(Short.valueOf((short)1), autoNumbersOfTextBox0[0].getfBulletHasAutoNumber());
+		assertEquals(Short.valueOf((short)1), autoNumbersOfTextBox0[0].getAutoNumberStartNumber());//Default value = 1 will be used 
+		assertTrue(AutoNumberingScheme.arabicPeriod == autoNumbersOfTextBox0[0].getAutoNumberScheme());
+		
+		final List<List<HSLFTextParagraph>> textParass = s.getTextParagraphs();
+		assertEquals(3, textParass.size());
+		assertEquals("Bulleted list\rMore bullets\rNo bullets here", HSLFTextParagraph.getRawText(textParass.get(0)));
+		assertEquals("Numbered list between two bulleted lists\rSecond numbered list item", HSLFTextParagraph.getRawText(textParass.get(1)));
+		assertEquals("Second bulleted list \u2013 should appear after numbered list\rMore bullets", HSLFTextParagraph.getRawText(textParass.get(2)));
+		assertEquals(3, textParass.get(0).size());
+		assertEquals(2, textParass.get(1).size());
+		assertEquals(2, textParass.get(2).size());
+		assertNull(textParass.get(0).get(0).getStyleTextProp9Atom());
+		assertNotNull(textParass.get(1).get(0).getStyleTextProp9Atom());
+		assertNull(textParass.get(2).get(0).getStyleTextProp9Atom());
+		final TextPFException9[] autoNumbers = textParass.get(1).get(0).getStyleTextProp9Atom().getAutoNumberTypes();
+		assertEquals(1, autoNumbers.length);
+		assertEquals(Short.valueOf((short)1), autoNumbers[0].getfBulletHasAutoNumber());
+		assertEquals(Short.valueOf((short)1), autoNumbers[0].getAutoNumberStartNumber());//Default value = 1 will be used 
+		assertTrue(AutoNumberingScheme.arabicPeriod == autoNumbersOfTextBox0[0].getAutoNumberScheme());
+		
+		int chCovered = 0;
+		for (HSLFTextParagraph htp : textParass.get(1)) {
+    		for (HSLFTextRun htr : htp.getTextRuns()) {
+    		    TextPropCollection textProp = htr.getCharacterStyle();
+    		    chCovered += textProp.getCharactersCovered();
+    		}
+		}
+		assertEquals(67, chCovered);
+		
+		assertTrue(textParass.get(0).get(0).isBullet());
+		
+		final EscherTextboxWrapper[] styleAtoms = s.getTextboxWrappers();
+		assertEquals(textParass.size(), styleAtoms.length);
+		checkSingleRunWrapper(43, styleAtoms[0]);
+		checkSingleRunWrapper(67, styleAtoms[1]);
+	}
+

@@ -1,0 +1,79 @@
+	/**
+	 * Test to ensure that changing non rich text between bytes and
+	 *  chars works correctly
+	 */
+	@SuppressWarnings("unused")
+    @Test
+	public void testAdvancedSetText() {
+		HSLFSlide slideOne = ss.getSlides().get(0);
+		List<HSLFTextParagraph> paras = slideOne.getTextParagraphs().get(0);
+		HSLFTextParagraph para = paras.get(0);
+		
+        TextHeaderAtom tha = null;
+        TextBytesAtom tba = null;
+        TextCharsAtom tca = null;
+		for (Record r : para.getRecords()) {
+		    if (r instanceof TextHeaderAtom) tha = (TextHeaderAtom)r;
+		    else if (r instanceof TextBytesAtom) tba = (TextBytesAtom)r;
+		    else if (r instanceof TextCharsAtom) tca = (TextCharsAtom)r;
+		}
+
+		// Bytes -> Bytes
+		assertNull(tca);
+		assertNotNull(tba);
+		// assertFalse(run._isUnicode);
+		assertEquals("This is a test title", para.getTextRuns().get(0).getRawText());
+
+		String changeBytesOnly = "New Test Title";
+		HSLFTextParagraph.setText(paras, changeBytesOnly);
+		para = paras.get(0);
+		tha = null; tba = null; tca = null;
+        for (Record r : para.getRecords()) {
+            if (r instanceof TextHeaderAtom) tha = (TextHeaderAtom)r;
+            else if (r instanceof TextBytesAtom) tba = (TextBytesAtom)r;
+            else if (r instanceof TextCharsAtom) tca = (TextCharsAtom)r;
+        }
+		
+		assertEquals(changeBytesOnly, HSLFTextParagraph.getRawText(paras));
+		assertNull(tca);
+		assertNotNull(tba);
+
+		// Bytes -> Chars
+        assertNull(tca);
+        assertNotNull(tba);
+		assertEquals(changeBytesOnly, HSLFTextParagraph.getRawText(paras));
+
+		String changeByteChar = "This is a test title with a '\u0121' g with a dot";
+		HSLFTextParagraph.setText(paras, changeByteChar);
+		para = paras.get(0);
+        tha = null; tba = null; tca = null;
+        for (Record r : para.getRecords()) {
+            if (r instanceof TextHeaderAtom) tha = (TextHeaderAtom)r;
+            else if (r instanceof TextBytesAtom) tba = (TextBytesAtom)r;
+            else if (r instanceof TextCharsAtom) tca = (TextCharsAtom)r;
+        }		
+
+		assertEquals(changeByteChar, HSLFTextParagraph.getRawText(paras));
+		assertNotNull(tca);
+		assertNull(tba);
+
+		// Chars -> Chars
+		assertNull(tba);
+		assertNotNull(tca);
+		assertEquals(changeByteChar, HSLFTextParagraph.getRawText(paras));
+
+		String changeCharChar = "This is a test title with a '\u0147' N with a hat";
+		HSLFTextParagraph.setText(paras, changeCharChar);
+        para = paras.get(0);
+        tha = null; tba = null; tca = null;
+        for (Record r : para.getRecords()) {
+            if (r instanceof TextHeaderAtom) tha = (TextHeaderAtom)r;
+            else if (r instanceof TextBytesAtom) tba = (TextBytesAtom)r;
+            else if (r instanceof TextCharsAtom) tca = (TextCharsAtom)r;
+        }       
+
+		assertEquals(changeCharChar, HSLFTextParagraph.getRawText(paras));
+		assertNotNull(tca);
+		assertNull(tba);
+	}
+

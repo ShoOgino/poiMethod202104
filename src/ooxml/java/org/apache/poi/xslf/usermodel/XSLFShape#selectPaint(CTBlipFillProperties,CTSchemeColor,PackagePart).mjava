@@ -1,0 +1,34 @@
+    protected PaintStyle selectPaint(final CTBlipFillProperties blipFill, final CTSchemeColor phClr, final PackagePart parentPart) {
+        final CTBlip blip = blipFill.getBlip();
+        return new TexturePaint() {
+            private PackagePart getPart() {
+                try {
+                    String blipId = blip.getEmbed();
+                    PackageRelationship rel = parentPart.getRelationship(blipId);
+                    return parentPart.getRelatedPart(rel);
+                } catch (InvalidFormatException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            
+            public InputStream getImageData() {
+                try {
+                    return getPart().getInputStream();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            public String getContentType() {
+                /* TOOD: map content-type */
+                return getPart().getContentType();
+            }
+
+            public int getAlpha() {
+                return (blip.sizeOfAlphaModFixArray() > 0)
+                    ? blip.getAlphaModFixArray(0).getAmt()
+                    : 0;
+            }
+        };        
+    }
+

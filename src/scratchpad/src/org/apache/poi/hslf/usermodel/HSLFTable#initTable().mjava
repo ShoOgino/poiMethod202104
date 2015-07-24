@@ -1,0 +1,53 @@
+    protected void initTable(){
+        List<HSLFShape> shapeList = getShapeList();
+
+        Iterator<HSLFShape> shapeIter = shapeList.iterator();
+        while (shapeIter.hasNext()) {
+            HSLFShape shape = shapeIter.next();
+            if (shape instanceof HSLFAutoShape) {
+                HSLFAutoShape autoShape = (HSLFAutoShape)shape;
+                EscherTextboxRecord etr = autoShape.getEscherChild(EscherTextboxRecord.RECORD_ID);
+                if (etr != null) continue;
+            }
+            shapeIter.remove();
+        }        
+        
+        Collections.sort(shapeList, new Comparator<HSLFShape>(){
+            public int compare( HSLFShape o1, HSLFShape o2 ) {
+                Rectangle anchor1 = o1.getAnchor();
+                Rectangle anchor2 = o2.getAnchor();
+                int delta = anchor1.y - anchor2.y;
+                if (delta == 0) delta = anchor1.x - anchor2.x;
+                // descending size
+                if (delta == 0) delta = (anchor2.width*anchor2.height)-(anchor1.width*anchor1.height);
+                return delta;
+            }
+        });
+        
+        int y0 = (shapeList.isEmpty()) ? -1 : shapeList.get(0).getAnchor().y - 1;
+        int maxrowlen = 0;
+        List<List<HSLFShape>> lst = new ArrayList<List<HSLFShape>>();
+        List<HSLFShape> row = null;
+        for (HSLFShape sh : shapeList) {
+            if(sh instanceof HSLFTextShape){
+                Rectangle anchor = sh.getAnchor();
+                if(anchor.y != y0){
+                    y0 = anchor.y;
+                    row = new ArrayList<HSLFShape>();
+                    lst.add(row);
+                }
+                row.add(sh);
+                maxrowlen = Math.max(maxrowlen, row.size());
+            }
+        }
+        cells = new HSLFTableCell[lst.size()][maxrowlen];
+        for (int i = 0; i < lst.size(); i++) {
+            row = lst.get(i);
+            for (int j = 0; j < row.size(); j++) {
+                HSLFTextShape tx = (HSLFTextShape)row.get(j);
+                cells[i][j] = new HSLFTableCell(tx.getSpContainer(), getParent());
+                cells[i][j].setSheet(tx.getSheet());
+            }
+        }
+    }
+

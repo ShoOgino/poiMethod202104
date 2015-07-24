@@ -1,0 +1,40 @@
+    Color getColor(short colorProperty, short opacityProperty, int defaultColor){
+        EscherOptRecord opt = getEscherOptRecord();
+        EscherSimpleProperty p = getEscherProperty(opt, colorProperty);
+        if(p == null && defaultColor == -1) return null;
+
+        int val = (p == null) ? defaultColor : p.getPropertyValue();
+
+        EscherColorRef ecr = new EscherColorRef(val);
+        
+        boolean fPaletteIndex = ecr.hasPaletteIndexFlag();
+        boolean fPaletteRGB = ecr.hasPaletteRGBFlag();
+        boolean fSystemRGB = ecr.hasSystemRGBFlag();
+        boolean fSchemeIndex = ecr.hasSchemeIndexFlag();
+        boolean fSysIndex = ecr.hasSysIndexFlag();
+        
+        int rgb[] = ecr.getRGB();
+
+        HSLFSheet sheet = getSheet();
+        if (fSchemeIndex && sheet != null) {
+            //red is the index to the color scheme
+            ColorSchemeAtom ca = sheet.getColorScheme();
+            int schemeColor = ca.getColor(ecr.getSchemeIndex());
+
+            rgb[0] = (schemeColor >> 0) & 0xFF;
+            rgb[1] = (schemeColor >> 8) & 0xFF;
+            rgb[2] = (schemeColor >> 16) & 0xFF;
+        } else if (fPaletteIndex){
+            //TODO
+        } else if (fPaletteRGB){
+            //TODO
+        } else if (fSystemRGB){
+            //TODO
+        } else if (fSysIndex){
+            //TODO
+        }
+
+        double alpha = getAlpha(opacityProperty);
+        return new Color(rgb[0], rgb[1], rgb[2], (int)(alpha*255.0));
+    }
+

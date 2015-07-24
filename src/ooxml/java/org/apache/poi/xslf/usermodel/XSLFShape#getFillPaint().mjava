@@ -1,0 +1,61 @@
+    protected PaintStyle getFillPaint() {
+        PropertyFetcher<PaintStyle> fetcher = new PropertyFetcher<PaintStyle>() {
+            public boolean fetch(XSLFShape shape) {
+                XmlObject pr = null;
+                try {
+                    pr = shape.getSpPr();
+                    if (((CTShapeProperties)pr).isSetNoFill()) {
+                        setValue(PaintStyle.TRANSPARENT_PAINT);
+                        return true;
+                    }                    
+                } catch (IllegalStateException e) {}
+                // trying background properties now
+                if (pr == null) {
+                    pr = shape.getBgPr();
+                }
+                if (pr == null) {
+                    pr = shape.getGrpSpPr();
+                }
+                if (pr == null) {
+                    if (shape.getXmlObject() instanceof CTBackground) {
+                        pr = shape.getXmlObject();
+                    }
+                }
+                
+                if (pr == null) {
+                    setValue(PaintStyle.TRANSPARENT_PAINT);
+                    return true;
+                }
+                
+                PaintStyle paint = null;
+                for (XmlObject obj : pr.selectPath("*")) {
+                    paint = selectPaint(obj, null, getSheet().getPackagePart());
+                    if (paint != null) break;
+                }
+                
+                if (paint == null) return false;
+                
+                setValue(paint);
+                return true;
+            }
+        };
+        fetchShapeProperty(fetcher);
+
+        PaintStyle paint = fetcher.getValue();
+        if (paint != null) return paint;
+        
+        // fill color was not found, check if it is defined in the theme
+        // get a reference to a fill style within the style matrix.
+        CTStyleMatrixReference fillRef = null;
+        if (fillRef == null) {
+            CTShapeStyle style = getSpStyle();
+            if (style != null) fillRef = style.getFillRef();
+        }
+        if (fillRef == null) {
+            fillRef = getBgRef();
+        }
+        paint = selectPaint(fillRef);
+
+        return paint == null ? PaintStyle.TRANSPARENT_PAINT : paint;
+    }
+

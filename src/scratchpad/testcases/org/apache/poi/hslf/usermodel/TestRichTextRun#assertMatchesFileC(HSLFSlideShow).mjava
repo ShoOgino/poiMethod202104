@@ -1,0 +1,32 @@
+	/**
+	 * Checks that the supplied slideshow still matches the bytes
+	 *  of slideshow c
+	 */
+	private static void assertMatchesFileC(HSLFSlideShow s) throws Exception {
+		// Grab the bytes of the file
+	    NPOIFSFileSystem fs = new NPOIFSFileSystem(_slTests.getFile(filenameC));
+	    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+	    InputStream is = fs.createDocumentInputStream("PowerPoint Document");
+	    IOUtils.copy(is, baos);
+	    is.close();
+	    fs.close();
+	    byte[] raw_file = baos.toByteArray();
+
+		// Now write out the slideshow
+		baos.reset();
+		s.write(baos);
+		fs = new NPOIFSFileSystem(new ByteArrayInputStream(baos.toByteArray()));
+		baos.reset();
+		is = fs.createDocumentInputStream("PowerPoint Document");
+        IOUtils.copy(is, baos);
+        is.close();
+        fs.close();		
+		byte[] raw_ss = baos.toByteArray();
+		
+		// different paragraph mask, because of sanitizing
+		raw_ss[169030] = 0x0a;
+		
+		// Ensure they're the same
+		assertArrayEquals(raw_file, raw_ss);
+	}
+

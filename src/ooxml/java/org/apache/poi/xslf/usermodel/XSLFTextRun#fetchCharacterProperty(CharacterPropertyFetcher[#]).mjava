@@ -1,0 +1,32 @@
+    private boolean fetchCharacterProperty(CharacterPropertyFetcher<?> fetcher){
+        boolean ok = false;
+
+        if(_r.isSetRPr()) ok = fetcher.fetch(getRPr());
+
+        if(!ok) {
+            XSLFTextShape shape = _p.getParentShape();
+            ok = shape.fetchShapeProperty(fetcher);
+            if(!ok){
+                CTPlaceholder ph = shape.getCTPlaceholder();
+                if(ph == null){
+                    // if it is a plain text box then take defaults from presentation.xml
+                    XMLSlideShow ppt = shape.getSheet().getSlideShow();
+                    CTTextParagraphProperties themeProps = ppt.getDefaultParagraphStyle(_p.getIndentLevel());
+                    if(themeProps != null) {
+                        fetcher.isFetchingFromMaster = true;
+                        ok = fetcher.fetch(themeProps);
+                    }
+                }
+                if (!ok) {
+                    CTTextParagraphProperties defaultProps =  _p.getDefaultMasterStyle();
+                    if(defaultProps != null) {
+                        fetcher.isFetchingFromMaster = true;
+                        ok = fetcher.fetch(defaultProps);
+                    }
+                }
+            }
+        }
+
+        return ok;
+    }
+

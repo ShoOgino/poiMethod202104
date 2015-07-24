@@ -1,0 +1,37 @@
+    @SuppressWarnings("unused")
+    public void init(InputStream is) throws XMLStreamException, JAXBException {
+        // Reader xml = new InputStreamReader( is, Charset.forName("UTF-8") );
+        
+
+        // StAX:
+        EventFilter startElementFilter = new EventFilter() {
+            @Override
+            public boolean accept(XMLEvent event) {
+                return event.isStartElement();
+            }
+        };
+        
+        long cntElem = 0;
+        XMLInputFactory staxFactory = XMLInputFactory.newInstance();
+        XMLEventReader staxReader = staxFactory.createXMLEventReader(is);
+        XMLEventReader staxFiltRd = staxFactory.createFilteredReader(staxReader, startElementFilter);
+        // ignore StartElement:
+        XMLEvent evDoc = staxFiltRd.nextEvent();
+        // JAXB:
+        JAXBContext jaxbContext = JAXBContext.newInstance(BINDING_PACKAGE);
+        Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+
+        while (staxFiltRd.peek() != null) {
+            StartElement evRoot = (StartElement)staxFiltRd.peek();
+            String name = evRoot.getName().getLocalPart();
+            JAXBElement<CTCustomGeometry2D> el = unmarshaller.unmarshal(staxReader, CTCustomGeometry2D.class);
+            CTCustomGeometry2D cus = el.getValue();
+            cntElem++;
+            
+            if(containsKey(name)) {
+                LOG.log(POILogger.WARN, "Duplicate definoition of " + name);
+            }
+            put(name, new CustomGeometry(cus));
+        }       
+    }
+

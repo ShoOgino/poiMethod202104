@@ -1,0 +1,44 @@
+	@Test
+	public void test48916() throws IOException {
+        HSLFSlideShow ppt = new HSLFSlideShow(_slTests.openResourceAsStream("SampleShow.ppt"));
+        List<HSLFSlide> slides = ppt.getSlides();
+        for(HSLFSlide slide : slides){
+            for(HSLFShape sh : slide.getShapes()){
+                if (!(sh instanceof HSLFTextShape)) continue;
+                HSLFTextShape tx = (HSLFTextShape)sh;
+                List<HSLFTextParagraph> paras = tx.getTextParagraphs();
+                //verify that records cached in  TextRun and EscherTextboxWrapper are the same
+                Record[] runChildren = paras.get(0).getRecords();
+                Record[] txboxChildren = tx.getEscherTextboxWrapper().getChildRecords();
+                assertEquals(runChildren.length, txboxChildren.length);
+                for(int i=0; i < txboxChildren.length; i++){
+                    assertSame(txboxChildren[i], runChildren[i]);
+                }
+                // caused NPE prior to fix of Bugzilla #48916
+                for (HSLFTextParagraph p : paras) {
+                    for (HSLFTextRun rt : p.getTextRuns()) {
+                        rt.setBold(true);
+                        rt.setFontColor(Color.RED);
+                    }
+                }
+                // tx.storeText();
+            }
+        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ppt.write(out);
+        
+        ppt = new HSLFSlideShow(new ByteArrayInputStream(out.toByteArray()));
+        for(HSLFSlide slide : ppt.getSlides()){
+            for(HSLFShape sh : slide.getShapes()){
+                if(sh instanceof HSLFTextShape){
+                    HSLFTextShape tx = (HSLFTextShape)sh;
+                    List<HSLFTextParagraph> run = tx.getTextParagraphs();
+                    HSLFTextRun rt = run.get(0).getTextRuns().get(0);
+                    assertTrue(rt.isBold());
+                    assertEquals(rt.getFontColor(), Color.RED);
+                }
+            }
+        }
+
+    }
+

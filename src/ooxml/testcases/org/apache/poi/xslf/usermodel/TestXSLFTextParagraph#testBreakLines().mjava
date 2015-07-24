@@ -2,12 +2,10 @@
      * test breaking test into lines.
      * This test requires that the Arial font is available and will run only on windows
      */
+    @Test
     public void testBreakLines(){
         String os = System.getProperty("os.name");
-        if(os == null || !os.contains("Windows")) {
-            _logger.log(POILogger.WARN, "Skipping testBreakLines(), it is executed only on Windows machines");
-            return;
-        }
+        Assume.assumeTrue("Skipping testBreakLines(), it is executed only on Windows machines", (os != null && os.contains("Windows")));
 
         XMLSlideShow ppt = new XMLSlideShow();
         XSLFSlide slide = ppt.createSlide();
@@ -16,51 +14,59 @@
         XSLFTextParagraph p = sh.addNewTextParagraph();
         XSLFTextRun r = p.addNewTextRun();
         r.setFontFamily("Arial"); // this should always be available
-        r.setFontSize(12);
+        r.setFontSize(12d);
         r.setText(
                 "Paragraph formatting allows for more granular control " +
                 "of text within a shape. Properties here apply to all text " +
                 "residing within the corresponding paragraph.");
 
         sh.setAnchor(new Rectangle(50, 50, 300, 200));
+        DrawTextParagraphProxy dtp = new DrawTextParagraphProxy(p);
 
         BufferedImage img = new BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = img.createGraphics();
 
-        List<TextFragment> lines;
-        lines = p.breakText(graphics);
+        List<DrawTextFragment> lines;
+        dtp.breakText(graphics);
+        lines = dtp.getLines();
         assertEquals(4, lines.size());
 
-        // descrease the shape width from 300 pt to 100 pt
+        // decrease the shape width from 300 pt to 100 pt
         sh.setAnchor(new Rectangle(50, 50, 100, 200));
-        lines = p.breakText(graphics);
+        dtp.breakText(graphics);
+        lines = dtp.getLines();
         assertEquals(12, lines.size());
 
-        // descrease the shape width from 300 pt to 100 pt
+        // decrease the shape width from 300 pt to 100 pt
         sh.setAnchor(new Rectangle(50, 50, 600, 200));
-        lines = p.breakText(graphics);
+        dtp.breakText(graphics);
+        lines = dtp.getLines();
         assertEquals(2, lines.size());
 
         // set left and right margins to 200pt. This leaves 200pt for wrapping text
         sh.setLeftInset(200);
         sh.setRightInset(200);
-        lines = p.breakText(graphics);
+        dtp.breakText(graphics);
+        lines = dtp.getLines();
         assertEquals(5, lines.size());
 
         r.setText("Apache POI");
-        lines = p.breakText(graphics);
+        dtp.breakText(graphics);
+        lines = dtp.getLines();
         assertEquals(1, lines.size());
         assertEquals("Apache POI", lines.get(0).getString());
 
         r.setText("Apache\nPOI");
-        lines = p.breakText(graphics);
+        dtp.breakText(graphics);
+        lines = dtp.getLines();
         assertEquals(2, lines.size());
         assertEquals("Apache", lines.get(0).getString());
         assertEquals("POI", lines.get(1).getString());
 
         // trailing newlines are ignored
         r.setText("Apache\nPOI\n");
-        lines = p.breakText(graphics);
+        dtp.breakText(graphics);
+        lines = dtp.getLines();
         assertEquals(2, lines.size());
         assertEquals("Apache", lines.get(0).getString());
         assertEquals("POI", lines.get(1).getString());
@@ -70,13 +76,15 @@
         XSLFTextParagraph p2 = sh2.addNewTextParagraph();
         XSLFTextRun r2 = p2.addNewTextRun();
         r2.setFontFamily("serif"); // this should always be available
-        r2.setFontSize(30);
+        r2.setFontSize(30d);
         r2.setText("Apache\n");
         XSLFTextRun r3 = p2.addNewTextRun();
         r3.setFontFamily("serif"); // this should always be available
-        r3.setFontSize(10);
+        r3.setFontSize(10d);
         r3.setText("POI");
-        lines = p2.breakText(graphics);
+        dtp = new DrawTextParagraphProxy(p2);
+        dtp.breakText(graphics);
+        lines = dtp.getLines();
         assertEquals(2, lines.size());
         assertEquals("Apache", lines.get(0).getString());
         assertEquals("POI", lines.get(1).getString());

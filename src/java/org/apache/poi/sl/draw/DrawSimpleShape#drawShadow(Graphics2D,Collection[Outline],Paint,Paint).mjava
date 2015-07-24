@@ -1,0 +1,39 @@
+    protected void drawShadow(
+            Graphics2D graphics
+          , Collection<Outline> outlines
+          , Paint fill
+          , Paint line
+    ) {
+          Shadow shadow = shape.getShadow();
+          if (shadow == null || (fill == null && line == null)) return;
+
+          SolidPaint shadowPaint = shadow.getFillStyle();
+          Color shadowColor = DrawPaint.applyColorTransform(shadowPaint.getSolidColor());
+          
+          double shapeRotation = shape.getRotation();
+          if(shape.getFlipVertical()) {
+              shapeRotation += 180;
+          }
+          double angle = shadow.getAngle() - shapeRotation;
+          double dist = shadow.getDistance();
+          double dx = dist * Math.cos(Math.toRadians(angle));
+          double dy = dist * Math.sin(Math.toRadians(angle));
+          
+          graphics.translate(dx, dy);
+          
+          for(Outline o : outlines){
+              java.awt.Shape s = o.getOutline();
+              Path p = o.getPath();
+              graphics.setRenderingHint(Drawable.GRADIENT_SHAPE, s);
+              graphics.setPaint(shadowColor);
+              
+              if(fill != null && p.isFilled()){
+                  graphics.fill(s);
+              } else if (line != null && p.isStroked()) {
+                  graphics.draw(s);
+              }
+          }
+
+          graphics.translate(-dx, -dy);
+      }
+

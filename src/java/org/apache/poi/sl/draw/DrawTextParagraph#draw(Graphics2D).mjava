@@ -1,0 +1,82 @@
+    public void draw(Graphics2D graphics){
+        if (lines.isEmpty()) return;
+        
+        Insets2D insets = paragraph.getParentShape().getInsets();
+        double leftInset = insets.left;
+        double rightInset = insets.right;
+        double penY = y;
+
+        boolean firstLine = true;
+        int indentLevel = paragraph.getIndentLevel();
+        Double leftMargin = paragraph.getLeftMargin();
+        if (leftMargin == null) {
+            // if the marL attribute is omitted, then a value of 347663 is implied
+            leftMargin = Units.toPoints(347663*(indentLevel+1));
+        }
+        Double indent = paragraph.getIndent();
+        if (indent == null) {
+            indent = Units.toPoints(347663*indentLevel);
+        }
+        Double rightMargin = paragraph.getRightMargin();
+        if (rightMargin == null) {
+            rightMargin = 0d;
+        }
+
+        //The vertical line spacing
+        Double spacing = paragraph.getLineSpacing();
+        if (spacing == null) spacing = 100d;
+        
+        for(DrawTextFragment line : lines){
+            double penX;
+
+            if(firstLine) {
+                if (!isEmptyParagraph()) {
+                    // TODO: find out character style for empty, but bulleted/numbered lines
+                    bullet = getBullet(graphics, line.getAttributedString().getIterator());
+                }
+                
+                if (bullet != null){
+                    bullet.setPosition(x + indent, penY);
+                    bullet.draw(graphics);
+                    // don't let text overlay the bullet and advance by the bullet width
+                    double bulletWidth = bullet.getLayout().getAdvance() + 1;
+                    penX = x + Math.max(leftMargin, indent+bulletWidth);
+                } else {
+                    penX = x + indent;
+                }
+            } else {
+                penX = x + leftMargin;
+            }
+
+            Rectangle2D anchor = DrawShape.getAnchor(graphics, paragraph.getParentShape());
+
+            TextAlign ta = paragraph.getTextAlign();
+            if (ta == null) ta = TextAlign.LEFT;
+            switch (ta) {
+                case CENTER:
+                    penX += (anchor.getWidth() - leftMargin - line.getWidth() - leftInset - rightInset) / 2;
+                    break;
+                case RIGHT:
+                    penX += (anchor.getWidth() - line.getWidth() - leftInset - rightInset);
+                    break;
+                default:
+                    break;
+            }
+
+            line.setPosition(penX, penY);
+            line.draw(graphics);
+
+            if(spacing > 0) {
+                // If linespacing >= 0, then linespacing is a percentage of normal line height.
+                penY += spacing*0.01* line.getHeight();
+            } else {
+                // negative value means absolute spacing in points
+                penY += -spacing;
+            }
+
+            firstLine = false;
+        }
+
+        y = penY - y;
+    }
+

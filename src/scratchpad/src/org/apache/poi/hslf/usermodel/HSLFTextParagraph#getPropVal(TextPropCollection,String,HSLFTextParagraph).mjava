@@ -1,0 +1,25 @@
+    /**
+     * Fetch the value of the given Paragraph related TextProp. Returns null if
+     * that TextProp isn't present. If the TextProp isn't present, the value
+     * from the appropriate Master Sheet will apply.
+     */
+    protected static TextProp getPropVal(TextPropCollection props, String propName, HSLFTextParagraph paragraph) {
+        TextProp prop = props.findByName(propName);
+        if (prop != null) return prop;
+
+        BitMaskTextProp maskProp = (BitMaskTextProp) props.findByName(ParagraphFlagsTextProp.NAME);
+        boolean hardAttribute = (maskProp != null && maskProp.getValue() == 0);
+        if (hardAttribute) return null;
+
+        HSLFSheet sheet = paragraph.getSheet();
+        int txtype = paragraph.getRunType();
+        HSLFMasterSheet master = sheet.getMasterSheet();
+        if (master == null) {
+            logger.log(POILogger.WARN, "MasterSheet is not available");
+            return null;
+        }
+
+        boolean isChar = props.getTextPropType() == TextPropType.character;
+        return master.getStyleAttribute(txtype, paragraph.getIndentLevel(), propName, isChar);
+    }
+

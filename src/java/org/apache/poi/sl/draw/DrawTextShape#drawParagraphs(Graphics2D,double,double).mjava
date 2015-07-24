@@ -1,0 +1,63 @@
+    /**
+     * paint the paragraphs starting from top left (x,y)
+     *
+     * @return  the vertical advance, i.e. the cumulative space occupied by the text
+     */
+    public double drawParagraphs(Graphics2D graphics, double x, double y) {
+        DrawFactory fact = DrawFactory.getInstance(graphics);
+        Insets2D shapePadding = shape.getInsets();
+
+        double y0 = y;
+        Iterator<? extends TextParagraph<? extends TextRun>> paragraphs = shape.iterator();
+        
+        boolean isFirstLine = true;
+        for (int autoNbrIdx=0; paragraphs.hasNext(); autoNbrIdx++){
+            TextParagraph<? extends TextRun> p = paragraphs.next();
+            DrawTextParagraph<? extends TextRun> dp = fact.getDrawable(p);
+            BulletStyle bs = p.getBulletStyle();
+            if (bs == null || bs.getAutoNumberingScheme() == null) {
+                autoNbrIdx = -1;
+            } else {
+                Integer startAt = bs.getAutoNumberingStartAt();
+                if (startAt == null) startAt = 1;
+                // TODO: handle reset auto number indexes
+                if (startAt > autoNbrIdx) autoNbrIdx = startAt;
+            }
+            dp.setAutoNumberingIdx(autoNbrIdx);
+            dp.breakText(graphics);
+
+            if (!isFirstLine) {
+                // the amount of vertical white space before the paragraph
+                Double spaceBefore = p.getSpaceBefore();
+                if (spaceBefore == null) spaceBefore = 0d;
+                if(spaceBefore > 0) {
+                    // positive value means percentage spacing of the height of the first line, e.g.
+                    // the higher the first line, the bigger the space before the paragraph
+                    y += spaceBefore*0.01*dp.getFirstLineHeight();
+                } else {
+                    // negative value means the absolute spacing in points
+                    y += -spaceBefore;
+                }
+            }
+            isFirstLine = false;
+            
+            dp.setPosition(x, y);
+            dp.draw(graphics);
+            y += dp.getY();
+
+            if (paragraphs.hasNext()) {
+                Double spaceAfter = p.getSpaceAfter();
+                if (spaceAfter == null) spaceAfter = 0d;
+                if(spaceAfter > 0) {
+                    // positive value means percentage spacing of the height of the last line, e.g.
+                    // the higher the last line, the bigger the space after the paragraph
+                    y += spaceAfter*0.01*dp.getLastLineHeight();
+                } else {
+                    // negative value means the absolute spacing in points
+                    y += -spaceAfter;
+                }
+            }
+        }
+        return y - y0;
+    }
+

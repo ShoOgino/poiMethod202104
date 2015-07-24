@@ -4,18 +4,18 @@
      */
     @Test
     public void textBoxWriteBytes() throws Exception {
-        ppt = new SlideShow();
-        Slide sl = ppt.createSlide();
-        RichTextRun rt;
+        ppt = new HSLFSlideShow();
+        HSLFSlide sl = ppt.createSlide();
+        HSLFTextRun rt;
 
         String val = "Hello, World!";
 
         // Create a new textbox, and give it lots of properties
-        TextBox txtbox = new TextBox();
-        rt = txtbox.getTextRun().getRichTextRuns()[0];
+        HSLFTextBox txtbox = new HSLFTextBox();
+        rt = txtbox.getTextParagraphs().get(0).getTextRuns().get(0);
         txtbox.setText(val);
-        rt.setFontName("Arial");
-        rt.setFontSize(42);
+        rt.setFontFamily("Arial");
+        rt.setFontSize(42d);
         rt.setBold(true);
         rt.setItalic(true);
         rt.setUnderlined(false);
@@ -23,13 +23,13 @@
         sl.addShape(txtbox);
 
         // Check it before save
-        rt = txtbox.getTextRun().getRichTextRuns()[0];
-        assertEquals(val, rt.getText());
-        assertEquals(42, rt.getFontSize());
+        rt = txtbox.getTextParagraphs().get(0).getTextRuns().get(0);
+        assertEquals(val, rt.getRawText());
+        assertEquals(42, rt.getFontSize(), 0);
         assertTrue(rt.isBold());
         assertTrue(rt.isItalic());
         assertFalse(rt.isUnderlined());
-        assertEquals("Arial", rt.getFontName());
+        assertEquals("Arial", rt.getFontFamily());
         assertEquals(Color.red, rt.getFontColor());
 
         // Serialize and read again
@@ -37,19 +37,19 @@
         ppt.write(out);
         out.close();
 
-        ppt = new SlideShow(new HSLFSlideShow(new ByteArrayInputStream(out.toByteArray())));
-        sl = ppt.getSlides()[0];
+        ppt = new HSLFSlideShow(new HSLFSlideShowImpl(new ByteArrayInputStream(out.toByteArray())));
+        sl = ppt.getSlides().get(0);
 
-        txtbox = (TextBox)sl.getShapes()[0];
-        rt = txtbox.getTextRun().getRichTextRuns()[0];
+        txtbox = (HSLFTextBox)sl.getShapes().get(0);
+        rt = txtbox.getTextParagraphs().get(0).getTextRuns().get(0);
 
         // Check after save
-        assertEquals(val, rt.getText());
-        assertEquals(42, rt.getFontSize());
+        assertEquals(val, rt.getRawText());
+        assertEquals(42, rt.getFontSize(), 0);
         assertTrue(rt.isBold());
         assertTrue(rt.isItalic());
         assertFalse(rt.isUnderlined());
-        assertEquals("Arial", rt.getFontName());
+        assertEquals("Arial", rt.getFontFamily());
         assertEquals(Color.red, rt.getFontColor());
     }
 

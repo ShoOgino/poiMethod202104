@@ -1,0 +1,51 @@
+    protected static CustomGeometry getCustomGeometry(String name, Graphics2D graphics) {
+        @SuppressWarnings("unchecked")
+        Map<String, CustomGeometry> presets = (graphics == null)
+            ? null
+            : (Map<String, CustomGeometry>)graphics.getRenderingHint(Drawable.PRESET_GEOMETRY_CACHE);
+        
+        if (presets == null) {
+            presets = new HashMap<String,CustomGeometry>();
+            if (graphics != null) {
+                graphics.setRenderingHint(Drawable.PRESET_GEOMETRY_CACHE, presets);
+            }
+            
+            String packageName = "org.apache.poi.sl.draw.binding";
+            InputStream presetIS = Drawable.class.getResourceAsStream("presetShapeDefinitions.xml");
+            Reader xml = new InputStreamReader( presetIS, Charset.forName("UTF-8") );
+    
+            // StAX:
+            EventFilter startElementFilter = new EventFilter() {
+                @Override
+                public boolean accept(XMLEvent event) {
+                    return event.isStartElement();
+                }
+            };
+            
+            try {
+                XMLInputFactory staxFactory = XMLInputFactory.newInstance();
+                XMLEventReader staxReader = staxFactory.createXMLEventReader(xml);
+                XMLEventReader staxFiltRd = staxFactory.createFilteredReader(staxReader, startElementFilter);
+                // Ignore StartElement:
+                staxFiltRd.nextEvent();
+                // JAXB:
+                JAXBContext jaxbContext = JAXBContext.newInstance(packageName);
+                Unmarshaller unmarshaller = jaxbContext.createUnmarshaller();
+        
+                while (staxFiltRd.peek() != null) {
+                    StartElement evRoot = (StartElement)staxFiltRd.peek();
+                    String cusName = evRoot.getName().getLocalPart();
+                    // XMLEvent ev = staxReader.nextEvent();
+                    JAXBElement<org.apache.poi.sl.draw.binding.CTCustomGeometry2D> el = unmarshaller.unmarshal(staxReader, CTCustomGeometry2D.class);
+                    CTCustomGeometry2D cusGeom = el.getValue();
+                    
+                    presets.put(cusName, new CustomGeometry(cusGeom));
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("Unable to load preset geometries.", e);
+            }
+        }
+        
+        return presets.get(name);
+    }
+

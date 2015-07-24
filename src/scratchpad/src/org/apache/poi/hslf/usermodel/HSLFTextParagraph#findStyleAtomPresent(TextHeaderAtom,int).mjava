@@ -1,0 +1,34 @@
+    /**
+     * Search for a StyleTextPropAtom is for this text header (list of paragraphs)
+     * 
+     * @param header the header
+     * @param textLen the length of the rawtext, or -1 if the length is not known
+     */
+    private static StyleTextPropAtom findStyleAtomPresent(TextHeaderAtom header, int textLen) {
+        boolean afterHeader = false;
+        StyleTextPropAtom style = null;
+        for (Record record : header.getParentRecord().getChildRecords()) {
+            long rt = record.getRecordType();
+            if (afterHeader && rt == RecordTypes.TextHeaderAtom.typeID) {
+                // already on the next header, quit searching
+                break;
+            }
+            afterHeader |= (header == record);
+            if (afterHeader && rt == RecordTypes.StyleTextPropAtom.typeID) {
+                // found it
+                style = (StyleTextPropAtom) record;
+            }
+        }
+
+        if (style == null) {
+            logger.log(POILogger.INFO, "styles atom doesn't exist. Creating dummy record for later saving.");
+            style = new StyleTextPropAtom((textLen < 0) ? 1 : textLen);
+        } else {
+            if (textLen >= 0) {
+                style.setParentTextSize(textLen);
+            }
+        }
+
+        return style;
+    }
+

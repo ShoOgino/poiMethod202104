@@ -1,0 +1,62 @@
+    /**
+     * break text into lines, each representing a line of text that fits in the wrapping width
+     *
+     * @param graphics
+     */
+    protected void breakText(Graphics2D graphics){
+        lines.clear();
+
+        DrawFactory fact = DrawFactory.getInstance(graphics);
+        StringBuilder text = new StringBuilder();
+        AttributedString at = getAttributedString(graphics, text);
+        boolean emptyParagraph = ("".equals(text.toString().trim()));
+
+        AttributedCharacterIterator it = at.getIterator();
+        LineBreakMeasurer measurer = new LineBreakMeasurer(it, graphics.getFontRenderContext());
+        for (;;) {
+            int startIndex = measurer.getPosition();
+
+            double wrappingWidth = getWrappingWidth(lines.size() == 0, graphics) + 1; // add a pixel to compensate rounding errors
+            // shape width can be smaller that the sum of insets (this was proved by a test file)
+            if(wrappingWidth < 0) wrappingWidth = 1;
+
+            int nextBreak = text.indexOf("\n", startIndex + 1);
+            if (nextBreak == -1) nextBreak = it.getEndIndex();
+
+            TextLayout layout = measurer.nextLayout((float)wrappingWidth, nextBreak, true);
+            if (layout == null) {
+                 // layout can be null if the entire word at the current position
+                 // does not fit within the wrapping width. Try with requireNextWord=false.
+                 layout = measurer.nextLayout((float)wrappingWidth, nextBreak, false);
+            }
+
+            if(layout == null) {
+                // exit if can't break any more
+                break;
+            }
+
+            int endIndex = measurer.getPosition();
+            // skip over new line breaks (we paint 'clear' text runs not starting or ending with \n)
+            if(endIndex < it.getEndIndex() && text.charAt(endIndex) == '\n'){
+                measurer.setPosition(endIndex + 1);
+            }
+
+            TextAlign hAlign = paragraph.getTextAlign();
+            if(hAlign == TextAlign.JUSTIFY || hAlign == TextAlign.JUSTIFY_LOW) {
+                layout = layout.getJustifiedLayout((float)wrappingWidth);
+            }
+
+            AttributedString str = (emptyParagraph)
+                ? null // we will not paint empty paragraphs
+                : new AttributedString(it, startIndex, endIndex);
+            DrawTextFragment line = fact.getTextFragment(layout, str);
+            lines.add(line);
+
+            maxLineHeight = Math.max(maxLineHeight, line.getHeight());
+
+            if(endIndex == it.getEndIndex()) break;
+        }
+
+        rawText = text.toString();
+    }
+

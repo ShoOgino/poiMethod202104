@@ -1,0 +1,77 @@
+	/**
+	 * Tests to ensure changing the text within rich text runs works
+	 *  correctly
+	 */
+	@Test
+	public void testChangeTextInRichTextRun() {
+		HSLFSlide slideOne = ssRich.getSlides().get(0);
+		List<List<HSLFTextParagraph>> textParass = slideOne.getTextParagraphs();
+		List<HSLFTextParagraph> trB = textParass.get(1);
+		assertEquals(3, trB.size());
+
+		// We start with 3 text runs, each with their own set of styles,
+		// but all sharing the same paragraph styles
+		HSLFTextRun rtrB = trB.get(0).getTextRuns().get(0);
+		HSLFTextRun rtrC = trB.get(1).getTextRuns().get(0);
+		HSLFTextRun rtrD = trB.get(2).getTextRuns().get(0);
+		TextPropCollection tpBP = rtrB.getTextParagraph().getParagraphStyle();
+		TextPropCollection tpBC = rtrB.getCharacterStyle();
+		TextPropCollection tpCP = rtrC.getTextParagraph().getParagraphStyle();
+		TextPropCollection tpCC = rtrC.getCharacterStyle();
+		TextPropCollection tpDP = rtrD.getTextParagraph().getParagraphStyle();
+		TextPropCollection tpDC = rtrD.getCharacterStyle();
+
+		// Check text and stylings
+		assertEquals(HSLFTextParagraph.getRawText(trB).substring(0, 30), rtrB.getRawText());
+		assertNotNull(tpBP);
+		assertNotNull(tpBC);
+		assertNotNull(tpCP);
+		assertNotNull(tpCC);
+		assertNotNull(tpDP);
+		assertNotNull(tpDC);
+		assertEquals(tpBP, tpCP);
+		assertEquals(tpBP, tpDP);
+		assertEquals(tpCP, tpDP);
+		assertNotEquals(tpBC, tpCC);
+		assertNotEquals(tpBC, tpDC);
+		assertNotEquals(tpCC, tpDC);
+
+		// Check text in the rich runs
+		assertEquals("This is the subtitle, in bold\r", rtrB.getRawText());
+		assertEquals("This bit is blue and italic\r", rtrC.getRawText());
+		assertEquals("This bit is red (normal)", rtrD.getRawText());
+
+		String newBText = "New Subtitle, will still be bold\n";
+		String newCText = "New blue and italic text\n";
+		String newDText = "Funky new normal red text";
+		rtrB.setText(newBText);
+		rtrC.setText(newCText);
+		rtrD.setText(newDText);
+		HSLFTextParagraph.storeText(trB);
+
+		assertEquals(newBText.replace('\n','\r'), rtrB.getRawText());
+		assertEquals(newCText.replace('\n','\r'), rtrC.getRawText());
+		assertEquals(newDText.replace('\n','\r'), rtrD.getRawText());
+
+		assertEquals(newBText.replace('\n','\r') + newCText.replace('\n','\r') + newDText.replace('\n','\r'), HSLFTextParagraph.getRawText(trB));
+
+		// The styles should have been updated for the new sizes
+		assertEquals(newBText.length(), tpBC.getCharactersCovered());
+		assertEquals(newCText.length(), tpCC.getCharactersCovered());
+		assertEquals(newDText.length()+1, tpDC.getCharactersCovered()); // Last one is always one larger
+
+        // Paragraph style should be sum of text length
+		assertEquals(
+			newBText.length() + newCText.length() + newDText.length() +1,
+			tpBP.getCharactersCovered() + tpCP.getCharactersCovered() + tpDP.getCharactersCovered()
+		);
+
+		// Check stylings still as expected
+		TextPropCollection ntpBC = rtrB.getCharacterStyle();
+		TextPropCollection ntpCC = rtrC.getCharacterStyle();
+		TextPropCollection ntpDC = rtrD.getCharacterStyle();
+		assertEquals(tpBC.getTextPropList(), ntpBC.getTextPropList());
+		assertEquals(tpCC.getTextPropList(), ntpCC.getTextPropList());
+		assertEquals(tpDC.getTextPropList(), ntpDC.getTextPropList());
+	}
+

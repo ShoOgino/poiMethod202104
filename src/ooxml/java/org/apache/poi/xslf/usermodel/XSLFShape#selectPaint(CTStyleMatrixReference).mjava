@@ -1,0 +1,22 @@
+    protected PaintStyle selectPaint(CTStyleMatrixReference fillRef) {
+        if (fillRef == null) return null;
+        
+        // The idx attribute refers to the index of a fill style or
+        // background fill style within the presentation's style matrix, defined by the fmtScheme element.
+        // value of 0 or 1000 indicates no background,
+        // values 1-999 refer to the index of a fill style within the fillStyleLst element
+        // values 1001 and above refer to the index of a background fill style within the bgFillStyleLst element.
+        int idx = (int)fillRef.getIdx();
+        CTSchemeColor phClr = fillRef.getSchemeClr();
+        XSLFSheet sheet = getSheet();
+        XSLFTheme theme = sheet.getTheme();
+        XmlObject fillProps = null;
+        CTStyleMatrix matrix = theme.getXmlObject().getThemeElements().getFmtScheme();
+        if (idx >= 1 && idx <= 999) {
+            fillProps = matrix.getFillStyleLst().selectPath("*")[idx - 1];
+        } else if (idx >= 1001 ){
+            fillProps = matrix.getBgFillStyleLst().selectPath("*")[idx - 1001];
+        }
+        return (fillProps == null) ? null : selectPaint(fillProps, phClr, theme.getPackagePart());
+    }
+

@@ -1,0 +1,45 @@
+    public FillStyle getFillStyle() {
+        return new FillStyle() {
+            public PaintStyle getPaint() {
+                switch (getFillType()) {
+                    case FILL_SOLID: {
+                        return new SolidPaint() {
+                            public ColorStyle getSolidColor() {
+                                return new ColorStyle() {
+                                    public Color getColor() { return getForegroundColor(); }
+                                    public int getAlpha() { return -1; }
+                                    public int getLumOff() { return -1; }
+                                    public int getLumMod() { return -1; }
+                                    public int getShade()  { return -1; }
+                                    public int getTint()  { return -1; }
+                                };
+                            }
+                        };
+                    }
+                    case FILL_PICTURE: {
+                        final HSLFPictureData pd = getPictureData();
+                        if (pd == null) break;
+                        
+                        return new TexturePaint() {
+                            public InputStream getImageData() {
+                                return new ByteArrayInputStream(pd.getData());
+                            }
+
+                            public String getContentType() {
+                                return pd.getContentType();
+                            }
+
+                            public int getAlpha() {
+                                return (int)(shape.getAlpha(EscherProperties.FILL__FILLOPACITY)*100000.0);
+                            }
+                        };
+                    }
+                    default:
+                        logger.log(POILogger.WARN, "unsuported fill type: " + getFillType());
+                        break;
+                }
+                return PaintStyle.TRANSPARENT_PAINT;
+            }
+        };
+    }
+

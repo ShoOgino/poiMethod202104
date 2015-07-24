@@ -1,0 +1,68 @@
+	/**
+	 * Removes the slide at the given index (0-based).
+	 * <p>
+	 * Shifts any subsequent slides to the left (subtracts one from their slide
+	 * numbers).
+	 * </p>
+	 *
+	 * @param index
+	 *            the index of the slide to remove (0-based)
+	 * @return the slide that was removed from the slide show.
+	 */
+	public HSLFSlide removeSlide(int index) {
+		int lastSlideIdx = _slides.size() - 1;
+		if (index < 0 || index > lastSlideIdx) {
+			throw new IllegalArgumentException("Slide index (" + index + ") is out of range (0.."
+					+ lastSlideIdx + ")");
+		}
+
+		SlideListWithText slwt = _documentRecord.getSlideSlideListWithText();
+		SlideAtomsSet[] sas = slwt.getSlideAtomsSets();
+
+		List<Record> records = new ArrayList<Record>();
+		List<SlideAtomsSet> sa = new ArrayList<SlideAtomsSet>(Arrays.asList(sas));
+
+		HSLFSlide removedSlide = _slides.remove(index);
+		_notes.remove(removedSlide.getNotes());
+		sa.remove(index);
+		
+		int i=0;
+		for (HSLFSlide s : _slides) s.setSlideNumber(i++);
+		
+		for (SlideAtomsSet s : sa) {
+            records.add(s.getSlidePersistAtom());
+            records.addAll(Arrays.asList(s.getSlideRecords()));
+		}
+		if (sa.isEmpty()) {
+			_documentRecord.removeSlideListWithText(slwt);
+		} else {
+			slwt.setSlideAtomsSets(sa.toArray(new SlideAtomsSet[sa.size()]));
+			slwt.setChildRecord(records.toArray(new Record[records.size()]));
+		}
+
+		// if the removed slide had notes - remove references to them too
+
+        int notesId = (removedSlide != null) ? removedSlide.getSlideRecord().getSlideAtom().getNotesID() : 0;
+		if (notesId != 0) {
+			SlideListWithText nslwt = _documentRecord.getNotesSlideListWithText();
+			records = new ArrayList<Record>();
+			ArrayList<SlideAtomsSet> na = new ArrayList<SlideAtomsSet>();
+			for (SlideAtomsSet ns : nslwt.getSlideAtomsSets()) {
+				if (ns.getSlidePersistAtom().getSlideIdentifier() == notesId) continue;
+				na.add(ns);
+				records.add(ns.getSlidePersistAtom());
+				if (ns.getSlideRecords() != null) {
+					records.addAll(Arrays.asList(ns.getSlideRecords()));
+				}
+			}
+			if (na.isEmpty()) {
+				_documentRecord.removeSlideListWithText(nslwt);
+			} else {
+				nslwt.setSlideAtomsSets(na.toArray(new SlideAtomsSet[na.size()]));
+				nslwt.setChildRecord(records.toArray(new Record[records.size()]));
+			}
+		}
+
+		return removedSlide;
+	}
+
