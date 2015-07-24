@@ -1,0 +1,48 @@
+    @Ignore("Used for manual testing with opening the resulting Workbook in Excel")
+    @Test
+    public void testBug58175a() throws IOException {
+        Workbook wb = new SXSSFWorkbook();
+        try {
+            Sheet sheet = wb.createSheet();
+
+            Row row = sheet.createRow(1);
+            Cell cell = row.createCell(3);
+
+            cell.setCellValue("F4");
+
+            Drawing drawing = sheet.createDrawingPatriarch();
+
+            CreationHelper factory = wb.getCreationHelper();
+
+            // When the comment box is visible, have it show in a 1x3 space
+            ClientAnchor anchor = factory.createClientAnchor();
+            anchor.setCol1(cell.getColumnIndex());
+            anchor.setCol2(cell.getColumnIndex() + 1);
+            anchor.setRow1(row.getRowNum());
+            anchor.setRow2(row.getRowNum() + 3);
+
+            // Create the comment and set the text+author
+            Comment comment = drawing.createCellComment(anchor);
+            RichTextString str = factory.createRichTextString("Hello, World!");
+            comment.setString(str);
+            comment.setAuthor("Apache POI");
+
+            /* fixed the problem as well 
+             * comment.setColumn(cell.getColumnIndex());
+             * comment.setRow(cell.getRowIndex());
+             */
+
+            // Assign the comment to the cell
+            cell.setCellComment(comment);
+
+            OutputStream out = new FileOutputStream("C:\\temp\\58175.xlsx");
+            try {
+                wb.write(out);
+            } finally {
+                out.close();
+            }
+        } finally {
+            wb.close();
+        }
+    }
+
