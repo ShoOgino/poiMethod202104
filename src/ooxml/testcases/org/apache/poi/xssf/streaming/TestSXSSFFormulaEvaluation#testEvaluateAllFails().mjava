@@ -1,0 +1,51 @@
+    /**
+     * EvaluateAll will normally fail, as any reference or
+     *  formula outside of the window will fail, and any
+     *  non-active sheets will fail
+     */
+    @Test
+    public void testEvaluateAllFails() throws IOException {
+        SXSSFWorkbook wb = new SXSSFWorkbook(5);
+        SXSSFSheet s = wb.createSheet();
+        
+        FormulaEvaluator eval = wb.getCreationHelper().createFormulaEvaluator();
+        
+        // References outside window will fail
+        s.createRow(0).createCell(0).setCellFormula("1+2");
+        s.createRow(1).createCell(0).setCellFormula("A21");
+        try {
+            eval.evaluateAll();
+            fail("Evaluate All shouldn't work, as references outside the window");
+        } catch(Exception e) {
+            System.err.println(e); // TODO
+        }
+        
+        // Cells outside window will fail
+        s.createRow(10).createCell(0).setCellFormula("A1+A2");
+        s.createRow(20).createCell(0).setCellFormula("A1+A11+100");
+        try {
+            eval.evaluateAll();
+            fail("Evaluate All shouldn't work, as some cells outside the window");
+        } catch(Exception e) {
+            System.err.println(e); // TODO
+        }
+        
+        
+        // Inactive sheets will fail
+        XSSFWorkbook xwb = new XSSFWorkbook();
+        xwb.createSheet("Open");
+        xwb.createSheet("Closed");
+        
+        wb = new SXSSFWorkbook(xwb, 5);
+        s = wb.getSheet("Closed");
+        s.flushRows();
+        s = wb.getSheet("Open");
+        s.createRow(0).createCell(0).setCellFormula("1+2");
+        
+        eval = wb.getCreationHelper().createFormulaEvaluator();
+        try {
+            eval.evaluateAll();
+            fail("Evaluate All shouldn't work, as sheets flushed");
+        } catch (SXSSFFormulaEvaluator.SheetsFlushedException e) {}
+    }
+
