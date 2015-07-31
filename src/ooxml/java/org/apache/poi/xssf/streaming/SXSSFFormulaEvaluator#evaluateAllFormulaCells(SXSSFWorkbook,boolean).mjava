@@ -10,7 +10,7 @@
         // Check they're all available
         for (int i=0; i<wb.getNumberOfSheets(); i++) {
             SXSSFSheet s = wb.getSheetAt(i);
-            if (s.isFlushed()) {
+            if (s.areAllRowsFlushed()) {
                 throw new SheetsFlushedException();
             }
         }
@@ -20,12 +20,10 @@
             SXSSFSheet s = wb.getSheetAt(i);
             
             // Check if any rows have already been flushed out
-            int firstRowNum = s.getFirstRowNum();
-            int firstAvailableRowNum = s.iterator().next().getRowNum();
-            if (firstRowNum != firstAvailableRowNum) {
-                if (skipOutOfWindow) throw new RowsFlushedException();
-                logger.log(POILogger.INFO, "Rows from " + firstRowNum + " to" +
-                           (firstAvailableRowNum-1) + " have already been flushed, skipping");
+            int lastFlushedRowNum = s.getLastFlushedRowNum();
+            if (lastFlushedRowNum > -1) {
+                if (! skipOutOfWindow) throw new RowFlushedException(0);
+                logger.log(POILogger.INFO, "Rows up to " + lastFlushedRowNum + " have already been flushed, skipping");
             }
             
             // Evaluate what we have
