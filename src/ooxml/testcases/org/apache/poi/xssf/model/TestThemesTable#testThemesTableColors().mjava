@@ -18,7 +18,7 @@
 //        workbooks.put("Re-Saved_" + testFileComplex, complexRS);
         
         // Sanity check
-        assertEquals(themeEntries.length, rgbExpected.length);
+        assertEquals(rgbExpected.length, rgbExpected.length);
         
         // For offline testing
         boolean createFiles = false;
@@ -31,25 +31,33 @@
             int startRN = 0;
             if (whatWorkbook.endsWith(testFileComplex)) startRN++;
             
-            for (int rn=startRN; rn<themeEntries.length+startRN; rn++) {
+            for (int rn=startRN; rn<rgbExpected.length+startRN; rn++) {
                 XSSFRow row = sheet.getRow(rn);
                 assertNotNull("Missing row " + rn + " in " + whatWorkbook, row);
                 String ref = (new CellReference(rn, 0)).formatAsString();
                 XSSFCell cell = row.getCell(0);
                 assertNotNull(
                         "Missing cell " + ref + " in " + whatWorkbook, cell);
+                
+                ThemeElement themeElem = ThemeElement.byId(rn-startRN);
                 assertEquals(
                         "Wrong theme at " + ref + " in " + whatWorkbook,
-                        themeEntries[rn], cell.getStringCellValue());
+                        themeElem.name.toLowerCase(), cell.getStringCellValue());
 
+                // Fonts are theme-based in their colours
                 XSSFFont font = cell.getCellStyle().getFont();
-                XSSFColor color = font.getXSSFColor();
+                CTColor ctColor = font.getCTFont().getColorArray(0);
+                assertNotNull(ctColor);
+                assertEquals(true, ctColor.isSetTheme());
+                assertEquals(themeElem.idx, ctColor.getTheme());
                 
+                // Get the colour, via the theme
+                XSSFColor color = font.getXSSFColor();
                 // Theme colours aren't tinted
                 assertEquals(false, color.hasTint());
                 // Check the RGB part (no tint)
                 assertEquals(
-                        "Wrong theme colour " + themeEntries[rn] + " on " + whatWorkbook,
+                        "Wrong theme colour " + themeElem.name + " on " + whatWorkbook,
                         rgbExpected[rn], Hex.encodeHexString(color.getRGB()));
                 // Check the Theme ID
                 int expectedThemeIdx = rn - startRN;
