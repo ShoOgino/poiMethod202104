@@ -1,0 +1,17 @@
+    public static void main(String[] args) throws IOException, SAXException {
+        InputStream sourceBytes = new FileInputStream("/path/too/workbook.xlsx");
+        XSSFWorkbook workbook = new XSSFWorkbook(sourceBytes) {
+            /** Avoid DOM parse of large sheet */
+            public void parseSheet(java.util.Map<String,XSSFSheet> shIdMap, CTSheet ctSheet) {
+                if (SHEET_TO_STREAM.equals(ctSheet.getName())) {
+                    return;
+                }
+            };
+        };
+        
+        // Having avoided a DOM-based parse of the sheet, we can stream it instead.
+        ReadOnlySharedStringsTable strings = new ReadOnlySharedStringsTable(workbook.getPackage());
+        new XSSFSheetXMLHandler(workbook.getStylesSource(), strings, createSheetContentsHandler(), false);
+        workbook.close();
+    }
+
