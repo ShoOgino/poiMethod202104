@@ -1,19 +1,17 @@
     @Override
-    @SuppressWarnings("deprecation")
     protected void onDocumentRead() throws IOException {
         try {
             PresentationDocument doc =
                     PresentationDocument.Factory.parse(getCorePart().getInputStream());
             _presentation = doc.getPresentation();
-            Map<String, XSLFSlide> shIdMap = new HashMap<String, XSLFSlide>();
 
-            _masters = new HashMap<String, XSLFSlideMaster>();
+            Map<String, XSLFSlideMaster> masterMap = new HashMap<String, XSLFSlideMaster>();
+            Map<String, XSLFSlide> shIdMap = new HashMap<String, XSLFSlide>();
             for (POIXMLDocumentPart p : getRelations()) {
                 if (p instanceof XSLFSlide) {
                     shIdMap.put(p.getPackageRelationship().getId(), (XSLFSlide) p);
                 } else if (p instanceof XSLFSlideMaster) {
-                    XSLFSlideMaster master = (XSLFSlideMaster)p;
-                    _masters.put(p.getPackageRelationship().getId(), master);
+                    masterMap.put(getRelationId(p), (XSLFSlideMaster) p);
                 } else if (p instanceof XSLFTableStyles){
                     _tableStyles = (XSLFTableStyles)p;
                 } else if (p instanceof XSLFNotesMaster) {
@@ -23,9 +21,15 @@
                 }
             }
 
-            _slides = new ArrayList<XSLFSlide>();
+            _masters = new ArrayList<XSLFSlideMaster>(masterMap.size());
+            for (CTSlideMasterIdListEntry masterId : _presentation.getSldMasterIdLst().getSldMasterIdList()) {
+                XSLFSlideMaster master = masterMap.get(masterId.getId2());
+                _masters.add(master);
+            }
+
+            _slides = new ArrayList<XSLFSlide>(shIdMap.size());
             if (_presentation.isSetSldIdLst()) {
-                for (CTSlideIdListEntry slId : _presentation.getSldIdLst().getSldIdArray()) {
+                for (CTSlideIdListEntry slId : _presentation.getSldIdLst().getSldIdList()) {
                     XSLFSlide sh = shIdMap.get(slId.getId2());
                     if (sh == null) {
                         _logger.log(POILogger.WARN, "Slide with r:id " + slId.getId() + " was defined, but didn't exist in package, skipping");
