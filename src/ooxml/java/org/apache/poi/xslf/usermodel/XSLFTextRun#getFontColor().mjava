@@ -1,20 +1,20 @@
     @Override
-    public Color getFontColor(){
-        final XSLFTheme theme = _p.getParentShape().getSheet().getTheme();
-        CTShapeStyle style = _p.getParentShape().getSpStyle();
-        final CTSchemeColor phClr = style == null ? null : style.getFontRef().getSchemeClr();
-
-        CharacterPropertyFetcher<Color> fetcher = new CharacterPropertyFetcher<Color>(_p.getIndentLevel()){
+    public PaintStyle getFontColor(){
+        CharacterPropertyFetcher<PaintStyle> fetcher = new CharacterPropertyFetcher<PaintStyle>(_p.getIndentLevel()){
             public boolean fetch(CTTextCharacterProperties props){
-                CTSolidColorFillProperties solidFill = props.getSolidFill();
-                if(solidFill != null) {
-                    boolean useCtxColor =
-                            (solidFill.isSetSchemeClr() && solidFill.getSchemeClr().getVal() == STSchemeColorVal.PH_CLR)
-                            || isFetchingFromMaster;
-                    Color c = new XSLFColor(solidFill, theme, useCtxColor ? phClr : null).getColor();
-                    setValue(c);
+                XSLFShape shape = _p.getParentShape();
+                CTShapeStyle style = shape.getSpStyle();
+                CTSchemeColor phClr = null;
+                if (style != null && style.getFontRef() != null) {
+                    phClr = style.getFontRef().getSchemeClr();
+                }
+
+                PaintStyle ps = shape.getPaint(props, phClr);
+                if (ps != null)  {
+                    setValue(ps);
                     return true;
                 }
+                
                 return false;
             }
         };

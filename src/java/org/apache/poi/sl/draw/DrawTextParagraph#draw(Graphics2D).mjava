@@ -1,9 +1,6 @@
     public void draw(Graphics2D graphics){
         if (lines.isEmpty()) return;
         
-        Insets2D insets = paragraph.getParentShape().getInsets();
-        double leftInset = insets.left;
-        double rightInset = insets.right;
         double penY = y;
 
         boolean firstLine = true;
@@ -11,12 +8,17 @@
         Double leftMargin = paragraph.getLeftMargin();
         if (leftMargin == null) {
             // if the marL attribute is omitted, then a value of 347663 is implied
-            leftMargin = Units.toPoints(347663*(indentLevel+1));
+            leftMargin = Units.toPoints(347663*indentLevel);
         }
         Double indent = paragraph.getIndent();
         if (indent == null) {
             indent = Units.toPoints(347663*indentLevel);
         }
+        if (paragraph.getClass().getName().contains("HSLF")) {
+            // special handling for HSLF
+            indent -= leftMargin;
+        }
+        
         Double rightMargin = paragraph.getRightMargin();
         if (rightMargin == null) {
             rightMargin = 0d;
@@ -36,25 +38,30 @@
                 }
                 
                 if (bullet != null){
-                    bullet.setPosition(x + indent, penY);
+                    bullet.setPosition(x+leftMargin+indent, penY);
                     bullet.draw(graphics);
                     // don't let text overlay the bullet and advance by the bullet width
                     double bulletWidth = bullet.getLayout().getAdvance() + 1;
-                    penX = x + Math.max(leftMargin, indent+bulletWidth);
+                    penX = x + Math.max(leftMargin, leftMargin+indent+bulletWidth);
                 } else {
-                    penX = x + indent;
+                    penX = x + leftMargin;
                 }
             } else {
                 penX = x + leftMargin;
             }
 
             Rectangle2D anchor = DrawShape.getAnchor(graphics, paragraph.getParentShape());
+            // Insets are already applied on DrawTextShape.drawContent
+            // but (outer) anchor need to be adjusted
+            Insets2D insets = paragraph.getParentShape().getInsets();
+            double leftInset = insets.left;
+            double rightInset = insets.right;
 
             TextAlign ta = paragraph.getTextAlign();
             if (ta == null) ta = TextAlign.LEFT;
             switch (ta) {
                 case CENTER:
-                    penX += (anchor.getWidth() - leftMargin - line.getWidth() - leftInset - rightInset) / 2;
+                    penX += (anchor.getWidth() - line.getWidth() - leftInset - rightInset - leftMargin) / 2;
                     break;
                 case RIGHT:
                     penX += (anchor.getWidth() - line.getWidth() - leftInset - rightInset);

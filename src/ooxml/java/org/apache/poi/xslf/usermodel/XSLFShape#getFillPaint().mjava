@@ -5,7 +5,7 @@
                 try {
                     pr = shape.getSpPr();
                     if (((CTShapeProperties)pr).isSetNoFill()) {
-                        setValue(PaintStyle.TRANSPARENT_PAINT);
+                        setValue(null);
                         return true;
                     }                    
                 } catch (IllegalStateException e) {}
@@ -22,21 +22,19 @@
                     }
                 }
                 
-                if (pr == null) {
-                    setValue(PaintStyle.TRANSPARENT_PAINT);
-                    return true;
-                }
+                if (pr == null) return false;
                 
                 PaintStyle paint = null;
+                PackagePart pp = getSheet().getPackagePart();
                 for (XmlObject obj : pr.selectPath("*")) {
-                    paint = selectPaint(obj, null, getSheet().getPackagePart());
-                    if (paint != null) break;
+                    paint = selectPaint(obj, null, pp);
+                    if (paint != null) {
+                        setValue(paint);
+                        return true;
+                    };
                 }
                 
-                if (paint == null) return false;
-                
-                setValue(paint);
-                return true;
+                return false;
             }
         };
         fetchShapeProperty(fetcher);
@@ -56,6 +54,6 @@
         }
         paint = selectPaint(fillRef);
 
-        return paint == null ? PaintStyle.TRANSPARENT_PAINT : paint;
+        return paint;
     }
 
