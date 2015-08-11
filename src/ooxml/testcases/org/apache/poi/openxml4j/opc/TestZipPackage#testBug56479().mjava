@@ -1,0 +1,26 @@
+    @Test
+    public void testBug56479() throws Exception {
+        InputStream is = OpenXML4JTestDataSamples.openSampleStream("dcterms_bug_56479.zip");
+        OPCPackage p = OPCPackage.open(is);
+        
+        // Check we found the contents of it
+        boolean foundCoreProps = false, foundDocument = false, foundTheme1 = false;
+        for (PackagePart part : p.getParts()) {
+            if (part.getPartName().toString().equals("/docProps/core.xml")) {
+                assertEquals(ContentTypes.CORE_PROPERTIES_PART, part.getContentType());
+                foundCoreProps = true;
+            }
+            if (part.getPartName().toString().equals("/word/document.xml")) {
+                assertEquals(XWPFRelation.DOCUMENT.getContentType(), part.getContentType());
+                foundDocument = true;
+            }
+            if (part.getPartName().toString().equals("/word/theme/theme1.xml")) {
+                assertEquals(XWPFRelation.THEME.getContentType(), part.getContentType());
+                foundTheme1 = true;
+            }
+        }
+        assertTrue("Core not found in " + p.getParts(), foundCoreProps);
+        assertFalse("Document should not be found in " + p.getParts(), foundDocument);
+        assertFalse("Theme1 should not found in " + p.getParts(), foundTheme1);
+    }
+
