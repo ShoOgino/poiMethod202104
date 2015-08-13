@@ -1,0 +1,31 @@
+    public void FIXMEtestCreateHeaderPicture() throws Exception { // TODO Fix
+        XWPFDocument doc = new XWPFDocument();
+        
+        // Starts with no header
+        XWPFHeaderFooterPolicy policy = doc.getHeaderFooterPolicy();
+        assertNull(policy);
+        
+        // Add a default header
+        policy = doc.createHeaderFooterPolicy();
+        
+        XWPFParagraph[] hparas = new XWPFParagraph[] {
+                new XWPFParagraph(CTP.Factory.newInstance(), doc)
+        };
+        hparas[0].createRun().setText("Header Hello World!");
+        XWPFHeader header = policy.createHeader(XWPFHeaderFooterPolicy.DEFAULT, hparas);
+        assertEquals(0, header.getAllPictures().size());
+        assertEquals(1, header.getParagraphs().size());
+        
+        // Add a picture to it
+        header.getParagraphs().get(0).getRuns().get(0).addPicture(
+                new ByteArrayInputStream(new byte[] {1,2,3,4}), 
+                Document.PICTURE_TYPE_JPEG, "test.jpg", 2, 2);
+        
+        // Check
+        verifyOneHeaderPicture(doc);
+        
+        // Save, re-load, re-check
+        XWPFDocument readBack = XWPFTestDataSamples.writeOutAndReadBack(doc);
+        verifyOneHeaderPicture(readBack);
+    }
+
