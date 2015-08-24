@@ -1,0 +1,25 @@
+    public static HSLFGroupShape createShapeGroup(EscherContainerRecord spContainer, ShapeContainer<HSLFShape,HSLFTextParagraph> parent){
+        boolean isTable = false;
+        EscherContainerRecord ecr = (EscherContainerRecord)spContainer.getChild(0);
+        EscherRecord opt = HSLFShape.getEscherChild(ecr, (short)RecordTypes.EscherUserDefined);
+
+        if (opt != null) {
+            EscherPropertyFactory f = new EscherPropertyFactory();
+            List<EscherProperty> props = f.createProperties( opt.serialize(), 8, opt.getInstance() );
+            for (EscherProperty ep : props) {
+                if (ep.getPropertyNumber() == 0x39F
+                    && ep instanceof EscherSimpleProperty
+                    && ((EscherSimpleProperty)ep).getPropertyValue() == 1) {
+                    isTable = true;
+                    break;
+                }
+            }
+        }
+        
+        HSLFGroupShape group = (isTable)
+            ? new HSLFTable(spContainer, parent)
+            : new HSLFGroupShape(spContainer, parent);
+        
+        return group;
+     }
+

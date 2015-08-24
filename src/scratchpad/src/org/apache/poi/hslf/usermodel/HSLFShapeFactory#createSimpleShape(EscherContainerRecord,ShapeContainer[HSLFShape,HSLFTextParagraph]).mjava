@@ -1,0 +1,53 @@
+    public static HSLFShape createSimpleShape(EscherContainerRecord spContainer, ShapeContainer<HSLFShape,HSLFTextParagraph> parent){
+        HSLFShape shape = null;
+        EscherSpRecord spRecord = spContainer.getChildById(EscherSpRecord.RECORD_ID);
+
+        ShapeType type = ShapeType.forId(spRecord.getShapeType(), false);
+        switch (type){
+            case TEXT_BOX:
+                shape = new HSLFTextBox(spContainer, parent);
+                break;
+            case HOST_CONTROL:
+            case FRAME: {
+                InteractiveInfo info = getClientDataRecord(spContainer, RecordTypes.InteractiveInfo.typeID);
+                OEShapeAtom oes = getClientDataRecord(spContainer, RecordTypes.OEShapeAtom.typeID);
+                if(info != null && info.getInteractiveInfoAtom() != null){
+                    switch(info.getInteractiveInfoAtom().getAction()){
+                        case InteractiveInfoAtom.ACTION_OLE:
+                            shape = new OLEShape(spContainer, parent);
+                            break;
+                        case InteractiveInfoAtom.ACTION_MEDIA:
+                            shape = new MovieShape(spContainer, parent);
+                            break;
+                        default:
+                            break;
+                    }
+                } else if (oes != null){
+                    shape = new OLEShape(spContainer, parent);
+                }
+
+                if(shape == null) shape = new HSLFPictureShape(spContainer, parent);
+                break;
+            }
+            case LINE:
+                shape = new HSLFLine(spContainer, parent);
+                break;
+            case NOT_PRIMITIVE: {
+                AbstractEscherOptRecord opt = HSLFShape.getEscherChild(spContainer, EscherOptRecord.RECORD_ID);
+                EscherProperty prop = HSLFShape.getEscherProperty(opt, EscherProperties.GEOMETRY__VERTICES);
+                if(prop != null)
+                    shape = new HSLFFreeformShape(spContainer, parent);
+                else {
+                    logger.log(POILogger.INFO, "Creating AutoShape for a NotPrimitive shape");
+                    shape = new HSLFAutoShape(spContainer, parent);
+                }
+                break;
+            }
+            default:
+                shape = new HSLFAutoShape(spContainer, parent);
+                break;
+        }
+        return shape;
+
+    }
+
