@@ -1,0 +1,55 @@
+    /**
+     * dump an array of bytes to a String
+     *
+     * @param data the byte array to be dumped
+     * @param offset its offset, whatever that might mean
+     * @param index initial index into the byte array
+     * @param length number of characters to output
+     *
+     * @exception ArrayIndexOutOfBoundsException if the index is
+     *            outside the data array's bounds
+     * @return output string
+     */
+
+    public static String dump(final byte [] data, final long offset, final int index, final int length) {
+        if (data == null || data.length == 0) {
+            return "No Data"+EOL;
+        }
+
+        int data_length = (length == Integer.MAX_VALUE || length < 0 || index+length < 0)
+            ? data.length
+            : Math.min(data.length,index+length);
+        
+        
+        if ((index < 0) || (index >= data.length)) {
+            String err = "illegal index: "+index+" into array of length "+data.length;
+            throw new ArrayIndexOutOfBoundsException(err);
+        }
+        
+        long  display_offset = offset + index;
+        StringBuilder buffer = new StringBuilder(74);
+        
+        for (int j = index; j < data_length; j += 16) {
+            int chars_read = data_length - j;
+
+            if (chars_read > 16) {
+                chars_read = 16;
+            }
+            
+            buffer.append(String.format("%08X ", display_offset));
+            for (int k = 0; k < 16; k++) {
+                if (k < chars_read) {
+                    buffer.append(String.format("%02X ", data[ k + j ]));
+                } else {
+                    buffer.append("   ");
+                }
+            }
+            for (int k = 0; k < chars_read; k++) {
+                buffer.append(toAscii(data[ k + j ]));
+            }
+            buffer.append(EOL);
+            display_offset += chars_read;
+        }
+        return buffer.toString();
+    }
+

@@ -18,7 +18,7 @@
 	 * </table>
 	 *
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 		// args = new String[] { "--out", "", };
 		CommandArgs cmdArgs;
 		try {
@@ -28,34 +28,32 @@
 			return;
 		}
 
-		try {
-
-			PrintStream ps;
-			if (cmdArgs.shouldOutputToFile()) {
-				OutputStream os = new FileOutputStream(cmdArgs.getFile().getAbsolutePath() + ".out");
-				ps = new PrintStream(os);
-			} else {
-				ps = System.out;
-			}
-
-			InputStream is = getPOIFSInputStream(cmdArgs.getFile());
-
-			if (cmdArgs.shouldOutputRawHexOnly()) {
-				int size = is.available();
-				byte[] data = new byte[size];
-
-				is.read(data);
-				HexDump.dump(data, 0, System.out, 0);
-			} else {
-				boolean dumpInterpretedRecords = cmdArgs.shouldDumpRecordInterpretations();
-				boolean dumpHex = cmdArgs.shouldDumpBiffHex();
-				boolean zeroAlignHexDump = dumpInterpretedRecords;  // TODO - fix non-zeroAlign
-				runBiffViewer(ps, is, dumpInterpretedRecords, dumpHex, zeroAlignHexDump,
-						cmdArgs.suppressHeader());
-			}
-			ps.close();
-		} catch (Exception e) {
-			e.printStackTrace();
+		PrintStream ps;
+		if (cmdArgs.shouldOutputToFile()) {
+			OutputStream os = new FileOutputStream(cmdArgs.getFile().getAbsolutePath() + ".out");
+			ps = new PrintStream(os);
+		} else {
+			ps = System.out;
 		}
+
+		NPOIFSFileSystem fs = new NPOIFSFileSystem(cmdArgs.getFile(), true);
+        InputStream is = getPOIFSInputStream(fs);
+		
+		if (cmdArgs.shouldOutputRawHexOnly()) {
+			int size = is.available();
+			byte[] data = new byte[size];
+
+			is.read(data);
+			HexDump.dump(data, 0, System.out, 0);
+		} else {
+			boolean dumpInterpretedRecords = cmdArgs.shouldDumpRecordInterpretations();
+			boolean dumpHex = cmdArgs.shouldDumpBiffHex();
+			boolean zeroAlignHexDump = dumpInterpretedRecords;  // TODO - fix non-zeroAlign
+			runBiffViewer(ps, is, dumpInterpretedRecords, dumpHex, zeroAlignHexDump,
+					cmdArgs.suppressHeader());
+		}
+		is.close();
+        fs.close();
+		ps.close();
 	}
 
