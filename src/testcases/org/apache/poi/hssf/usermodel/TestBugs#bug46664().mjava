@@ -7,8 +7,8 @@
      */
     @Test
     public void bug46664() throws Exception {
-       HSSFWorkbook wb = new HSSFWorkbook();
-       HSSFSheet sheet = wb.createSheet("new_sheet");
+       HSSFWorkbook wb1 = new HSSFWorkbook();
+       HSSFSheet sheet = wb1.createSheet("new_sheet");
        HSSFRow row = sheet.createRow((short)0);
        row.createCell(0).setCellValue(new HSSFRichTextString("Column A"));
        row.createCell(1).setCellValue(new HSSFRichTextString("Column B"));
@@ -18,7 +18,7 @@
        row.createCell(5).setCellValue(new HSSFRichTextString("Column F"));
 
        //set print area from column a to column c (on first row)
-       wb.setPrintArea(
+       wb1.setPrintArea(
                0, //sheet index
                0, //start column
                2, //end column
@@ -26,11 +26,12 @@
                0  //end row
        );
 
-       wb = writeOutAndReadBack(wb);
+       HSSFWorkbook wb2 = writeOutAndReadBack(wb1);
+       wb1.close();
 
        // Ensure the tab index
        TabIdRecord tr = null;
-       for(Record r : wb.getWorkbook().getRecords()) {
+       for(Record r : wb2.getWorkbook().getRecords()) {
           if(r instanceof TabIdRecord) {
              tr = (TabIdRecord)r;
           }
@@ -40,19 +41,20 @@
        assertEquals(0, tr._tabids[0]);
 
        // Ensure the print setup
-       assertEquals("new_sheet!$A$1:$C$1", wb.getPrintArea(0));
-       assertEquals("new_sheet!$A$1:$C$1", wb.getName("Print_Area").getRefersToFormula());
+       assertEquals("new_sheet!$A$1:$C$1", wb2.getPrintArea(0));
+       assertEquals("new_sheet!$A$1:$C$1", wb2.getName("Print_Area").getRefersToFormula());
 
        // Needs reference not value
-       NameRecord nr = wb.getWorkbook().getNameRecord(
-             wb.getNameIndex("Print_Area")
+       NameRecord nr = wb2.getWorkbook().getNameRecord(
+               wb2.getNameIndex("Print_Area")
        );
        assertEquals("Print_Area", nr.getNameText());
        assertEquals(1, nr.getNameDefinition().length);
        assertEquals(
              "new_sheet!$A$1:$C$1",
-             ((Area3DPtg)nr.getNameDefinition()[0]).toFormulaString(HSSFEvaluationWorkbook.create(wb))
+             ((Area3DPtg)nr.getNameDefinition()[0]).toFormulaString(HSSFEvaluationWorkbook.create(wb2))
        );
        assertEquals('R', nr.getNameDefinition()[0].getRVAType());
+       wb2.close();
     }
 
