@@ -1,0 +1,124 @@
+    /*
+     * Open <em>doc2</em> for reading and check summary information and
+     * document summary information. All properties written before must be
+     * found in the property streams of <em>doc2</em> and have the correct
+     * values.
+     */
+    private static CustomProperties write2ndFile(File fileIn, File fileOut) throws Exception {
+        NPOIFSFileSystem poifs = new NPOIFSFileSystem(fileIn, false);
+        SummaryInformation si = getSummaryInformation(poifs);
+        DocumentSummaryInformation dsi = getDocumentSummaryInformation(poifs);
+
+        assertEquals(P_APPLICATION_NAME, si.getApplicationName());
+        assertEquals(P_AUTHOR, si.getAuthor());
+        assertEquals(P_CHAR_COUNT, si.getCharCount());
+        assertEquals(P_COMMENTS, si.getComments());
+        assertEquals(P_CREATE_DATE_TIME, si.getCreateDateTime());
+        assertEquals(P_EDIT_TIME, si.getEditTime());
+        assertEquals(P_KEYWORDS, si.getKeywords());
+        assertEquals(P_LAST_AUTHOR, si.getLastAuthor());
+        assertEquals(P_LAST_PRINTED, si.getLastPrinted());
+        assertEquals(P_LAST_SAVE_DATE_TIME, si.getLastSaveDateTime());
+        assertEquals(P_PAGE_COUNT, si.getPageCount());
+        assertEquals(P_REV_NUMBER, si.getRevNumber());
+        assertEquals(P_SECURITY, si.getSecurity());
+        assertEquals(P_SUBJECT, si.getSubject());
+        assertEquals(P_TEMPLATE, si.getTemplate());
+        // FIXME (byte array properties not yet implemented): assertEquals(P_THUMBNAIL, si.getThumbnail());
+        assertEquals(P_TITLE, si.getTitle());
+        assertEquals(P_WORD_COUNT, si.getWordCount());
+
+        assertEquals(P_BYTE_COUNT, dsi.getByteCount());
+        assertEquals(P_CATEGORY, dsi.getCategory());
+        assertEquals(P_COMPANY, dsi.getCompany());
+        // FIXME (byte array properties not yet implemented): assertEquals(P_, dsi.getDocparts());
+        // FIXME (byte array properties not yet implemented): assertEquals(P_, dsi.getHeadingPair());
+        assertEquals(P_HIDDEN_COUNT, dsi.getHiddenCount());
+        assertEquals(P_LINE_COUNT, dsi.getLineCount());
+        assertEquals(P_LINKS_DIRTY, dsi.getLinksDirty());
+        assertEquals(P_MANAGER, dsi.getManager());
+        assertEquals(P_MM_CLIP_COUNT, dsi.getMMClipCount());
+        assertEquals(P_NOTE_COUNT, dsi.getNoteCount());
+        assertEquals(P_PAR_COUNT, dsi.getParCount());
+        assertEquals(P_PRESENTATION_FORMAT, dsi.getPresentationFormat());
+        assertEquals(P_SCALE, dsi.getScale());
+        assertEquals(P_SLIDE_COUNT, dsi.getSlideCount());
+
+        final CustomProperties cps = dsi.getCustomProperties();
+        assertNotNull(cps);
+        assertNull(cps.get("No value available"));
+        assertEquals("Wert \u00e4", cps.get("Schl\u00fcssel \u00e4"));
+        assertEquals("Wert \u00e4\u00f6", cps.get("Schl\u00fcssel \u00e4\u00f6"));
+        assertEquals("Wert \u00e4\u00f6\u00fc", cps.get("Schl\u00fcssel \u00e4\u00f6\u00fc"));
+        assertEquals("Wert \u00e4\u00f6\u00fc\u00d6", cps.get("Schl\u00fcssel \u00e4\u00f6\u00fc\u00d6"));
+        assertEquals(POSITIVE_INTEGER, cps.get("positive_Integer"));
+        assertEquals(POSITIVE_LONG, cps.get("positive_Long"));
+        assertEquals(POSITIVE_DOUBLE, cps.get("positive_Double"));
+        assertEquals(NEGATIVE_INTEGER, cps.get("negative_Integer"));
+        assertEquals(NEGATIVE_LONG, cps.get("negative_Long"));
+        assertEquals(NEGATIVE_DOUBLE, cps.get("negative_Double"));
+        assertEquals(Boolean.TRUE, cps.get("Boolean"));
+        assertEquals(now, cps.get("Date"));
+        assertEquals(MAX_INTEGER, cps.get("max_Integer"));
+        assertEquals(MIN_INTEGER, cps.get("min_Integer"));
+        assertEquals(MAX_LONG, cps.get("max_Long"));
+        assertEquals(MIN_LONG, cps.get("min_Long"));
+        assertEquals(MAX_DOUBLE, cps.get("max_Double"));
+        assertEquals(MIN_DOUBLE, cps.get("min_Double"));
+
+        /* Remove all properties supported by HPSF from the summary
+         * information (e.g. author, edit date, application name) and from the
+         * document summary information (e.g. company, manager). */
+        si.removeApplicationName();
+        si.removeAuthor();
+        si.removeCharCount();
+        si.removeComments();
+        si.removeCreateDateTime();
+        si.removeEditTime();
+        si.removeKeywords();
+        si.removeLastAuthor();
+        si.removeLastPrinted();
+        si.removeLastSaveDateTime();
+        si.removePageCount();
+        si.removeRevNumber();
+        si.removeSecurity();
+        si.removeSubject();
+        si.removeTemplate();
+        si.removeThumbnail();
+        si.removeTitle();
+        si.removeWordCount();
+
+        dsi.removeByteCount();
+        dsi.removeCategory();
+        dsi.removeCompany();
+        dsi.removeCustomProperties();
+        dsi.removeDocparts();
+        dsi.removeHeadingPair();
+        dsi.removeHiddenCount();
+        dsi.removeLineCount();
+        dsi.removeLinksDirty();
+        dsi.removeManager();
+        dsi.removeMMClipCount();
+        dsi.removeNoteCount();
+        dsi.removeParCount();
+        dsi.removePresentationFormat();
+        dsi.removeScale();
+        dsi.removeSlideCount();
+
+        /*
+         * <li><p>Write the summary information stream and the document summary
+         * information stream to the POI filesystem. */
+        si.write(poifs.getRoot(), SummaryInformation.DEFAULT_STREAM_NAME);
+        dsi.write(poifs.getRoot(), DocumentSummaryInformation.DEFAULT_STREAM_NAME);
+
+        /*
+         * <li><p>Write the POI filesystem to a (temporary) file <em>doc3</em>
+         * and close the latter. */
+        FileOutputStream out = new FileOutputStream(fileOut);
+        poifs.writeFilesystem(out);
+        out.close();
+        poifs.close();
+        
+        return cps;
+    }
+

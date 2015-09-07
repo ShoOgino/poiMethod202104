@@ -4,6 +4,7 @@
      *
      * @throws Throwable if anything goes wrong.
      */
+    @Test
     public void testReadCustomPropertiesFromFiles() throws Throwable
     {
         final AllDataFilesTester.TestTask task = new AllDataFilesTester.TestTask()
@@ -15,43 +16,35 @@
                     UnexpectedPropertySetTypeException
             {
                 /* Read a test document <em>doc</em> into a POI filesystem. */
-                final POIFSFileSystem poifs = new POIFSFileSystem(new FileInputStream(file));
-                final DirectoryEntry dir = poifs.getRoot();
-                DocumentEntry dsiEntry = null;
-                try
-                {
-                    dsiEntry = (DocumentEntry) dir.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME);
-                }
-                catch (FileNotFoundException ex)
-                {
+                NPOIFSFileSystem poifs = null;
+                try {
+                    poifs = new NPOIFSFileSystem(file);
+                    final DirectoryEntry dir = poifs.getRoot();
                     /*
-                     * A missing document summary information stream is not an error
-                     * and therefore silently ignored here.
+                     * If there is a document summry information stream, read it from
+                     * the POI filesystem, else create a new one.
                      */
-                }
-
-                /*
-                 * If there is a document summry information stream, read it from
-                 * the POI filesystem, else create a new one.
-                 */
-                DocumentSummaryInformation dsi;
-                if (dsiEntry != null)
-                {
-                    final DocumentInputStream dis = new DocumentInputStream(dsiEntry);
-                    final PropertySet ps = new PropertySet(dis);
-                    dsi = new DocumentSummaryInformation(ps);
-                }
-                else
-                    dsi = PropertySetFactory.newDocumentSummaryInformation();
-                final CustomProperties cps = dsi.getCustomProperties();
-
-                if (cps == null)
-                    /* The document does not have custom properties. */
-                    return;
-
-                for (CustomProperty cp : cps.values()) {
-                    cp.getName();
-                    cp.getValue();
+                    DocumentSummaryInformation dsi;
+                    if (dir.hasEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME)) {
+                        final DocumentInputStream dis = poifs.createDocumentInputStream(DocumentSummaryInformation.DEFAULT_STREAM_NAME);
+                        final PropertySet ps = new PropertySet(dis);
+                        dsi = new DocumentSummaryInformation(ps);
+                        dis.close();
+                    } else {
+                        dsi = PropertySetFactory.newDocumentSummaryInformation();
+                    }
+                    final CustomProperties cps = dsi.getCustomProperties();
+    
+                    if (cps == null)
+                        /* The document does not have custom properties. */
+                        return;
+    
+                    for (CustomProperty cp : cps.values()) {
+                        cp.getName();
+                        cp.getValue();
+                    }
+                } finally {
+                    if (poifs != null) poifs.close();
                 }
             }
         };

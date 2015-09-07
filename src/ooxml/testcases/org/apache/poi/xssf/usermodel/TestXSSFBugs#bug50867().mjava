@@ -3,12 +3,12 @@
      */
     @Test
     public void bug50867() throws Exception {
-        XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("50867_with_table.xlsx");
-        assertEquals(3, wb.getNumberOfSheets());
+        XSSFWorkbook wb1 = XSSFTestDataSamples.openSampleWorkbook("50867_with_table.xlsx");
+        assertEquals(3, wb1.getNumberOfSheets());
 
-        XSSFSheet s1 = wb.getSheetAt(0);
-        XSSFSheet s2 = wb.getSheetAt(1);
-        XSSFSheet s3 = wb.getSheetAt(2);
+        XSSFSheet s1 = wb1.getSheetAt(0);
+        XSSFSheet s2 = wb1.getSheetAt(1);
+        XSSFSheet s3 = wb1.getSheetAt(2);
         assertEquals(1, s1.getTables().size());
         assertEquals(0, s2.getTables().size());
         assertEquals(0, s3.getTables().size());
@@ -19,8 +19,8 @@
         assertEquals("A1:C3", t.getCTTable().getRef());
 
         // Add a sheet and re-order
-        XSSFSheet s4 = wb.createSheet("NewSheet");
-        wb.setSheetOrder(s4.getSheetName(), 0);
+        XSSFSheet s4 = wb1.createSheet("NewSheet");
+        wb1.setSheetOrder(s4.getSheetName(), 0);
 
         // Check on tables
         assertEquals(1, s1.getTables().size());
@@ -29,21 +29,23 @@
         assertEquals(0, s4.getTables().size());
 
         // Refetch to get the new order
-        s1 = wb.getSheetAt(0);
-        s2 = wb.getSheetAt(1);
-        s3 = wb.getSheetAt(2);
-        s4 = wb.getSheetAt(3);
+        s1 = wb1.getSheetAt(0);
+        s2 = wb1.getSheetAt(1);
+        s3 = wb1.getSheetAt(2);
+        s4 = wb1.getSheetAt(3);
         assertEquals(0, s1.getTables().size());
         assertEquals(1, s2.getTables().size());
         assertEquals(0, s3.getTables().size());
         assertEquals(0, s4.getTables().size());
 
         // Save and re-load
-        wb = XSSFTestDataSamples.writeOutAndReadBack(wb);
-        s1 = wb.getSheetAt(0);
-        s2 = wb.getSheetAt(1);
-        s3 = wb.getSheetAt(2);
-        s4 = wb.getSheetAt(3);
+        XSSFWorkbook wb2 = XSSFTestDataSamples.writeOutAndReadBack(wb1);
+        wb1.close();
+        
+        s1 = wb2.getSheetAt(0);
+        s2 = wb2.getSheetAt(1);
+        s3 = wb2.getSheetAt(2);
+        s4 = wb2.getSheetAt(3);
         assertEquals(0, s1.getTables().size());
         assertEquals(1, s2.getTables().size());
         assertEquals(0, s3.getTables().size());
@@ -63,11 +65,12 @@
         t.setName("New 3");
         t.setDisplayName("New 3");
 
-        wb = XSSFTestDataSamples.writeOutAndReadBack(wb);
-        s1 = wb.getSheetAt(0);
-        s2 = wb.getSheetAt(1);
-        s3 = wb.getSheetAt(2);
-        s4 = wb.getSheetAt(3);
+        XSSFWorkbook wb3 = XSSFTestDataSamples.writeOutAndReadBack(wb2);
+        wb2.close();
+        s1 = wb3.getSheetAt(0);
+        s2 = wb3.getSheetAt(1);
+        s3 = wb3.getSheetAt(2);
+        s4 = wb3.getSheetAt(3);
         assertEquals(0, s1.getTables().size());
         assertEquals(2, s2.getTables().size());
         assertEquals(1, s3.getTables().size());
@@ -93,24 +96,25 @@
         assertEquals(0, s4.getRelations().size());
 
         assertEquals(
-                XSSFRelation.PRINTER_SETTINGS.getContentType(), 
+                XSSFRelation.PRINTER_SETTINGS.getContentType(),
                 s2.getRelations().get(0).getPackagePart().getContentType()
         );
         assertEquals(
-                XSSFRelation.TABLE.getContentType(), 
+                XSSFRelation.TABLE.getContentType(),
                 s2.getRelations().get(1).getPackagePart().getContentType()
         );
         assertEquals(
-                XSSFRelation.TABLE.getContentType(), 
+                XSSFRelation.TABLE.getContentType(),
                 s2.getRelations().get(2).getPackagePart().getContentType()
         );
         assertEquals(
-                XSSFRelation.TABLE.getContentType(), 
+                XSSFRelation.TABLE.getContentType(),
                 s3.getRelations().get(0).getPackagePart().getContentType()
         );
         assertEquals(
                 "/xl/tables/table3.xml",
                 s3.getRelations().get(0).getPackagePart().getPartName().toString()
         );
+        wb3.close();
     }
 

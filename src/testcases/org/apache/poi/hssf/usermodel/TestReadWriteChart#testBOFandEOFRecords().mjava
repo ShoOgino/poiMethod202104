@@ -1,24 +1,27 @@
     /**
      * In the presence of a chart we need to make sure BOF/EOF records still exist.
      */
-    public void testBOFandEOFRecords() {
+    @Test
+    public void testBOFandEOFRecords() throws Exception {
         HSSFWorkbook workbook  = HSSFTestDataSamples.openSampleWorkbook("SimpleChart.xls");
         HSSFSheet       sheet     = workbook.getSheetAt(0);
         HSSFRow         firstRow  = sheet.getRow(0);
         HSSFCell        firstCell = firstRow.getCell(0);
 
         //System.out.println("first assertion for date");
-        assertEquals(new GregorianCalendar(2000, 0, 1, 10, 51, 2).getTime(),
-                     HSSFDateUtil
-                         .getJavaDate(firstCell.getNumericCellValue(), false));
+        Calendar calExp = LocaleUtil.getLocaleCalendar(2000, 0, 1, 10, 51, 2);
+        Date dateAct = HSSFDateUtil.getJavaDate(firstCell.getNumericCellValue(), false);
+        assertEquals(calExp.getTime(), dateAct);
         HSSFRow  row  = sheet.createRow(15);
         HSSFCell cell = row.createCell(1);
 
         cell.setCellValue(22);
         InternalSheet newSheet = workbook.getSheetAt(0).getSheet();
-        List  records  = newSheet.getRecords();
+        List<RecordBase> records  = newSheet.getRecords();
 
         assertTrue(records.get(0) instanceof BOFRecord);
         assertTrue(records.get(records.size() - 1) instanceof EOFRecord);
+        
+        workbook.close();
     }
 

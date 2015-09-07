@@ -1,34 +1,35 @@
 	/**
 	 * Embeded in a non-excel file
 	 */
-	public void testWithEmbeded() throws Exception {
-		POIFSFileSystem fs = new POIFSFileSystem(
-			POIDataSamples.getDocumentInstance().openResourceAsStream("word_with_embeded.doc")
-		);
+	@Test
+    public void testWithEmbeded() throws Exception {
+		POIFSFileSystem fs = null;
+		
+		HSSFWorkbook wbA = null, wbB = null;
+		ExcelExtractor exA = null, exB = null;
 
-		DirectoryNode objPool = (DirectoryNode) fs.getRoot().getEntry("ObjectPool");
-		DirectoryNode dirA = (DirectoryNode) objPool.getEntry("_1269427460");
-		DirectoryNode dirB = (DirectoryNode) objPool.getEntry("_1269427461");
-
-		HSSFWorkbook wbA = new HSSFWorkbook(dirA, fs, true);
-		HSSFWorkbook wbB = new HSSFWorkbook(dirB, fs, true);
-
-		ExcelExtractor exA = new ExcelExtractor(wbA);
 		try {
-    		ExcelExtractor exB = new ExcelExtractor(wbB);
-    		try {
-        		assertEquals("Sheet1\nTest excel file\nThis is the first file\nSheet2\nSheet3\n",
-        				exA.getText());
-        		assertEquals("Sample Excel", exA.getSummaryInformation().getTitle());
-        
-        		assertEquals("Sheet1\nAnother excel file\nThis is the second file\nSheet2\nSheet3\n",
-        				exB.getText());
-        		assertEquals("Sample Excel 2", exB.getSummaryInformation().getTitle());
-    		} finally {
-    		    exB.close();
-    		}
+	        fs = new POIFSFileSystem(POIDataSamples.getDocumentInstance().getFile("word_with_embeded.doc"));
+
+	        DirectoryNode objPool = (DirectoryNode) fs.getRoot().getEntry("ObjectPool");
+	        DirectoryNode dirA = (DirectoryNode) objPool.getEntry("_1269427460");
+	        DirectoryNode dirB = (DirectoryNode) objPool.getEntry("_1269427461");
+		    
+		    wbA = new HSSFWorkbook(dirA, fs, true);
+	        exA = new ExcelExtractor(wbA);
+	        wbB = new HSSFWorkbook(dirB, fs, true);
+            exB = new ExcelExtractor(wbB);
+
+            assertEquals("Sheet1\nTest excel file\nThis is the first file\nSheet2\nSheet3\n", exA.getText());
+    		assertEquals("Sample Excel", exA.getSummaryInformation().getTitle());
+    		assertEquals("Sheet1\nAnother excel file\nThis is the second file\nSheet2\nSheet3\n", exB.getText());
+    		assertEquals("Sample Excel 2", exB.getSummaryInformation().getTitle());
 		} finally {
-		    exA.close();
+            if (exB != null) exB.close();
+            if (wbB != null) wbB.close();
+            if (exA != null) exA.close();
+            if (wbA != null) wbA.close();
+            if (fs != null) fs.close();
 		}
 	}
 

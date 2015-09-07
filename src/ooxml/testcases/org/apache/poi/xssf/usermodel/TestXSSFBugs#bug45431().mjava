@@ -3,48 +3,56 @@
      */
     @Test
     public void bug45431() throws Exception {
-        XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("45431.xlsm");
-        OPCPackage pkg = wb.getPackage();
-        assertTrue(wb.isMacroEnabled());
+        XSSFWorkbook wb1 = XSSFTestDataSamples.openSampleWorkbook("45431.xlsm");
+        OPCPackage pkg1 = wb1.getPackage();
+        assertTrue(wb1.isMacroEnabled());
 
         // Check the various macro related bits can be found
-        PackagePart vba = pkg.getPart(
+        PackagePart vba = pkg1.getPart(
                 PackagingURIHelper.createPartName("/xl/vbaProject.bin")
         );
         assertNotNull(vba);
         // And the drawing bit
-        PackagePart drw = pkg.getPart(
+        PackagePart drw = pkg1.getPart(
                 PackagingURIHelper.createPartName("/xl/drawings/vmlDrawing1.vml")
         );
         assertNotNull(drw);
 
 
         // Save and re-open, both still there
-        XSSFWorkbook nwb = XSSFTestDataSamples.writeOutAndReadBack(wb);
-        OPCPackage nPkg = nwb.getPackage();
-        assertTrue(nwb.isMacroEnabled());
+        XSSFWorkbook wb2 = XSSFTestDataSamples.writeOutAndReadBack(wb1);
+        pkg1.close();
+        wb1.close();
 
-        vba = nPkg.getPart(
+        OPCPackage pkg2 = wb2.getPackage();
+        assertTrue(wb2.isMacroEnabled());
+
+        vba = pkg2.getPart(
                 PackagingURIHelper.createPartName("/xl/vbaProject.bin")
         );
         assertNotNull(vba);
-        drw = nPkg.getPart(
+        drw = pkg2.getPart(
                 PackagingURIHelper.createPartName("/xl/drawings/vmlDrawing1.vml")
         );
         assertNotNull(drw);
 
         // And again, just to be sure
-        nwb = XSSFTestDataSamples.writeOutAndReadBack(nwb);
-        nPkg = nwb.getPackage();
-        assertTrue(nwb.isMacroEnabled());
+        XSSFWorkbook wb3 = XSSFTestDataSamples.writeOutAndReadBack(wb2);
+        pkg2.close();
+        wb2.close();
+        OPCPackage pkg3 = wb3.getPackage();
+        assertTrue(wb3.isMacroEnabled());
 
-        vba = nPkg.getPart(
+        vba = pkg3.getPart(
                 PackagingURIHelper.createPartName("/xl/vbaProject.bin")
         );
         assertNotNull(vba);
-        drw = nPkg.getPart(
+        drw = pkg3.getPart(
                 PackagingURIHelper.createPartName("/xl/drawings/vmlDrawing1.vml")
         );
         assertNotNull(drw);
+
+        pkg3.close();
+        wb3.close();
     }
 

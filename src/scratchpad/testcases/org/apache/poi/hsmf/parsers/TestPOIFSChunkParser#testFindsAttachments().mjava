@@ -1,10 +1,6 @@
-	public void testFindsAttachments() throws IOException {
-	   POIFSFileSystem with = new POIFSFileSystem(
-	         new FileInputStream(samples.getFile("attachment_test_msg.msg"))
-	   );
-      POIFSFileSystem without = new POIFSFileSystem(
-            new FileInputStream(samples.getFile("quick.msg"))
-      );
+   public void testFindsAttachments() throws Exception {
+	  NPOIFSFileSystem with = new NPOIFSFileSystem(samples.getFile("attachment_test_msg.msg"), true);
+      NPOIFSFileSystem without = new NPOIFSFileSystem(samples.getFile("quick.msg"), true);
       AttachmentChunks attachment;
       
       
@@ -33,15 +29,8 @@
 	   
       
       // Check raw details on one without
-      try {
-         without.getRoot().getEntry("__attach_version1.0_#00000000");
-         fail();
-      } catch(FileNotFoundException e) {}
-      try {
-         without.getRoot().getEntry("__attach_version1.0_#00000001");
-         fail();
-      } catch(FileNotFoundException e) {}
-      
+      assertFalse(without.getRoot().hasEntry("__attach_version1.0_#00000000"));
+      assertFalse(without.getRoot().hasEntry("__attach_version1.0_#00000001"));
       
 	   // One with, from the top
       MAPIMessage msgWith = new MAPIMessage(with);
@@ -58,14 +47,9 @@
       assertEquals(89, attachment.attachData.getValue().length);
       
       // Plus check core details are there
-      try {
-         assertEquals("'nicolas1.23456@free.fr'", msgWith.getDisplayTo());
-         assertEquals("Nicolas1 23456", msgWith.getDisplayFrom());
-         assertEquals("test pi\u00e8ce jointe 1", msgWith.getSubject());
-      } catch(ChunkNotFoundException e) {
-         fail();
-      }
-	   
+      assertEquals("'nicolas1.23456@free.fr'", msgWith.getDisplayTo());
+      assertEquals("Nicolas1 23456", msgWith.getDisplayFrom());
+      assertEquals("test pi\u00e8ce jointe 1", msgWith.getSubject());
       
 	   // One without, from the top
       MAPIMessage msgWithout = new MAPIMessage(without);
@@ -74,12 +58,11 @@
       assertEquals(0, msgWithout.getAttachmentFiles().length);
       
       // But has core details
-      try {
-         assertEquals("Kevin Roast", msgWithout.getDisplayTo());
-         assertEquals("Kevin Roast", msgWithout.getDisplayFrom());
-         assertEquals("Test the content transformer", msgWithout.getSubject());
-      } catch(ChunkNotFoundException e) {
-         fail();
-      }
+      assertEquals("Kevin Roast", msgWithout.getDisplayTo());
+      assertEquals("Kevin Roast", msgWithout.getDisplayFrom());
+      assertEquals("Test the content transformer", msgWithout.getSubject());
+
+      without.close();
+      with.close();
    }
 

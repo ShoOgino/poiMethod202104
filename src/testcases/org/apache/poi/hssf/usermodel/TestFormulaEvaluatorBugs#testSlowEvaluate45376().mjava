@@ -1,7 +1,8 @@
     /**
      * The HSSFFormula evaluator performance benefits greatly from caching of intermediate cell values
      */
-    public void testSlowEvaluate45376() {
+    @Test
+    public void testSlowEvaluate45376() throws Exception {
         /*
          * Note - to observe behaviour without caching, disable the call to
          * updateValue() from FormulaCellCacheEntry.updateFormulaResult().
@@ -22,7 +23,7 @@
                     "DATE(YEAR(" + prevCell + "),MONTH(" + prevCell + ")+1,1),NA())";
             cell.setCellFormula(formula);
         }
-        Calendar cal = new GregorianCalendar(2000, 0, 1, 0, 0, 0);
+        Calendar cal = LocaleUtil.getLocaleCalendar(2000, 0, 1, 0, 0, 0);
         row.createCell(0).setCellValue(cal);
 
         // Choose cell A9 instead of A10, so that the failing test case doesn't take too long to execute.
@@ -35,8 +36,8 @@
             // Without caching, evaluating cell 'A9' takes 21845 evaluations which consumes
             // much time (~3 sec on Core 2 Duo 2.2GHz)
             // short-circuit-if optimisation cuts this down to 255 evaluations which is still too high
-            System.err.println("Cell A9 took " + evalCount + " intermediate evaluations");
-            throw new AssertionFailedError("Identifed bug 45376 - Formula evaluator should cache values");
+            // System.err.println("Cell A9 took " + evalCount + " intermediate evaluations");
+            fail("Identifed bug 45376 - Formula evaluator should cache values");
         }
         // With caching, the evaluationCount is 8 which is exactly the
         // number of formula cells that needed to be evaluated.
@@ -51,5 +52,7 @@
 
         // confirm the evaluation result too
         assertEquals(ErrorEval.NA, ve);
+        
+        wb.close();
     }
 

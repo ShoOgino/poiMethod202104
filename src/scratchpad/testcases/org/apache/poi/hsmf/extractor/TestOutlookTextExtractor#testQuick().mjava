@@ -1,8 +1,7 @@
+   @Test
    public void testQuick() throws Exception {
-      POIFSFileSystem simple = new POIFSFileSystem(
-            new FileInputStream(samples.getFile("quick.msg"))
-      );
-      MAPIMessage msg = new MAPIMessage(simple);
+      NPOIFSFileSystem poifs = new NPOIFSFileSystem(samples.getFile("quick.msg"), true);
+      MAPIMessage msg = new MAPIMessage(poifs);
       
       OutlookTextExtactor ext = new OutlookTextExtactor(msg);
       String text = ext.getText();
@@ -13,13 +12,14 @@
       assertEquals(-1, text.indexOf("BCC:"));
       assertEquals(-1, text.indexOf("Attachment:"));
       assertContains(text, "Subject: Test the content transformer\n");
-      Calendar cal = new GregorianCalendar(2007, 5, 14, 9, 42, 55);
-      SimpleDateFormat f = new SimpleDateFormat("E, d MMM yyyy HH:mm:ss Z");
-      f.setTimeZone(TimeZone.getTimeZone("UTC"));
+      Calendar cal = LocaleUtil.getLocaleCalendar(2007, 5, 14, 9, 42, 55);
+      SimpleDateFormat f = new SimpleDateFormat("E, d MMM yyyy HH:mm:ss Z", Locale.ROOT);
+      f.setTimeZone(LocaleUtil.getUserTimeZone());
       String dateText = f.format(cal.getTime());
       assertContains(text, "Date: " + dateText + "\n");
       assertContains(text, "The quick brown fox jumps over the lazy dog");
 
       ext.close();
+      poifs.close();
    }
 

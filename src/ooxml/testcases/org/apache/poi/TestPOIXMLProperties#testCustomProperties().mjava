@@ -1,10 +1,11 @@
     /**
      * Test usermodel API for setting custom properties
      */
-    public void testCustomProperties() {
-        POIXMLDocument wb = new XSSFWorkbook();
+	@Test
+	public void testCustomProperties() throws Exception {
+        POIXMLDocument wb1 = new XSSFWorkbook();
 
-        POIXMLProperties.CustomProperties customProps = wb.getProperties().getCustomProperties();
+        POIXMLProperties.CustomProperties customProps = wb1.getProperties().getCustomProperties();
         customProps.addProperty("test-1", "string val");
         customProps.addProperty("test-2", 1974);
         customProps.addProperty("test-3", 36.6);
@@ -17,9 +18,10 @@
         }
         customProps.addProperty("test-4", true);
 
-        wb = XSSFTestDataSamples.writeOutAndReadBack((XSSFWorkbook)wb);
+        POIXMLDocument wb2 = XSSFTestDataSamples.writeOutAndReadBack((XSSFWorkbook)wb1);
+        wb1.close();
         org.openxmlformats.schemas.officeDocument.x2006.customProperties.CTProperties ctProps =
-                wb.getProperties().getCustomProperties().getUnderlyingProperties();
+                wb2.getProperties().getCustomProperties().getUnderlyingProperties();
         assertEquals(4, ctProps.sizeOfPropertyArray());
         org.openxmlformats.schemas.officeDocument.x2006.customProperties.CTProperty p;
 
@@ -38,7 +40,7 @@
         p = ctProps.getPropertyArray(2);
         assertEquals("{D5CDD505-2E9C-101B-9397-08002B2CF9AE}", p.getFmtid());
         assertEquals("test-3", p.getName());
-        assertEquals(36.6, p.getR8());
+        assertEquals(36.6, p.getR8(), 0);
         assertEquals(4, p.getPid());
 
         p = ctProps.getPropertyArray(3);
@@ -46,5 +48,7 @@
         assertEquals("test-4", p.getName());
         assertEquals(true, p.getBool());
         assertEquals(5, p.getPid());
+        
+        wb2.close();
     }
 

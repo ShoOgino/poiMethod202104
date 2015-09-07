@@ -1,34 +1,41 @@
-	public void testEventExtractor() throws Exception {
+	@Test
+    public void testEventExtractor() throws Exception {
 		// First up, a simple file with string
 		//  based formulas in it
-		EventBasedExcelExtractor extractor = new EventBasedExcelExtractor(
-				new POIFSFileSystem(
-						HSSFTestDataSamples.openSampleFileStream("SimpleWithFormula.xls")
-				)
-		);
+		EventBasedExcelExtractor extractor1 = null;
 		try {
-    		extractor.setIncludeSheetNames(true);
-    
-    		String text = extractor.getText();
+	        extractor1 = new EventBasedExcelExtractor(
+	                new POIFSFileSystem(
+	                        HSSFTestDataSamples.openSampleFileStream("SimpleWithFormula.xls")
+	                )
+	        );
+    		extractor1.setIncludeSheetNames(true);
+        
+    		String text = extractor1.getText();
     		assertEquals("Sheet1\nreplaceme\nreplaceme\nreplacemereplaceme\nSheet2\nSheet3\n", text);
     
-    		extractor.setIncludeSheetNames(false);
-    		extractor.setFormulasNotResults(true);
+    		extractor1.setIncludeSheetNames(false);
+    		extractor1.setFormulasNotResults(true);
     
-    		text = extractor.getText();
+    		text = extractor1.getText();
     		assertEquals("replaceme\nreplaceme\nCONCATENATE(A1,A2)\n", text);
+		} finally {
+		    if (extractor1 != null) extractor1.close();
+		}
+
+		// Now, a slightly longer file with numeric formulas
+		EventBasedExcelExtractor extractor2 = null;
+		try {
+		    extractor2 = new EventBasedExcelExtractor(
+	                new POIFSFileSystem(
+	                        HSSFTestDataSamples.openSampleFileStream("sumifformula.xls")
+	                )
+	        );		    
+		    
+    		extractor2.setIncludeSheetNames(false);
+    		extractor2.setFormulasNotResults(true);
     
-    
-    		// Now, a slightly longer file with numeric formulas
-    		extractor = new EventBasedExcelExtractor(
-    				new POIFSFileSystem(
-    						HSSFTestDataSamples.openSampleFileStream("sumifformula.xls")
-    				)
-    		);
-    		extractor.setIncludeSheetNames(false);
-    		extractor.setFormulasNotResults(true);
-    
-    		text = extractor.getText();
+    		String text = extractor2.getText();
     		assertEquals(
     				"1000\t1\tSUMIF(A1:A5,\">4000\",B1:B5)\n" +
     				"2000\t2\n" +
@@ -38,7 +45,7 @@
     				text
     		);
 		} finally {
-		    extractor.close();
+		    if (extractor2 != null) extractor2.close();
 		}
 	}
 

@@ -1,4 +1,5 @@
-	private static void processRow(HSSFRow row, HSSFCell cell, HSSFFormulaEvaluator formulaEvaluator) {
+	private void processRow(HSSFRow row, HSSFCell cell, HSSFFormulaEvaluator formulaEvaluator)
+	throws EvaluationException {
 		
 		double startDate = makeDate(row, SS.START_YEAR_COLUMN);
 		double endDate = makeDate(row, SS.END_YEAR_COLUMN);
@@ -7,20 +8,11 @@
 		
 		double expectedValue = getDoubleCell(row, SS.EXPECTED_RESULT_COLUMN);
 		
-		double actualValue;
-		try {
-			actualValue = YearFracCalculator.calculate(startDate, endDate, basis);
-		} catch (EvaluationException e) {
-			throw new RuntimeException(e);
-		}
-		if (expectedValue != actualValue) {
-			throw new ComparisonFailure("Direct calculate failed - row " + (row.getRowNum()+1), 
-					String.valueOf(expectedValue), String.valueOf(actualValue));
-		}
+		double actualValue = YearFracCalculator.calculate(startDate, endDate, basis);
+
+		String loc = " - row " + (row.getRowNum()+1);
+		assertEquals("Direct calculate failed"+loc, expectedValue, actualValue, 0);
 		actualValue = formulaEvaluator.evaluate(cell).getNumberValue();
-		if (expectedValue != actualValue) {
-			throw new ComparisonFailure("Formula evaluate failed - row " + (row.getRowNum()+1), 
-					String.valueOf(expectedValue), String.valueOf(actualValue));
-		}
+		assertEquals("Formula evaluate failed"+loc, expectedValue, actualValue, 0);
 	}
 

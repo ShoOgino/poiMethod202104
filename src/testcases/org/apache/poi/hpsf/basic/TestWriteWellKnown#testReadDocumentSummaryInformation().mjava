@@ -5,6 +5,7 @@
      * the document summary information stream in the root directory and calling
      * its get... methods.</p>
      */
+    @Test
     public void testReadDocumentSummaryInformation()
             throws FileNotFoundException, IOException,
             NoPropertySetStreamException, MarkUnsupportedException,
@@ -21,36 +22,18 @@
             }
         });
 
-        for (int i = 0; i < docs.length; i++)
-        {
+        for (final File doc : docs) {
+            NPOIFSFileSystem poifs = null;
             try {
-                final File doc = docs[i];
-    
                 /* Read a test document <em>doc</em> into a POI filesystem. */
-                final POIFSFileSystem poifs = new POIFSFileSystem(new FileInputStream(doc));
+                poifs = new NPOIFSFileSystem(doc, true);
                 final DirectoryEntry dir = poifs.getRoot();
-                DocumentEntry dsiEntry = null;
-                try
-                {
-                    dsiEntry = (DocumentEntry) dir.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME);
-                }
-                catch (FileNotFoundException ex)
-                {
-                    /*
-                     * A missing document summary information stream is not an error
-                     * and therefore silently ignored here.
-                     */
-                }
-    
                 /*
                  * If there is a document summry information stream, read it from
                  * the POI filesystem.
                  */
-                if (dsiEntry != null)
-                {
-                    final DocumentInputStream dis = new DocumentInputStream(dsiEntry);
-                    final PropertySet ps = new PropertySet(dis);
-                    final DocumentSummaryInformation dsi = new DocumentSummaryInformation(ps);
+                if (dir.hasEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME)) {
+                    final DocumentSummaryInformation dsi = getDocumentSummaryInformation(poifs);
     
                     /* Execute the get... methods. */
                     dsi.getByteCount();
@@ -72,7 +55,9 @@
                     dsi.getSlideCount();
                 }
             } catch (Exception e) {
-                throw new IOException("While handling file " + docs[i], e);
+                throw new IOException("While handling file " + doc, e);
+            } finally {
+                if (poifs != null) poifs.close();
             }
         }
     }

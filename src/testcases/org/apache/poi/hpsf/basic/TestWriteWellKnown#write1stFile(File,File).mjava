@@ -1,0 +1,112 @@
+    /*
+     * Write all properties supported by HPSF to the summary information
+     * (e.g. author, edit date, application name) and to the document
+     * summary information (e.g. company, manager).
+     */
+    private static CustomProperties write1stFile(File fileIn, File fileOut) throws Exception {
+        /* Read a test document <em>doc1</em> into a POI filesystem. */
+        NPOIFSFileSystem poifs = new NPOIFSFileSystem(fileIn, false);
+
+        /*
+         * Read the summary information stream and the document summary
+         * information stream from the POI filesystem.
+         *
+         * Please note that the result consists of SummaryInformation and
+         * DocumentSummaryInformation instances which are in memory only. To
+         * make them permanent they have to be written to a POI filesystem
+         * explicitly (overwriting the former contents). Then the POI filesystem
+         * should be saved to a file.
+         */
+        SummaryInformation si = getSummaryInformation(poifs);
+        DocumentSummaryInformation dsi = getDocumentSummaryInformation(poifs);
+
+        si.setApplicationName(P_APPLICATION_NAME);
+        si.setAuthor(P_AUTHOR);
+        si.setCharCount(P_CHAR_COUNT);
+        si.setComments(P_COMMENTS);
+        si.setCreateDateTime(P_CREATE_DATE_TIME);
+        si.setEditTime(P_EDIT_TIME);
+        si.setKeywords(P_KEYWORDS);
+        si.setLastAuthor(P_LAST_AUTHOR);
+        si.setLastPrinted(P_LAST_PRINTED);
+        si.setLastSaveDateTime(P_LAST_SAVE_DATE_TIME);
+        si.setPageCount(P_PAGE_COUNT);
+        si.setRevNumber(P_REV_NUMBER);
+        si.setSecurity(P_SECURITY);
+        si.setSubject(P_SUBJECT);
+        si.setTemplate(P_TEMPLATE);
+        // FIXME (byte array properties not yet implemented): si.setThumbnail(P_THUMBNAIL);
+        si.setTitle(P_TITLE);
+        si.setWordCount(P_WORD_COUNT);
+
+        dsi.setByteCount(P_BYTE_COUNT);
+        dsi.setCategory(P_CATEGORY);
+        dsi.setCompany(P_COMPANY);
+        // FIXME (byte array properties not yet implemented): dsi.setDocparts(P_DOCPARTS);
+        // FIXME (byte array properties not yet implemented): dsi.setHeadingPair(P_HEADING_PAIR);
+        dsi.setHiddenCount(P_HIDDEN_COUNT);
+        dsi.setLineCount(P_LINE_COUNT);
+        dsi.setLinksDirty(P_LINKS_DIRTY);
+        dsi.setManager(P_MANAGER);
+        dsi.setMMClipCount(P_MM_CLIP_COUNT);
+        dsi.setNoteCount(P_NOTE_COUNT);
+        dsi.setParCount(P_PAR_COUNT);
+        dsi.setPresentationFormat(P_PRESENTATION_FORMAT);
+        dsi.setScale(P_SCALE);
+        dsi.setSlideCount(P_SLIDE_COUNT);
+
+        CustomProperties cps = dsi.getCustomProperties();
+        assertNull(cps);
+        cps = new CustomProperties();
+        cps.put("Schl\u00fcssel \u00e4",    "Wert \u00e4");
+        cps.put("Schl\u00fcssel \u00e4\u00f6",   "Wert \u00e4\u00f6");
+        cps.put("Schl\u00fcssel \u00e4\u00f6\u00fc",  "Wert \u00e4\u00f6\u00fc");
+        cps.put("Schl\u00fcssel \u00e4\u00f6\u00fc\u00d6", "Wert \u00e4\u00f6\u00fc\u00d6");
+        cps.put("positive_Integer", POSITIVE_INTEGER);
+        cps.put("positive_Long", POSITIVE_LONG);
+        cps.put("positive_Double", POSITIVE_DOUBLE);
+        cps.put("negative_Integer", NEGATIVE_INTEGER);
+        cps.put("negative_Long", NEGATIVE_LONG);
+        cps.put("negative_Double", NEGATIVE_DOUBLE);
+        cps.put("Boolean", Boolean.TRUE);
+        cps.put("Date", now);
+        cps.put("max_Integer", MAX_INTEGER);
+        cps.put("min_Integer", MIN_INTEGER);
+        cps.put("max_Long", MAX_LONG);
+        cps.put("min_Long", MIN_LONG);
+        cps.put("max_Double", MAX_DOUBLE);
+        cps.put("min_Double", MIN_DOUBLE);
+        
+        // Check the keys went in
+        assertTrue(cps.containsKey("Schl\u00fcssel \u00e4"));
+        assertTrue(cps.containsKey("Boolean"));
+        
+        // Check the values went in
+        assertEquals("Wert \u00e4", cps.get("Schl\u00fcssel \u00e4"));
+        assertEquals(Boolean.TRUE, cps.get("Boolean"));
+        assertTrue(cps.containsValue(Boolean.TRUE));
+        assertTrue(cps.containsValue("Wert \u00e4"));
+        
+        // Check that things that aren't in aren't in
+        assertFalse(cps.containsKey("False Boolean"));
+        assertFalse(cps.containsValue(Boolean.FALSE));
+
+        // Save as our custom properties
+        dsi.setCustomProperties(cps);
+
+        
+        /* Write the summary information stream and the document summary
+         * information stream to the POI filesystem. */
+        si.write(poifs.getRoot(), SummaryInformation.DEFAULT_STREAM_NAME);
+        dsi.write(poifs.getRoot(), DocumentSummaryInformation.DEFAULT_STREAM_NAME);
+
+        /* Write the POI filesystem to a (temporary) file <em>doc2</em>
+         * and close the latter. */
+        OutputStream out = new FileOutputStream(fileOut);
+        poifs.writeFilesystem(out);
+        out.close();
+        poifs.close();
+        
+        return cps;
+    }
+
