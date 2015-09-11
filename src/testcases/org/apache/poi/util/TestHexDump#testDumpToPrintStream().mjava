@@ -1,80 +1,40 @@
     @Test
     public void testDumpToPrintStream() throws IOException {
-        byte[] testArray = new byte[ 256 ];
+        byte[] testArray = testArray();
+        ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
+        PrintStream out = new PrintStream(byteOut,true,LocaleUtil.CHARSET_1252.name());
+        ByteArrayInputStream byteIn = new ByteArrayInputStream(testArray);
+        byteIn.mark(256);
+        String str;
 
-        for (int j = 0; j < 256; j++)
-        {
-            testArray[ j ] = ( byte ) j;
-        }
+        byteIn.reset();
+        byteOut.reset();
+        HexDump.dump(byteIn, out, 0, 256);
+        str = new String(byteOut.toByteArray(), LocaleUtil.CHARSET_1252);
+        assertTrue("Had: \n" + str, str.contains("0123456789:;<=>?"));
 
-        InputStream in = new ByteArrayInputStream(testArray);
-        try {
-            ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-            PrintStream out = new PrintStream(byteOut);
-            try {
-                HexDump.dump(in, out, 0, 256);
-            } finally {
-                out.close();
-            }
-            
-            String str = new String(byteOut.toByteArray());
-            assertTrue("Had: \n" + str, 
-                    str.contains("0123456789:;<=>?"));
-        } finally {
-            in.close();
-        }
-        
-        in = new ByteArrayInputStream(testArray);
-        try {
-            ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-            PrintStream out = new PrintStream(byteOut);
-            try {
-                // test with more than we have
-                HexDump.dump(in, out, 0, 1000);
-            } finally {
-                out.close();
-            }
-            
-            String str = new String(byteOut.toByteArray());
-            assertTrue("Had: \n" + str, 
-                    str.contains("0123456789:;<=>?"));
-        } finally {
-            in.close();
-        }        
+        // test with more than we have
+        byteIn.reset();
+        byteOut.reset();
+        HexDump.dump(byteIn, out, 0, 1000);
+        str = new String(byteOut.toByteArray(), LocaleUtil.CHARSET_1252);
+        assertTrue("Had: \n" + str, str.contains("0123456789:;<=>?"));
 
-        in = new ByteArrayInputStream(testArray);
-        try {
-            ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-            PrintStream out = new PrintStream(byteOut);
-            try {
-                // test with -1
-                HexDump.dump(in, out, 0, -1);
-            } finally {
-                out.close();
-            }
-            
-            String str = new String(byteOut.toByteArray());
-            assertTrue("Had: \n" + str, 
-                    str.contains("0123456789:;<=>?"));
-        } finally {
-            in.close();
-        }
-        
-        in = new ByteArrayInputStream(testArray);
-        try {
-            ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
-            PrintStream out = new PrintStream(byteOut);
-            try {
-                HexDump.dump(in, out, 1, 235);
-            } finally {
-                out.close();
-            }
-            
-            String str = new String(byteOut.toByteArray());
-            assertTrue("Line contents should be moved by one now, but Had: \n" + str, 
+        // test with -1
+        byteIn.reset();
+        byteOut.reset();
+        HexDump.dump(byteIn, out, 0, -1);
+        str = new String(byteOut.toByteArray(), LocaleUtil.CHARSET_1252);
+        assertTrue("Had: \n" + str, str.contains("0123456789:;<=>?"));
+
+        byteIn.reset();
+        byteOut.reset();
+        HexDump.dump(byteIn, out, 1, 235);
+        str = new String(byteOut.toByteArray(), LocaleUtil.CHARSET_1252);
+        assertTrue("Line contents should be moved by one now, but Had: \n" + str,
                     str.contains("123456789:;<=>?@"));
-        } finally {
-            in.close();
-        }
+
+        byteIn.close();
+        byteOut.close();
     }
 
