@@ -1,0 +1,38 @@
+    private static void processFunctionGroup(List<Object[]> data, HSSFSheet sheet, final int startRowIndex, String testFocusFunctionName, String filename) {
+        HSSFFormulaEvaluator evaluator = new HSSFFormulaEvaluator(sheet.getWorkbook());
+
+        String currentGroupComment = "";
+        final int maxRows = sheet.getLastRowNum()+1;
+        for(int rowIndex=startRowIndex; rowIndex<maxRows; rowIndex++) {
+            HSSFRow r = sheet.getRow(rowIndex);
+            if(r == null) {
+                continue;
+            }
+            String newMarkerValue = getCellTextValue(r, SS.COLUMN_INDEX_MARKER, "marker");                    
+            if(SS.TEST_CASES_END_MARKER.equalsIgnoreCase(newMarkerValue)) {
+                // normal exit point
+                return;
+            }
+            if(SS.SKIP_CURRENT_TEST_CASE_MARKER.equalsIgnoreCase(newMarkerValue)) {
+                // currently disabled test case row
+                continue;
+            }
+            if(newMarkerValue != null) {
+                currentGroupComment = newMarkerValue;
+            }
+            HSSFCell evalCell = r.getCell(SS.COLUMN_INDEX_EVALUATION);
+            if (evalCell == null || evalCell.getCellType() != HSSFCell.CELL_TYPE_FORMULA) {
+                continue;
+            }
+            String rowComment = getCellTextValue(r, SS.COLUMN_ROW_COMMENT, "row comment");
+
+            String testName = (currentGroupComment+'\n'+rowComment).replace("null", "").trim().replace("\n", " - ");
+            if ("".equals(testName)) {
+                testName = evalCell.getCellFormula();
+            }
+            
+            data.add(new Object[]{testName, filename, sheet, rowIndex, evaluator});
+        }
+        fail("Missing end marker '" + SS.TEST_CASES_END_MARKER + "' on sheet '" + sheet.getSheetName() + "'");
+    }
+
