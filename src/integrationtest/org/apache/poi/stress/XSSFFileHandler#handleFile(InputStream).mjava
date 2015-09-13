@@ -1,21 +1,26 @@
-	@Override
+    @Override
     public void handleFile(InputStream stream) throws Exception {
-	    // ignore password protected files
-	    if (POIXMLDocumentHandler.isEncrypted(stream)) return;
-	    
-		XSSFWorkbook wb = new XSSFWorkbook(stream);
-		
-		// use the combined handler for HSSF/XSSF
-		handleWorkbook(wb, ".xlsx");
-		
+        // ignore password protected files
+        if (POIXMLDocumentHandler.isEncrypted(stream)) return;
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        IOUtils.copy(stream, out);
+
+        XSSFWorkbook wb = new XSSFWorkbook(new ByteArrayInputStream(out.toByteArray()));
+        
+        // use the combined handler for HSSF/XSSF
+        handleWorkbook(wb, ".xlsx");
+        
         // TODO: some documents fail currently...
         //XSSFFormulaEvaluator evaluator = new XSSFFormulaEvaluator(wb);
         //evaluator.evaluateAll();
 
-		// also verify general POIFS-stuff
-		new POIXMLDocumentHandler().handlePOIXMLDocument(wb);
-		
-		// and finally ensure that exporting to XML works
-		exportToXML(wb);
-	}
+        // also verify general POIFS-stuff
+        new POIXMLDocumentHandler().handlePOIXMLDocument(wb);
+        
+        // and finally ensure that exporting to XML works
+        exportToXML(wb);
+        
+        checkXSSFReader(OPCPackage.open(new ByteArrayInputStream(out.toByteArray())));
+    }
 
