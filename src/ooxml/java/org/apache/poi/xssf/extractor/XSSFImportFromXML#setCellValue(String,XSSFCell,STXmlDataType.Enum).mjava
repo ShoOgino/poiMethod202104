@@ -1,0 +1,39 @@
+    private void setCellValue(String value, XSSFCell cell, STXmlDataType.Enum xmlDataType) {
+        DataType type = DataType.getDataType(xmlDataType);
+        try {
+            if (value.isEmpty() || type == null) {
+                cell.setCellValue((String) null);
+            } else {
+                switch (type) {
+                case BOOLEAN:
+                    cell.setCellValue(Boolean.parseBoolean(value));
+                    break;
+                case DOUBLE:
+                    cell.setCellValue(Double.parseDouble(value));
+                    break;
+                case INTEGER:
+                    cell.setCellValue(Integer.parseInt(value));
+                    break;
+                case DATE:
+                    DateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", LocaleUtil.getUserLocale());
+                    Date date = sdf.parse(value);
+                    cell.setCellValue(date);
+                    if (!DateUtil.isValidExcelDate(cell.getNumericCellValue())) {
+                        cell.setCellValue(value);
+                    }
+                    break;
+                case STRING:
+                default:
+                    cell.setCellValue(value.trim());
+                    break;
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(String.format(LocaleUtil.getUserLocale(), "Unable to format value '%s' as %s for cell %s", value,
+                    type, new CellReference(cell).formatAsString()));
+        } catch (ParseException e) {
+            throw new IllegalArgumentException(String.format(LocaleUtil.getUserLocale(), "Unable to format value '%s' as %s for cell %s", value,
+                    type, new CellReference(cell).formatAsString()));
+        }
+    }
+
