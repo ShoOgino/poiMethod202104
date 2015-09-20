@@ -3,11 +3,11 @@
      *  Mid in it, can give #VALUE in Excel
      */
     @Test
-    public void bug55747() {
-        Workbook wb = _testDataProvider.createWorkbook();
-        FormulaEvaluator ev = wb.getCreationHelper().createFormulaEvaluator();
-        Sheet s = wb.createSheet();
-        
+    public void bug55747() throws Exception {
+        Workbook wb1 = _testDataProvider.createWorkbook();
+        FormulaEvaluator ev = wb1.getCreationHelper().createFormulaEvaluator();
+        Sheet s = wb1.createSheet();
+
         Row row = s.createRow(0);
         row.createCell(0).setCellValue("abc");
         row.createCell(1).setCellValue("");
@@ -17,37 +17,39 @@
         cell.setCellFormula("IF(A1<>\"\",MID(A1,1,2),\" \")");
         ev.evaluateAll();
         assertEquals("ab", cell.getStringCellValue());
-        
+
         cell = row.createCell(6);
         cell.setCellFormula("IF(B1<>\"\",MID(A1,1,2),\"empty\")");
         ev.evaluateAll();
         assertEquals("empty", cell.getStringCellValue());
-        
+
         cell = row.createCell(7);
         cell.setCellFormula("IF(A1<>\"\",IF(C1<>\"\",MID(A1,1,2),\"c1\"),\"c2\")");
         ev.evaluateAll();
         assertEquals("ab", cell.getStringCellValue());
-        
+
         // Write it back out, and re-read
-        wb = _testDataProvider.writeOutAndReadBack(wb);
-        ev = wb.getCreationHelper().createFormulaEvaluator();
-        s = wb.getSheetAt(0);
+        Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1);
+        wb1.close();
+        ev = wb2.getCreationHelper().createFormulaEvaluator();
+        s = wb2.getSheetAt(0);
         row = s.getRow(0);
-        
+
         // Check read ok, and re-evaluate fine
         cell = row.getCell(5);
         assertEquals("ab", cell.getStringCellValue());
         ev.evaluateFormulaCell(cell);
         assertEquals("ab", cell.getStringCellValue());
-        
+
         cell = row.getCell(6);
         assertEquals("empty", cell.getStringCellValue());
         ev.evaluateFormulaCell(cell);
         assertEquals("empty", cell.getStringCellValue());
-        
+
         cell = row.getCell(7);
         assertEquals("ab", cell.getStringCellValue());
         ev.evaluateFormulaCell(cell);
         assertEquals("ab", cell.getStringCellValue());
+        wb2.close();
     }
 

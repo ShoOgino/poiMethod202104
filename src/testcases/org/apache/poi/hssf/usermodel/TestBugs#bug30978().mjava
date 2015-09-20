@@ -4,17 +4,17 @@
      *  used for printing stuff.
      */
     @Test
-    public void bug30978() {
-        HSSFWorkbook wb = openSample("30978-alt.xls");
-        assertEquals(1, wb.getNumberOfNames());
-        assertEquals(3, wb.getNumberOfSheets());
+    public void bug30978() throws Exception {
+        HSSFWorkbook wb1 = openSample("30978-alt.xls");
+        assertEquals(1, wb1.getNumberOfNames());
+        assertEquals(3, wb1.getNumberOfSheets());
 
         // Check all names fit within range, and use
         //  DeletedArea3DPtg
-        InternalWorkbook w = wb.getWorkbook();
+        InternalWorkbook w = wb1.getWorkbook();
         for(int i=0; i<w.getNumNames(); i++) {
             NameRecord r = w.getNameRecord(i);
-            assertTrue(r.getSheetNumber() <= wb.getNumberOfSheets());
+            assertTrue(r.getSheetNumber() <= wb1.getNumberOfSheets());
 
             Ptg[] nd = r.getNameDefinition();
             assertEquals(1, nd.length);
@@ -23,16 +23,16 @@
 
 
         // Delete the 2nd sheet
-        wb.removeSheetAt(1);
+        wb1.removeSheetAt(1);
 
 
         // Re-check
-        assertEquals(1, wb.getNumberOfNames());
-        assertEquals(2, wb.getNumberOfSheets());
+        assertEquals(1, wb1.getNumberOfNames());
+        assertEquals(2, wb1.getNumberOfSheets());
 
         for(int i=0; i<w.getNumNames(); i++) {
             NameRecord r = w.getNameRecord(i);
-            assertTrue(r.getSheetNumber() <= wb.getNumberOfSheets());
+            assertTrue(r.getSheetNumber() <= wb1.getNumberOfSheets());
 
             Ptg[] nd = r.getNameDefinition();
             assertEquals(1, nd.length);
@@ -41,19 +41,21 @@
 
 
         // Save and re-load
-        wb = writeOutAndReadBack(wb);
-        w = wb.getWorkbook();
+        HSSFWorkbook wb2 = writeOutAndReadBack(wb1);
+        wb1.close();
+        w = wb2.getWorkbook();
 
-        assertEquals(1, wb.getNumberOfNames());
-        assertEquals(2, wb.getNumberOfSheets());
+        assertEquals(1, wb2.getNumberOfNames());
+        assertEquals(2, wb2.getNumberOfSheets());
 
         for(int i=0; i<w.getNumNames(); i++) {
             NameRecord r = w.getNameRecord(i);
-            assertTrue(r.getSheetNumber() <= wb.getNumberOfSheets());
+            assertTrue(r.getSheetNumber() <= wb2.getNumberOfSheets());
 
             Ptg[] nd = r.getNameDefinition();
             assertEquals(1, nd.length);
             assertTrue(nd[0] instanceof DeletedArea3DPtg);
         }
+        wb2.close();
     }
 

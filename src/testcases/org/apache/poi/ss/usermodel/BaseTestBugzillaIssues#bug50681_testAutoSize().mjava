@@ -1,5 +1,5 @@
     @Test
-    public final void bug50681_testAutoSize() {
+    public final void bug50681_testAutoSize() throws Exception {
         Workbook wb = _testDataProvider.createWorkbook();
         BaseTestSheetAutosizeColumn.fixFonts(wb);
         Sheet sheet = wb.createSheet("Sheet1");
@@ -17,12 +17,12 @@
 
         // autoSize will fail if required fonts are not installed, skip this test then
         Font font = wb.getFontAt(cell0.getCellStyle().getFontIndex());
-        Assume.assumeTrue("Cannot verify auoSizeColumn() because the necessary Fonts are not installed on this machine: " + font, 
+        Assume.assumeTrue("Cannot verify auoSizeColumn() because the necessary Fonts are not installed on this machine: " + font,
                 SheetUtil.canComputeColumnWidht(font));
-        
+
         assertEquals("Expecting no indentation in this test",
                 0, cell0.getCellStyle().getIndention());
-        assertEquals("Expecting no rotation in this test", 
+        assertEquals("Expecting no rotation in this test",
                 0, cell0.getCellStyle().getRotation());
 
         // check computing size up to a large size
@@ -35,21 +35,22 @@
         double widthBeforeCell = SheetUtil.getCellWidth(cell0, 8, null, false);
         double widthBeforeCol = SheetUtil.getColumnWidth(sheet, 0, false);
 
-        String info = widthManual + "/" + widthBeforeCell + "/" + widthBeforeCol + "/" + 
-                        SheetUtil.canComputeColumnWidht(font) + "/" + computeCellWidthFixed(font, "1") + "/" + computeCellWidthFixed(font, "w") + "/" + 
+        String info = widthManual + "/" + widthBeforeCell + "/" + widthBeforeCol + "/" +
+                        SheetUtil.canComputeColumnWidht(font) + "/" + computeCellWidthFixed(font, "1") + "/" + computeCellWidthFixed(font, "w") + "/" +
                         computeCellWidthFixed(font, "1w") + "/" + computeCellWidthFixed(font, "0000") + "/" + computeCellWidthFixed(font, longValue);
         assertTrue("Expected to have cell width > 0 when computing manually, but had " + info, widthManual > 0);
         assertTrue("Expected to have cell width > 0 BEFORE auto-size, but had " + info, widthBeforeCell > 0);
         assertTrue("Expected to have column width > 0 BEFORE auto-size, but had " + info, widthBeforeCol > 0);
 
         sheet.autoSizeColumn(0);
-        
+
         double width = SheetUtil.getColumnWidth(sheet, 0, false);
         assertTrue("Expected to have column width > 0 AFTER auto-size, but had " + width, width > 0);
         width = SheetUtil.getCellWidth(cell0, 8, null, false);
         assertTrue("Expected to have cell width > 0 AFTER auto-size, but had " + width, width > 0);
-        
+
         assertEquals(255*256, sheet.getColumnWidth(0)); // maximum column width is 255 characters
         sheet.setColumnWidth(0, sheet.getColumnWidth(0)); // Bug 506819 reports exception at this point
+        wb.close();
     }
 
