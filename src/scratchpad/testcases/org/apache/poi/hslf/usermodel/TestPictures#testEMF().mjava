@@ -1,13 +1,23 @@
     /**
      * Test read/write EMF
      */
+    @Test
     public void testEMF() throws Exception {
         HSLFSlideShow ppt = new HSLFSlideShow();
 
         HSLFSlide slide = ppt.createSlide();
         byte[] src_bytes = slTests.readFile("wrench.emf");
         HSLFPictureData data = ppt.addPicture(src_bytes, PictureType.EMF);
+        EMF.NativeHeader nHeader = new EMF.NativeHeader(src_bytes, 0);
+        final int expWidth = 190, expHeight = 115;
+        Dimension nDim = nHeader.getSize();
+        assertEquals(expWidth, nDim.getWidth(), 0);
+        assertEquals(expHeight, nDim.getHeight(), 0);
 
+        Dimension dim = data.getImageDimension();
+        assertEquals(expWidth, dim.getWidth(), 0);
+        assertEquals(expHeight, dim.getHeight(), 0);
+        
         HSLFPictureShape pict = new HSLFPictureShape(data);
         assertEquals(data.getIndex(), pict.getPictureIndex());
         slide.addShape(pict);
@@ -26,15 +36,22 @@
         assertEquals(data.getIndex(), pict.getPictureIndex());
 
         //check picture data
-        HSLFPictureData[] pictures = ppt.getPictureData();
+        List<HSLFPictureData> pictures = ppt.getPictureData();
+        assertEquals(1, pictures.size());
+        
+        HSLFPictureData pd = pictures.get(0);
+        dim = pd.getImageDimension();
+        assertEquals(expWidth, dim.width);
+        assertEquals(expHeight, dim.height);
+        
         //the Picture shape refers to the PictureData object in the Presentation
-        assertEquals(pict.getPictureData(), pictures[0]);
+        assertEquals(pict.getPictureData(), pd);
 
-        assertEquals(1, pictures.length);
-        assertEquals(PictureType.EMF, pictures[0].getType());
-        assertTrue(pictures[0] instanceof EMF);
+        assertEquals(1, pictures.size());
+        assertEquals(PictureType.EMF, pd.getType());
+        assertTrue(pd instanceof EMF);
         //compare the content of the initial file with what is stored in the PictureData
-        byte[] ppt_bytes = pictures[0].getData();
+        byte[] ppt_bytes = pd.getData();
         assertArrayEquals(src_bytes, ppt_bytes);
     }
 

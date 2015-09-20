@@ -1,12 +1,23 @@
     /**
      * Test read/write Macintosh PICT
      */
+    @Test
     public void testPICT() throws Exception {
         HSLFSlideShow ppt = new HSLFSlideShow();
 
         HSLFSlide slide = ppt.createSlide();
         byte[] src_bytes = slTests.readFile("cow.pict");
         HSLFPictureData data = ppt.addPicture(src_bytes, PictureType.PICT);
+        PICT.NativeHeader nHeader = new PICT.NativeHeader(src_bytes, 512);
+        final int expWidth = 197, expHeight = 137;
+        Dimension nDim = nHeader.getSize();
+        assertEquals(expWidth, nDim.getWidth(), 0);
+        assertEquals(expHeight, nDim.getHeight(), 0);
+        
+        Dimension dim = data.getImageDimension();
+        assertEquals(expWidth, dim.getWidth(), 0);
+        assertEquals(expHeight, dim.getHeight(), 0);
+        
         HSLFPictureShape pict = new HSLFPictureShape(data);
         assertEquals(data.getIndex(), pict.getPictureIndex());
         slide.addShape(pict);
@@ -25,15 +36,22 @@
         assertEquals(data.getIndex(), pict.getPictureIndex());
 
         //check picture data
-        HSLFPictureData[] pictures = ppt.getPictureData();
+        List<HSLFPictureData> pictures = ppt.getPictureData();
+        assertEquals(1, pictures.size());
+        
+        HSLFPictureData pd = pictures.get(0);
+        dim = pd.getImageDimension();
+        assertEquals(expWidth, dim.width);
+        assertEquals(expHeight, dim.height);
+        
         //the Picture shape refers to the PictureData object in the Presentation
-        assertEquals(pict.getPictureData(), pictures[0]);
+        assertEquals(pict.getPictureData(), pd);
 
-        assertEquals(1, pictures.length);
-        assertEquals(PictureType.PICT, pictures[0].getType());
-        assertTrue(pictures[0] instanceof PICT);
+        assertEquals(1, pictures.size());
+        assertEquals(PictureType.PICT, pd.getType());
+        assertTrue(pd instanceof PICT);
         //compare the content of the initial file with what is stored in the PictureData
-        byte[] ppt_bytes = pictures[0].getData();
+        byte[] ppt_bytes = pd.getData();
         assertEquals(src_bytes.length, ppt_bytes.length);
         //in PICT the first 512 bytes are MAC specific and may not be preserved, ignore them
         byte[] b1 = new byte[src_bytes.length-512];

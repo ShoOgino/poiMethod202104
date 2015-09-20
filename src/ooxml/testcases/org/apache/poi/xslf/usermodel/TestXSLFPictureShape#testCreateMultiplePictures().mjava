@@ -1,7 +1,7 @@
     @Test
-    public void testCreateMultiplePictures() {
-        XMLSlideShow ppt = new XMLSlideShow();
-        XSLFSlide slide1 = ppt.createSlide();
+    public void testCreateMultiplePictures() throws Exception {
+        XMLSlideShow ppt1 = new XMLSlideShow();
+        XSLFSlide slide1 = ppt1.createSlide();
         XSLFGroupShape group1 = slide1.createGroup();
 
 
@@ -9,7 +9,7 @@
         // first add 20 images to the slide
         for (int i = 0; i < 20; i++, pictureIndex++) {
             byte[] data = new byte[]{(byte)pictureIndex};
-            XSLFPictureData elementData = ppt.addPicture(data, PictureType.PNG);
+            XSLFPictureData elementData = ppt1.addPicture(data, PictureType.PNG);
             assertEquals(pictureIndex, elementData.getIndex());   // added images have indexes 0,1,2....19
             XSLFPictureShape picture = slide1.createPicture(elementData);
             // POI saves images as image1.png, image2.png, etc.
@@ -21,7 +21,7 @@
         // and then add next 20 images to a group
         for (int i = 0; i < 20; i++, pictureIndex++) {
             byte[] data = new byte[]{(byte)pictureIndex};
-            XSLFPictureData elementData = ppt.addPicture(data, PictureType.PNG);
+            XSLFPictureData elementData = ppt1.addPicture(data, PictureType.PNG);
             XSLFPictureShape picture = group1.createPicture(elementData);
             // POI saves images as image1.png, image2.png, etc.
             assertEquals(pictureIndex, elementData.getIndex());   // added images have indexes 0,1,2....19
@@ -32,10 +32,11 @@
 
         // serialize, read back and check that all images are there
 
-        ppt = XSLFTestDataSamples.writeOutAndReadBack(ppt);
+        XMLSlideShow ppt2 = XSLFTestDataSamples.writeOutAndReadBack(ppt1);
+        ppt1.close();
         // pictures keyed by file name
         Map<String, XSLFPictureData> pics = new HashMap<String, XSLFPictureData>();
-        for(XSLFPictureData p : ppt.getAllPictures()){
+        for(XSLFPictureData p : ppt2.getPictureData()){
             pics.put(p.getFileName(), p);
         }
         assertEquals(40, pics.size());
@@ -47,5 +48,6 @@
             assertEquals(fileName, data.getFileName());
             assertArrayEquals(data1, data.getData());
         }
+        ppt2.close();
     }
 

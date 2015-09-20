@@ -1,35 +1,37 @@
     @Test
-    public void testCreate() {
-        XMLSlideShow ppt = new XMLSlideShow();
-        assertEquals(0, ppt.getAllPictures().size());
+    public void testCreate() throws Exception {
+        XMLSlideShow ppt1 = new XMLSlideShow();
+        assertEquals(0, ppt1.getPictureData().size());
         byte[] data1 = new byte[100];
         for(int i = 0;i < 100;i++) { data1[i] = (byte)i; }
-        XSLFPictureData pdata1 = ppt.addPicture(data1, PictureType.JPEG);
+        XSLFPictureData pdata1 = ppt1.addPicture(data1, PictureType.JPEG);
         assertEquals(0, pdata1.getIndex());
-        assertEquals(1, ppt.getAllPictures().size());
+        assertEquals(1, ppt1.getPictureData().size());
 
-        XSLFSlide slide = ppt.createSlide();
+        XSLFSlide slide = ppt1.createSlide();
         XSLFPictureShape shape1 = slide.createPicture(pdata1);
         assertNotNull(shape1.getPictureData());
         assertArrayEquals(data1, shape1.getPictureData().getData());
 
         byte[] data2 = new byte[200];
         for(int i = 0;i < 200;i++) { data2[i] = (byte)i; }
-        XSLFPictureData pdata2 = ppt.addPicture(data2, PictureType.PNG);
+        XSLFPictureData pdata2 = ppt1.addPicture(data2, PictureType.PNG);
         XSLFPictureShape shape2 = slide.createPicture(pdata2);
         assertNotNull(shape2.getPictureData());
         assertEquals(1, pdata2.getIndex());
-        assertEquals(2, ppt.getAllPictures().size());
+        assertEquals(2, ppt1.getPictureData().size());
         assertArrayEquals(data2, shape2.getPictureData().getData());
 
-        ppt = XSLFTestDataSamples.writeOutAndReadBack(ppt);
-        List<XSLFPictureData> pics = ppt.getAllPictures();
+        XMLSlideShow ppt2 = XSLFTestDataSamples.writeOutAndReadBack(ppt1);
+        ppt1.close();
+        List<XSLFPictureData> pics = ppt2.getPictureData();
         assertEquals(2, pics.size());
         assertArrayEquals(data1, pics.get(0).getData());
         assertArrayEquals(data2, pics.get(1).getData());
 
-        List<XSLFShape> shapes = ppt.getSlides().get(0).getShapes();
+        List<XSLFShape> shapes = ppt2.getSlides().get(0).getShapes();
         assertArrayEquals(data1, ((XSLFPictureShape) shapes.get(0)).getPictureData().getData());
         assertArrayEquals(data2, ((XSLFPictureShape) shapes.get(1)).getPictureData().getData());
+        ppt2.close();
     }
 

@@ -1,18 +1,16 @@
     @Override
     public void setData(byte[] data) throws IOException {
         int pos = 0;
-        AldusHeader aldus = new AldusHeader();
-        aldus.read(data, pos);
-        pos += aldus.getSize();
+        NativeHeader nHeader = new NativeHeader(data, pos);
+        pos += nHeader.getLength();
 
         byte[] compressed = compress(data, pos, data.length-pos);
 
         Header header = new Header();
-        header.wmfsize = data.length - aldus.getSize();
-        header.bounds = new java.awt.Rectangle((short)aldus.left, (short)aldus.top, (short)aldus.right-(short)aldus.left, (short)aldus.bottom-(short)aldus.top);
-        //coefficient to translate from WMF dpi to 96pdi
-        int coeff = 96*Units.EMU_PER_POINT/aldus.inch;
-        header.size = new java.awt.Dimension(header.bounds.width*coeff, header.bounds.height*coeff);
+        header.wmfsize = data.length - nHeader.getLength();
+        header.bounds = new Rectangle((short)nHeader.left, (short)nHeader.top, (short)nHeader.right-(short)nHeader.left, (short)nHeader.bottom-(short)nHeader.top);
+        Dimension nDim = nHeader.getSize();
+        header.size = new Dimension(Units.toEMU(nDim.getWidth()), Units.toEMU(nDim.getHeight()));
         header.zipsize = compressed.length;
 
         byte[] checksum = getChecksum(data);

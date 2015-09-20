@@ -1,0 +1,34 @@
+    /**
+     * Determine and cache image properties
+     */
+    protected void cacheProperties() {
+        if (_origSize == null || checksum == null) {
+            byte data[] = getData();
+            checksum = IOUtils.calculateChecksum(data);
+            
+            switch (getType()) {
+            case EMF:
+                _origSize = new EMF.NativeHeader(data, 0).getSize();
+                break;
+            case WMF:
+                // wmf files in pptx usually have their placeable header 
+                // stripped away, so this returns only the dummy size
+                _origSize = new WMF.NativeHeader(data, 0).getSize();
+                break;
+            case PICT:
+                _origSize = new PICT.NativeHeader(data, 0).getSize();
+                break;
+            default:
+                try {
+                    BufferedImage img = ImageIO.read(new ByteArrayInputStream(data));
+                    _origSize = (img == null) ? new Dimension() : new Dimension(img.getWidth(), img.getHeight());
+                } catch (IOException e) {
+                    logger.log(POILogger.WARN, "Can't determine image dimensions", e);
+                    // failed to get information, set dummy size
+                    _origSize = new Dimension(200,200);
+                }
+                break;
+            }
+        }
+    }
+

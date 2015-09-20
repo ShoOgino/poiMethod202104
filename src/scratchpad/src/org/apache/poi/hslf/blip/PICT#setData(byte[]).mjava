@@ -1,21 +1,23 @@
     @Override
     public void setData(byte[] data) throws IOException {
-        int pos = 512; //skip the first 512 bytes - they are MAC specific crap
-        byte[] compressed = compress(data, pos, data.length-pos);
-
+        // skip the first 512 bytes - they are MAC specific crap
+        final int nOffset = NativeHeader.PICT_HEADER_OFFSET;
+        NativeHeader nHeader = new NativeHeader(data, nOffset);
+        
         Header header = new Header();
-        header.wmfsize = data.length - 512;
-        //we don't have a PICT reader in java, have to set default image size  200x200
-        header.bounds = new java.awt.Rectangle(0, 0, 200, 200);
-        header.size = new java.awt.Dimension(header.bounds.width*Units.EMU_PER_POINT,
-                header.bounds.height*Units.EMU_PER_POINT);
+        header.wmfsize = data.length - nOffset;
+        byte[] compressed = compress(data, nOffset, header.wmfsize);
         header.zipsize = compressed.length;
+        header.bounds = nHeader.bounds;
+        Dimension nDim = nHeader.getSize();
+        header.size = new Dimension(Units.toEMU(nDim.getWidth()), Units.toEMU(nDim.getHeight()));
 
         byte[] checksum = getChecksum(data);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(checksum);
-
-        out.write(new byte[16]); //16-byte prefix which is safe to ignore
+        if (uidInstanceCount == 2) {
+            out.write(checksum);
+        }
         header.write(out);
         out.write(compressed);
 

@@ -2,16 +2,21 @@
     public void setData(byte[] data) throws IOException {
         byte[] compressed = compress(data, 0, data.length);
 
+        NativeHeader nHeader = new NativeHeader(data, 0);
+        
         Header header = new Header();
         header.wmfsize = data.length;
-        //we don't have a EMF reader in java, have to set default image size  200x200
-        header.bounds = new java.awt.Rectangle(0, 0, 200, 200);
-        header.size = new java.awt.Dimension(header.bounds.width*Units.EMU_PER_POINT, header.bounds.height*Units.EMU_PER_POINT);
+        header.bounds = nHeader.deviceBounds;
+        Dimension nDim = nHeader.getSize();
+        header.size = new Dimension(Units.toEMU(nDim.getWidth()), Units.toEMU(nDim.getHeight()));
         header.zipsize = compressed.length;
 
         byte[] checksum = getChecksum(data);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         out.write(checksum);
+        if (uidInstanceCount == 2) {
+            out.write(checksum);
+        }
         header.write(out);
         out.write(compressed);
 
