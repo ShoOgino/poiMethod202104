@@ -1,0 +1,30 @@
+    protected static SlideShow<?,?> createSlideShow(String factoryClass, Object args[]) throws IOException, EncryptedDocumentException {
+        try {
+            Class<?> clazz = Thread.currentThread().getContextClassLoader().loadClass(factoryClass);
+            Class<?> argsClz[] = new Class<?>[args.length];
+            int i=0;
+            for (Object o : args) {
+                Class<?> c = o.getClass();
+                if (Boolean.class.isAssignableFrom(c)) {
+                    c = boolean.class;
+                } else if (InputStream.class.isAssignableFrom(c)) {
+                    c = InputStream.class;
+                }
+                argsClz[i++] = c;
+            }
+            Method m = clazz.getMethod("createSlideShow", argsClz);
+            return (SlideShow<?,?>)m.invoke(null, args);
+        } catch (InvocationTargetException e) {
+            Throwable t = e.getCause();
+            if (t instanceof IOException) {
+                throw (IOException)t;
+            } else if (t instanceof EncryptedDocumentException) {
+                throw (EncryptedDocumentException)t;
+            } else {
+                throw new IOException(t);
+            }
+        } catch (Exception e) {
+            throw new IOException(e);
+        }
+    }
+

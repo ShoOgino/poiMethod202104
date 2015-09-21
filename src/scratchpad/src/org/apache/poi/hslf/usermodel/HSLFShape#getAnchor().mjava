@@ -4,8 +4,36 @@
      *
      * @return the anchor of this shape
      */
-    public java.awt.Rectangle getAnchor(){
-        Rectangle2D anchor2d = getAnchor2D();
-        return anchor2d.getBounds();
+    public Rectangle getAnchor() {
+        EscherSpRecord spRecord = getEscherChild(EscherSpRecord.RECORD_ID);
+        int flags = spRecord.getFlags();
+        int x1,y1,x2,y2;
+        EscherChildAnchorRecord childRec = getEscherChild(EscherChildAnchorRecord.RECORD_ID);
+        boolean useChildRec = ((flags & EscherSpRecord.FLAG_CHILD) != 0);
+        if (useChildRec && childRec != null){
+            x1 = childRec.getDx1();
+            y1 = childRec.getDy1();
+            x2 = childRec.getDx2();
+            y2 = childRec.getDy2();
+        } else {
+            if (useChildRec) {
+                logger.log(POILogger.WARN, "EscherSpRecord.FLAG_CHILD is set but EscherChildAnchorRecord was not found");
+            }
+            EscherClientAnchorRecord clientRec = getEscherChild(EscherClientAnchorRecord.RECORD_ID);
+            x1 = clientRec.getCol1();
+            y1 = clientRec.getFlag();
+            x2 = clientRec.getDx1();
+            y2 = clientRec.getRow1();
+        }
+
+        // TODO: find out where this -1 value comes from at #57820 (link to ms docs?)
+        Rectangle anchor = new Rectangle(
+            (int)(x1 == -1 ? -1 : Units.masterToPoints(x1)),
+            (int)(y1 == -1 ? -1 : Units.masterToPoints(y1)),
+            (int)(x2 == -1 ? -1 : Units.masterToPoints(x2-x1)),
+            (int)(y2 == -1 ? -1 : Units.masterToPoints(y2-y1))
+        );
+        
+        return anchor;
     }
 
