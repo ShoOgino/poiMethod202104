@@ -1,56 +1,47 @@
-public void walkTree(int depth, int startPos, int maxLen) {
+public void walkTree(int depth, int startPos, int maxLen) throws IOException {
 	int pos = startPos;
 	int endPos = startPos + maxLen;
-	int indent = depth;
+	final String ind = (depth == 0) ? "%1$s" : "%1$"+depth+"s";
 	while(pos <= endPos - 8) {
-		long type = LittleEndian.getUShort(_docstream,pos+2);
-		long len = LittleEndian.getUInt(_docstream,pos+4);
-		byte opt = _docstream[pos];
+		long type = LittleEndian.getUShort(docstream,pos+2);
+		long len = LittleEndian.getUInt(docstream,pos+4);
+		byte opt = docstream[pos];
 
-		String ind = "";
-		for(int i=0; i<indent; i++) { ind += " "; }
-
-		System.out.println(ind + "At position " + pos + " (" + makeHex(pos) + "):");
-		System.out.println(ind + "Type is " + type + " (" + makeHex((int)type) + "), len is " + len + " (" + makeHex((int)len) + ")");
+		String fmt = ind+"At position %2$d (%2$04x): type is %3$d (%3$04x), len is %4$d (%4$04x)";
+		out.println(String.format(Locale.ROOT, fmt, "", pos, type, len));
 
 		// See if we know about the type of it
 		String recordName = RecordTypes.recordName((int)type);
 
 		// Jump over header, and think about going on more
 		pos += 8;
-		if(recordName != null) {
-			System.out.println(ind + "That's a " + recordName);
+		out.println(String.format(Locale.ROOT, ind+"That's a %2$s", "", recordName));
 
-			// Now check if it's a container or not
-			int container = opt & 0x0f;
+		// Now check if it's a container or not
+		int container = opt & 0x0f;
 
-			// BinaryTagData seems to contain records, but it
-			//  isn't tagged as doing so. Try stepping in anyway
-			if(type == 5003L && opt == 0L) {
-				container = 0x0f;
-			}
-
-			if(type == 0L || (container != 0x0f)) {
-				System.out.println();
-			} else if (type == 1035l || type == 1036l) {
-				// Special Handling of 1035=PPDrawingGroup and 1036=PPDrawing
-				System.out.println();
-
-				if(ddfEscher) {
-					// Seems to be:
-					walkEscherDDF((indent+3),pos+8,(int)len-8);
-				} else if(basicEscher) {
-					walkEscherBasic((indent+3),pos+8,(int)len-8);
-				}
-			} else {
-				// General container record handling code
-				System.out.println();
-				walkTree((indent+2),pos,(int)len);
-			}
-		} else {
-			System.out.println(ind + "** unknown record **");
-			System.out.println();
+		// BinaryTagData seems to contain records, but it
+		//  isn't tagged as doing so. Try stepping in anyway
+		if(type == 5003L && opt == 0L) {
+			container = 0x0f;
 		}
+
+        out.println();
+		if (type != 0L && container == 0x0f) {
+		    if (type == 1035l || type == 1036l) {
+    			// Special Handling of 1035=PPDrawingGroup and 1036=PPDrawing
+    			if(ddfEscher) {
+    				// Seems to be:
+    				walkEscherDDF((depth+3),pos+8,(int)len-8);
+    			} else if(basicEscher) {
+    				walkEscherBasic((depth+3),pos+8,(int)len-8);
+    			}
+    		} else {
+    			// General container record handling code
+    			walkTree((depth+2),pos,(int)len);
+    		}
+		}
+
 		pos += (int)len;
 	}
   }

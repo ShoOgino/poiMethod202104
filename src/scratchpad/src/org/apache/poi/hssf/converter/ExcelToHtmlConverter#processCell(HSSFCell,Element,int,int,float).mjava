@@ -25,16 +25,13 @@
                 }
                 break;
             case HSSFCell.CELL_TYPE_NUMERIC:
-                HSSFCellStyle style = cellStyle;
-                if ( style == null )
-                {
-                    value = String.valueOf( cell.getNumericCellValue() );
-                }
-                else
-                {
-                    value = ( _formatter.formatRawCellContents(
-                            cell.getNumericCellValue(), style.getDataFormat(),
-                            style.getDataFormatString() ) );
+                double nValue = cell.getNumericCellValue();
+                if ( cellStyle == null ) {
+                    value = Double.toString(nValue);
+                } else {
+                    short df = cellStyle.getDataFormat();
+                    String dfs = cellStyle.getDataFormatString();
+                    value = _formatter.formatRawCellContents(nValue, df, dfs);
                 }
                 break;
             case HSSFCell.CELL_TYPE_BOOLEAN:
@@ -72,27 +69,22 @@
 
         final boolean noText = ExcelToHtmlUtils.isEmpty( value );
         final boolean wrapInDivs = !noText && isUseDivsToSpan()
-                && !cellStyle.getWrapText();
+                && (cellStyle == null || !cellStyle.getWrapText());
 
-        final short cellStyleIndex = cellStyle.getIndex();
-        if ( cellStyleIndex != 0 )
+        if ( cellStyle != null && cellStyle.getIndex() != 0 )
         {
             @SuppressWarnings("resource")
             HSSFWorkbook workbook = cell.getRow().getSheet().getWorkbook();
             String mainCssClass = getStyleClassName( workbook, cellStyle );
             
-            if ( wrapInDivs )
-            {
+            if ( wrapInDivs ) {
                 tableCellElement.setAttribute( "class", mainCssClass + " "
                         + cssClassContainerCell );
-            }
-            else
-            {
+            } else {
                 tableCellElement.setAttribute( "class", mainCssClass );
             }
 
-            if ( noText )
-            {
+            if ( noText ) {
                 /*
                  * if cell style is defined (like borders, etc.) but cell text
                  * is empty, add "&nbsp;" to output, so browser won't collapse
@@ -139,8 +131,9 @@
             innerDivStyle.append( "overflow:hidden;max-height:" );
             innerDivStyle.append( normalHeightPt );
             innerDivStyle.append( "pt;white-space:nowrap;" );
-            ExcelToHtmlUtils.appendAlign( innerDivStyle,
-                    cellStyle.getAlignment() );
+            if (cellStyle != null) {
+                ExcelToHtmlUtils.appendAlign( innerDivStyle, cellStyle.getAlignment() );
+            }
             htmlDocumentFacade.addStyleClass( outerDiv, cssClassPrefixDiv,
                     innerDivStyle.toString() );
 
@@ -153,6 +146,6 @@
             tableCellElement.appendChild( text );
         }
 
-        return ExcelToHtmlUtils.isEmpty( value ) && cellStyleIndex == 0;
+        return ExcelToHtmlUtils.isEmpty( value ) && (cellStyle == null || cellStyle.getIndex() == 0);
     }
 

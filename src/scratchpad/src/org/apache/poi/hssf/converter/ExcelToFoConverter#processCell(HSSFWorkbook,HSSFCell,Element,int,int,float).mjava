@@ -26,20 +26,17 @@
                 }
                 break;
             case HSSFCell.CELL_TYPE_NUMERIC:
-                HSSFCellStyle style = cellStyle;
-                if ( style == null )
-                {
-                    value = String.valueOf( cell.getNumericCellValue() );
-                }
-                else
-                {
-                    value = ( _formatter.formatRawCellContents(
-                            cell.getNumericCellValue(), style.getDataFormat(),
-                            style.getDataFormatString() ) );
+                double nValue = cell.getNumericCellValue();
+                if ( cellStyle == null ) {
+                    value = Double.toString( nValue );
+                } else {
+                    short df = cellStyle.getDataFormat();
+                    String dfs = cellStyle.getDataFormatString();
+                    value = _formatter.formatRawCellContents(nValue, df, dfs );
                 }
                 break;
             case HSSFCell.CELL_TYPE_BOOLEAN:
-                value = String.valueOf( cell.getBooleanCellValue() );
+                value = Boolean.toString( cell.getBooleanCellValue() );
                 break;
             case HSSFCell.CELL_TYPE_ERROR:
                 value = ErrorEval.getText( cell.getErrorCellValue() );
@@ -60,7 +57,7 @@
             value = _formatter.formatCellValue( cell );
             break;
         case HSSFCell.CELL_TYPE_BOOLEAN:
-            value = String.valueOf( cell.getBooleanCellValue() );
+            value = Boolean.toString( cell.getBooleanCellValue() );
             break;
         case HSSFCell.CELL_TYPE_ERROR:
             value = ErrorEval.getText( cell.getErrorCellValue() );
@@ -72,20 +69,16 @@
         }
 
         final boolean noText = ExcelToHtmlUtils.isEmpty( value );
-        final boolean wrapInDivs = !noText && !cellStyle.getWrapText();
+        final boolean wrapInDivs = !noText && (cellStyle == null || !cellStyle.getWrapText());
 
         final boolean emptyStyle = isEmptyStyle( cellStyle );
-        if ( !emptyStyle )
-        {
-            if ( noText )
-            {
-                /*
-                 * if cell style is defined (like borders, etc.) but cell text
-                 * is empty, add "&nbsp;" to output, so browser won't collapse
-                 * and ignore cell
-                 */
-                value = "\u00A0";
-            }
+        if ( !emptyStyle && noText ) {
+            /*
+             * if cell style is defined (like borders, etc.) but cell text
+             * is empty, add "&nbsp;" to output, so browser won't collapse
+             * and ignore cell
+             */
+            value = "\u00A0";
         }
 
         if ( isOutputLeadingSpacesAsNonBreaking() && value.startsWith( " " ) )
@@ -93,13 +86,15 @@
             StringBuilder builder = new StringBuilder();
             for ( int c = 0; c < value.length(); c++ )
             {
-                if ( value.charAt( c ) != ' ' )
+                if ( value.charAt( c ) != ' ' ) {
                     break;
+                }
                 builder.append( '\u00a0' );
             }
 
-            if ( value.length() != builder.length() )
+            if ( value.length() != builder.length() ) {
                 builder.append( value.substring( builder.length() ) );
+            }
 
             value = builder.toString();
         }
