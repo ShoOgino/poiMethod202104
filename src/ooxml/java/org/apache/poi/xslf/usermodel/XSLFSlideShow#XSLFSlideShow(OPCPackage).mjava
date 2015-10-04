@@ -1,25 +1,27 @@
-    @SuppressWarnings("deprecation")
+	@SuppressWarnings("deprecation")
 	public XSLFSlideShow(OPCPackage container) throws OpenXML4JException, IOException, XmlException {
 		super(container);
-		
+
 		if(getCorePart().getContentType().equals(XSLFRelation.THEME_MANAGER.getContentType())) {
-		   rebase(getPackage());
+			rebase(getPackage());
 		}
-		
+
 		presentationDoc =
 			PresentationDocument.Factory.parse(getCorePart().getInputStream());
-		
-      embedds = new LinkedList<PackagePart>();
-      for (CTSlideIdListEntry ctSlide : getSlideReferences().getSldIdArray()) {
-             PackagePart corePart = getCorePart();
-	          PackagePart slidePart = corePart.getRelatedPart(
-	                corePart.getRelationship(ctSlide.getId2()));
 
-	          for(PackageRelationship rel : slidePart.getRelationshipsByType(OLE_OBJECT_REL_TYPE))
-	              embedds.add(slidePart.getRelatedPart(rel)); // TODO: Add this reference to each slide as well
+		embedds = new LinkedList<PackagePart>();
+		for (CTSlideIdListEntry ctSlide : getSlideReferences().getSldIdArray()) {
+			PackagePart corePart = getCorePart();
+			PackagePart slidePart = corePart.getRelatedPart(corePart.getRelationship(ctSlide.getId2()));
 
-	          for(PackageRelationship rel : slidePart.getRelationshipsByType(PACK_OBJECT_REL_TYPE))
-                  embedds.add(slidePart.getRelatedPart(rel));
+			for(PackageRelationship rel : slidePart.getRelationshipsByType(OLE_OBJECT_REL_TYPE)) {
+				// TODO: Add this reference to each slide as well
+				embedds.add(slidePart.getRelatedPart(rel));
+			}
+
+			for (PackageRelationship rel : slidePart.getRelationshipsByType(PACK_OBJECT_REL_TYPE)) {
+				embedds.add(slidePart.getRelatedPart(rel));
+			}
 		}
 	}
 
