@@ -1,16 +1,13 @@
-    @SuppressWarnings("deprecation")
-    public CTCols addCleanColIntoCols(CTCols cols, CTCol col) {
-        CTCols newCols = CTCols.Factory.newInstance();
-        for (CTCol c : cols.getColArray()) {
-            cloneCol(newCols, c);
-        }
-        cloneCol(newCols, col);
-        sortColumns(newCols);
-        CTCol[] colArray = newCols.getColArray();
-        CTCols returnCols = CTCols.Factory.newInstance();
-        sweepCleanColumns(returnCols, colArray, col);
-        colArray = returnCols.getColArray();
-        cols.setColArray(colArray);
-        return returnCols;
+    public CTCols addCleanColIntoCols(CTCols cols, CTCol newCol) {
+        // Performance issue. If we encapsulated management of min/max in this
+        // class then we could keep trackedCols as state,
+        // making this log(N) rather than Nlog(N). We do this for the initial
+        // read above.
+        TreeSet<CTCol> trackedCols = new TreeSet<CTCol>(
+                CTColComparator.BY_MIN_MAX);
+        trackedCols.addAll(cols.getColList());
+        addCleanColIntoCols(cols, newCol, trackedCols);
+        cols.setColArray(trackedCols.toArray(new CTCol[0]));
+        return cols;
     }
 

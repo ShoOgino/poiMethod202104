@@ -1,0 +1,36 @@
+    private void addCleanColIntoCols(final CTCols cols, final CTCol newCol, final TreeSet<CTCol> trackedCols) {
+        List<CTCol> overlapping = getOverlappingCols(newCol, trackedCols);
+        if (overlapping.isEmpty()) {
+            trackedCols.add(cloneCol(cols, newCol));
+            return;
+        }
+
+        trackedCols.removeAll(overlapping);
+        for (CTCol existing : overlapping) {
+            // We add up to three columns for each existing one: non-overlap
+            // before, overlap, non-overlap after.
+            long[] overlap = getOverlap(newCol, existing);
+
+            CTCol overlapCol = cloneCol(cols, existing, overlap);
+            setColumnAttributes(newCol, overlapCol);
+            trackedCols.add(overlapCol);
+
+            CTCol beforeCol = existing.getMin() < newCol.getMin() ? existing
+                    : newCol;
+            long[] before = new long[] {
+                    Math.min(existing.getMin(), newCol.getMin()),
+                    overlap[0] - 1 };
+            if (before[0] <= before[1]) {
+                trackedCols.add(cloneCol(cols, beforeCol, before));
+            }
+
+            CTCol afterCol = existing.getMax() > newCol.getMax() ? existing
+                    : newCol;
+            long[] after = new long[] { overlap[1] + 1,
+                    Math.max(existing.getMax(), newCol.getMax()) };
+            if (after[0] <= after[1]) {
+                trackedCols.add(cloneCol(cols, afterCol, after));
+            }
+        }
+    }
+

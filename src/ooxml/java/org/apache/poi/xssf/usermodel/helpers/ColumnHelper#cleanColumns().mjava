@@ -1,26 +1,21 @@
     @SuppressWarnings("deprecation")
     public void cleanColumns() {
-        this.newCols = CTCols.Factory.newInstance();
-
-        CTCols aggregateCols = CTCols.Factory.newInstance();
+        TreeSet<CTCol> trackedCols = new TreeSet<CTCol>(CTColComparator.BY_MIN_MAX);
+        CTCols newCols = CTCols.Factory.newInstance();
         CTCols[] colsArray = worksheet.getColsArray();
-        assert(colsArray != null);
-        
-        for (CTCols cols : colsArray) {
-            for (CTCol col : cols.getColArray()) {
-                cloneCol(aggregateCols, col);
+        int i = 0;
+        for (i = 0; i < colsArray.length; i++) {
+            CTCols cols = colsArray[i];
+            CTCol[] colArray = cols.getColArray();
+            for (CTCol col : colArray) {
+                addCleanColIntoCols(newCols, col, trackedCols);
             }
         }
-        
-        sortColumns(aggregateCols);
-        
-        CTCol[] colArray = aggregateCols.getColArray();
-        sweepCleanColumns(newCols, colArray, null);
-        
-        int i = colsArray.length;
         for (int y = i - 1; y >= 0; y--) {
             worksheet.removeCols(y);
         }
+        
+        newCols.setColArray(trackedCols.toArray(new CTCol[trackedCols.size()]));
         worksheet.addNewCols();
         worksheet.setColsArray(0, newCols);
     }
