@@ -2,11 +2,11 @@
      * Setting ForceFormulaRecalculation on sheets
      */
     @Test
-    public void forceRecalculation() throws Exception {
-        HSSFWorkbook workbook = HSSFTestDataSamples.openSampleWorkbook("UncalcedRecord.xls");
+    public void forceRecalculation() throws IOException {
+        HSSFWorkbook wb1 = HSSFTestDataSamples.openSampleWorkbook("UncalcedRecord.xls");
 
-        HSSFSheet sheet = workbook.getSheetAt(0);
-        HSSFSheet sheet2 = workbook.getSheetAt(0);
+        HSSFSheet sheet = wb1.getSheetAt(0);
+        HSSFSheet sheet2 = wb1.getSheetAt(0);
         HSSFRow row = sheet.getRow(0);
         row.createCell(0).setCellValue(5);
         row.createCell(1).setCellValue(8);
@@ -14,22 +14,14 @@
         assertFalse(sheet2.getForceFormulaRecalculation());
 
         // Save and manually verify that on column C we have 0, value in template
-        File tempFile = TempFile.createTempFile("uncalced_err", ".xls" );
-        FileOutputStream fout = new FileOutputStream( tempFile );
-        workbook.write( fout );
-        fout.close();
+        HSSFTestDataSamples.writeOutAndReadBack(wb1).close();
         sheet.setForceFormulaRecalculation(true);
         assertTrue(sheet.getForceFormulaRecalculation());
 
         // Save and manually verify that on column C we have now 13, calculated value
-        tempFile = TempFile.createTempFile("uncalced_succ", ".xls");
-        tempFile.delete();
-        fout = new FileOutputStream( tempFile );
-        workbook.write( fout );
-        fout.close();
-
         // Try it can be opened
-        HSSFWorkbook wb2 = new HSSFWorkbook(new FileInputStream(tempFile));
+        HSSFWorkbook wb2 = HSSFTestDataSamples.writeOutAndReadBack(wb1);
+        wb1.close();
 
         // And check correct sheet settings found
         sheet = wb2.getSheetAt(0);
@@ -40,32 +32,29 @@
         // Now turn if back off again
         sheet.setForceFormulaRecalculation(false);
 
-        fout = new FileOutputStream( tempFile );
-        wb2.write( fout );
-        fout.close();
-        wb2 = new HSSFWorkbook(new FileInputStream(tempFile));
+        HSSFWorkbook wb3 = HSSFTestDataSamples.writeOutAndReadBack(wb2);
+        wb2.close();
 
-        assertFalse(wb2.getSheetAt(0).getForceFormulaRecalculation());
-        assertFalse(wb2.getSheetAt(1).getForceFormulaRecalculation());
-        assertFalse(wb2.getSheetAt(2).getForceFormulaRecalculation());
+        assertFalse(wb3.getSheetAt(0).getForceFormulaRecalculation());
+        assertFalse(wb3.getSheetAt(1).getForceFormulaRecalculation());
+        assertFalse(wb3.getSheetAt(2).getForceFormulaRecalculation());
 
         // Now add a new sheet, and check things work
         //  with old ones unset, new one set
-        HSSFSheet s4 = wb2.createSheet();
+        HSSFSheet s4 = wb3.createSheet();
         s4.setForceFormulaRecalculation(true);
 
         assertFalse(sheet.getForceFormulaRecalculation());
         assertFalse(sheet2.getForceFormulaRecalculation());
         assertTrue(s4.getForceFormulaRecalculation());
 
-        fout = new FileOutputStream( tempFile );
-        wb2.write( fout );
-        fout.close();
-
-        HSSFWorkbook wb3 = new HSSFWorkbook(new FileInputStream(tempFile));
-        assertFalse(wb3.getSheetAt(0).getForceFormulaRecalculation());
-        assertFalse(wb3.getSheetAt(1).getForceFormulaRecalculation());
-        assertFalse(wb3.getSheetAt(2).getForceFormulaRecalculation());
-        assertTrue(wb3.getSheetAt(3).getForceFormulaRecalculation());
+        HSSFWorkbook wb4 = HSSFTestDataSamples.writeOutAndReadBack(wb3);
+        wb3.close();
+        
+        assertFalse(wb4.getSheetAt(0).getForceFormulaRecalculation());
+        assertFalse(wb4.getSheetAt(1).getForceFormulaRecalculation());
+        assertFalse(wb4.getSheetAt(2).getForceFormulaRecalculation());
+        assertTrue(wb4.getSheetAt(3).getForceFormulaRecalculation());
+        wb4.close();
     }
 

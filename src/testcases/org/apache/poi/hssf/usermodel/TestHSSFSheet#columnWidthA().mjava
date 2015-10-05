@@ -1,12 +1,12 @@
     @Test
-    public void columnWidthA() {
+    public void columnWidthA() throws IOException {
         //check we can correctly read column widths from a reference workbook
-        HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook("colwidth.xls");
+        HSSFWorkbook wb1 = HSSFTestDataSamples.openSampleWorkbook("colwidth.xls");
 
         //reference values
         int[] ref = {365, 548, 731, 914, 1097, 1280, 1462, 1645, 1828, 2011, 2194, 2377, 2560, 2742, 2925, 3108, 3291, 3474, 3657};
 
-        HSSFSheet sh = wb.getSheetAt(0);
+        HSSFSheet sh = wb1.getSheetAt(0);
         for (char i = 'A'; i <= 'S'; i++) {
             int idx = i - 'A';
             int w = sh.getColumnWidth(idx);
@@ -14,7 +14,7 @@
         }
 
         //the second sheet doesn't have overridden column widths
-        sh = wb.getSheetAt(1);
+        sh = wb1.getSheetAt(1);
         int def_width = sh.getDefaultColumnWidth();
         for (char i = 'A'; i <= 'S'; i++) {
             int idx = i - 'A';
@@ -23,10 +23,11 @@
             //getColumnWidth returns width measured in 1/256th units
             assertEquals(def_width*256, w);
         }
+        wb1.close();
 
         //test new workbook
-        wb = new HSSFWorkbook();
-        sh = wb.createSheet();
+        HSSFWorkbook wb2 = new HSSFWorkbook();
+        sh = wb2.createSheet();
         sh.setDefaultColumnWidth(10);
         assertEquals(10, sh.getDefaultColumnWidth());
         assertEquals(256*10, sh.getColumnWidth(0));
@@ -39,9 +40,10 @@
         }
 
         //serialize and read again
-        wb = HSSFTestDataSamples.writeOutAndReadBack(wb);
+        HSSFWorkbook wb3 = HSSFTestDataSamples.writeOutAndReadBack(wb2);
+        wb2.close();
 
-        sh = wb.getSheetAt(0);
+        sh = wb3.getSheetAt(0);
         assertEquals(10, sh.getDefaultColumnWidth());
         //columns A-C have default width
         assertEquals(256*10, sh.getColumnWidth(0));
@@ -56,5 +58,6 @@
         // check for 16-bit signed/unsigned error:
         sh.setColumnWidth(0, 40000);
         assertEquals(40000, sh.getColumnWidth(0));
+        wb3.close();
     }
 
