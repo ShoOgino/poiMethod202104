@@ -1,6 +1,13 @@
    @Override
    public void close() throws IOException {
-      if (srcFile != null) {
+	   // also ensure that all buffers are unmapped so we do not keep files locked on Windows
+	   // We consider it a bug if a Buffer is still in use now! 
+       for(ByteBuffer buffer : buffersToClean) {
+           unmap(buffer);
+       }
+       buffersToClean.clear();
+
+       if (srcFile != null) {
           // see http://bugs.java.com/bugdatabase/view_bug.do?bug_id=4796385
           srcFile.close();
       } else {
