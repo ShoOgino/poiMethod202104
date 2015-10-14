@@ -35,23 +35,26 @@
                 targetHeader = solveReference(targetHeader);
 
 
-                if(!(targetHeader instanceof StringValueEval))
-                    columnCondition = false;
-                else if (getColumnForName(targetHeader, db) == -1)
+                if(!(targetHeader instanceof StringValueEval)) {
+                    throw new EvaluationException(ErrorEval.VALUE_INVALID);
+                }
+                
+                if (getColumnForName(targetHeader, db) == -1)
                     // No column found, it's again a special column that accepts formulas.
                     columnCondition = false;
 
                 if(columnCondition == true) { // normal column condition
                     // Should not throw, checked above.
-                    ValueEval target = db.getValue(
+                    ValueEval value = db.getValue(
                             row, getColumnForName(targetHeader, db));
-                    // Must be a string.
-                    String conditionString = getStringFromValueEval(condition);
-                    if(!testNormalCondition(target, conditionString)) {
+                    if(!testNormalCondition(value, condition)) {
                         matches = false;
                         break;
                     }
                 } else { // It's a special formula condition.
+                    if(getStringFromValueEval(condition).isEmpty()) {
+                        throw new EvaluationException(ErrorEval.VALUE_INVALID);
+                    }
                     throw new NotImplementedException(
                             "D* function with formula conditions");
                 }

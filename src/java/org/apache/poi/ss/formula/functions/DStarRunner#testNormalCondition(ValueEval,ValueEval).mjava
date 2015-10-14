@@ -1,0 +1,88 @@
+    /**
+     * Test a value against a simple (< > <= >= = starts-with) condition string.
+     *
+     * @param value The value to check.
+     * @param condition The condition to check for.
+     * @return Whether the condition holds.
+     * @throws EvaluationException If comparison operator and operands don't match.
+     */
+    private static boolean testNormalCondition(ValueEval value, ValueEval condition)
+            throws EvaluationException {
+        if(condition instanceof StringEval) {
+            String conditionString = ((StringEval)condition).getStringValue();
+        
+            if(conditionString.startsWith("<")) { // It's a </<= condition.
+                String number = conditionString.substring(1);
+                if(number.startsWith("=")) {
+                    number = number.substring(1);
+                    return testNumericCondition(value, operator.smallerEqualThan, number);
+                } else {
+                    return testNumericCondition(value, operator.smallerThan, number);
+                }
+            }
+            else if(conditionString.startsWith(">")) { // It's a >/>= condition.
+                String number = conditionString.substring(1);
+                if(number.startsWith("=")) {
+                    number = number.substring(1);
+                    return testNumericCondition(value, operator.largerEqualThan, number);
+                } else {
+                    return testNumericCondition(value, operator.largerThan, number);
+                }
+            }
+            else if(conditionString.startsWith("=")) { // It's a = condition.
+                String stringOrNumber = conditionString.substring(1);
+
+                if(stringOrNumber.isEmpty()) {
+                    return value instanceof BlankEval;
+                }
+                // Distinguish between string and number.
+                boolean itsANumber = false;
+                try {
+                    Integer.parseInt(stringOrNumber);
+                    itsANumber = true;
+                } catch (NumberFormatException e) { // It's not an int.
+                    try {
+                        Double.parseDouble(stringOrNumber);
+                        itsANumber = true;
+                    } catch (NumberFormatException e2) { // It's a string.
+                        itsANumber = false;
+                    }
+                }
+                if(itsANumber) {
+                    return testNumericCondition(value, operator.equal, stringOrNumber);
+                } else { // It's a string.
+                    String valueString = value instanceof BlankEval ? "" : getStringFromValueEval(value);
+                    return stringOrNumber.equals(valueString);
+                }
+            } else { // It's a text starts-with condition.
+                if(conditionString.isEmpty()) {
+                    return value instanceof StringEval;
+                }
+                else {
+                    String valueString = value instanceof BlankEval ? "" : getStringFromValueEval(value);
+                    return valueString.startsWith(conditionString);
+                }
+            }
+        }
+        else if(condition instanceof NumericValueEval) {
+            double conditionNumber = ((NumericValueEval)condition).getNumberValue();
+            Double valueNumber = getNumerFromValueEval(value);
+            if(valueNumber == null) {
+                return false;
+            }
+            
+            return conditionNumber == valueNumber;
+        }
+        else if(condition instanceof ErrorEval) {
+            if(value instanceof ErrorEval) {
+                return ((ErrorEval)condition).getErrorCode() == ((ErrorEval)value).getErrorCode();
+            }
+            else {
+                return false;
+            }
+        }
+        else {
+            return false;
+        }
+    }
+
