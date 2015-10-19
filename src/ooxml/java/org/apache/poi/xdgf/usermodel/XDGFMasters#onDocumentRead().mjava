@@ -1,37 +1,39 @@
-	@Override
-	protected void onDocumentRead() {
-		try {
-			try {
-				_mastersObject = MastersDocument.Factory.parse(getPackagePart().getInputStream()).getMasters();
-			} catch (XmlException | IOException e) {
-				throw new POIXMLException(e);
-			}
-			
-			Map<String, MasterType> masterSettings = new HashMap<>();
-			for (MasterType master: _mastersObject.getMasterArray()) {
-				masterSettings.put(master.getRel().getId(), master);
-			}
-			
-			// create the masters
-			for (POIXMLDocumentPart part: getRelations()) {
-				
-				String relId = part.getPackageRelationship().getId();
-				MasterType settings = masterSettings.get(relId);
-				
-				if (settings == null)
-					throw new POIXMLException("Master relationship for " + relId + " not found");
-				
-				if (!(part instanceof XDGFMasterContents))
-					throw new POIXMLException("Unexpected masters relationship for " + relId + ": " + part);
-				
-				XDGFMasterContents contents = (XDGFMasterContents)part;
-				contents.onDocumentRead();
-				
-				XDGFMaster master = new XDGFMaster(settings, contents, _document);
-				_masters.put(master.getID(), master);
-			}
-		} catch (POIXMLException e) {
-			throw XDGFException.wrap(this, e);
-		}
-	}
+    @Override
+    protected void onDocumentRead() {
+        try {
+            try {
+                _mastersObject = MastersDocument.Factory.parse(getPackagePart().getInputStream()).getMasters();
+            } catch (XmlException e) {
+                throw new POIXMLException(e);
+            } catch (IOException e) {
+                throw new POIXMLException(e);
+            }
+
+            Map<String, MasterType> masterSettings = new HashMap<String, MasterType>();
+            for (MasterType master: _mastersObject.getMasterArray()) {
+                masterSettings.put(master.getRel().getId(), master);
+            }
+
+            // create the masters
+            for (POIXMLDocumentPart part: getRelations()) {
+
+                String relId = part.getPackageRelationship().getId();
+                MasterType settings = masterSettings.get(relId);
+
+                if (settings == null)
+                    throw new POIXMLException("Master relationship for " + relId + " not found");
+
+                if (!(part instanceof XDGFMasterContents))
+                    throw new POIXMLException("Unexpected masters relationship for " + relId + ": " + part);
+
+                XDGFMasterContents contents = (XDGFMasterContents)part;
+                contents.onDocumentRead();
+
+                XDGFMaster master = new XDGFMaster(settings, contents, _document);
+                _masters.put(master.getID(), master);
+            }
+        } catch (POIXMLException e) {
+            throw XDGFException.wrap(this, e);
+        }
+    }
 
