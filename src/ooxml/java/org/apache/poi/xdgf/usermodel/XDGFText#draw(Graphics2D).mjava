@@ -1,0 +1,53 @@
+	// assumes graphics is set properly to draw in the right style
+	public void draw(Graphics2D graphics) {
+
+		String textContent = getTextContent();
+		if (textContent.length() == 0)
+			return;
+		
+		Rectangle2D.Double bounds = getTextBounds();
+		
+		String[] lines = textContent.trim().split("\n");
+		FontRenderContext frc = graphics.getFontRenderContext();
+		Font font = graphics.getFont();
+		
+		AffineTransform oldTr = graphics.getTransform();
+		
+		// visio is in flipped coordinates, so translate the text to be in the right place
+		Boolean flipX = _parent.getFlipX();
+		Boolean flipY = _parent.getFlipY();
+		
+		if (flipY == null || !_parent.getFlipY()) {
+			graphics.translate(bounds.x, bounds.y);
+			graphics.scale(1, -1);
+			graphics.translate(0, -bounds.height + graphics.getFontMetrics().getMaxCharBounds(graphics).getHeight());
+		}
+		
+		if (flipX != null && _parent.getFlipX()) {
+			graphics.scale(-1, 1);
+			graphics.translate(-bounds.width, 0);
+		}
+		
+		Double txtAngle = _parent.getTxtAngle();
+		if (txtAngle != null && Math.abs(txtAngle) > 0.01)
+			graphics.rotate(txtAngle);
+			
+		float nextY = 0;
+		for (String line: lines) {
+			
+			if (line.length() == 0)
+				continue;
+			
+			TextLayout layout = new TextLayout(line, font, frc);
+			
+			if (layout.isLeftToRight())
+				layout.draw(graphics, 0, nextY);
+			else
+				layout.draw(graphics, (float)(bounds.width - layout.getAdvance()), nextY);
+			
+			nextY += layout.getAscent() + layout.getDescent() + layout.getLeading();
+		}
+		
+		graphics.setTransform(oldTr);
+	}
+

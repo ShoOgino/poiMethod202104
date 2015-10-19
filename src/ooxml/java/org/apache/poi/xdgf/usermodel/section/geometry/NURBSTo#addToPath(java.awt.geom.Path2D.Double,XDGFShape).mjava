@@ -1,0 +1,73 @@
+	@Override
+	public void addToPath(java.awt.geom.Path2D.Double path, XDGFShape parent) {
+		if (getDel()) return;
+		
+		Point2D last = path.getCurrentPoint();
+		
+		// A NURBS formula: knotLast, degree, xType, yType, x1, y1, knot1, weight1, ..
+		String formula = getE().trim();
+		if (!formula.startsWith("NURBS(") || !formula.endsWith(")"))
+			throw new POIXMLException("Invalid NURBS formula: " + formula);
+		
+		String [] components = formula.substring(6, formula.length()-1).split(",");
+		
+		if (components.length < 8)
+			throw new POIXMLException("Invalid NURBS formula (not enough arguments)");
+		
+		if ((components.length - 4) % 4 != 0)
+			throw new POIXMLException("Invalid NURBS formula -- need 4 + n*4 arguments, got " + components.length);
+		
+		double lastControlX = getX();
+		double lastControlY = getY();
+		double secondToLastKnot = getA();
+		double lastWeight = getB();
+		double firstKnot = getC();
+		double firstWeight = getD();
+		
+		double lastKnot = Double.parseDouble(components[0].trim());
+		int degree = Integer.parseInt(components[1].trim());
+		int xType = Integer.parseInt(components[2].trim());
+		int yType = Integer.parseInt(components[3].trim());
+		
+		double xScale = 1;
+		double yScale = 1;
+		
+		if (xType == 0)
+			xScale = parent.getWidth();
+		if (yType == 0)
+			yScale = parent.getHeight();
+		
+		// setup first knots/weights/control point
+		ControlPath controlPath = new ControlPath();
+		ValueVector knots = new ValueVector();
+		ValueVector weights = new ValueVector();
+		
+		knots.add(firstKnot);
+		weights.add(firstWeight);
+		controlPath.addPoint(PointFactory.create(last.getX(), last.getY()));
+		
+		// iterate get knots/weights
+		int sets = (components.length - 4) / 4;
+		for (int i = 0; i < sets; i++) {
+			double x1 = Double.parseDouble(components[4 + i*4 + 0].trim());
+			double y1 = Double.parseDouble(components[4 + i*4 + 1].trim());
+			double k = Double.parseDouble(components[4 + i*4 + 2].trim());
+			double w = Double.parseDouble(components[4 + i*4 + 3].trim());
+			
+			controlPath.addPoint(PointFactory.create(x1*xScale, y1*yScale));
+			knots.add(k);
+			weights.add(w);
+		}
+		
+		// last knots/weights/control point
+		knots.add(secondToLastKnot);
+		knots.add(lastKnot);
+		
+		weights.add(lastWeight);
+		
+		controlPath.addPoint(PointFactory.create(lastControlX, lastControlY));
+		
+		ShapeMultiPath shape = SplineRenderer.createNurbsSpline(controlPath, knots, weights, degree);
+		path.append(shape, true);
+	}
+

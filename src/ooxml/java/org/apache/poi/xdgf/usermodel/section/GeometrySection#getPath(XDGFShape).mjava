@@ -1,0 +1,59 @@
+	public Path2D.Double getPath(XDGFShape parent) {
+		
+		Iterator<GeometryRow> rows = getCombinedRows().iterator();
+		
+		// special cases
+		GeometryRow first = rows.next();
+		
+		if (first instanceof Ellipse) {
+			return ((Ellipse)first).getPath();
+		} else if (first instanceof InfiniteLine) {
+			return ((InfiniteLine)first).getPath();
+		} else if (first instanceof SplineStart) {
+			throw new POIXMLException("SplineStart must be preceded by another type");
+		} else {
+		
+			// everything else is a path
+			Path2D.Double path = new Path2D.Double();
+			
+			// dealing with splines makes this more complex
+			SplineCollector renderer = null;
+			GeometryRow row;
+			
+			while (true) {
+				
+				if (first != null) {
+					row = first;
+					first = null;
+				} else {
+					if (!rows.hasNext())
+						break;
+					row = rows.next();
+				}
+				
+				if (row instanceof SplineStart) {
+					if (renderer != null)
+						throw new POIXMLException("SplineStart found multiple times!");
+					renderer = new SplineCollector((SplineStart) row);
+				} else if (row instanceof SplineKnot) {
+					if (renderer == null)
+						throw new POIXMLException("SplineKnot found without SplineStart!");
+					renderer.addKnot((SplineKnot) row);
+				} else {
+					if (renderer != null) {
+						renderer.addToPath(path, parent);
+						renderer = null;
+					}
+					
+					row.addToPath(path, parent);
+				}
+			}
+			
+			// just in case we end iteration
+			if (renderer != null)
+				renderer.addToPath(path, parent);
+			
+			return path;
+		}
+	}
+
