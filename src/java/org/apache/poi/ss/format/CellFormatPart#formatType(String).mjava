@@ -15,8 +15,14 @@
         boolean seenZero = false;
         while (m.find()) {
             String repl = m.group(0);
+            
             if (repl.length() > 0) {
-                switch (repl.charAt(0)) {
+                char c1 = repl.charAt(0);
+                char c2 = 0;
+                if (repl.length() > 1)
+                    c2 = Character.toLowerCase(repl.charAt(1));
+                
+                switch (c1) {
                 case '@':
                     return CellFormatType.TEXT;
                 case 'd':
@@ -38,7 +44,16 @@
                     seenZero = true;
                     break;
                 case '[':
-                    return CellFormatType.ELAPSED;
+                    if (c2 == 'h' || c2 == 'm' || c2 == 's') {
+                        return CellFormatType.ELAPSED;
+                    }
+                    if (c2 == '$') {
+                        // Localised currency
+                        return CellFormatType.NUMBER;
+                    }
+                    // Something else inside [] which isn't supported!
+                    throw new IllegalArgumentException("Unsupported [] format block '" +
+                                                       repl + "' in '" + fdesc + "'");
                 case '#':
                 case '?':
                     return CellFormatType.NUMBER;

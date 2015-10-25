@@ -8,6 +8,22 @@
      */
     private CellFormatter getFormatter(Matcher matcher) {
         String fdesc = matcher.group(SPECIFICATION_GROUP);
+        
+        // For now, we don't support localised currencies, so simplify if there
+        Matcher currencyM = CURRENCY_PAT.matcher(fdesc);
+        if (currencyM.find()) {
+            String currencyPart = currencyM.group(1);
+            String currencyRepl;
+            if (currencyPart.startsWith("[$-")) {
+                // Default $ in a different locale
+                currencyRepl = "$";
+            } else {
+                currencyRepl = currencyPart.substring(2, currencyPart.lastIndexOf('-'));
+            }
+            fdesc = fdesc.replace(currencyPart, currencyRepl);
+        }
+        
+        // Build a formatter for this simplified string
         return type.formatter(fdesc);
     }
 
