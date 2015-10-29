@@ -32,6 +32,7 @@
                 // remove row from _rows
                 it.remove();
 
+                // FIXME: (performance optimization) this should be moved outside the for-loop so that comments only needs to be iterated over once.
                 // also remove any comments associated with this row
                 if(sheetComments != null){
                     CTCommentList lst = sheetComments.getCTComments().getCommentList();
@@ -44,6 +45,16 @@
                             sheetComments.removeComment(strRef);
                             vml.removeCommentShape(ref.getRow(), ref.getCol());
                     	}
+                    }
+                }
+                // FIXME: (performance optimization) this should be moved outside the for-loop so that hyperlinks only needs to be iterated over once.
+                // also remove any hyperlinks associated with this row
+                if (hyperlinks != null) {
+                    for (XSSFHyperlink link : new ArrayList<XSSFHyperlink>(hyperlinks)) {
+                        CellReference ref = new CellReference(link.getCellRef());
+                        if (ref.getRow() == rownum) {
+                            hyperlinks.remove(link);
+                        }
                     }
                 }
             }
@@ -129,6 +140,7 @@
         rowShifter.updateFormulas(shifter);
         rowShifter.shiftMerged(startRow, endRow, n);
         rowShifter.updateConditionalFormatting(shifter);
+        rowShifter.updateHyperlinks(shifter);
 
         //rebuild the _rows map
         SortedMap<Integer, XSSFRow> map = new TreeMap<Integer, XSSFRow>();
