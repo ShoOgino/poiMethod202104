@@ -1,34 +1,22 @@
     protected void afterInsert(HSLFSheet sh){
         super.afterInsert(sh);
 
-        EscherContainerRecord spCont = (EscherContainerRecord) getSpContainer().getChild(0);
-        List<EscherRecord> lst = spCont.getChildRecords();
-        AbstractEscherOptRecord opt = (AbstractEscherOptRecord)lst.get(lst.size()-2);
-        EscherArrayProperty p = opt.lookup(0x3A0); 
-        for (int i = 0; i < cells.length; i++) {
-            HSLFTableCell cell = cells[i][0];
-            int rowHeight = Units.pointsToMaster(cell.getAnchor().height);
-            byte[] val = new byte[4];
-            LittleEndian.putInt(val, 0, rowHeight);
-            p.setElement(i, val);
-            for (int j = 0; j < cells[i].length; j++) {
-                HSLFTableCell c = cells[i][j];
+        Set<HSLFLine> lineSet = new HashSet<HSLFLine>();
+        for (HSLFTableCell row[] : cells) {
+            for (HSLFTableCell c : row) {
                 addShape(c);
-
-                HSLFLine bt = c.getBorderTop();
-                if(bt != null) addShape(bt);
-
-                HSLFLine br = c.getBorderRight();
-                if(br != null) addShape(br);
-
-                HSLFLine bb = c.getBorderBottom();
-                if(bb != null) addShape(bb);
-
-                HSLFLine bl = c.getBorderLeft();
-                if(bl != null) addShape(bl);
-
+                for (HSLFLine bt : new HSLFLine[]{ c.borderTop, c.borderRight, c.borderBottom, c.borderLeft }) {
+                    if (bt != null) {
+                        lineSet.add(bt);
+                    }
+                }
             }
         }
 
+        for (HSLFLine l : lineSet) {
+            addShape(l);
+        }
+
+        updateRowHeightsProperty();
     }
 

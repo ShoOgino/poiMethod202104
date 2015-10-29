@@ -1,0 +1,33 @@
+    private void cellListToArray() {
+        List<HSLFTableCell> htc = new ArrayList<HSLFTableCell>();
+        for (HSLFShape h : getShapes()) {
+            if (h instanceof HSLFTableCell) {
+                htc.add((HSLFTableCell)h);
+            }
+        }
+        
+        if (htc.isEmpty()) {
+            throw new IllegalStateException("HSLFTable without HSLFTableCells");
+        }
+
+        Collections.sort(htc, new TableCellComparator());
+
+        List<HSLFTableCell[]> lst = new ArrayList<HSLFTableCell[]>();
+        List<HSLFTableCell> row = new ArrayList<HSLFTableCell>();
+
+        int y0 = htc.get(0).getAnchor().y;
+        for (HSLFTableCell sh : htc) {
+            Rectangle anchor = sh.getAnchor();
+            boolean isNextRow = (anchor.y > y0);
+            if (isNextRow) {
+                y0 = anchor.y;
+                lst.add(row.toArray(new HSLFTableCell[row.size()]));
+                row.clear();
+            }
+            row.add(sh);
+        }
+        lst.add(row.toArray(new HSLFTableCell[row.size()]));
+
+        cells = lst.toArray(new HSLFTableCell[lst.size()][]);
+    }
+
