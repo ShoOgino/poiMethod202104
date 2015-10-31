@@ -1,0 +1,40 @@
+    /**
+     * Dissallow creating wholly or partially overlapping merged regions
+     * as this results in a corrupted workbook
+     */
+    @Test
+    public void addOverlappingMergedRegions() {
+        final Workbook wb = _testDataProvider.createWorkbook();
+        final Sheet sheet = wb.createSheet();
+        
+        final CellRangeAddress baseRegion = new CellRangeAddress(0, 1, 0, 1);
+        sheet.addMergedRegion(baseRegion);
+        
+        try {
+            final CellRangeAddress duplicateRegion = new CellRangeAddress(0, 1, 0, 1);
+            sheet.addMergedRegion(duplicateRegion);
+            fail("Should not be able to add a merged region if sheet already contains the same merged region");
+        } catch (final IllegalStateException e) { } //expected
+        
+        try {
+            final CellRangeAddress partiallyOverlappingRegion = new CellRangeAddress(1, 2, 1, 2);
+            sheet.addMergedRegion(partiallyOverlappingRegion);
+            fail("Should not be able to add a merged region if it partially overlaps with an existing merged region");
+        } catch (final IllegalStateException e) { } //expected
+        
+        try {
+            final CellRangeAddress subsetRegion = new CellRangeAddress(0, 1, 0, 0);
+            sheet.addMergedRegion(subsetRegion);
+            fail("Should not be able to add a merged region if it is a formal subset of an existing merged region");
+        } catch (final IllegalStateException e) { } //expected
+        
+        try {
+            final CellRangeAddress supersetRegion = new CellRangeAddress(0, 2, 0, 2);
+            sheet.addMergedRegion(supersetRegion);
+            fail("Should not be able to add a merged region if it is a formal superset of an existing merged region");
+        } catch (final IllegalStateException e) { } //expected
+        
+        final CellRangeAddress disjointRegion = new CellRangeAddress(10, 11, 10, 11);
+        sheet.addMergedRegion(disjointRegion); //allowed
+    }
+
