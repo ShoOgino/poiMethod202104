@@ -2,16 +2,16 @@
      * Tests that all of the unicode capable string fields can be set, written and then read back
      */
     @Test
-    public void unicodeInAll() {
-        Workbook wb = _testDataProvider.createWorkbook();
-        CreationHelper factory = wb.getCreationHelper();
+    public void unicodeInAll() throws IOException {
+        Workbook wb1 = _testDataProvider.createWorkbook();
+        CreationHelper factory = wb1.getCreationHelper();
         //Create a unicode dataformat (contains euro symbol)
-        DataFormat df = wb.createDataFormat();
+        DataFormat df = wb1.createDataFormat();
         final String formatStr = "_([$\u20ac-2]\\\\\\ * #,##0.00_);_([$\u20ac-2]\\\\\\ * \\\\\\(#,##0.00\\\\\\);_([$\u20ac-2]\\\\\\ *\\\"\\-\\\\\"??_);_(@_)";
         short fmt = df.getFormat(formatStr);
 
         //Create a unicode sheet name (euro symbol)
-        Sheet s = wb.createSheet("\u20ac");
+        Sheet s = wb1.createSheet("\u20ac");
 
         //Set a unicode header (you guessed it the euro symbol)
         Header h = s.getHeader();
@@ -37,10 +37,11 @@
         String formulaString = "TEXT(12.34,\"\u20ac###,##\")";
         c3.setCellFormula(formulaString);
 
-        wb = _testDataProvider.writeOutAndReadBack(wb);
+        Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1);
+        wb1.close();
 
         //Test the sheetname
-        s = wb.getSheet("\u20ac");
+        s = wb2.getSheet("\u20ac");
         assertNotNull(s);
 
         //Test the header
@@ -58,7 +59,7 @@
         //Test the dataformat
         r = s.getRow(0);
         c = r.getCell(1);
-        df = wb.createDataFormat();
+        df = wb2.createDataFormat();
         assertEquals(formatStr, df.getFormat(c.getCellStyle().getDataFormat()));
 
         //Test the cell string value
@@ -68,5 +69,6 @@
         //Test the cell formula
         c3 = r.getCell(3);
         assertEquals(c3.getCellFormula(), formulaString);
+        wb2.close();
     }
 

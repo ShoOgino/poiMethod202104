@@ -4,15 +4,15 @@
      * @see <a href="https://issues.apache.org/bugzilla/show_bug.cgi?id=47100">Bugzilla 47100</a>
      */
     @Test
-    public void setSheetName() throws Exception {
+    public void setSheetName() throws IOException {
 
-        Workbook wb = newSetSheetNameTestingWorkbook();
+        Workbook wb1 = newSetSheetNameTestingWorkbook();
 
-        Sheet sh1 = wb.getSheetAt(0);
+        Sheet sh1 = wb1.getSheetAt(0);
 
-        Name sale_2 = wb.getNameAt(1);
-        Name sale_3 = wb.getNameAt(2);
-        Name sale_4 = wb.getNameAt(3);
+        Name sale_2 = wb1.getNameAt(1);
+        Name sale_3 = wb1.getNameAt(2);
+        Name sale_4 = wb1.getNameAt(3);
 
         assertEquals("sale_2", sale_2.getNameName());
         assertEquals("'Testing 47100'!$A$1", sale_2.getRefersToFormula());
@@ -21,7 +21,7 @@
         assertEquals("sale_4", sale_4.getNameName());
         assertEquals("'To be renamed'!$A$3", sale_4.getRefersToFormula());
 
-        FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
+        FormulaEvaluator evaluator = wb1.getCreationHelper().createFormulaEvaluator();
 
         Cell cell0 = sh1.getRow(0).getCell(0);
         Cell cell1 = sh1.getRow(1).getCell(0);
@@ -35,8 +35,8 @@
         assertEquals(21.0, evaluator.evaluate(cell1).getNumberValue(), 0);
         assertEquals(6.0, evaluator.evaluate(cell2).getNumberValue(), 0);
 
-        wb.setSheetName(1, "47100 - First");
-        wb.setSheetName(2, "47100 - Second");
+        wb1.setSheetName(1, "47100 - First");
+        wb1.setSheetName(2, "47100 - Second");
 
         assertEquals("sale_2", sale_2.getNameName());
         assertEquals("'47100 - First'!$A$1", sale_2.getRefersToFormula());
@@ -54,13 +54,14 @@
         assertEquals(21.0, evaluator.evaluate(cell1).getNumberValue(), 0);
         assertEquals(6.0, evaluator.evaluate(cell2).getNumberValue(), 0);
 
-        wb = _testDataProvider.writeOutAndReadBack(wb);
+        Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1);
+        wb1.close();
 
-        sh1 = wb.getSheetAt(0);
+        sh1 = wb2.getSheetAt(0);
 
-        sale_2 = wb.getNameAt(1);
-        sale_3 = wb.getNameAt(2);
-        sale_4 = wb.getNameAt(3);
+        sale_2 = wb2.getNameAt(1);
+        sale_3 = wb2.getNameAt(2);
+        sale_4 = wb2.getNameAt(3);
 
         cell0 = sh1.getRow(0).getCell(0);
         cell1 = sh1.getRow(1).getCell(0);
@@ -77,9 +78,10 @@
         assertEquals("SUM('47100 - First'!A1:C1,'47100 - Second'!A1:A5)", cell1.getCellFormula());
         assertEquals("sale_2+sale_3+'47100 - First'!C1", cell2.getCellFormula());
 
-        evaluator = wb.getCreationHelper().createFormulaEvaluator();
+        evaluator = wb2.getCreationHelper().createFormulaEvaluator();
         assertEquals(6.0, evaluator.evaluate(cell0).getNumberValue(), 0);
         assertEquals(21.0, evaluator.evaluate(cell1).getNumberValue(), 0);
         assertEquals(6.0, evaluator.evaluate(cell2).getNumberValue(), 0);
+        wb2.close();
     }
 

@@ -3,29 +3,32 @@
      * 1-based sheet tab index (not a 1-based extern sheet index)
      */
     @Test
-    public void findBuiltInNameRecord() {
+    public void findBuiltInNameRecord() throws IOException {
         // testRRaC has multiple (3) built-in name records
         // The second print titles name record has getSheetNumber()==4
-        HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook("testRRaC.xls");
+        HSSFWorkbook wb1 = HSSFTestDataSamples.openSampleWorkbook("testRRaC.xls");
         NameRecord nr;
-        assertEquals(3, wb.getWorkbook().getNumNames());
-        nr = wb.getWorkbook().getNameRecord(2);
+        assertEquals(3, wb1.getWorkbook().getNumNames());
+        nr = wb1.getWorkbook().getNameRecord(2);
         // TODO - render full row and full column refs properly
-        assertEquals("Sheet2!$A$1:$IV$1", HSSFFormulaParser.toFormulaString(wb, nr.getNameDefinition())); // 1:1
+        assertEquals("Sheet2!$A$1:$IV$1", HSSFFormulaParser.toFormulaString(wb1, nr.getNameDefinition())); // 1:1
 
         try {
-          wb.getSheetAt(3).setRepeatingRows(CellRangeAddress.valueOf("9:12"));
-          wb.getSheetAt(3).setRepeatingColumns(CellRangeAddress.valueOf("E:F"));
+          wb1.getSheetAt(3).setRepeatingRows(CellRangeAddress.valueOf("9:12"));
+          wb1.getSheetAt(3).setRepeatingColumns(CellRangeAddress.valueOf("E:F"));
         } catch (RuntimeException e) {
             if (e.getMessage().equals("Builtin (7) already exists for sheet (4)")) {
                 // there was a problem in the code which locates the existing print titles name record
-                throw new RuntimeException("Identified bug 45720b");
+                fail("Identified bug 45720b");
             }
+            wb1.close();
             throw e;
         }
-        wb = HSSFTestDataSamples.writeOutAndReadBack(wb);
-        assertEquals(3, wb.getWorkbook().getNumNames());
-        nr = wb.getWorkbook().getNameRecord(2);
-        assertEquals("Sheet2!E:F,Sheet2!$A$9:$IV$12", HSSFFormulaParser.toFormulaString(wb, nr.getNameDefinition())); // E:F,9:12
+        HSSFWorkbook wb2 = HSSFTestDataSamples.writeOutAndReadBack(wb1);
+        wb1.close();
+        assertEquals(3, wb2.getWorkbook().getNumNames());
+        nr = wb2.getWorkbook().getNameRecord(2);
+        assertEquals("Sheet2!E:F,Sheet2!$A$9:$IV$12", HSSFFormulaParser.toFormulaString(wb2, nr.getNameDefinition())); // E:F,9:12
+        wb2.close();
     }
 
