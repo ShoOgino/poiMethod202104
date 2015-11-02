@@ -1,0 +1,135 @@
+    protected void testCopyOneRow(String copyRowsTestWorkbook) throws IOException {
+        final double FLOAT_PRECISION = 1e-9;
+        final XSSFWorkbook workbook = XSSFTestDataSamples.openSampleWorkbook(copyRowsTestWorkbook);
+        final XSSFSheet sheet = workbook.getSheetAt(0);
+        final CellCopyPolicy defaultCopyPolicy = new CellCopyPolicy();
+        sheet.copyRows(1, 1, 6, defaultCopyPolicy);
+
+        final Row srcRow = sheet.getRow(1);
+        final Row destRow = sheet.getRow(6);
+        int col = 0;
+        Cell cell;
+
+        cell = CellUtil.getCell(destRow, col++);
+        assertEquals("Source row ->", cell.getStringCellValue());
+
+        // Style
+        cell = CellUtil.getCell(destRow, col++);
+        assertEquals("[Style] B7 cell value", "Red", cell.getStringCellValue());
+        assertEquals("[Style] B7 cell style", CellUtil.getCell(srcRow, 1).getCellStyle(), cell.getCellStyle());
+
+        // Blank
+        cell = CellUtil.getCell(destRow, col++);
+        assertEquals("[Blank] C7 cell type", Cell.CELL_TYPE_BLANK, cell.getCellType());
+
+        // Error
+        cell = CellUtil.getCell(destRow, col++);
+        assertEquals("[Error] D7 cell type", Cell.CELL_TYPE_ERROR, cell.getCellType());
+        final FormulaError error = FormulaError.forInt(cell.getErrorCellValue());
+        assertEquals("[Error] D7 cell value", FormulaError.NA, error); //FIXME: XSSFCell and HSSFCell expose different interfaces. getErrorCellString would be helpful here
+
+        // Date
+        cell = CellUtil.getCell(destRow, col++);
+        assertEquals("[Date] E7 cell type", Cell.CELL_TYPE_NUMERIC, cell.getCellType());
+        final Date date = new GregorianCalendar(2000, Calendar.JANUARY, 1).getTime();
+        assertEquals("[Date] E7 cell value", date, cell.getDateCellValue());
+
+        // Boolean
+        cell = CellUtil.getCell(destRow, col++);
+        assertEquals("[Boolean] F7 cell type", Cell.CELL_TYPE_BOOLEAN, cell.getCellType());
+        assertEquals("[Boolean] F7 cell value", true, cell.getBooleanCellValue());
+
+        // String
+        cell = CellUtil.getCell(destRow, col++);
+        assertEquals("[String] G7 cell type", Cell.CELL_TYPE_STRING, cell.getCellType());
+        assertEquals("[String] G7 cell value", "Hello", cell.getStringCellValue());
+        
+        // Int
+        cell = CellUtil.getCell(destRow, col++);
+        assertEquals("[Int] H7 cell type", Cell.CELL_TYPE_NUMERIC, cell.getCellType());
+        assertEquals("[Int] H7 cell value", 15, (int) cell.getNumericCellValue());
+        
+        // Float
+        cell = CellUtil.getCell(destRow, col++);
+        assertEquals("[Float] I7 cell type", Cell.CELL_TYPE_NUMERIC, cell.getCellType());
+        assertEquals("[Float] I7 cell value", 12.5, cell.getNumericCellValue(), FLOAT_PRECISION);
+        
+        // Cell Formula
+        cell = CellUtil.getCell(destRow, col++);
+        assertEquals("J7", new CellReference(cell).formatAsString());
+        assertEquals("[Cell Formula] J7 cell type", Cell.CELL_TYPE_FORMULA, cell.getCellType());
+        assertEquals("[Cell Formula] J7 cell formula", "5+2", cell.getCellFormula());
+        System.out.println("Cell formula evaluation currently unsupported");
+        
+        // Cell Formula with Reference
+        // Formula row references should be adjusted by destRowNum-srcRowNum
+        cell = CellUtil.getCell(destRow, col++);
+        assertEquals("K7", new CellReference(cell).formatAsString());
+        assertEquals("[Cell Formula with Reference] K7 cell type",
+                Cell.CELL_TYPE_FORMULA, cell.getCellType());
+        assertEquals("[Cell Formula with Reference] K7 cell formula",
+                "J7+H$2", cell.getCellFormula());
+        
+        // Cell Formula with Reference spanning multiple rows
+        cell = CellUtil.getCell(destRow, col++);
+        assertEquals("[Cell Formula with Reference spanning multiple rows] L7 cell type",
+                Cell.CELL_TYPE_FORMULA, cell.getCellType());
+        assertEquals("[Cell Formula with Reference spanning multiple rows] L7 cell formula",
+                "G7&\" \"&G8", cell.getCellFormula());
+        
+        // Cell Formula with Reference spanning multiple rows
+        cell = CellUtil.getCell(destRow, col++);
+        assertEquals("[Cell Formula with Area Reference] M7 cell type",
+                Cell.CELL_TYPE_FORMULA, cell.getCellType());
+        assertEquals("[Cell Formula with Area Reference] M7 cell formula",
+                "SUM(H7:I8)", cell.getCellFormula());
+        
+        // Array Formula
+        cell = CellUtil.getCell(destRow, col++);
+        System.out.println("Array formulas currently unsupported");
+        // FIXME: Array Formula set with Sheet.setArrayFormula() instead of cell.setFormula()
+        /*
+        assertEquals("[Array Formula] N7 cell type", Cell.CELL_TYPE_FORMULA, cell.getCellType());
+        assertEquals("[Array Formula] N7 cell formula", "{SUM(H7:J7*{1,2,3})}", cell.getCellFormula());
+        */
+        
+        // Data Format
+        cell = CellUtil.getCell(destRow, col++);
+        assertEquals("[Data Format] O7 cell type;", Cell.CELL_TYPE_NUMERIC, cell.getCellType());
+        assertEquals("[Data Format] O7 cell value", 100.20, cell.getNumericCellValue(), FLOAT_PRECISION);
+        //FIXME: currently fails
+        final String moneyFormat = "\"$\"#,##0.00_);[Red]\\(\"$\"#,##0.00\\)";
+        assertEquals("[Data Format] O7 data format", moneyFormat, cell.getCellStyle().getDataFormatString());
+        
+        // Merged
+        cell = CellUtil.getCell(destRow, col);
+        assertEquals("[Merged] P7:Q7 cell value",
+                "Merged cells", cell.getStringCellValue());
+        assertTrue("[Merged] P7:Q7 merged region",
+                sheet.getMergedRegions().contains(CellRangeAddress.valueOf("P7:Q7")));
+        
+        // Merged across multiple rows
+        // Microsoft Excel 2013 does not copy a merged region unless all rows of
+        // the source merged region are selected
+        // POI's behavior should match this behavior
+        col += 2;
+        cell = CellUtil.getCell(destRow, col);
+        // Note: this behavior deviates from Microsoft Excel,
+        // which will not overwrite a cell in destination row if merged region extends beyond the copied row.
+        // The Excel way would require:
+        //assertEquals("[Merged across multiple rows] R7:S8 merged region", "Should NOT be overwritten", cell.getStringCellValue());
+        //assertFalse("[Merged across multiple rows] R7:S8 merged region", 
+        //        sheet.getMergedRegions().contains(CellRangeAddress.valueOf("R7:S8")));
+        // As currently implemented, cell value is copied but merged region is not copied
+        assertEquals("[Merged across multiple rows] R7:S8 cell value",
+                "Merged cells across multiple rows", cell.getStringCellValue());
+        assertFalse("[Merged across multiple rows] R7:S7 merged region (one row)", 
+                sheet.getMergedRegions().contains(CellRangeAddress.valueOf("R7:S7"))); //shouldn't do 1-row merge
+        assertFalse("[Merged across multiple rows] R7:S8 merged region", 
+                sheet.getMergedRegions().contains(CellRangeAddress.valueOf("R7:S8"))); //shouldn't do 2-row merge
+        
+        // Make sure other rows are blank (off-by-one errors)
+        assertNull(sheet.getRow(5));
+        assertNull(sheet.getRow(7));
+    }
+

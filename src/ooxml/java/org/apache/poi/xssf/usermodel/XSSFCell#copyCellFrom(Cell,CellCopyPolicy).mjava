@@ -1,0 +1,64 @@
+    /**
+     * Copy cell value, formula, and style, from srcCell per cell copy policy
+     * If srcCell is null, clears the cell value and cell style per cell copy policy
+     * @param srcCell
+     * @param policy
+     * @throws IllegalArgumentException if copy cell style and srcCell is from a different workbook
+     */
+    @Beta
+    @Internal
+    public void copyCellFrom(Cell srcCell, CellCopyPolicy policy) {
+        // Copy cell value (cell type is updated implicitly)
+        if (policy.isCopyCellValue()) {
+            if (srcCell != null) {
+                int copyCellType = srcCell.getCellType();
+                if (copyCellType == Cell.CELL_TYPE_FORMULA && !policy.isCopyCellFormula()) {
+                    // Copy formula result as value
+                    // FIXME: Cached value may be stale
+                    copyCellType = srcCell.getCachedFormulaResultType();
+                }
+                switch (copyCellType) {
+                    case Cell.CELL_TYPE_BOOLEAN:
+                        setCellValue(srcCell.getBooleanCellValue());
+                        break;
+                    case Cell.CELL_TYPE_ERROR:
+                        setCellErrorValue(srcCell.getErrorCellValue());
+                        break;
+                    case Cell.CELL_TYPE_FORMULA:
+                        setCellFormula(srcCell.getCellFormula());
+                        break;
+                    case Cell.CELL_TYPE_NUMERIC:
+                        // DataFormat is not copied unless policy.isCopyCellStyle is true
+                        if (DateUtil.isCellDateFormatted(srcCell)) {
+                            setCellValue(srcCell.getDateCellValue());
+                        }
+                        else {
+                            setCellValue(srcCell.getNumericCellValue());
+                        }
+                        break;
+                    case Cell.CELL_TYPE_STRING:
+                        setCellValue(srcCell.getStringCellValue());
+                        break;
+                    case Cell.CELL_TYPE_BLANK:
+                        setBlank();
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Invalid cell type " + srcCell.getCellType());
+                }
+            } else { //srcCell is null
+                setBlank();
+            }
+        }
+        
+        // Copy CellStyle
+        if (policy.isCopyCellStyle()) {
+            if (srcCell != null) {
+                setCellStyle(srcCell.getCellStyle());
+            }
+            else {
+                // clear cell style
+                setCellStyle(null);
+            }
+        }
+    }
+
