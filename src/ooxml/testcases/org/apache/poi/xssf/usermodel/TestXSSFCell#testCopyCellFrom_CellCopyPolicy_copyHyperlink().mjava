@@ -1,0 +1,37 @@
+    @Test
+    public final void testCopyCellFrom_CellCopyPolicy_copyHyperlink() throws IOException {
+        setUp_testCopyCellFrom_CellCopyPolicy();
+        final Workbook wb = srcCell.getSheet().getWorkbook();
+        final CreationHelper createHelper = wb.getCreationHelper();
+
+        srcCell.setCellValue("URL LINK");
+        Hyperlink link = createHelper.createHyperlink(Hyperlink.LINK_URL);
+        link.setAddress("http://poi.apache.org/");
+        srcCell.setHyperlink(link);
+
+        // Set link cell style (optional)
+        CellStyle hlinkStyle = wb.createCellStyle();
+        Font hlinkFont = wb.createFont();
+        hlinkFont.setUnderline(Font.U_SINGLE);
+        hlinkFont.setColor(IndexedColors.BLUE.getIndex());
+        hlinkStyle.setFont(hlinkFont);
+        srcCell.setCellStyle(hlinkStyle);
+
+        // Copy hyperlink
+        final CellCopyPolicy policy = new CellCopyPolicy.Builder().copyHyperlink(true).mergeHyperlink(false).build();
+        destCell.copyCellFrom(srcCell, policy);
+        assertNotNull(destCell.getHyperlink());
+
+        assertSame("unit test assumes srcCell and destCell are on the same sheet",
+                srcCell.getSheet(), destCell.getSheet());
+
+        final List<XSSFHyperlink> links = srcCell.getSheet().getHyperlinkList();
+        assertEquals("number of hyperlinks on sheet", 2, links.size());
+        assertEquals("source hyperlink",
+                new CellReference(srcCell).formatAsString(), links.get(0).getCellRef());
+        assertEquals("destination hyperlink",
+                new CellReference(destCell).formatAsString(), links.get(1).getCellRef());
+        
+        wb.close();
+    }
+
