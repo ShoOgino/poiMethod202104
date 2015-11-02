@@ -1,0 +1,35 @@
+    /**
+     * Modifies aptg in-place and return a reference to aptg if the first or last row of
+     * of the Area reference would move due to a row copy operation
+     * Returns <code>null</code> or {@link #AreaErrPtg} if no change was made
+     *
+     * @param aptg
+     * @return null, AreaErrPtg, or modified aptg
+     */
+    private Ptg rowCopyAreaPtg(AreaPtgBase aptg) {
+        boolean changed = false;
+    
+        final int aFirstRow = aptg.getFirstRow();
+        final int aLastRow = aptg.getLastRow();
+    
+        if (aptg.isFirstRowRelative()) {
+            final int destFirstRowIndex = aFirstRow + _amountToMove;
+            if (destFirstRowIndex < 0 || _version.getLastRowIndex() < destFirstRowIndex)
+                return createDeletedRef(aptg);
+            aptg.setFirstRow(destFirstRowIndex);
+            changed = true;
+        }
+        if (aptg.isLastRowRelative()) {
+            final int destLastRowIndex = aLastRow + _amountToMove;
+            if (destLastRowIndex < 0 || _version.getLastRowIndex() < destLastRowIndex)
+                return createDeletedRef(aptg);
+            aptg.setLastRow(destLastRowIndex);
+            changed = true;
+        }
+        if (changed) {
+            aptg.sortTopLeftToBottomRight();
+        }
+
+        return changed ? aptg : null;
+    }
+
