@@ -1,0 +1,23 @@
+    /**
+     * @return the metro blob shape or null if either there's no metro blob or the ooxml classes
+     * aren't in the classpath
+     */
+    @SuppressWarnings("unchecked")
+    public T getShape() {
+        byte metroBytes[] = getMetroBytes();
+        if (metroBytes == null) {
+            return null;
+        }
+        
+        // org.apache.poi.xslf.usermodel.XSLFMetroShape
+        ClassLoader cl = Thread.currentThread().getContextClassLoader();
+        try {
+            Class<?> ms = cl.loadClass("org.apache.poi.xslf.usermodel.XSLFMetroShape");
+            Method m = ms.getMethod("parseShape", byte[].class);
+            return (T)m.invoke(null, new Object[]{metroBytes});
+        } catch (Exception e) {
+            LOGGER.log(POILogger.ERROR, "can't process metro blob, check if all dependencies for POI OOXML are in the classpath.", e);
+            return null;
+        }
+    }
+
