@@ -1,0 +1,28 @@
+    @Test
+    public void testZipEntityExpansionExceedsMemory() throws Exception {
+        try {
+            Workbook wb = WorkbookFactory.create(XSSFTestDataSamples.openSamplePackage("poc-xmlbomb.xlsx"));
+            wb.close();
+            fail("Should catch exception due to entity expansion limitations");
+        } catch (POIXMLException e) {
+            assertEntityLimitReached(e);
+        }
+
+        try {
+            POITextExtractor extractor = ExtractorFactory.createExtractor(HSSFTestDataSamples.getSampleFile("poc-xmlbomb.xlsx"));
+            try  {
+                assertNotNull(extractor);
+    
+                try {
+                    extractor.getText();
+                } catch (IllegalStateException e) {
+                    // expected due to shared strings expansion
+                }
+            } finally {
+                extractor.close();
+            }
+        } catch (POIXMLException e) {
+            assertEntityLimitReached(e);
+        }
+    }
+
