@@ -9,9 +9,21 @@
     DocumentProperties newDocProperties =
       new DocumentProperties(buf, 0, size);
 
-    Field[] fields = DocumentProperties.class.getSuperclass().getDeclaredFields();
-    AccessibleObject.setAccessible(fields, true);
-
+    final Field[] fields;
+    try {
+        fields = AccessController.doPrivileged(new PrivilegedExceptionAction<Field[]>() {
+            @Override
+            @SuppressForbidden("Test only")
+            public Field[] run() throws Exception {
+                final Field[] fields = DocumentProperties.class.getSuperclass().getDeclaredFields();
+                AccessibleObject.setAccessible(fields, true);
+                return fields;
+            }
+        });
+    } catch (PrivilegedActionException pae) {
+        throw pae.getException();
+    }
+    
     for (int x = 0; x < fields.length; x++)
     {
       // JaCoCo Code Coverage adds it's own field, don't look at this one here
