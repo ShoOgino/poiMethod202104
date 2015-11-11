@@ -8,12 +8,19 @@
         // make the field accessible, we defer this from static initialization to here to 
         // allow JDKs which do not have this field (e.g. IBM JDK) to at least load the class
         // without failing, see https://issues.apache.org/bugzilla/show_bug.cgi?id=56550
-        try {
-            _classes = ClassLoader.class.getDeclaredField("classes");
-            _classes.setAccessible(true);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        final Field _classes = AccessController.doPrivileged(new PrivilegedAction<Field>() {
+            @SuppressForbidden("TODO: Reflection works until Java 8 on Oracle/Sun JDKs, but breaks afterwards (different classloader types, access checks)")
+            public Field run() {
+                try {
+                    Field fld = ClassLoader.class.getDeclaredField("classes");
+                    fld.setAccessible(true);
+                    return fld;
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+
+            }
+        });
 
         ClassLoader appLoader = ClassLoader.getSystemClassLoader();
         try {
