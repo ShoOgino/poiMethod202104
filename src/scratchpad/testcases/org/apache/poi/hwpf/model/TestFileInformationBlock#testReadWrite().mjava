@@ -7,9 +7,20 @@
         FileInformationBlock newFileInformationBlock = new FileInformationBlock(
                 buf);
 
-        Field[] fields = FileInformationBlock.class.getSuperclass()
-                .getDeclaredFields();
-        AccessibleObject.setAccessible(fields, true);
+        final Field[] fields;
+        try {
+            fields = AccessController.doPrivileged(new PrivilegedExceptionAction<Field[]>() {
+                @Override
+                @SuppressForbidden("Test only")
+                public Field[] run() throws Exception {
+                    final Field[] fields = FileInformationBlock.class.getSuperclass().getDeclaredFields();
+                    AccessibleObject.setAccessible(fields, true);
+                    return fields;
+                }
+            });
+        } catch (PrivilegedActionException pae) {
+            throw pae.getException();
+        }
 
         for (int x = 0; x < fields.length; x++) {
             assertEquals(fields[x].get(_fileInformationBlock),
