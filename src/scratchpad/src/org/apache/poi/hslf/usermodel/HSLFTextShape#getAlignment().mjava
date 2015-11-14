@@ -4,38 +4,40 @@
      *
      * @return the type of alignment
      */
-    /* package */ int getAlignment(){
+    /* package */ HSLFTextAnchor getAlignment(){
         AbstractEscherOptRecord opt = getEscherOptRecord();
         EscherSimpleProperty prop = getEscherProperty(opt, EscherProperties.TEXT__ANCHORTEXT);
-        int align = HSLFTextShape.AnchorTop;
+        HSLFTextAnchor align = HSLFTextAnchor.TOP;
         if (prop == null){
             /**
              * If vertical alignment was not found in the shape properties then try to
              * fetch the master shape and search for the align property there.
              */
             int type = getRunType();
-            if(getSheet() != null && getSheet().getMasterSheet() != null){
-                HSLFMasterSheet master = getSheet().getMasterSheet();
-                HSLFTextShape masterShape = master.getPlaceholderByTextType(type);
-                if(masterShape != null) align = masterShape.getAlignment();
+            HSLFSheet sh = getSheet();
+            HSLFMasterSheet master = (sh != null) ? sh.getMasterSheet() : null;
+            HSLFTextShape masterShape = (master != null) ? master.getPlaceholderByTextType(type) : null;
+            if (masterShape != null && type != TextHeaderAtom.OTHER_TYPE) {
+                align = masterShape.getAlignment();
             } else {
                 //not found in the master sheet. Use the hardcoded defaults.
                 switch (type){
-                     case org.apache.poi.hslf.record.TextHeaderAtom.TITLE_TYPE:
-                     case org.apache.poi.hslf.record.TextHeaderAtom.CENTER_TITLE_TYPE:
-                         align = HSLFTextShape.AnchorMiddle;
+                     case TextHeaderAtom.TITLE_TYPE:
+                     case TextHeaderAtom.CENTER_TITLE_TYPE:
+                         align = HSLFTextAnchor.MIDDLE;
                          break;
                      default:
-                         align = HSLFTextShape.AnchorTop;
+                         align = HSLFTextAnchor.TOP;
                          break;
                  }
             }
         } else {
-            align = prop.getPropertyValue();
+            align = HSLFTextAnchor.fromNativeId(prop.getPropertyValue());
         }
 
-        alignToBaseline = (align == AnchorBottomBaseline || align == AnchorBottomCenteredBaseline
-            || align == AnchorTopBaseline || align == AnchorTopCenteredBaseline);
+        if (align == null) {
+            align = HSLFTextAnchor.TOP;
+        }
 
         return align;
     }
