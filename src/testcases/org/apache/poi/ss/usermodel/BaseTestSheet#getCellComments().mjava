@@ -1,0 +1,39 @@
+    @Test
+    public void getCellComments() throws IOException {
+        Workbook workbook = _testDataProvider.createWorkbook();
+        Sheet sheet = workbook.createSheet("TEST");
+        Drawing dg = sheet.createDrawingPatriarch();
+        
+        int nRows = 5;
+        int nCols = 6;
+        
+        for (int r=0; r<nRows; r++) {
+            sheet.createRow(r);
+            // Create columns in reverse order
+            for (int c=nCols-1; c>=0; c--) {
+                Comment comment = dg.createCellComment(workbook.getCreationHelper().createClientAnchor());
+                Cell cell = sheet.getRow(r).createCell(c);
+                comment.setAuthor("Author " + r);
+                RichTextString text = workbook.getCreationHelper().createRichTextString("Test comment at row=" + r + ", column=" + c);
+                comment.setString(text);
+                cell.setCellComment(comment);
+            }
+        }
+        
+        Workbook wb = _testDataProvider.writeOutAndReadBack(workbook);
+        Sheet sh = wb.getSheet("TEST");
+        Map<CellAddress, ? extends Comment> cellComments = sh.getCellComments();
+        assertEquals(nRows*nCols, cellComments.size());
+        
+        for (Entry<CellAddress, ? extends Comment> e : cellComments.entrySet()) {
+            CellAddress ref = e.getKey();
+            Comment aComment = e.getValue();
+            assertEquals("Author " + ref.getRow(), aComment.getAuthor());
+            String text = "Test comment at row=" + ref.getRow() + ", column=" + ref.getColumn();
+            assertEquals(text, aComment.getString().getString());
+        }
+        
+        workbook.close();
+        wb.close();
+    }
+
