@@ -1,0 +1,38 @@
+    @Test
+    public void updateColumnWidths_and_getBestFitColumnWidth() {
+        tracker.trackAllColumns();
+        Row row1 = sheet.createRow(0);
+        Row row2 = sheet.createRow(1);
+        // A1, B1, D1
+        for (int column : columns) {
+            row1.createCell(column).setCellValue(LONG_MESSAGE);
+            row2.createCell(column+1).setCellValue(SHORT_MESSAGE);
+        }
+        tracker.updateColumnWidths(row1);
+        tracker.updateColumnWidths(row2);
+        sheet.addMergedRegion(CellRangeAddress.valueOf("D1:E1"));
+        
+        assumeRequiredFontsAreInstalled(workbook, row1.getCell(columns.iterator().next()));
+        
+        // Excel 2013 and LibreOffice 4.2.8.2 both treat columns with merged regions as blank
+        /**    A     B    C      D   E
+         * 1 LONG  LONG        LONGMERGE
+         * 2       SHORT SHORT     SHORT
+         */
+        
+        // measured in Excel 2013. Sizes may vary.
+        final int longMsgWidth = (int) (57.43*256);
+        final int shortMsgWidth = (int) (4.86*256);
+        
+        checkColumnWidth(longMsgWidth, 0, true);
+        checkColumnWidth(longMsgWidth, 0, false);
+        checkColumnWidth(longMsgWidth, 1, true);
+        checkColumnWidth(longMsgWidth, 1, false);
+        checkColumnWidth(shortMsgWidth, 2, true);
+        checkColumnWidth(shortMsgWidth, 2, false);
+        checkColumnWidth(-1, 3, true);
+        checkColumnWidth(longMsgWidth, 3, false);
+        checkColumnWidth(shortMsgWidth, 4, true); //but is it really? shouldn't autosizing column E use "" from E1 and SHORT from E2?
+        checkColumnWidth(shortMsgWidth, 4, false);
+    }
+

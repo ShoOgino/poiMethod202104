@@ -1,0 +1,34 @@
+    /**
+     * Get the best-fit width of a tracked column
+     *
+     * @param column the index of the column to get the current best-fit width of
+     * @param useMergedCells true if merged cells should be considered when computing the best-fit width
+     * @return best-fit column width, measured in units of 1/256th of a character width
+     * @throws IllegalStateException if column is not tracked and trackAllColumns is false
+     * @since 3.14beta1
+     */
+    public int getBestFitColumnWidth(int column, boolean useMergedCells) {
+        if (!maxColumnWidths.containsKey(column)) {
+            // if column is not tracked, implicitly track the column if trackAllColumns is True and column has not been explicitly untracked
+            if (trackAllColumns) {
+                if (!implicitlyTrackColumn(column)) {
+                    final Throwable reason = new IllegalStateException(
+                            "Column was explicitly untracked after trackAllColumns() was called.");
+                    throw new IllegalStateException(
+                            "Cannot get best fit column width on explicitly untracked column " + column + ". " +
+                            "Either explicitly track the column or track all columns.", reason);
+                }
+            }
+            else {
+                final Throwable reason = new IllegalStateException(
+                        "Column was never explicitly tracked and isAllColumnsTracked() is false " +
+                        "(trackAllColumns() was never called or untrackAllColumns() was called after trackAllColumns() was called).");
+                throw new IllegalStateException(
+                        "Cannot get best fit column width on untracked column " + column + ". " +
+                        "Either explicitly track the column or track all columns.", reason);
+            }
+        }
+        final double width = maxColumnWidths.get(column).getMaxColumnWidth(useMergedCells);
+        return (int) (256*width);
+    }
+
