@@ -1,16 +1,22 @@
 	public static POITextExtractor createExtractor(File f) throws IOException, InvalidFormatException, OpenXML4JException, XmlException {
-		InputStream inp = null;
+	    NPOIFSFileSystem fs = null;
         try {
-            try {
-                NPOIFSFileSystem fs = new NPOIFSFileSystem(f);
-                return createExtractor(fs);
-            } catch (OfficeXmlFileException e) {
-                return createExtractor(OPCPackage.open(f.toString(), PackageAccess.READ));
-            } catch (NotOLE2FileException ne) {
-                throw new IllegalArgumentException("Your File was neither an OLE2 file, nor an OOXML file");
+            fs = new NPOIFSFileSystem(f);
+            POIOLE2TextExtractor extractor = createExtractor(fs);
+            extractor.setFilesystem(fs);
+            return extractor;
+        } catch (OfficeXmlFileException e) {
+            // ensure file-handle release
+            if(fs != null) {
+                fs.close();
             }
-        } finally {
-            if(inp != null) inp.close();
+            return createExtractor(OPCPackage.open(f.toString(), PackageAccess.READ));
+        } catch (NotOLE2FileException ne) {
+            // ensure file-handle release
+            if(fs != null) {
+                fs.close();
+            }
+            throw new IllegalArgumentException("Your File was neither an OLE2 file, nor an OOXML file");
         }
     }
 
