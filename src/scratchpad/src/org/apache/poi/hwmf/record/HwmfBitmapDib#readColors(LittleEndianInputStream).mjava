@@ -1,0 +1,47 @@
+    protected int readColors(LittleEndianInputStream leis) throws IOException {
+        switch (headerBitCount) {
+        default:
+        case BI_BITCOUNT_0:
+            // no table
+            return 0;
+        case BI_BITCOUNT_1:
+            // 2 colors
+            return readRGBQuad(leis, 2);
+        case BI_BITCOUNT_2:
+            // 16 colors
+            return readRGBQuad(leis, 16);
+        case BI_BITCOUNT_3:
+            // 256 colors
+            return readRGBQuad(leis, 256);
+        case BI_BITCOUNT_5:
+            colorMaskRed=0xFF;
+            colorMaskGreen=0xFF;
+            colorMaskBlue=0xFF;
+            return 0;
+        case BI_BITCOUNT_4:
+            if (headerCompression == Compression.BI_RGB) {
+                colorMaskBlue = 0x1F;
+                colorMaskGreen = 0x1F<<5;
+                colorMaskRed = 0x1F<<10;
+                return 0;
+            } else {
+                assert(headerCompression == Compression.BI_BITFIELDS);
+                colorMaskBlue = leis.readInt();
+                colorMaskGreen = leis.readInt();
+                colorMaskRed = leis.readInt();
+                return 3*LittleEndianConsts.INT_SIZE;
+            }
+        case BI_BITCOUNT_6:    
+            if (headerCompression == Compression.BI_RGB) {
+                colorMaskBlue = colorMaskGreen = colorMaskRed = 0xFF;
+                return 0;
+            } else {
+                assert(headerCompression == Compression.BI_BITFIELDS);
+                colorMaskBlue = leis.readInt();
+                colorMaskGreen = leis.readInt();
+                colorMaskRed = leis.readInt();
+                return 3*LittleEndianConsts.INT_SIZE;
+            }
+        }
+    }
+

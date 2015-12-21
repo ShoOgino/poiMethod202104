@@ -1,0 +1,33 @@
+        public int init(LittleEndianInputStream leis, long recordSize, int recordFunction) throws IOException {
+            boolean hasBitmap = (recordSize > ((recordFunction >> 8) + 3));
+
+            int size = 0;
+            int rasterOpIndex = leis.readUShort();
+            int rasterOpCode = leis.readUShort();
+            
+            rasterOperation = HwmfTernaryRasterOp.fromOpIndex(rasterOpIndex);
+            assert(rasterOpCode == rasterOperation.opCode);
+
+            srcHeight = leis.readShort();
+            srcWidth = leis.readShort();
+            ySrc = leis.readShort();
+            xSrc = leis.readShort();
+            size = 6*LittleEndianConsts.SHORT_SIZE;
+            if (!hasBitmap) {
+                @SuppressWarnings("unused")
+                int reserved = leis.readShort();
+                size += LittleEndianConsts.SHORT_SIZE;
+            }
+            destHeight = leis.readShort();
+            destWidth = leis.readShort();
+            yDest = leis.readShort();
+            xDest = leis.readShort();
+            size += 4*LittleEndianConsts.SHORT_SIZE;
+            if (hasBitmap) {
+                target = new HwmfBitmap16();
+                size += target.init(leis);
+            }
+            
+            return size;
+        }
+

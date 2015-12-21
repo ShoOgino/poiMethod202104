@@ -1,0 +1,30 @@
+    public int init(LittleEndianInputStream leis) throws IOException {
+        height = leis.readShort();
+        width = leis.readShort();
+        escapement = leis.readShort();
+        orientation = leis.readShort();
+        weight = leis.readShort();
+        italic = leis.readByte() != 0;
+        underline = leis.readByte() != 0;
+        strikeOut = leis.readByte() != 0;
+        charSet = WmfCharset.valueOf(leis.readUByte());
+        outPrecision = WmfOutPrecision.valueOf(leis.readUByte());
+        quality = WmfFontQuality.valueOf(leis.readUByte());
+        int pitchAndFamily = leis.readUByte();
+        family = WmfFontFamilyClass.valueOf(pitchAndFamily & 0xF);
+        pitch = WmfFontPitch.valueOf((pitchAndFamily >>> 6) & 3);
+        
+        byte buf[] = new byte[32], readBytes;
+        for (readBytes = 0; readBytes < 32; readBytes++) {
+            if ((buf[readBytes] = leis.readByte()) == 0) {
+                break;
+            }
+        }
+        if (readBytes == 1 || readBytes == 32) {
+            throw new IOException("Font facename can't be determined.");
+        }
+        facename = new String(buf, 0, readBytes-1, Charset.forName("ISO-8859-1"));
+        
+        return 17+readBytes;
+    }
+
