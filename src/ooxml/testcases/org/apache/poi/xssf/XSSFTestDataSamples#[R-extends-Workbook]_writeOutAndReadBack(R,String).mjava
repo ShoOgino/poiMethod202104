@@ -1,38 +1,24 @@
     /**
      * Writes the Workbook either into a file or into a byte array, depending on presence of 
      * the system property {@value #TEST_OUTPUT_DIR}, and reads it in a new instance of the Workbook back.
+     * If TEST_OUTPUT_DIR is set, the file will NOT be deleted at the end of this function.
      * @param wb workbook to write
      * @param testName file name to be used if writing into a file. The old file with the same name will be overridden.
      * @return new instance read from the stream written by the wb parameter.
      */
+    
     public static <R extends Workbook> R writeOutAndReadBack(R wb, String testName) {
-        XSSFWorkbook result = null;
-        if (System.getProperty(TEST_OUTPUT_DIR) != null) {
+        if (System.getProperty(TEST_OUTPUT_DIR) == null) {
+            return writeOutAndReadBack(wb);
+        } else {
             try {
-                File file = new File(System.getProperty(TEST_OUTPUT_DIR), testName + ".xlsx");
-                if (file.exists()) {
-                    file.delete();
-                }
-                FileOutputStream out = new FileOutputStream(file);
-                try {
-                    wb.write(out);
-                } finally {
-                    out.close();
-                }
-                FileInputStream in = new FileInputStream(file);
-                try {
-                    result = new XSSFWorkbook(in);
-                } finally {
-                    in.close();
-                }
+                Workbook result = readBack(writeOut(wb, testName));
+                @SuppressWarnings("unchecked")
+                R r = (R) result;
+                return r;
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-        } else {
-            return writeOutAndReadBack(wb);
         }
-        @SuppressWarnings("unchecked")
-        R r = (R) result;
-        return r;
     }
 
