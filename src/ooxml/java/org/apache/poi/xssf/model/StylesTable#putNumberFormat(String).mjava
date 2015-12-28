@@ -7,6 +7,7 @@
      * @return the index of <code>fmt</code> in the number format style table
      */
     public int putNumberFormat(String fmt) {
+        // Check if number format already exists
         if (numberFormats.containsValue(fmt)) {
             // Find the key, and return that
             for (Entry<Integer,String> numFmt : numberFormats.entrySet()) {
@@ -16,16 +17,27 @@
             }
             throw new IllegalStateException("Found the format, but couldn't figure out where - should never happen!");
         }
+        
+        if (numberFormats.size() > MAXIMUM_NUMBER_OF_DATA_FORMATS) {
+            throw new IllegalStateException("The maximum number of Data Formats was exceeded. " +
+                    "You can define up to " + MAXIMUM_NUMBER_OF_DATA_FORMATS + " formats in a .xlsx Workbook.");
+        }
 
         // Find a spare key, and add that
-        for (int i=FIRST_CUSTOM_STYLE_ID; i<usedNumberFormats.length; i++) {
-            if (!usedNumberFormats[i]) {
-                usedNumberFormats[i] = true;
-                numberFormats.put(i, fmt);
-                return i;
-            }
+        final int formatIndex;
+        if (numberFormats.isEmpty()) {
+            formatIndex = FIRST_USER_DEFINED_NUMBER_FORMAT_ID;
         }
-        throw new IllegalStateException("The maximum number of Data Formats was exceeded. " +
-                "You can define up to " + usedNumberFormats.length + " formats in a .xlsx Workbook");
+        else {
+            // get next-available numberFormat index.
+            // Assumption: there are never gaps in numberFormats indices
+            formatIndex = Math.max(
+                    numberFormats.lastKey() + 1,
+                    FIRST_USER_DEFINED_NUMBER_FORMAT_ID);
+        }
+        
+        
+        numberFormats.put(formatIndex, fmt);
+        return formatIndex;
     }
 
