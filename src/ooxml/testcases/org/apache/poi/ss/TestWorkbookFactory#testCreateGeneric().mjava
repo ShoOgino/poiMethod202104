@@ -13,15 +13,14 @@
         );
         assertNotNull(wb);
         assertTrue(wb instanceof HSSFWorkbook);
-        wb.close();
+        assertCloseDoesNotModifyFile(xls, wb);
 
         wb = WorkbookFactory.create(
                 HSSFTestDataSamples.openSampleFileStream(xlsx)
         );
         assertNotNull(wb);
         assertTrue(wb instanceof XSSFWorkbook);
-        // TODO: this re-writes the sample-file?! wb.close();
-        revert(wb);
+        assertCloseDoesNotModifyFile(xlsx, wb);
 
         // File -> either
         wb = WorkbookFactory.create(
@@ -29,17 +28,17 @@
         );
         assertNotNull(wb);
         assertTrue(wb instanceof HSSFWorkbook);
-        wb.close();
+        assertCloseDoesNotModifyFile(xls, wb);
 
         wb = WorkbookFactory.create(
                 HSSFTestDataSamples.getSampleFile(xlsx)
         );
         assertNotNull(wb);
         assertTrue(wb instanceof XSSFWorkbook);
-        // TODO: close() re-writes the sample-file?! Resort to revert() for now to close file handle...
-        revert(wb);
+        assertCloseDoesNotModifyFile(xlsx, wb);
 
         // Invalid type -> exception
+        final byte[] before = HSSFTestDataSamples.getTestDataFileContent(txt);
         try {
             InputStream stream = HSSFTestDataSamples.openSampleFileStream(txt);
             try {
@@ -51,5 +50,8 @@
         } catch(InvalidFormatException e) {
             // Good
         }
+        final byte[] after = HSSFTestDataSamples.getTestDataFileContent(txt);
+        assertArrayEquals("Invalid type file was modified after trying to open the file as a spreadsheet",
+                before, after);
     }
 
