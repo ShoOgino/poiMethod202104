@@ -5,18 +5,19 @@
      *
      * @param fmt the number format to add to number format style table
      * @return the index of <code>fmt</code> in the number format style table
+     * @throws IllegalStateException if adding the number format to the styles table
+     * would exceed the {@link #MAXIMUM_NUMBER_OF_DATA_FORMATS} allowed.
      */
     public int putNumberFormat(String fmt) {
         // Check if number format already exists
         if (numberFormats.containsValue(fmt)) {
-            // Find the key, and return that
-            for (Entry<Integer,String> numFmt : numberFormats.entrySet()) {
-                if(numFmt.getValue().equals(fmt)) {
-                    return numFmt.getKey();
-                }
+            try {
+                return getNumberFormatId(fmt);
+            } catch (final IllegalStateException e) {
+                throw new IllegalStateException("Found the format, but couldn't figure out where - should never happen!");
             }
-            throw new IllegalStateException("Found the format, but couldn't figure out where - should never happen!");
         }
+        
         
         if (numberFormats.size() >= MAXIMUM_NUMBER_OF_DATA_FORMATS) {
             throw new IllegalStateException("The maximum number of Data Formats was exceeded. " +
@@ -24,18 +25,23 @@
         }
 
         // Find a spare key, and add that
-        final int formatIndex;
+        final short formatIndex;
         if (numberFormats.isEmpty()) {
             formatIndex = FIRST_USER_DEFINED_NUMBER_FORMAT_ID;
         }
         else {
             // get next-available numberFormat index.
-            // Assumption: there are never gaps in numberFormats indices
-            formatIndex = Math.max(
-                    numberFormats.lastKey() + 1,
-                    FIRST_USER_DEFINED_NUMBER_FORMAT_ID);
+            // Assumption: gaps in number format ids are acceptable
+            // to catch arithmetic overflow, nextKey's data type
+            // must match numberFormat's key data type
+            short nextKey = (short) (numberFormats.lastKey() + 1);
+            if (nextKey < 0) {
+                throw new IllegalStateException(
+                        "Cowardly avoiding creating a number format with a negative id." +
+                        "This is probably due to arithmetic overflow.");
+            }
+            formatIndex = (short) Math.max(nextKey, FIRST_USER_DEFINED_NUMBER_FORMAT_ID);
         }
-        
         
         numberFormats.put(formatIndex, fmt);
         return formatIndex;
