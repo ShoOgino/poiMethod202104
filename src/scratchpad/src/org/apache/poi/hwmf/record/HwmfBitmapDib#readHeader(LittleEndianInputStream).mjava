@@ -1,42 +1,61 @@
     protected int readHeader(LittleEndianInputStream leis) throws IOException {
         int size = 0;
-        
+
         /**
          * DIBHeaderInfo (variable): Either a BitmapCoreHeader Object or a
          * BitmapInfoHeader Object that specifies information about the image.
-         * 
+         *
          * The first 32 bits of this field is the HeaderSize value.
          * If it is 0x0000000C, then this is a BitmapCoreHeader; otherwise, this is a BitmapInfoHeader.
          */
         headerSize = leis.readInt();
         size += LittleEndianConsts.INT_SIZE;
-        
-        // BitmapCoreHeader
-        // A 16-bit unsigned integer that defines the width of the DIB, in pixels.
-        headerWidth = leis.readUShort();
-        // A 16-bit unsigned integer that defines the height of the DIB, in pixels.
-        headerHeight = leis.readUShort();
-        // A 16-bit unsigned integer that defines the number of planes for the target
-        // device. This value MUST be 0x0001.
-        headerPlanes = leis.readUShort();
-        // A 16-bit unsigned integer that defines the format of each pixel, and the
-        // maximum number of colors in the DIB.
-        headerBitCount = BitCount.valueOf(leis.readUShort());
-        size += 4*LittleEndianConsts.SHORT_SIZE;
 
-        if (headerSize > 0x0C) {
+        if (headerSize == 0x0C) {
+            // BitmapCoreHeader
+            // A 16-bit unsigned integer that defines the width of the DIB, in pixels.
+            headerWidth = leis.readUShort();
+            // A 16-bit unsigned integer that defines the height of the DIB, in pixels.
+            headerHeight = leis.readUShort();
+            // A 16-bit unsigned integer that defines the number of planes for the target
+            // device. This value MUST be 0x0001.
+            headerPlanes = leis.readUShort();
+            // A 16-bit unsigned integer that defines the format of each pixel, and the
+            // maximum number of colors in the DIB.
+            headerBitCount = BitCount.valueOf(leis.readUShort());
+            size += 4*LittleEndianConsts.SHORT_SIZE;
+        } else {
             // BitmapInfoHeader
-            // A 32-bit unsigned integer that defines the compression mode of the 
-            // DIB. 
+            // A 32-bit signed integer that defines the width of the DIB, in pixels.
+            // This value MUST be positive.
+            // This field SHOULD specify the width of the decompressed image file,
+            // if the Compression value specifies JPEG or PNG format.
+            headerWidth = leis.readInt();
+            // A 32-bit signed integer that defines the height of the DIB, in pixels.
+            // This value MUST NOT be zero.
+            // - If this value is positive, the DIB is a bottom-up bitmap,
+            //   and its origin is the lower-left corner.
+            //   This field SHOULD specify the height of the decompressed image file,
+            //   if the Compression value specifies JPEG or PNG format.
+            // - If this value is negative, the DIB is a top-down bitmap,
+            //   and its origin is the upper-left corner. Top-down bitmaps do not support compression.
+            headerHeight = leis.readInt();
+            // A 16-bit unsigned integer that defines the number of planes for the target
+            // device. This value MUST be 0x0001.
+            headerPlanes = leis.readUShort();
+            // A 16-bit unsigned integer that defines the format of each pixel, and the
+            // maximum number of colors in the DIB.
+            headerBitCount = BitCount.valueOf(leis.readUShort());
+            // A 32-bit unsigned integer that defines the compression mode of the DIB.
             // This value MUST NOT specify a compressed format if the DIB is a top-down bitmap,
             // as indicated by the Height value.
             headerCompression = Compression.valueOf((int)leis.readUInt());
             // A 32-bit unsigned integer that defines the size, in bytes, of the image.
             // If the Compression value is BI_RGB, this value SHOULD be zero and MUST be ignored.
-            // If the Compression value is BI_JPEG or BI_PNG, this value MUST specify the size of the JPEG 
+            // If the Compression value is BI_JPEG or BI_PNG, this value MUST specify the size of the JPEG
             // or PNG image buffer, respectively.
             headerImageSize = leis.readUInt();
-            // A 32-bit signed integer that defines the horizontal resolution, 
+            // A 32-bit signed integer that defines the horizontal resolution,
             // in pixels-per-meter, of the target device for the DIB.
             headerXPelsPerMeter = leis.readInt();
             // A 32-bit signed integer that defines the vertical resolution,
@@ -48,8 +67,9 @@
             // A 32-bit unsigned integer that defines the number of color indexes that are
             // required for displaying the DIB. If this value is zero, all color indexes are required.
             headerColorImportant = leis.readUInt();
-            size += 6*LittleEndianConsts.INT_SIZE;
+            size += 8*LittleEndianConsts.INT_SIZE+2*LittleEndianConsts.SHORT_SIZE;
         }
+        assert(size == headerSize);
         return size;
     }
 

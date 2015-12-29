@@ -1,20 +1,34 @@
+        @Override
         public int init(LittleEndianInputStream leis, long recordSize, int recordFunction) throws IOException {
             y = leis.readShort();
             x = leis.readShort();
             stringLength = leis.readShort();
             fwOpts = leis.readUShort();
-            left = leis.readShort();
-            top = leis.readShort();
-            right = leis.readShort();
-            bottom = leis.readShort();
             
-            byte buf[] = new byte[stringLength+(stringLength%2)];
+            int size = 4*LittleEndianConsts.SHORT_SIZE;
+            
+            if (fwOpts != 0) {
+                // the bounding rectangle is optional and only read when fwOpts are given
+                left = leis.readShort();
+                top = leis.readShort();
+                right = leis.readShort();
+                bottom = leis.readShort();
+                size += 4*LittleEndianConsts.SHORT_SIZE;
+            }
+            
+            byte buf[] = new byte[stringLength+(stringLength&1)];
             leis.readFully(buf);
-            text = new String(buf, "UTF16-LE");
+            text = new String(buf, 0, stringLength, LocaleUtil.CHARSET_1252);
+            size += buf.length;
             
-            int size = 8*LittleEndianConsts.SHORT_SIZE+buf.length;
-            if (size < recordSize) {
-                dx = new int[text.length()];
+            // -6 bytes of record function and length header
+            int remainingRecordSize = (int)(recordSize-6);
+            if (size < remainingRecordSize) {
+                if (size + stringLength*LittleEndianConsts.SHORT_SIZE < remainingRecordSize) {
+                    throw new RecordFormatException("can't read Dx array - given recordSize doesn't contain enough values for string length "+stringLength);
+                }
+                
+                dx = new int[stringLength];
                 for (int i=0; i<dx.length; i++) {
                     dx[i] = leis.readShort();
                 }
