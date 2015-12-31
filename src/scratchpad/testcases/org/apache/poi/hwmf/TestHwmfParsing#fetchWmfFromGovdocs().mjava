@@ -1,0 +1,32 @@
+    @Test
+    @Ignore
+    public void fetchWmfFromGovdocs() throws IOException {
+        URL url = new URL("http://digitalcorpora.org/corpora/files/govdocs1/by_type/ppt.zip");
+        File outdir = new File("build/ppt");
+        outdir.mkdirs();
+        ZipInputStream zis = new ZipInputStream(url.openStream());
+        ZipEntry ze;
+        while ((ze = zis.getNextEntry()) != null) {
+            String basename = ze.getName().replaceAll(".*?([^/]+)\\.wmf", "$1");
+            FilterInputStream fis = new FilterInputStream(zis){
+                public void close() throws IOException {}
+            };
+            try {
+                SlideShow<?,?> ss = SlideShowFactory.create(fis);
+                int wmfIdx = 1;
+                for (PictureData pd : ss.getPictureData()) {
+                    if (pd.getType() != PictureType.WMF) continue;
+                    byte wmfData[] = pd.getData();
+                    String filename = String.format(Locale.ROOT, "%s-%04d.wmf", basename, wmfIdx);
+                    FileOutputStream fos = new FileOutputStream(new File(outdir, filename));
+                    fos.write(wmfData);
+                    fos.close();
+                    wmfIdx++;
+                }
+                ss.close();
+            } catch (Exception e) {
+                System.out.println(ze.getName()+" ignored.");
+            }
+        }
+    }
+

@@ -6,41 +6,43 @@
             return 0;
         case BI_BITCOUNT_1:
             // 2 colors
-            return readRGBQuad(leis, 2);
+            return readRGBQuad(leis, (int)(headerColorUsed == 0 ? 2 : Math.min(headerColorUsed,2)));
         case BI_BITCOUNT_2:
             // 16 colors
-            return readRGBQuad(leis, 16);
+            return readRGBQuad(leis, (int)(headerColorUsed == 0 ? 16 : Math.min(headerColorUsed,16)));
         case BI_BITCOUNT_3:
             // 256 colors
-            return readRGBQuad(leis, (int)headerColorUsed);
-        case BI_BITCOUNT_5:
-            colorMaskRed=0xFF;
-            colorMaskGreen=0xFF;
-            colorMaskBlue=0xFF;
-            return 0;
+            return readRGBQuad(leis, (int)(headerColorUsed == 0 ? 256 : Math.min(headerColorUsed,256)));
         case BI_BITCOUNT_4:
-            if (headerCompression == Compression.BI_RGB) {
-                colorMaskBlue = 0x1F;
-                colorMaskGreen = 0x1F<<5;
-                colorMaskRed = 0x1F<<10;
+            switch (headerCompression) {
+            case BI_RGB:
+                colorMaskB = 0x1F;
+                colorMaskG = 0x1F<<5;
+                colorMaskR = 0x1F<<10;
                 return 0;
-            } else {
-                assert(headerCompression == Compression.BI_BITFIELDS);
-                colorMaskBlue = leis.readInt();
-                colorMaskGreen = leis.readInt();
-                colorMaskRed = leis.readInt();
+            case BI_BITFIELDS:
+                colorMaskB = leis.readInt();
+                colorMaskG = leis.readInt();
+                colorMaskR = leis.readInt();
                 return 3*LittleEndianConsts.INT_SIZE;
+            default:
+                throw new IOException("Invalid compression option ("+headerCompression+") for bitcount ("+headerBitCount+").");
             }
+        case BI_BITCOUNT_5:
         case BI_BITCOUNT_6:
-            if (headerCompression == Compression.BI_RGB) {
-                colorMaskBlue = colorMaskGreen = colorMaskRed = 0xFF;
+            switch (headerCompression) {
+            case BI_RGB:
+                colorMaskR=0xFF;
+                colorMaskG=0xFF;
+                colorMaskB=0xFF;
                 return 0;
-            } else {
-                assert(headerCompression == Compression.BI_BITFIELDS);
-                colorMaskBlue = leis.readInt();
-                colorMaskGreen = leis.readInt();
-                colorMaskRed = leis.readInt();
+            case BI_BITFIELDS:
+                colorMaskB = leis.readInt();
+                colorMaskG = leis.readInt();
+                colorMaskR = leis.readInt();
                 return 3*LittleEndianConsts.INT_SIZE;
+            default:
+                throw new IOException("Invalid compression option ("+headerCompression+") for bitcount ("+headerBitCount+").");
             }
         }
     }

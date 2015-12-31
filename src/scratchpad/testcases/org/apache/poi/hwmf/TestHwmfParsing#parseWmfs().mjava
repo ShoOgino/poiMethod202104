@@ -1,0 +1,37 @@
+    @Test
+    @Ignore
+    public void parseWmfs() throws IOException {
+        boolean outputFiles = false;
+        File indir = new File("build/ppt"), outdir = indir;
+        final String startFile = "";
+        File files[] = indir.listFiles(new FileFilter() {
+            boolean foundStartFile = false;
+            public boolean accept(File pathname) {
+                foundStartFile |= startFile.isEmpty() || pathname.getName().contains(startFile);
+                return foundStartFile && pathname.getName().matches("(?i).*\\.wmf?$");
+            }
+        });
+        for (File f : files) {
+            try {
+                String basename = f.getName().replaceAll(".*?([^/]+)\\.wmf", "$1");
+                FileInputStream fis = new FileInputStream(f);
+                HwmfPicture wmf = new HwmfPicture(fis);
+                fis.close();
+                
+                int bmpIndex = 1;
+                for (HwmfRecord r : wmf.getRecords()) {
+                    if (r instanceof HwmfImageRecord) {
+                        BufferedImage bi = ((HwmfImageRecord)r).getImage();
+                        if (bi != null && outputFiles) {
+                            String filename = String.format(Locale.ROOT, "%s-%04d.png", basename, bmpIndex);
+                            ImageIO.write(bi, "PNG", new File(outdir, filename));
+                        }
+                        bmpIndex++;
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println(f.getName()+" ignored.");                
+            }
+        }
+    }
+

@@ -2,25 +2,22 @@
         public int init(LittleEndianInputStream leis, long recordSize, int recordFunction) throws IOException {
             nextInChain = leis.readShort();
             objectType = leis.readShort();
-            objectCount = leis.readUShort();
+            objectCount = leis.readInt();
             regionSize = leis.readShort();
             scanCount = leis.readShort();
             maxScan = leis.readShort();
-            bottom = leis.readShort();
-            right = leis.readShort();
-            top = leis.readShort();
             left = leis.readShort();
+            top = leis.readShort();
+            right = leis.readShort();
+            bottom = leis.readShort();
+            
+            int size = 9*LittleEndianConsts.SHORT_SIZE+LittleEndianConsts.INT_SIZE;
 
-            List<WmfScanObject> soList = new ArrayList<WmfScanObject>();
-            int scanCountI = 0, size = 0;
-            do {
-                WmfScanObject so = new WmfScanObject();
-                size += so.init(leis);
-                scanCountI += so.count;
-                soList.add(so);
-            } while  (scanCountI < scanCount);
-            scanObjects = soList.toArray(new WmfScanObject[soList.size()]);
+            scanObjects = new WmfScanObject[scanCount];
+            for (int i=0; i<scanCount; i++) {
+                size += (scanObjects[i] = new WmfScanObject()).init(leis);
+            }
 
-            return 20 + size;
+            return size;
         }
 
