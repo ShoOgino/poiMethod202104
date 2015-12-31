@@ -4,25 +4,19 @@
      * @param shape  <code>Shape</code> to lookup hyperlink in
      * @return found hyperlink or <code>null</code>
      */
+    @SuppressWarnings("resource")
     public static HSLFHyperlink find(HSLFShape shape){
-        List<HSLFHyperlink> lst = new ArrayList<HSLFHyperlink>();
         HSLFSlideShow ppt = shape.getSheet().getSlideShow();
         //document-level container which stores info about all links in a presentation
         ExObjList exobj = ppt.getDocumentRecord().getExObjList();
-        if (exobj == null) {
-            return null;
+        HSLFEscherClientDataRecord cldata = shape.getClientData(false);
+
+        if (exobj != null && cldata != null) {
+            List<HSLFHyperlink> lst = new ArrayList<HSLFHyperlink>();
+            find(cldata.getHSLFChildRecords(), exobj, lst);
+            return lst.isEmpty() ? null : (HSLFHyperlink)lst.get(0);
         }
 
-        EscherContainerRecord spContainer = shape.getSpContainer();
-        for (Iterator<EscherRecord> it = spContainer.getChildIterator(); it.hasNext(); ) {
-            EscherRecord obj = it.next();
-            if (obj.getRecordId() ==  EscherClientDataRecord.RECORD_ID){
-                byte[] data = obj.serialize();
-                Record[] records = Record.findChildRecords(data, 8, data.length-8);
-                find(records, exobj, lst);
-            }
-        }
-
-        return lst.size() == 1 ? (HSLFHyperlink)lst.get(0) : null;
+        return null;
     }
 

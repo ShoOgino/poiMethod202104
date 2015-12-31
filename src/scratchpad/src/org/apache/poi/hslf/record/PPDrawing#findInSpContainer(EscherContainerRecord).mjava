@@ -1,14 +1,24 @@
 	private StyleTextProp9Atom findInSpContainer(final EscherContainerRecord spContainer) {
-		EscherContainerRecord clientData = findFirstEscherContainerRecordOfType((short)RecordTypes.EscherClientData, spContainer);
-		if (null == clientData) { return null; }
-		final EscherContainerRecord progTagsContainer = findFirstEscherContainerRecordOfType((short)0x1388, clientData);
-		if (null == progTagsContainer) { return null; }
-		final EscherContainerRecord progBinaryTag = findFirstEscherContainerRecordOfType((short)0x138A, progTagsContainer);
-		if (null == progBinaryTag) { return null; }
-		int size = progBinaryTag.getChildRecords().size();
+        HSLFEscherClientDataRecord cldata = spContainer.getChildById(RecordTypes.EscherClientData.typeID);
+        if (cldata == null) {
+            return null;
+        }
+        DummyPositionSensitiveRecordWithChildren progTags =
+            getChildRecord(cldata.getHSLFChildRecords(), RecordTypes.ProgTags);
+        if (progTags == null) {
+            return null;
+        }
+        DummyPositionSensitiveRecordWithChildren progBinaryTag =
+            (DummyPositionSensitiveRecordWithChildren)progTags.findFirstOfType(RecordTypes.ProgBinaryTag.typeID);
+        if (progBinaryTag == null) {
+            return null;
+        }
+		int size = progBinaryTag.getChildRecords().length;
 		if (2 != size) { return null; }
-		final Record r0 = buildFromUnknownEscherRecord((UnknownEscherRecord) progBinaryTag.getChild(0));
-		final Record r1 = buildFromUnknownEscherRecord((UnknownEscherRecord) progBinaryTag.getChild(1));
+
+		final Record r0 = progBinaryTag.getChildRecords()[0];
+		final Record r1 = progBinaryTag.getChildRecords()[1];
+		
 		if (!(r0 instanceof CString)) { return null; }
 		if (!("___PPT9".equals(((CString) r0).getText()))) { return null; };
 		if (!(r1 instanceof BinaryTagDataBlob )) { return null; }
