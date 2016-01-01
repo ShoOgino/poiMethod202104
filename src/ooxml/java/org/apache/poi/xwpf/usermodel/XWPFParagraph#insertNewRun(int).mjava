@@ -1,13 +1,26 @@
     /**
      * insert a new Run in RunArray
      *
-     * @param pos
-     * @return the inserted run
+     * @param pos The position at which the new run should be added.
+     * 
+     * @return the inserted run or null if the given pos is out of bounds.
      */
     public XWPFRun insertNewRun(int pos) {
-        if (pos >= 0 && pos <= paragraph.sizeOfRArray()) {
-            CTR ctRun = paragraph.insertNewR(pos);
-            XWPFRun newRun = new XWPFRun(ctRun, (IRunBody)this);
+        if (pos >= 0 && pos <= runs.size()) {
+            // calculate the correct pos as our run/irun list contains
+            // hyperlinks
+            // and fields so it is different to the paragraph R array.
+            int rPos = 0;
+            for (int i = 0; i < pos; i++) {
+                XWPFRun currRun = runs.get(i);
+                if (!(currRun instanceof XWPFHyperlinkRun
+                        || currRun instanceof XWPFFieldRun)) {
+                    rPos++;
+                }
+            }
+
+            CTR ctRun = paragraph.insertNewR(rPos);
+            XWPFRun newRun = new XWPFRun(ctRun, (IRunBody) this);
 
             // To update the iruns, find where we're going
             // in the normal runs, and go in there
@@ -26,6 +39,7 @@
 
             return newRun;
         }
+
         return null;
     }
     // TODO Add methods to allow adding a HyperlinkRun or a FieldRun
