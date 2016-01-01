@@ -1,6 +1,7 @@
-    public void testNew() throws Exception {
-        XSSFWorkbook wb = new XSSFWorkbook();
-        XSSFSheet sheet = wb.createSheet();
+    @Test
+    public void testNew() throws IOException {
+        XSSFWorkbook wb1 = new XSSFWorkbook();
+        XSSFSheet sheet = wb1.createSheet();
         //multiple calls of createDrawingPatriarch should return the same instance of XSSFDrawing
         XSSFDrawing dr1 = sheet.createDrawingPatriarch();
         XSSFDrawing dr2 = sheet.createDrawingPatriarch();
@@ -30,8 +31,8 @@
 
         XSSFTextBox c4 = drawing.createTextbox(new XSSFClientAnchor(0,0,0,0,4,4,5,6));
         XSSFRichTextString rt = new XSSFRichTextString("Test String");
-        rt.applyFont(0, 5, wb.createFont());
-        rt.applyFont(5, 6, wb.createFont());
+        rt.applyFont(0, 5, wb1.createFont());
+        rt.applyFont(5, 6, wb1.createFont());
         c4.setText(rt);
 
         c4.setNoFill(true);
@@ -45,8 +46,9 @@
         assertTrue(shapes.get(3) instanceof XSSFSimpleShape); //
 
         // Save and re-load it
-        wb = XSSFTestDataSamples.writeOutAndReadBack(wb);
-        sheet = wb.getSheetAt(0);
+        XSSFWorkbook wb2 = XSSFTestDataSamples.writeOutAndReadBack(wb1);
+        wb1.close();
+        sheet = wb2.getSheetAt(0);
 
         // Check
         dr1 = sheet.createDrawingPatriarch();
@@ -69,6 +71,7 @@
         assertTrue(xml.contains("xmlns:xdr=\"http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing\""));
         assertTrue(xml.contains("xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\""));
         
-        assertNotNull(XSSFTestDataSamples.writeOutAndReadBack(wb));
+        checkRewrite(wb2);
+        wb2.close();
     }
 
