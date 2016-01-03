@@ -1,0 +1,28 @@
+    /**
+     * Returns the bounding box in device-independent units. Usually this is taken from the placeable header.
+     * 
+     * @return the bounding box
+     */
+    public Rectangle2D getBounds() {
+        if (placeableHeader != null) {
+            return placeableHeader.getBounds();
+        } else {
+            WmfSetWindowOrg wOrg = null;
+            WmfSetWindowExt wExt = null;
+            for (HwmfRecord r : getRecords()) {
+                if (wOrg != null && wExt != null) {
+                    break;
+                }
+                if (r instanceof WmfSetWindowOrg) {
+                    wOrg = (WmfSetWindowOrg)r;
+                } else if (r instanceof WmfSetWindowExt) {
+                    wExt = (WmfSetWindowExt)r;
+                }
+            }
+            if (wOrg == null || wExt == null) {
+                throw new RuntimeException("invalid wmf file - window records are incomplete.");
+            }
+            return new Rectangle2D.Double(wOrg.getX(), wOrg.getY(), wExt.getWidth(), wExt.getHeight());
+        }        
+    }
+
