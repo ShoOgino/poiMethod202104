@@ -1,10 +1,18 @@
     protected static void testFactoryFromProtectedNative(String protectedFile, String password) throws Exception {
         SlideShow<?,?> ss;
+        // Encryption layer is a BIFF8 binary format that can be read by NPOIFSFileSystem,
+        // used for both HSLF and XSLF
+
         // from protected NPOIFS
-        NPOIFSFileSystem npoifs = new NPOIFSFileSystem(fromFile(protectedFile));
-        ss = SlideShowFactory.create(npoifs, password);
-        assertNotNull(ss);
-        npoifs.close();
-        ss.close();
+        if (protectedFile.endsWith(".ppt") || protectedFile.endsWith(".pptx")) {
+            NPOIFSFileSystem npoifs = new NPOIFSFileSystem(fromFile(protectedFile));
+            ss = SlideShowFactory.create(npoifs, password);
+            assertNotNull(ss);
+            npoifs.close();
+            assertCloseDoesNotModifyFile(protectedFile, ss);
+        }
+        else {
+            fail("Unrecognized file extension: " + protectedFile);
+        }
     }
 
