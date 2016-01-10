@@ -1,10 +1,15 @@
         @Override
         public int init(LittleEndianInputStream leis, long recordSize, int recordFunction) throws IOException {
             // see http://secunia.com/gfx/pdf/SA31675_BA.pdf ;)
-            numberOfPolygons = leis.readUShort();
-            pointsPerPolygon = new int[numberOfPolygons];
-            xPoints = new int[numberOfPolygons][];
-            yPoints = new int[numberOfPolygons][];
+            /**
+             * A 16-bit unsigned integer that defines the number of polygons in the object.
+             */
+            int numberOfPolygons = leis.readUShort();
+            /**
+             * A NumberOfPolygons array of 16-bit unsigned integers that define the number of
+             * points for each polygon in the object.
+             */
+            int[] pointsPerPolygon = new int[numberOfPolygons];
 
             int size = LittleEndianConsts.SHORT_SIZE;
 
@@ -13,16 +18,23 @@
                 size += LittleEndianConsts.SHORT_SIZE;
             }
 
-            for (int i=0; i<numberOfPolygons; i++) {
-
-                xPoints[i] = new int[pointsPerPolygon[i]];
-                yPoints[i] = new int[pointsPerPolygon[i]];
-
-                for (int j=0; j<pointsPerPolygon[i]; j++) {
-                    xPoints[i][j] = leis.readUShort();
-                    yPoints[i][j] = leis.readUShort();
+            for (int nPoints : pointsPerPolygon) {
+                /**
+                 * An array of 16-bit unsigned integers that define the coordinates of the polygons.
+                 */
+                Path2D poly = new Path2D.Double();
+                for (int i=0; i<nPoints; i++) {
+                    int x = leis.readUShort();
+                    int y = leis.readUShort();
                     size += 2*LittleEndianConsts.SHORT_SIZE;
+                    if (i == 0) {
+                        poly.moveTo(x, y);
+                    } else {
+                        poly.lineTo(x, y);
+                    }
                 }
+                poly.closePath();
+                polyList.add(poly);
             }
 
             return size;
