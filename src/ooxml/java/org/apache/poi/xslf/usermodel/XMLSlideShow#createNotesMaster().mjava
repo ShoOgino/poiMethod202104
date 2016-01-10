@@ -2,15 +2,16 @@
      * Create a notes master.
      */ 
     public void createNotesMaster() {
-
-        _notesMaster = (XSLFNotesMaster) createRelationship(XSLFRelation.NOTES_MASTER, 
-                XSLFFactory.getInstance(), 1);
+        RelationPart rp = createRelationship
+            (XSLFRelation.NOTES_MASTER, XSLFFactory.getInstance(), 1, false);
+        _notesMaster = (XSLFNotesMaster)rp.getDocumentPart();
         
         CTNotesMasterIdList notesMasterIdList = _presentation.addNewNotesMasterIdLst();
         CTNotesMasterIdListEntry notesMasterId = notesMasterIdList.addNewNotesMasterId();
-        notesMasterId.setId(_notesMaster.getPackageRelationship().getId());
+        notesMasterId.setId(rp.getRelationship().getId());
         
         Integer themeIndex = 1;
+        // TODO: check if that list can be replaced by idx = Math.max(idx,themeIdx)
         List<Integer> themeIndexList = new ArrayList<Integer>();
         for (POIXMLDocumentPart p : getRelations()) {
             if (p instanceof XSLFTheme) {
@@ -31,13 +32,10 @@
             }
         }
         
-        XSLFTheme theme = (XSLFTheme) createRelationship(XSLFRelation.THEME, 
-                XSLFFactory.getInstance(), themeIndex);
+        XSLFTheme theme = (XSLFTheme) createRelationship
+            (XSLFRelation.THEME, XSLFFactory.getInstance(), themeIndex);
         theme.importTheme(getSlides().get(0).getTheme());
         
-        _notesMaster.addRelation(theme.getPackageRelationship().getId(), theme);
-        PackagePartName themePackagePartName = theme.getPackagePart().getPartName();
-        _notesMaster.getPackagePart().addRelationship(themePackagePartName, TargetMode.INTERNAL, 
-                theme.getPackageRelationship().getRelationshipType());
+        _notesMaster.addRelation(null, XSLFRelation.THEME, theme);
     }
 

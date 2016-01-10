@@ -15,6 +15,34 @@
         String clonedName = getUniqueSheetName(srcName);
 
         XSSFSheet clonedSheet = createSheet(clonedName);
+
+        // copy sheet's relations
+        List<RelationPart> rels = srcSheet.getRelationParts();
+        // if the sheet being cloned has a drawing then rememebr it and re-create it too
+        XSSFDrawing dg = null;
+        for(RelationPart rp : rels) {
+            POIXMLDocumentPart r = rp.getDocumentPart();
+            // do not copy the drawing relationship, it will be re-created
+            if(r instanceof XSSFDrawing) {
+                dg = (XSSFDrawing)r;
+                continue;
+            }
+
+            addRelation(rp, clonedSheet);
+        }
+
+        try {
+            for(PackageRelationship pr : srcSheet.getPackagePart().getRelationships()) {
+                if (pr.getTargetMode() == TargetMode.EXTERNAL) {
+                    clonedSheet.getPackagePart().addExternalRelationship
+                        (pr.getTargetURI().toASCIIString(), pr.getRelationshipType(), pr.getId());
+                }
+            }
+        } catch (InvalidFormatException e) {
+            throw new POIXMLException("Failed to clone sheet", e);
+        }
+        
+        
         try {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             srcSheet.write(out);
@@ -34,23 +62,6 @@
 
         clonedSheet.setSelected(false);
 
-        // copy sheet's relations
-        List<POIXMLDocumentPart> rels = srcSheet.getRelations();
-        // if the sheet being cloned has a drawing then rememebr it and re-create tpoo
-        XSSFDrawing dg = null;
-        for(POIXMLDocumentPart r : rels) {
-            // do not copy the drawing relationship, it will be re-created
-            if(r instanceof XSSFDrawing) {
-                dg = (XSSFDrawing)r;
-                continue;
-            }
-
-            PackageRelationship rel = r.getPackageRelationship();
-            clonedSheet.getPackagePart().addRelationship(
-                    rel.getTargetURI(), rel.getTargetMode(),rel.getRelationshipType());
-            clonedSheet.addRelation(rel.getId(), r);
-        }
-
         // clone the sheet drawing alongs with its relationships
         if (dg != null) {
             if(ct.isSetDrawing()) {
@@ -65,16 +76,9 @@
             clonedDg = clonedSheet.createDrawingPatriarch();
             
             // Clone drawing relations
-            List<POIXMLDocumentPart> srcRels = srcSheet.createDrawingPatriarch().getRelations();
-            for (POIXMLDocumentPart rel : srcRels) {
-                PackageRelationship relation = rel.getPackageRelationship();
-
-                clonedDg.addRelation(relation.getId(), rel);
-                
-                clonedDg
-						.getPackagePart()
-                        .addRelationship(relation.getTargetURI(), relation.getTargetMode(),
-                                relation.getRelationshipType(), relation.getId());
+            List<RelationPart> srcRels = srcSheet.createDrawingPatriarch().getRelationParts();
+            for (RelationPart rp : srcRels) {
+                addRelation(rp, clonedDg);
             }
         }
         return clonedSheet;
