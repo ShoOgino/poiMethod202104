@@ -1,0 +1,41 @@
+	private void findNotesSlides(Map<Integer,Integer> slideIdToNotes) {
+        SlideListWithText notesSLWT = _documentRecord.getNotesSlideListWithText();
+
+        if (notesSLWT == null) {
+            return;
+        }
+        
+        // Match up the records and the SlideAtomSets
+        int idx = -1;
+        for (SlideAtomsSet notesSet : notesSLWT.getSlideAtomsSets()) {
+            idx++;
+            // Get the right core record
+            Record r = getCoreRecordForSAS(notesSet);
+            SlidePersistAtom spa = notesSet.getSlidePersistAtom();
+
+            String loggerLoc = "A Notes SlideAtomSet at "+idx+" said its record was at refID "+spa.getRefID();
+
+            // we need to add null-records, otherwise the index references to other existing don't work anymore
+            if (r == null) {
+                logger.log(POILogger.WARN, loggerLoc+", but that record didn't exist - record ignored.");
+                continue;
+            }
+
+            // Ensure it really is a notes record
+            if (!(r instanceof Notes)) {
+                logger.log(POILogger.ERROR, loggerLoc+", but that was actually a " + r);
+                continue;
+            }
+            
+            Notes notesRecord = (Notes) r;
+
+            // Record the match between slide id and these notes
+            int slideId = spa.getSlideIdentifier();
+            slideIdToNotes.put(slideId, idx);
+            
+            HSLFNotes hn = new HSLFNotes(notesRecord);
+            hn.setSlideShow(this);
+            _notes.add(hn);
+        }
+	}
+

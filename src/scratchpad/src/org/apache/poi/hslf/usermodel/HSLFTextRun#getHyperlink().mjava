@@ -1,0 +1,40 @@
+    @Override
+    public HSLFHyperlink getHyperlink() {
+        if (hyperlinkId == -1) {
+            return null;
+        }
+        
+        ExHyperlink linkRecord = parentParagraph.getSheet().getSlideShow().getDocumentRecord().getExObjList().get(hyperlinkId);
+        if (linkRecord == null) {
+            return null;
+        }
+        
+        InteractiveInfoAtom info = null;
+        for (Record r : parentParagraph.getRecords()) {
+            if (r instanceof InteractiveInfo) {
+                InteractiveInfo ii = (InteractiveInfo)r;
+                InteractiveInfoAtom iia = ii.getInteractiveInfoAtom();
+                if (iia.getHyperlinkID() == hyperlinkId) {
+                    info = iia;
+                    break;
+                }
+            }
+        }
+        if (info == null) {
+            return null;
+        }
+        
+        // TODO: check previous/next sibling runs for same hyperlink id and return the whole string length
+        int startIdx = parentParagraph.getStartIdxOfTextRun(this);
+
+        HSLFHyperlink link = new HSLFHyperlink();
+        link.setId(hyperlinkId);
+        link.setType(info.getAction());
+        link.setLabel(linkRecord.getLinkTitle());
+        link.setAddress(linkRecord.getLinkURL());
+        link.setStartIndex(startIdx);
+        link.setEndIndex(startIdx+getLength());
+        
+        return link;
+    }
+

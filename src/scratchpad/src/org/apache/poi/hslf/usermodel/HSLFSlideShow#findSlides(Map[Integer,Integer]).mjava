@@ -1,0 +1,47 @@
+	private void findSlides(Map<Integer,Integer> slideIdToNotes) {
+        SlideListWithText slidesSLWT = _documentRecord.getSlideSlideListWithText();
+        if (slidesSLWT == null) {
+            return;
+        }
+
+        // Match up the records and the SlideAtomSets
+        int idx = -1;
+        for (SlideAtomsSet sas : slidesSLWT.getSlideAtomsSets()) {
+            idx++;
+            // Get the right core record
+            SlidePersistAtom spa = sas.getSlidePersistAtom();
+            Record r = getCoreRecordForSAS(sas);
+
+            // Ensure it really is a slide record
+            if (!(r instanceof Slide)) {
+                logger.log(POILogger.ERROR, "A Slide SlideAtomSet at " + idx
+                        + " said its record was at refID "
+                        + spa.getRefID()
+                        + ", but that was actually a " + r);
+                continue;
+            }
+            
+            Slide slide = (Slide)r;
+
+            // Do we have a notes for this?
+            HSLFNotes notes = null;
+            // Slide.SlideAtom.notesId references the corresponding notes slide.
+            // 0 if slide has no notes.
+            int noteId = slide.getSlideAtom().getNotesID();
+            if (noteId != 0) {
+                Integer notesPos = slideIdToNotes.get(noteId);
+                if (notesPos != null && 0 <= notesPos && notesPos < _notes.size()) {
+                    notes = _notes.get(notesPos);
+                } else {
+                    logger.log(POILogger.ERROR, "Notes not found for noteId=" + noteId);
+                }
+            }
+
+            // Now, build our slide
+            int slideIdentifier = spa.getSlideIdentifier();
+            HSLFSlide hs = new HSLFSlide(slide, notes, sas, slideIdentifier, (idx + 1));
+            hs.setSlideShow(this);
+            _slides.add(hs);
+        }
+	}
+
