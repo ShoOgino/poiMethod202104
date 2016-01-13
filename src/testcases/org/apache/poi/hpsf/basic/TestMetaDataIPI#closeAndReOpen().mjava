@@ -3,18 +3,10 @@
 	 * When finished writing information this method is used in the tests to
 	 * start reading from the created document and then the see if the results match.
 	 */
-	public void closeAndReOpen() {
+	public void closeAndReOpen() throws IOException, HPSFException {
 
-		try {
-			dsi.write(dir, DocumentSummaryInformation.DEFAULT_STREAM_NAME);
-			si.write(dir, SummaryInformation.DEFAULT_STREAM_NAME);
-		} catch (WritingNotSupportedException e) {
-			e.printStackTrace();
-			fail();
-		} catch (IOException e) {
-			e.printStackTrace();
-			fail();
-		}
+		dsi.write(dir, DocumentSummaryInformation.DEFAULT_STREAM_NAME);
+		si.write(dir, SummaryInformation.DEFAULT_STREAM_NAME);
 
 		si = null;
 		dsi = null;
@@ -28,41 +20,25 @@
 
 		InputStream is = new ByteArrayInputStream(bout.toByteArray());
 		assertNotNull(is);
-		POIFSFileSystem poifs = null;
-		try {
-			poifs = new POIFSFileSystem(is);
-		} catch (IOException e) {
-			e.printStackTrace();
-			fail();
-		}
-		try {
-			is.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-			fail();
-		}
+		POIFSFileSystem poifs = new POIFSFileSystem(is);
+		is.close();
+
 		assertNotNull(poifs);
 		/* Read the document summary information. */
 		DirectoryEntry dir = poifs.getRoot();
 
+		DocumentEntry dsiEntry = (DocumentEntry) dir
+				.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME);
+		DocumentInputStream dis = new DocumentInputStream(dsiEntry);
+		PropertySet ps = new PropertySet(dis);
+		dis.close();
+		dsi = new DocumentSummaryInformation(ps);
+
 		try {
-			DocumentEntry dsiEntry = (DocumentEntry) dir
-					.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME);
-			DocumentInputStream dis = new DocumentInputStream(dsiEntry);
-			PropertySet ps = new PropertySet(dis);
-			dis.close();
-			dsi = new DocumentSummaryInformation(ps);
-		} catch (FileNotFoundException ex) {
-			fail();
-		} catch (Exception e) {
-			e.printStackTrace();
-			fail();
-		}
-		try {
-			DocumentEntry dsiEntry = (DocumentEntry) dir
+			dsiEntry = (DocumentEntry) dir
 					.getEntry(SummaryInformation.DEFAULT_STREAM_NAME);
-			DocumentInputStream dis = new DocumentInputStream(dsiEntry);
-			PropertySet ps = new PropertySet(dis);
+			dis = new DocumentInputStream(dsiEntry);
+			ps = new PropertySet(dis);
 			dis.close();
 			si = new SummaryInformation(ps);
 
@@ -73,9 +49,6 @@
 			 */
 			si = PropertySetFactory.newSummaryInformation();
 			assertNotNull(si);
-		} catch (Exception e) {
-			e.printStackTrace();
-			fail();
 		}
 	}
 
