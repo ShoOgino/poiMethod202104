@@ -1,0 +1,27 @@
+    @Override
+    public XSLFPictureShape getFallbackPicture() {
+        String xquery =
+                  "declare namespace p='http://schemas.openxmlformats.org/presentationml/2006/main'; "
+                + "declare namespace mc='http://schemas.openxmlformats.org/markup-compatibility/2006' "
+                + ".//mc:Fallback/*/p:pic"
+                ;
+        XmlObject xo = selectProperty(XmlObject.class, xquery);
+        if (xo == null) {
+            return null;
+        }
+
+        CTGroupShape gs;
+        try {
+            gs = CTGroupShape.Factory.parse(xo.newDomNode());
+        } catch (XmlException e) {
+            LOG.log(POILogger.WARN, "Can't parse fallback picture stream of graphical frame", e);
+            return null;
+        }
+
+        if (gs.sizeOfPicArray() == 0) {
+            return null;
+        }
+
+        return new XSLFPictureShape(gs.getPicArray(0), getSheet());
+    }
+
