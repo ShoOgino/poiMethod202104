@@ -1,0 +1,55 @@
+    /**
+     * Update paragraph and character styles - merges them when subsequential styles match
+     */
+    private static void updateStyles(List<HSLFTextParagraph> paragraphs) {
+        final String rawText = toInternalString(getRawText(paragraphs));
+        TextHeaderAtom headerAtom = paragraphs.get(0)._headerAtom;
+        StyleTextPropAtom styleAtom = findStyleAtomPresent(headerAtom, rawText.length());
+
+        // Update the text length for its Paragraph and Character stylings
+        // * reset the length, to the new string's length
+        // * add on +1 if the last block
+
+        styleAtom.clearStyles();
+
+        TextPropCollection lastPTPC = null, lastRTPC = null, ptpc = null, rtpc = null;
+        for (HSLFTextParagraph para : paragraphs) {
+            ptpc = para.getParagraphStyle();
+            ptpc.updateTextSize(0);
+            if (!ptpc.equals(lastPTPC)) {
+                lastPTPC = styleAtom.addParagraphTextPropCollection(0);
+                lastPTPC.copy(ptpc);
+            }
+            for (HSLFTextRun tr : para.getTextRuns()) {
+                rtpc = tr.getCharacterStyle();
+                rtpc.updateTextSize(0);
+                if (!rtpc.equals(lastRTPC)) {
+                    lastRTPC = styleAtom.addCharacterTextPropCollection(0);
+                    lastRTPC.copy(rtpc);
+                }
+                int len = tr.getLength();
+                ptpc.updateTextSize(ptpc.getCharactersCovered() + len);
+                rtpc.updateTextSize(len);
+                lastPTPC.updateTextSize(lastPTPC.getCharactersCovered() + len);
+                lastRTPC.updateTextSize(lastRTPC.getCharactersCovered() + len);
+            }
+        }
+
+        assert (lastPTPC != null && lastRTPC != null && ptpc != null && rtpc != null);
+        ptpc.updateTextSize(ptpc.getCharactersCovered() + 1);
+        rtpc.updateTextSize(rtpc.getCharactersCovered() + 1);
+        lastPTPC.updateTextSize(lastPTPC.getCharactersCovered() + 1);
+        lastRTPC.updateTextSize(lastRTPC.getCharactersCovered() + 1);
+
+        /**
+         * If TextSpecInfoAtom is present, we must update the text size in it,
+         * otherwise the ppt will be corrupted
+         */
+        for (Record r : paragraphs.get(0).getRecords()) {
+            if (r instanceof TextSpecInfoAtom) {
+                ((TextSpecInfoAtom) r).setParentSize(rawText.length() + 1);
+                break;
+            }
+        }
+    }
+

@@ -1,0 +1,33 @@
+    /**
+     * Creates a new Hyperlink for a textrun.
+     * This is only a helper method - use {@link HSLFTextRun#createHyperlink()} instead!
+     *
+     * @param run the run which receives the hyperlink
+     * @return the new hyperlink
+     * 
+     * @see HSLFTextRun#createHyperlink()
+     */
+    /* package */ static HSLFHyperlink createHyperlink(HSLFTextRun run) {
+        // TODO: check if a hyperlink already exists
+        ExHyperlink exHyper = new ExHyperlink();
+        int linkId = run.getTextParagraph().getSheet().getSlideShow().addToObjListAtom(exHyper);
+        ExHyperlinkAtom obj = exHyper.getExHyperlinkAtom();
+        obj.setNumber(linkId);
+        InteractiveInfo info = new InteractiveInfo();
+        info.getInteractiveInfoAtom().setHyperlinkID(linkId);
+        // don't add the hyperlink now to text paragraph records
+        // this will be done, when the paragraph is saved
+        HSLFHyperlink hyper = new HSLFHyperlink(exHyper, info);
+        hyper.linkToNextSlide();
+        
+        TxInteractiveInfoAtom txinfo = new TxInteractiveInfoAtom();
+        int startIdx = run.getTextParagraph().getStartIdxOfTextRun(run);
+        int endIdx = startIdx + run.getLength();
+        txinfo.setStartIndex(startIdx);
+        txinfo.setEndIndex(endIdx);
+        hyper.setTextRunInfo(txinfo);
+        
+        run.setHyperlink(hyper);
+        return hyper;
+    }
+

@@ -1,0 +1,63 @@
+    @Test
+    public void bug47291() throws IOException {
+        HSLFSlideShow ppt1 = new HSLFSlideShow();
+        HSLFSlide slide1 = ppt1.createSlide();
+        HSLFTextRun r1 = slide1.createTextBox().setText("page1");
+        HSLFHyperlink hl1 = r1.createHyperlink();
+        hl1.linkToEmail("dev@poi.apache.org");
+        HSLFTextRun r2 = ppt1.createSlide().createTextBox().setText("page2");
+        HSLFHyperlink hl2 = r2.createHyperlink();
+        hl2.linkToLastSlide();
+        HSLFSlide sl1 = ppt1.createSlide();
+        HSLFTextBox tb1 = sl1.createTextBox();
+        tb1.setAnchor(new Rectangle2D.Double(100,100,100,100));
+        tb1.appendText("text1 ", false);
+        HSLFTextRun r3 = tb1.appendText("lin\u000bk", false);
+        tb1.appendText(" text2", false);
+        HSLFHyperlink hl3 = r3.createHyperlink();
+        hl3.linkToSlide(slide1);
+        HSLFTextRun r4 = ppt1.createSlide().createTextBox().setText("page4");
+        HSLFHyperlink hl4 = r4.createHyperlink();
+        hl4.linkToUrl("http://poi.apache.org");
+        HSLFTextBox tb5 = ppt1.createSlide().createTextBox();
+        tb5.setText("page5");
+        HSLFHyperlink hl5 = tb5.createHyperlink();
+        hl5.linkToFirstSlide();
+
+        HSLFSlideShow ppt2 = HSLFTestDataSamples.writeOutAndReadBack(ppt1);
+        ppt1.close();
+
+        List<HSLFSlide> slides = ppt2.getSlides();
+        tb1 = (HSLFTextBox)slides.get(0).getShapes().get(0);
+        hl1 = tb1.getTextParagraphs().get(0).getTextRuns().get(0).getHyperlink();
+        assertNotNull(hl1);
+        assertEquals("dev@poi.apache.org", hl1.getLabel());
+        assertEquals(Hyperlink.LINK_EMAIL, hl1.getType());
+
+        HSLFTextBox tb2 = (HSLFTextBox)slides.get(1).getShapes().get(0);
+        hl2 = tb2.getTextParagraphs().get(0).getTextRuns().get(0).getHyperlink();
+        assertNotNull(hl2);
+        assertEquals(InteractiveInfoAtom.LINK_LastSlide, hl2.getInfo().getInteractiveInfoAtom().getHyperlinkType());
+        assertEquals(Hyperlink.LINK_DOCUMENT, hl2.getType());
+
+        HSLFTextBox tb3 = (HSLFTextBox)slides.get(2).getShapes().get(0);
+        hl3 = tb3.getTextParagraphs().get(0).getTextRuns().get(1).getHyperlink();
+        assertNotNull(hl3);
+        assertEquals(ppt2.getSlides().get(0)._getSheetNumber(), Integer.parseInt(hl3.getAddress().split(",")[0]));
+        assertEquals(Hyperlink.LINK_DOCUMENT, hl3.getType());
+
+        HSLFTextBox tb4 = (HSLFTextBox)slides.get(3).getShapes().get(0);
+        hl4 = tb4.getTextParagraphs().get(0).getTextRuns().get(0).getHyperlink();
+        assertNotNull(hl4);
+        assertEquals("http://poi.apache.org", hl4.getLabel());
+        assertEquals(Hyperlink.LINK_URL, hl4.getType());
+
+        tb5 = (HSLFTextBox)slides.get(4).getShapes().get(0);
+        hl5 = tb5.getHyperlink();
+        assertNotNull(hl5);
+        assertEquals(InteractiveInfoAtom.LINK_FirstSlide, hl5.getInfo().getInteractiveInfoAtom().getHyperlinkType());
+        assertEquals(Hyperlink.LINK_DOCUMENT, hl5.getType());
+        
+        ppt2.close();
+    }
+

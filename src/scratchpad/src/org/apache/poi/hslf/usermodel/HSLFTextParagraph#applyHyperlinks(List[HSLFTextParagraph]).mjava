@@ -1,14 +1,40 @@
     protected static void applyHyperlinks(List<HSLFTextParagraph> paragraphs) {
         List<HSLFHyperlink> links = HSLFHyperlink.find(paragraphs);
-        
+
         for (HSLFHyperlink h : links) {
             int csIdx = 0;
             for (HSLFTextParagraph p : paragraphs) {
-                for (HSLFTextRun r : p) {
-                    if (h.getStartIndex() <= csIdx && csIdx < h.getEndIndex()) {
-                        r.setHyperlinkId(h.getId());
+                if (csIdx > h.getEndIndex()) break;
+                List<HSLFTextRun> runs = p.getTextRuns();
+                for (int rlen=0,rIdx=0; rIdx < runs.size(); csIdx+=rlen, rIdx++) {
+                    HSLFTextRun run = runs.get(rIdx);
+                    rlen = run.getLength();
+                    if (csIdx < h.getEndIndex() && h.getStartIndex() < csIdx+rlen) {
+                        String rawText = run.getRawText();
+                        int startIdx = h.getStartIndex()-csIdx;
+                        if (startIdx > 0) {
+                            // hyperlink starts within current textrun
+                            HSLFTextRun newRun = new HSLFTextRun(p);
+                            newRun.setCharacterStyle(run.getCharacterStyle());
+                            newRun.setText(rawText.substring(startIdx));
+                            run.setText(rawText.substring(0, startIdx));
+                            runs.add(rIdx+1, newRun);
+                            rlen = startIdx;
+                            continue;
+                        }
+                        int endIdx = Math.min(rlen, h.getEndIndex()-h.getStartIndex());
+                        if (endIdx < rlen) {
+                            // hyperlink ends before end of current textrun
+                            HSLFTextRun newRun = new HSLFTextRun(p);
+                            newRun.setCharacterStyle(run.getCharacterStyle());
+                            newRun.setText(rawText.substring(0, endIdx));
+                            run.setText(rawText.substring(endIdx));
+                            runs.add(rIdx, newRun);
+                            rlen = endIdx;
+                            run = newRun;
+                        }
+                        run.setHyperlink(h);
                     }
-                    csIdx += r.getLength();
                 }
             }
         }

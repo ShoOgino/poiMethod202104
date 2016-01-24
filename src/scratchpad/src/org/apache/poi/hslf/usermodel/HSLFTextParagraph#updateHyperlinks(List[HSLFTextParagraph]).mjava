@@ -1,0 +1,40 @@
+    private static void updateHyperlinks(List<HSLFTextParagraph> paragraphs) {
+        TextHeaderAtom headerAtom = paragraphs.get(0)._headerAtom;
+        RecordContainer _txtbox = headerAtom.getParentRecord();
+        // remove existing hyperlink records
+        for (Record r : _txtbox.getChildRecords()) {
+            if (r instanceof InteractiveInfo || r instanceof TxInteractiveInfoAtom) {
+                _txtbox.removeChild(r);
+            }
+        }
+        // now go through all the textruns and check for hyperlinks
+        HSLFHyperlink lastLink = null;
+        for (HSLFTextParagraph para : paragraphs) {
+            for (HSLFTextRun run : para) {
+                HSLFHyperlink thisLink = run.getHyperlink();
+                if (thisLink != null && thisLink == lastLink) {
+                    // the hyperlink extends over this text run, increase its length
+                    // TODO: the text run might be longer than the hyperlink
+                    thisLink.setEndIndex(thisLink.getEndIndex()+run.getLength());
+                } else {
+                    if (lastLink != null) {
+                        InteractiveInfo info = lastLink.getInfo();
+                        TxInteractiveInfoAtom txinfo = lastLink.getTextRunInfo();
+                        assert(info != null && txinfo != null);
+                        _txtbox.appendChildRecord(info);
+                        _txtbox.appendChildRecord(txinfo);
+                    }
+                }
+                lastLink = thisLink;
+            }
+        }
+
+        if (lastLink != null) {
+            InteractiveInfo info = lastLink.getInfo();
+            TxInteractiveInfoAtom txinfo = lastLink.getTextRunInfo();
+            assert(info != null && txinfo != null);
+            _txtbox.appendChildRecord(info);
+            _txtbox.appendChildRecord(txinfo);
+        }    
+    }
+

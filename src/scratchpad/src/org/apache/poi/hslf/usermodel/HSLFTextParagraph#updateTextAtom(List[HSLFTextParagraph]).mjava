@@ -1,0 +1,72 @@
+    /**
+     * Set the correct text atom depending on the multibyte usage
+     */
+    private static void updateTextAtom(List<HSLFTextParagraph> paragraphs) {
+        final String rawText = toInternalString(getRawText(paragraphs));
+
+        // Will it fit in a 8 bit atom?
+        boolean isUnicode = StringUtil.hasMultibyte(rawText);
+        // isUnicode = true;
+
+        TextHeaderAtom headerAtom = paragraphs.get(0)._headerAtom;
+        TextBytesAtom byteAtom = paragraphs.get(0)._byteAtom;
+        TextCharsAtom charAtom = paragraphs.get(0)._charAtom;
+        StyleTextPropAtom styleAtom = findStyleAtomPresent(headerAtom, rawText.length());
+
+        // Store in the appropriate record
+        Record oldRecord = null, newRecord = null;
+        if (isUnicode) {
+            if (byteAtom != null || charAtom == null) {
+                oldRecord = byteAtom;
+                charAtom = new TextCharsAtom();
+            }
+            newRecord = charAtom;
+            charAtom.setText(rawText);
+        } else {
+            if (charAtom != null || byteAtom == null) {
+                oldRecord = charAtom;
+                byteAtom = new TextBytesAtom();
+            }
+            newRecord = byteAtom;
+            byte[] byteText = new byte[rawText.length()];
+            StringUtil.putCompressedUnicode(rawText, byteText, 0);
+            byteAtom.setText(byteText);
+        }
+        assert (newRecord != null);
+
+        RecordContainer _txtbox = headerAtom.getParentRecord();
+        Record[] cr = _txtbox.getChildRecords();
+        int /* headerIdx = -1, */ textIdx = -1, styleIdx = -1;
+        for (int i = 0; i < cr.length; i++) {
+            Record r = cr[i];
+            if (r == headerAtom) ; // headerIdx = i;
+            else if (r == oldRecord || r == newRecord) textIdx = i;
+            else if (r == styleAtom) styleIdx = i;
+        }
+
+        if (textIdx == -1) {
+            // the old record was never registered, ignore it
+            _txtbox.addChildAfter(newRecord, headerAtom);
+            // textIdx = headerIdx + 1;
+        } else {
+            // swap not appropriated records - noop if unchanged
+            cr[textIdx] = newRecord;
+        }
+
+        if (styleIdx == -1) {
+            // Add the new StyleTextPropAtom after the TextCharsAtom / TextBytesAtom
+            _txtbox.addChildAfter(styleAtom, newRecord);
+        }
+
+        for (HSLFTextParagraph p : paragraphs) {
+            if (newRecord == byteAtom) {
+                p._byteAtom = byteAtom;
+                p._charAtom = null;
+            } else {
+                p._byteAtom = null;
+                p._charAtom = charAtom;
+            }
+        }
+
+    }
+
