@@ -1,10 +1,15 @@
    @Override
-   public void endElement(String uri, String localName, String name)
+   public void endElement(String uri, String localName, String qName)
            throws SAXException {
+
+       if (uri != null && ! uri.equals(SPREADSHEETML_NS)) {
+           return;
+       }
+
        String thisStr = null;
 
        // v => contents of a cell
-       if (isTextTag(name)) {
+       if (isTextTag(localName)) {
            vIsOpen = false;
            
            // Process the value contents as required, now we have it all
@@ -77,11 +82,11 @@
            
            // Output
            output.cell(cellRef, thisStr, comment);
-       } else if ("f".equals(name)) {
+       } else if ("f".equals(localName)) {
           fIsOpen = false;
-       } else if ("is".equals(name)) {
+       } else if ("is".equals(localName)) {
           isIsOpen = false;
-       } else if ("row".equals(name)) {
+       } else if ("row".equals(localName)) {
           // Handle any "missing" cells which had comments attached
           checkForEmptyCellComments(EmptyCellCommentsCheckType.END_OF_ROW);
           
@@ -90,19 +95,19 @@
           
           // some sheets do not have rowNum set in the XML, Excel can read them so we should try to read them as well
           nextRowNum = rowNum + 1;
-       } else if ("sheetData".equals(name)) {
+       } else if ("sheetData".equals(localName)) {
            // Handle any "missing" cells which had comments attached
            checkForEmptyCellComments(EmptyCellCommentsCheckType.END_OF_SHEET_DATA);
        }
-       else if("oddHeader".equals(name) || "evenHeader".equals(name) ||
-             "firstHeader".equals(name)) {
+       else if("oddHeader".equals(localName) || "evenHeader".equals(localName) ||
+             "firstHeader".equals(localName)) {
           hfIsOpen = false;
-          output.headerFooter(headerFooter.toString(), true, name);
+          output.headerFooter(headerFooter.toString(), true, localName);
        }
-       else if("oddFooter".equals(name) || "evenFooter".equals(name) ||
-             "firstFooter".equals(name)) {
+       else if("oddFooter".equals(localName) || "evenFooter".equals(localName) ||
+             "firstFooter".equals(localName)) {
           hfIsOpen = false;
-          output.headerFooter(headerFooter.toString(), false, name);
+          output.headerFooter(headerFooter.toString(), false, localName);
        }
    }
 

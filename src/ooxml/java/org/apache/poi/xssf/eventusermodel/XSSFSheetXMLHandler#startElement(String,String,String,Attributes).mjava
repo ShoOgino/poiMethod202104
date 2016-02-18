@@ -1,16 +1,20 @@
    @Override
    @SuppressWarnings("unused")
-   public void startElement(String uri, String localName, String name,
+   public void startElement(String uri, String localName, String qName,
                             Attributes attributes) throws SAXException {
 
-       if (isTextTag(name)) {
+       if (uri != null && ! uri.equals(SPREADSHEETML_NS)) {
+           return;
+       }
+
+       if (isTextTag(localName)) {
            vIsOpen = true;
            // Clear contents cache
            value.setLength(0);
-       } else if ("is".equals(name)) {
+       } else if ("is".equals(localName)) {
           // Inline string outer tag
           isIsOpen = true;
-       } else if ("f".equals(name)) {
+       } else if ("f".equals(localName)) {
           // Clear contents cache
           formula.setLength(0);
           
@@ -45,14 +49,14 @@
              fIsOpen = true;
           }
        }
-       else if("oddHeader".equals(name) || "evenHeader".equals(name) ||
-             "firstHeader".equals(name) || "firstFooter".equals(name) ||
-             "oddFooter".equals(name) || "evenFooter".equals(name)) {
+       else if("oddHeader".equals(localName) || "evenHeader".equals(localName) ||
+             "firstHeader".equals(localName) || "firstFooter".equals(localName) ||
+             "oddFooter".equals(localName) || "evenFooter".equals(localName)) {
           hfIsOpen = true;
           // Clear contents cache
           headerFooter.setLength(0);
        }
-       else if("row".equals(name)) {
+       else if("row".equals(localName)) {
            String rowNumStr = attributes.getValue("r");
            if(rowNumStr != null) {
                rowNum = Integer.parseInt(rowNumStr) - 1;
@@ -62,7 +66,7 @@
            output.startRow(rowNum);
        }
        // c => cell
-       else if ("c".equals(name)) {
+       else if ("c".equals(localName)) {
            // Set up defaults.
            this.nextDataType = xssfDataType.NUMBER;
            this.formatIndex = -1;
@@ -83,11 +87,13 @@
            else {
                // Number, but almost certainly with a special style or format
                XSSFCellStyle style = null;
-               if (cellStyleStr != null) {
-                   int styleIndex = Integer.parseInt(cellStyleStr);
-                   style = stylesTable.getStyleAt(styleIndex);
-               } else if (stylesTable.getNumCellStyles() > 0) {
-                   style = stylesTable.getStyleAt(0);
+               if (stylesTable != null) {
+                   if (cellStyleStr != null) {
+                       int styleIndex = Integer.parseInt(cellStyleStr);
+                       style = stylesTable.getStyleAt(styleIndex);
+                   } else if (stylesTable.getNumCellStyles() > 0) {
+                       style = stylesTable.getStyleAt(0);
+                   }
                }
                if (style != null) {
                    this.formatIndex = style.getDataFormat();
