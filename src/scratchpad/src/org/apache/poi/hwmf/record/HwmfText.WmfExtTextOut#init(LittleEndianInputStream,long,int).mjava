@@ -10,7 +10,8 @@
             
             int size = 4*LittleEndianConsts.SHORT_SIZE;
             
-            if (fwOpts != 0 && size+8<=remainingRecordSize) {
+            // Check if we have a rectangle
+            if ((ETO_OPAQUE.isSet(fwOpts) || ETO_CLIPPED.isSet(fwOpts)) && size+8<=remainingRecordSize) {
                 // the bounding rectangle is optional and only read when fwOpts are given
                 left = leis.readShort();
                 top = leis.readShort();
@@ -24,16 +25,20 @@
             text = new String(buf, 0, stringLength, LocaleUtil.CHARSET_1252);
             size += buf.length;
             
-            if (size < remainingRecordSize) {
-                if (size + stringLength*LittleEndianConsts.SHORT_SIZE < remainingRecordSize) {
-                    throw new RecordFormatException("can't read Dx array - given recordSize doesn't contain enough values for string length "+stringLength);
-                }
-                
-                dx = new int[stringLength];
-                for (int i=0; i<dx.length; i++) {
-                    dx[i] = leis.readShort();
-                }
-                size += dx.length*LittleEndianConsts.SHORT_SIZE;
+            if (size >= remainingRecordSize) {
+                logger.log(POILogger.INFO, "META_EXTTEXTOUT doesn't contain character tracking info");
+                return size;
+            }
+            
+            int dxLen = Math.min(stringLength, (remainingRecordSize-size)/LittleEndianConsts.SHORT_SIZE);
+            if (dxLen < stringLength) {
+                logger.log(POILogger.WARN, "META_EXTTEXTOUT tracking info doesn't cover all characters");
+            }
+
+            dx = new int[stringLength]; 
+            for (int i=0; i<dxLen; i++) {
+                dx[i] = leis.readShort();
+                size += LittleEndianConsts.SHORT_SIZE;
             }
             
             return size;

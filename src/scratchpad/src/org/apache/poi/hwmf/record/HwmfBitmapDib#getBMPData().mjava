@@ -1,0 +1,26 @@
+    private byte[] getBMPData() {
+        if (imageData == null) {
+            throw new RecordFormatException("bitmap not initialized ... need to call init() before");
+        }
+
+        // sometimes there are missing bytes after the imageData which will be 0-filled
+        int imageSize = (int)Math.max(imageData.length, introSize+headerImageSize);
+        
+        // create the image data and leave the parsing to the ImageIO api
+        byte buf[] = new byte[BMP_HEADER_SIZE+imageSize];
+
+        // https://en.wikipedia.org/wiki/BMP_file_format #  Bitmap file header
+        buf[0] = (byte)'B';
+        buf[1] = (byte)'M';
+        // the full size of the bmp
+        LittleEndian.putInt(buf, 2, BMP_HEADER_SIZE+imageSize);
+        // the next 4 bytes are unused
+        LittleEndian.putInt(buf, 6, 0);
+        // start of image = BMP header length + dib header length + color tables length
+        LittleEndian.putInt(buf, 10, BMP_HEADER_SIZE + introSize);
+        // fill the "known" image data
+        System.arraycopy(imageData, 0, buf, BMP_HEADER_SIZE, imageData.length);
+        
+        return buf;
+    }
+

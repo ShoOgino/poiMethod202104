@@ -1,32 +1,27 @@
     public FillStyle getFillStyle() {
         return new FillStyle() {
             public PaintStyle getPaint() {
-                switch (getFillType()) {
+                final int fillType = getFillType();
+                // TODO: fix gradient types, this mismatches with the MS-ODRAW definition ...
+                // need to handle (not only) the type (radial,rectangular,linear),
+                // the direction, e.g. top right, and bounds (e.g. for rectangular boxes)
+                switch (fillType) {
                     case FILL_SOLID:
                         return DrawPaint.createSolidPaint(getForegroundColor());
-                    case FILL_PICTURE: {
-                        final HSLFPictureData pd = getPictureData();
-                        if (pd == null) break;
-                        
-                        return new TexturePaint() {
-                            public InputStream getImageData() {
-                                return new ByteArrayInputStream(pd.getData());
-                            }
-
-                            public String getContentType() {
-                                return pd.getContentType();
-                            }
-
-                            public int getAlpha() {
-                                return (int)(shape.getAlpha(EscherProperties.FILL__FILLOPACITY)*100000.0);
-                            }
-                        };
-                    }
+                    case FILL_SHADE_SHAPE:
+                        return getGradientPaint(GradientType.shape);
+                    case FILL_SHADE_CENTER:
+                    case FILL_SHADE_TITLE:
+                        return getGradientPaint(GradientType.circular);
+                    case FILL_SHADE:
+                    case FILL_SHADE_SCALE:
+                        return getGradientPaint(GradientType.linear);
+                    case FILL_PICTURE:
+                        return getTexturePaint();
                     default:
-                        logger.log(POILogger.WARN, "unsuported fill type: " + getFillType());
-                        break;
+                        logger.log(POILogger.WARN, "unsuported fill type: " + fillType);
+                        return null;
                 }
-                return null;
             }
         };
     }

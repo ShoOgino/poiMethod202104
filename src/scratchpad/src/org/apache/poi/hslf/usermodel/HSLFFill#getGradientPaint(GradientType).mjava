@@ -1,0 +1,56 @@
+    private GradientPaint getGradientPaint(final GradientType gradientType) {
+        final AbstractEscherOptRecord opt = shape.getEscherOptRecord();
+        final EscherArrayProperty ep = HSLFShape.getEscherProperty(opt, EscherProperties.FILL__SHADECOLORS);
+        final int colorCnt = (ep == null) ? 0 : ep.getNumberOfElementsInArray();
+
+        return new GradientPaint() {
+            public double getGradientAngle() {
+                // A value of type FixedPoint, as specified in [MS-OSHARED] section 2.2.1.6,
+                // that specifies the angle of the gradient fill. Zero degrees represents a vertical vector from
+                // bottom to top. The default value for this property is 0x00000000.
+                int rot = shape.getEscherProperty(EscherProperties.FILL__ANGLE);
+                return 90-Units.fixedPointToDouble(rot);
+            }
+            public ColorStyle[] getGradientColors() {
+                ColorStyle cs[];
+                if (colorCnt == 0) {
+                    cs = new ColorStyle[2];
+                    cs[0] = wrapColor(getBackgroundColor());
+                    cs[1] = wrapColor(getForegroundColor());
+                } else {
+                    cs = new ColorStyle[colorCnt];
+                    int idx = 0;
+                    // TODO: handle palette colors and alpha(?) value 
+                    for (byte data[] : ep) {
+                        EscherColorRef ecr = new EscherColorRef(data, 0, 4);
+                        cs[idx++] = wrapColor(shape.getColor(ecr));
+                    }
+                }
+                return cs;
+            }
+            private ColorStyle wrapColor(Color col) {
+                return (col == null) ? null : DrawPaint.createSolidPaint(col).getSolidColor();
+            }
+            public float[] getGradientFractions() {
+                float frc[];
+                if (colorCnt == 0) {
+                    frc = new float[]{0, 1};
+                } else {
+                    frc = new float[colorCnt];
+                    int idx = 0;
+                    for (byte data[] : ep) {
+                        double pos = Units.fixedPointToDouble(LittleEndian.getInt(data, 4));
+                        frc[idx++] = (float)pos;
+                    }
+                }
+                return frc;
+            }
+            public boolean isRotatedWithShape() {
+                return false;
+            }
+            public GradientType getGradientType() {
+                return gradientType;
+            }
+        };
+    }
+

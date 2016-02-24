@@ -10,28 +10,19 @@
         String propNames[] = propName.split(",");
         for (String pn : propNames) {
             TextProp prop = props.findByName(pn);
-            if (prop != null) return prop;
+            if (prop == null) {
+                continue;
+            }
+
+            // Font properties (maybe other too???) can have an index of -1
+            // so we check the master for this font index then
+            if (pn.contains("font") && prop.getValue() == -1) {
+                return getMasterPropVal(props, pn, paragraph);
+            }
+            
+            return prop;
         }
-
-        BitMaskTextProp maskProp = (BitMaskTextProp) props.findByName(ParagraphFlagsTextProp.NAME);
-        boolean hardAttribute = (maskProp != null && maskProp.getValue() == 0);
-        if (hardAttribute) return null;
-
-        HSLFSheet sheet = paragraph.getSheet();
-        int txtype = paragraph.getRunType();
-        HSLFMasterSheet master = sheet.getMasterSheet();
-        if (master == null) {
-            logger.log(POILogger.WARN, "MasterSheet is not available");
-            return null;
-        }
-
-        boolean isChar = props.getTextPropType() == TextPropType.character;
-
-        for (String pn : propNames) {
-            TextProp prop = master.getStyleAttribute(txtype, paragraph.getIndentLevel(), pn, isChar);
-            if (prop != null) return prop;
-        }
-
-        return null;
+        
+        return getMasterPropVal(props, propName, paragraph);
     }
 
