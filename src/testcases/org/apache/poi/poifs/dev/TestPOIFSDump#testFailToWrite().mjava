@@ -1,0 +1,24 @@
+    @Test
+    public void testFailToWrite() throws IOException {
+        File dir = TempFile.createTempFile("TestPOIFSDump", ".tst");
+        assertTrue("Had: " + dir, dir.exists());
+        assertTrue("Had: " + dir, dir.delete());
+        assertTrue("Had: " + dir, dir.mkdirs());
+
+        FileInputStream is = new FileInputStream(TEST_FILE);
+        NPOIFSFileSystem fs = new NPOIFSFileSystem(is);
+        is.close();
+
+        NPropertyTable props = fs.getPropertyTable();
+        assertNotNull(props);
+
+        try {
+            // try with an invalid startBlock to trigger an exception
+            // to validate that file-handles are closed properly
+            POIFSDump.dump(fs, 999999999, "mini-stream", dir);
+            fail("Should catch exception here");
+        } catch (IndexOutOfBoundsException e) {
+            // expected here
+        }
+    }
+
