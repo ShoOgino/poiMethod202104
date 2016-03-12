@@ -1,10 +1,7 @@
     /**
      * Test setRepeatingRowsAndColumns when startRow and startColumn are -1.
-     * 
-     * This test intentionally tests the deprecated
-     * {@link HSSFWorkbook#setRepeatingRowsAndColumns(int, int, int, int, int)} function
      */
-    @SuppressWarnings("deprecation")
+    @Test
     public void testRepeatingColsRowsMinusOne() throws IOException
     {
         HSSFWorkbook workbook = new HSSFWorkbook();
@@ -14,17 +11,21 @@
 
         HSSFCell cell = row.createCell(1);
         cell.setCellValue(new HSSFRichTextString("hi"));
+        CellRangeAddress cra = new CellRangeAddress(-1, 1, -1, 1);
+        try {
+            sheet.setRepeatingColumns(cra);
+            fail("invalid start index is ignored");
+        } catch (IllegalArgumentException e) {}
+        
+        try {
+            sheet.setRepeatingRows(cra);
+            fail("invalid start index is ignored");
+        } catch (IllegalArgumentException e) {}
 
-
-        workbook.setRepeatingRowsAndColumns(0, -1, 1, -1, 0);
-
-        File file = TempFile.createTempFile("testPrintTitlesA",".xls");
-
-        FileOutputStream fileOut = new FileOutputStream(file);
-        workbook.write(fileOut);
-        fileOut.close();
-
-        assertTrue("file exists",file.exists());
+        sheet.setRepeatingColumns(null);
+        sheet.setRepeatingRows(null);
+        
+        HSSFTestDataSamples.writeOutAndReadBack(workbook).close();
         
         workbook.close();
     }

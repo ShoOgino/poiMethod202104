@@ -4,46 +4,35 @@
      * SUCCESS:    HSSF reads the sheet.  Matches values in their particular positions and format is correct<P>
      * FAILURE:    HSSF does not read a sheet or excepts.  HSSF cannot identify values
      *             in the sheet in their known positions.<P>
-     *
      */
-
+    @Test
     public void testWriteDataFormat() throws IOException {
-        File file = TempFile.createTempFile("testWriteDataFormat", ".xls");
-        FileOutputStream out = new FileOutputStream(file);
-        HSSFWorkbook wb = new HSSFWorkbook();
-        HSSFSheet s = wb.createSheet();
-        HSSFRow r = null;
-        HSSFCell c = null;
-        HSSFDataFormat format = wb.createDataFormat();
-        HSSFCellStyle cs = wb.createCellStyle();
+        HSSFWorkbook wb1 = new HSSFWorkbook();
+        HSSFSheet s1 = wb1.createSheet();
+        HSSFDataFormat format = wb1.createDataFormat();
+        HSSFCellStyle cs = wb1.createCellStyle();
 
         short df = format.getFormat("0.0");
         cs.setDataFormat(df);
 
-        r = s.createRow(0);
-        c = r.createCell(0);
-        c.setCellStyle(cs);
-        c.setCellValue(1.25);
+        HSSFCell c1 = s1.createRow(0).createCell(0);
+        c1.setCellStyle(cs);
+        c1.setCellValue(1.25);
 
-        wb.write(out);
-        out.close();
+        HSSFWorkbook wb2 = HSSFTestDataSamples.writeOutAndReadBack(wb1);
+        wb1.close();
 
-        FileInputStream stream = new FileInputStream(file);
-        POIFSFileSystem fs = new POIFSFileSystem(stream);
-        HSSFWorkbook workbook = new HSSFWorkbook(fs);
-        HSSFSheet sheet = workbook.getSheetAt(0);
-        HSSFCell cell = sheet.getRow(0).getCell(0);
-        format = workbook.createDataFormat();
+        HSSFSheet s2 = wb2.getSheetAt(0);
+        HSSFCell c2 = s2.getRow(0).getCell(0);
+        format = wb2.createDataFormat();
 
-        assertEquals(1.25, cell.getNumericCellValue(), 1e-10);
+        assertEquals(1.25, c2.getNumericCellValue(), 1e-10);
 
         assertEquals(format.getFormat(df), "0.0");
 
-        assertEquals(format, workbook.createDataFormat());
+        assertEquals(format, wb2.createDataFormat());
 
-        stream.close();
-
-        workbook.close();
-        wb.close();
+        wb2.close();
+        wb1.close();
     }
 

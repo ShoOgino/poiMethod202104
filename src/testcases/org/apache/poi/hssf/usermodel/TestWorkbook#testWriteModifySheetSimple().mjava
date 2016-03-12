@@ -6,25 +6,17 @@
      *             Last row, first row is tested against the correct values (74,25).<P>
      * FAILURE:    HSSF does not create a sheet or excepts.  Filesize does not match the known good.
      *             HSSFSheet last row or first row is incorrect.             <P>
-     *
      */
-
-    public void testWriteModifySheetSimple()
-        throws IOException
-    {
-        File             file = TempFile.createTempFile("testWriteSheetSimple",
-                                                    ".xls");
-        FileOutputStream out  = new FileOutputStream(file);
-        HSSFWorkbook     wb   = new HSSFWorkbook();
-        HSSFSheet        s    = wb.createSheet();
-        HSSFRow          r    = null;
-        HSSFCell         c    = null;
+    @Test
+    public void testWriteModifySheetSimple() throws IOException {
+        HSSFWorkbook wb1 = new HSSFWorkbook();
+        HSSFSheet s = wb1.createSheet();
 
         for (int rownum = 0; rownum < 100; rownum++) {
-            r = s.createRow(rownum);
+            HSSFRow r = s.createRow(rownum);
 
             for (int cellnum = 0; cellnum < 50; cellnum += 2) {
-                c = r.createCell(cellnum);
+                HSSFCell c = r.createCell(cellnum);
                 c.setCellValue(rownum * 10000 + cellnum
                                + ((( double ) rownum / 1000)
                                   + (( double ) cellnum / 10000)));
@@ -33,18 +25,26 @@
             }
         }
         for (int rownum = 0; rownum < 25; rownum++) {
-            r = s.getRow(rownum);
+            HSSFRow r = s.getRow(rownum);
             s.removeRow(r);
         }
         for (int rownum = 75; rownum < 100; rownum++) {
-            r = s.getRow(rownum);
+            HSSFRow r = s.getRow(rownum);
             s.removeRow(r);
         }
-        wb.write(out);
-        out.close();
 
-        sanityChecker.checkHSSFWorkbook(wb);
+        HSSFWorkbook wb2 = HSSFTestDataSamples.writeOutAndReadBack(wb1);
+        
+        sanityChecker.checkHSSFWorkbook(wb1);
         assertEquals("LAST ROW == 74", 74, s.getLastRowNum());
         assertEquals("FIRST ROW == 25", 25, s.getFirstRowNum());
+
+        sanityChecker.checkHSSFWorkbook(wb2);
+        s = wb2.getSheetAt(0);
+        assertEquals("LAST ROW == 74", 74, s.getLastRowNum());
+        assertEquals("FIRST ROW == 25", 25, s.getFirstRowNum());
+    
+        wb2.close();
+        wb1.close();
     }
 
