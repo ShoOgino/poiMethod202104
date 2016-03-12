@@ -15,40 +15,7 @@
 
         // Encrypted OOXML files go inside OLE2 containers, is this one?
         if (root.hasEntry(Decryptor.DEFAULT_POIFS_ENTRY)) {
-            EncryptionInfo info = new EncryptionInfo(fs);
-            Decryptor d = Decryptor.getInstance(info);
-
-            boolean passwordCorrect = false;
-            InputStream stream = null;
-            try {
-                if (password != null && d.verifyPassword(password)) {
-                    passwordCorrect = true;
-                }
-                if (!passwordCorrect && d.verifyPassword(Decryptor.DEFAULT_PASSWORD)) {
-                    passwordCorrect = true;
-                }
-                if (passwordCorrect) {
-                    // wrap the stream in a FilterInputStream to close the NPOIFSFileSystem
-                    // as well when the resulting OPCPackage is closed
-                    stream = new FilterInputStream(d.getDataStream(root)) {
-                        @Override
-                        public void close() throws IOException {
-                            fs.close();
-
-                            super.close();
-                        }
-                    };
-                }
-            } catch (GeneralSecurityException e) {
-                throw new IOException(e);
-            }
-
-            if (! passwordCorrect) {
-                if (password != null)
-                    throw new EncryptedDocumentException("Password incorrect");
-                else
-                    throw new EncryptedDocumentException("The supplied spreadsheet is protected, but no password was supplied");
-            }
+            InputStream stream = DocumentFactoryHelper.getDecryptedStream(fs, password);
 
             OPCPackage pkg = OPCPackage.open(stream);
             return create(pkg);

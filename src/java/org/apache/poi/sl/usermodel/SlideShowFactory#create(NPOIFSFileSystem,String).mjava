@@ -9,37 +9,16 @@
      *
      * @throws IOException if an error occurs while reading the data
      */
-    public static SlideShow<?,?> create(NPOIFSFileSystem fs, String password) throws IOException {
+    public static SlideShow<?,?> create(final NPOIFSFileSystem fs, String password) throws IOException {
         DirectoryNode root = fs.getRoot();
 
         // Encrypted OOXML files go inside OLE2 containers, is this one?
         if (root.hasEntry(Decryptor.DEFAULT_POIFS_ENTRY)) {
-            EncryptionInfo info = new EncryptionInfo(fs);
-            Decryptor d = Decryptor.getInstance(info);
-
-            boolean passwordCorrect = false;
             InputStream stream = null;
             try {
-                if (password != null && d.verifyPassword(password)) {
-                    passwordCorrect = true;
-                }
-                if (!passwordCorrect && d.verifyPassword(Decryptor.DEFAULT_PASSWORD)) {
-                    passwordCorrect = true;
-                }
-                if (passwordCorrect) {
-                    stream = d.getDataStream(root);
-                }
-
-                if (!passwordCorrect) {
-                    String err = (password != null)
-                        ? "Password incorrect"
-                        : "The supplied spreadsheet is protected, but no password was supplied";
-                    throw new EncryptedDocumentException(err);
-                }
+                stream = DocumentFactoryHelper.getDecryptedStream(fs, password);
 
                 return createXSLFSlideShow(stream);
-            } catch (GeneralSecurityException e) {
-                throw new IOException(e);
             } finally {
                 if (stream != null) stream.close();
             }
