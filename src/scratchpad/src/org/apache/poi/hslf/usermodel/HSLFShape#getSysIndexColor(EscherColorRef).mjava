@@ -1,0 +1,63 @@
+    private Color getSysIndexColor(EscherColorRef ecr) {
+        SysIndexSource sis = ecr.getSysIndexSource();
+        if (sis == null) {
+            int sysIdx = ecr.getSysIndex();
+            PresetColor pc = PresetColor.valueOfNativeId(sysIdx);
+            return (pc != null) ? pc.color : null;
+        }
+        
+        // TODO: check for recursive loops, when color getter also reference
+        // a different color type
+        switch (sis) {
+            case FILL_COLOR: {
+                return getFill().getForegroundColor();
+            }
+            case LINE_OR_FILL_COLOR: {
+                Color col = null;
+                if (this instanceof HSLFSimpleShape) {
+                    col = ((HSLFSimpleShape)this).getLineColor();
+                }
+                if (col == null) {
+                    col = getFill().getForegroundColor();
+                }
+                return col;
+            }
+            case LINE_COLOR: {
+                if (this instanceof HSLFSimpleShape) {
+                    return ((HSLFSimpleShape)this).getLineColor();
+                }
+                break;
+            }
+            case SHADOW_COLOR: {
+                if (this instanceof HSLFSimpleShape) {
+                    return ((HSLFSimpleShape)this).getShadowColor();
+                }
+                break;
+            }
+            case CURRENT_OR_LAST_COLOR: {
+                // TODO ... read from graphics context???
+                break;
+            }
+            case FILL_BACKGROUND_COLOR: {
+                return getFill().getBackgroundColor();
+            }
+            case LINE_BACKGROUND_COLOR: {
+                if (this instanceof HSLFSimpleShape) {
+                    return ((HSLFSimpleShape)this).getLineBackgroundColor();
+                }
+                break;
+            }
+            case FILL_OR_LINE_COLOR: {
+                Color col = getFill().getForegroundColor();
+                if (col == null && this instanceof HSLFSimpleShape) {
+                    col = ((HSLFSimpleShape)this).getLineColor();
+                }
+                return col;
+            }
+            default:
+                break;
+        }
+            
+        return null;
+    }
+
