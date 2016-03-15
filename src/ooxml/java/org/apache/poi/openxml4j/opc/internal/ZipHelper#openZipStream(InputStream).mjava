@@ -6,7 +6,12 @@
      * @return The zip stream freshly open.
      */
     public static ThresholdInputStream openZipStream(InputStream stream) throws IOException {
-        InputStream zis = new ZipInputStream(stream);
+        // Peek at the first few bytes to sanity check
+        InputStream checkedStream = prepareToCheckHeader(stream);
+        verifyZipHeader(checkedStream);
+        
+        // Open as a proper zip stream
+        InputStream zis = new ZipInputStream(checkedStream);
         ThresholdInputStream tis = ZipSecureFile.addThreshold(zis);
         return tis;
     }
