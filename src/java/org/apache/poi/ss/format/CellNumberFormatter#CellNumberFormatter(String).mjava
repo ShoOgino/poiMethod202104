@@ -6,71 +6,100 @@
     public CellNumberFormatter(String format) {
         super(format);
 
-        scale = 1;
+        CellNumberPartHandler ph = new CellNumberPartHandler();
+        StringBuffer descBuf = CellFormatPart.parseFormat(format, CellFormatType.NUMBER, ph);
 
-        specials = new LinkedList<Special>();
-
-        NumPartHandler partHandler = new NumPartHandler();
-        StringBuffer descBuf = CellFormatPart.parseFormat(format,
-                CellFormatType.NUMBER, partHandler);
+        exponent = ph.getExponent();
+        specials.addAll(ph.getSpecials());
+        improperFraction = ph.isImproperFraction();
 
         // These are inconsistent settings, so ditch 'em
-        if ((decimalPoint != null || exponent != null) && slash != null) {
+        if ((ph.getDecimalPoint() != null || ph.getExponent() != null) && ph.getSlash() != null) {
             slash = null;
             numerator = null;
+        } else {
+            slash = ph.getSlash();
+            numerator = ph.getNumerator();
         }
 
-        interpretCommas(descBuf);
-
-        int precision;
+        final int precision = interpretPrecision(ph.getDecimalPoint(), specials);
         int fractionPartWidth = 0;
-        if (decimalPoint == null) {
-            precision = 0;
-        } else {
-            precision = interpretPrecision();
+        if (ph.getDecimalPoint() != null) {
             fractionPartWidth = 1 + precision;
             if (precision == 0) {
                 // This means the format has a ".", but that output should have no decimals after it.
                 // We just stop treating it specially
-                specials.remove(decimalPoint);
+                specials.remove(ph.getDecimalPoint());
                 decimalPoint = null;
+            } else {
+                decimalPoint = ph.getDecimalPoint();
             }
-        }
-
-        if (precision == 0)
-            fractionalSpecials = Collections.emptyList();
-        else
-            fractionalSpecials = specials.subList(specials.indexOf(
-                    decimalPoint) + 1, fractionalEnd());
-        if (exponent == null)
-            exponentSpecials = Collections.emptyList();
-        else {
-            int exponentPos = specials.indexOf(exponent);
-            exponentSpecials = specialsFor(exponentPos, 2);
-            exponentDigitSpecials = specialsFor(exponentPos + 2);
-        }
-
-        if (slash == null) {
-            numeratorSpecials = Collections.emptyList();
-            denominatorSpecials = Collections.emptyList();
         } else {
-            if (numerator == null)
-                numeratorSpecials = Collections.emptyList();
-            else
-                numeratorSpecials = specialsFor(specials.indexOf(numerator));
+            decimalPoint = null;
+        }
 
-            denominatorSpecials = specialsFor(specials.indexOf(slash) + 1);
+        if (decimalPoint != null) {
+            afterInteger = decimalPoint;
+        } else if (exponent != null) {
+            afterInteger = exponent;
+        } else if (numerator != null) {
+            afterInteger = numerator;
+        } else {
+            afterInteger = null;
+        }
+
+        if (exponent != null) {
+            afterFractional = exponent;
+        } else if (numerator != null) {
+            afterFractional = numerator;
+        } else {
+            afterFractional = null;
+        }
+        
+        double scaleByRef[] = { ph.getScale() };
+        integerCommas = interpretIntegerCommas(descBuf, specials, decimalPoint, integerEnd(), fractionalEnd(), scaleByRef);
+        if (exponent == null) {
+            scale = scaleByRef[0];
+        } else {
+            // in "e" formats,% and trailing commas have no scaling effect
+            scale = 1;
+        }
+
+        if (precision != 0) {
+            // TODO: if decimalPoint is null (-> index == -1), return the whole list?
+            fractionalSpecials.addAll(specials.subList(specials.indexOf(decimalPoint) + 1, fractionalEnd()));
+        }
+
+        if (exponent != null) {
+            int exponentPos = specials.indexOf(exponent);
+            exponentSpecials.addAll(specialsFor(exponentPos, 2));
+            exponentDigitSpecials.addAll(specialsFor(exponentPos + 2));
+        }
+
+        if (slash != null) {
+            if (numerator != null) {
+                numeratorSpecials.addAll(specialsFor(specials.indexOf(numerator)));
+            }
+
+            denominatorSpecials.addAll(specialsFor(specials.indexOf(slash) + 1));
             if (denominatorSpecials.isEmpty()) {
                 // no denominator follows the slash, drop the fraction idea
-                numeratorSpecials = Collections.emptyList();
+                numeratorSpecials.clear();
+                maxDenominator = 1;
+                numeratorFmt = null;
+                denominatorFmt = null;
             } else {
                 maxDenominator = maxValue(denominatorSpecials);
                 numeratorFmt = singleNumberFormat(numeratorSpecials);
                 denominatorFmt = singleNumberFormat(denominatorSpecials);
             }
+        } else {
+            maxDenominator = 1;
+            numeratorFmt = null;
+            denominatorFmt = null;
         }
 
-        integerSpecials = specials.subList(0, integerEnd());
+        integerSpecials.addAll(specials.subList(0, integerEnd()));
 
         if (exponent == null) {
             StringBuffer fmtBuf = new StringBuffer("%");
@@ -82,6 +111,7 @@
 
             fmtBuf.append("f");
             printfFmt = fmtBuf.toString();
+            decimalFmt = null;
         } else {
             StringBuffer fmtBuf = new StringBuffer();
             boolean first = true;
@@ -108,15 +138,11 @@
                 }
             }
             fmtBuf.append('E');
-            placeZeros(fmtBuf, exponentSpecials.subList(2,
-                    exponentSpecials.size()));
+            placeZeros(fmtBuf, exponentSpecials.subList(2, exponentSpecials.size()));
             DecimalFormatSymbols dfs = DecimalFormatSymbols.getInstance(LocaleUtil.getUserLocale());
             decimalFmt = new DecimalFormat(fmtBuf.toString(), dfs);
+            printfFmt = null;
         }
-
-        if (exponent != null)
-            scale =
-                    1;  // in "e" formats,% and trailing commas have no scaling effect
 
         desc = descBuf.toString();
     }

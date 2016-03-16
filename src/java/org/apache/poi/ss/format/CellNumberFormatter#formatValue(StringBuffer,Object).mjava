@@ -27,7 +27,7 @@
             }
         }
 
-        Set<StringMod> mods = new TreeSet<StringMod>();
+        Set<CellNumberStringMod> mods = new TreeSet<CellNumberStringMod>();
         StringBuffer output = new StringBuffer(desc);
 
         if (exponent != null) {
@@ -45,46 +45,44 @@
 
             if (numerator == null) {
                 writeFractional(result, output);
-                writeInteger(result, output, integerSpecials, mods,
-                        integerCommas);
+                writeInteger(result, output, integerSpecials, mods, integerCommas);
             } else {
                 writeFraction(value, result, fractional, output, mods);
             }
         }
 
         // Now strip out any remaining '#'s and add any pending text ...
-        ListIterator<Special> it = specials.listIterator();
-        Iterator<StringMod> changes = mods.iterator();
-        StringMod nextChange = (changes.hasNext() ? changes.next() : null);
+        Iterator<CellNumberStringMod> changes = mods.iterator();
+        CellNumberStringMod nextChange = (changes.hasNext() ? changes.next() : null);
+        // records chars already deleted
+        BitSet deletedChars = new BitSet();
         int adjust = 0;
-        BitSet deletedChars = new BitSet(); // records chars already deleted
-        while (it.hasNext()) {
-            Special s = it.next();
+        for (Special s : specials) {
             int adjustedPos = s.pos + adjust;
             if (!deletedChars.get(s.pos) && output.charAt(adjustedPos) == '#') {
                 output.deleteCharAt(adjustedPos);
                 adjust--;
                 deletedChars.set(s.pos);
             }
-            while (nextChange != null && s == nextChange.special) {
+            while (nextChange != null && s == nextChange.getSpecial()) {
                 int lenBefore = output.length();
                 int modPos = s.pos + adjust;
-                int posTweak = 0;
-                switch (nextChange.op) {
-                case StringMod.AFTER:
+                switch (nextChange.getOp()) {
+                case CellNumberStringMod.AFTER:
                     // ignore adding a comma after a deleted char (which was a '#')
-                    if (nextChange.toAdd.equals(",") && deletedChars.get(s.pos))
+                    if (nextChange.getToAdd().equals(",") && deletedChars.get(s.pos)) {
                         break;
-                    posTweak = 1;
-                    //noinspection fallthrough
-                case StringMod.BEFORE:
-                    output.insert(modPos + posTweak, nextChange.toAdd);
+                    }
+                    output.insert(modPos + 1, nextChange.getToAdd());
+                    break;
+                case CellNumberStringMod.BEFORE:
+                    output.insert(modPos, nextChange.getToAdd());
                     break;
 
-                case StringMod.REPLACE:
-                    int delPos =
-                            s.pos; // delete starting pos in original coordinates
-                    if (!nextChange.startInclusive) {
+                case CellNumberStringMod.REPLACE:
+                    // delete starting pos in original coordinates
+                    int delPos = s.pos;
+                    if (!nextChange.isStartInclusive()) {
                         delPos++;
                         modPos++;
                     }
@@ -95,42 +93,42 @@
                         modPos++;
                     }
 
-                    int delEndPos =
-                            nextChange.end.pos; // delete end point in original
-                    if (nextChange.endInclusive)
+                    // delete end point in original
+                    int delEndPos = nextChange.getEnd().pos;
+                    if (nextChange.isEndInclusive()) {
                         delEndPos++;
+                    }
 
-                    int modEndPos =
-                            delEndPos + adjust; // delete end point in current
+                    // delete end point in current
+                    int modEndPos = delEndPos + adjust;
 
                     if (modPos < modEndPos) {
-                        if ("".equals(nextChange.toAdd))
+                        if ("".equals(nextChange.getToAdd())) {
                             output.delete(modPos, modEndPos);
+                        }
                         else {
-                            char fillCh = nextChange.toAdd.charAt(0);
-                            for (int i = modPos; i < modEndPos; i++)
+                            char fillCh = nextChange.getToAdd().charAt(0);
+                            for (int i = modPos; i < modEndPos; i++) {
                                 output.setCharAt(i, fillCh);
+                            }
                         }
                         deletedChars.set(delPos, delEndPos);
                     }
                     break;
 
                 default:
-                    throw new IllegalStateException(
-                            "Unknown op: " + nextChange.op);
+                    throw new IllegalStateException("Unknown op: " + nextChange.getOp());
                 }
                 adjust += output.length() - lenBefore;
 
-                if (changes.hasNext())
-                    nextChange = changes.next();
-                else
-                    nextChange = null;
+                nextChange = (changes.hasNext()) ? changes.next() : null;
             }
         }
 
         // Finally, add it to the string
-        if (negative)
+        if (negative) {
             toAppendTo.append('-');
+        }
         toAppendTo.append(output);
     }
 

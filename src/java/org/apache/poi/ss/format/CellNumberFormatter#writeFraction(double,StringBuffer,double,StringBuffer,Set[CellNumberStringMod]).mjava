@@ -1,6 +1,6 @@
     @SuppressWarnings("unchecked")
     private void writeFraction(double value, StringBuffer result,
-            double fractional, StringBuffer output, Set<StringMod> mods) {
+            double fractional, StringBuffer output, Set<CellNumberStringMod> mods) {
 
         // Figure out if we are to suppress either the integer or fractional part.
         // With # the suppressed part is removed; with ? it is replaced with spaces.
@@ -10,11 +10,9 @@
             if (fractional == 0 && !hasChar('0', numeratorSpecials)) {
                 writeInteger(result, output, integerSpecials, mods, false);
 
-                Special start = integerSpecials.get(integerSpecials.size() - 1);
-                Special end = denominatorSpecials.get(
-                        denominatorSpecials.size() - 1);
-                if (hasChar('?', integerSpecials, numeratorSpecials,
-                        denominatorSpecials)) {
+                Special start = lastSpecial(integerSpecials);
+                Special end = lastSpecial(denominatorSpecials);
+                if (hasChar('?', integerSpecials, numeratorSpecials, denominatorSpecials)) {
                     //if any format has '?', then replace the fraction with spaces
                     mods.add(replaceMod(start, false, end, true, ' '));
                 } else {
@@ -26,23 +24,20 @@
                 return;
             } else {
                 // New we check to see if we should remove the integer part
-                boolean allZero = (value == 0 && fractional == 0);
-                boolean willShowFraction = fractional != 0 || hasChar('0',
-                        numeratorSpecials);
-                boolean removeBecauseZero = allZero && (hasOnly('#',
-                        integerSpecials) || !hasChar('0', numeratorSpecials));
-                boolean removeBecauseFraction =
-                        !allZero && value == 0 && willShowFraction && !hasChar(
-                                '0', integerSpecials);
-                if (removeBecauseZero || removeBecauseFraction) {
-                    Special start = integerSpecials.get(
-                            integerSpecials.size() - 1);
-                    if (hasChar('?', integerSpecials, numeratorSpecials)) {
-                        mods.add(replaceMod(start, true, numerator, false,
-                                ' '));
-                    } else {
-                        mods.add(deleteMod(start, true, numerator, false));
-                    }
+                boolean numNoZero = !numeratorSpecials.contains('0');
+                boolean intNoZero = !integerSpecials.contains('0');
+                boolean intOnlyHash = integerSpecials.isEmpty() || (integerSpecials.size() == 1 && integerSpecials.contains('#'));
+
+                boolean removeBecauseZero     = fractional == 0 && (intOnlyHash || numNoZero);
+                boolean removeBecauseFraction = fractional != 0 && intNoZero;
+
+                if (value == 0 && (removeBecauseZero || removeBecauseFraction)) {
+                    Special start = lastSpecial(integerSpecials);
+                    boolean hasPlaceHolder = integerSpecials.contains('?') || numeratorSpecials.contains('?');
+                    CellNumberStringMod sm = hasPlaceHolder
+                        ? replaceMod(start, true, numerator, false, ' ')
+                        : deleteMod(start, true, numerator, false);
+                    mods.add(sm);
                 } else {
                     // Not removing the integer part -- print it out
                     writeInteger(result, output, integerSpecials, mods, false);
@@ -64,12 +59,11 @@
                 n = frac.getNumerator();
                 d = frac.getDenominator();
             }
-            if (improperFraction)
+            if (improperFraction) {
                 n += Math.round(value * d);
-            writeSingleInteger(numeratorFmt, n, output, numeratorSpecials,
-                    mods);
-            writeSingleInteger(denominatorFmt, d, output, denominatorSpecials,
-                    mods);
+            }
+            writeSingleInteger(numeratorFmt, n, output, numeratorSpecials, mods);
+            writeSingleInteger(denominatorFmt, d, output, denominatorSpecials, mods);
         } catch (RuntimeException ignored) {
             LOG.log(POILogger.ERROR, "error while fraction evaluation", ignored);
         }
