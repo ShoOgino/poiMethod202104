@@ -8,19 +8,42 @@
 		if (dateStr == null || dateStr.equals("")) {
 			return new Nullable<Date>();
 		}
+
+		Matcher m = TIME_ZONE_PAT.matcher(dateStr);
+		if (m.find()) {
+			String dateTzStr = dateStr.substring(0, m.start())+
+					m.group(1)+m.group(2);
+			for (String fStr : TZ_DATE_FORMATS) {
+				SimpleDateFormat df = new SimpleDateFormat(fStr, Locale.ROOT);
+				df.setTimeZone(LocaleUtil.TIMEZONE_UTC);
+				Date d = new SimpleDateFormat(fStr).parse(dateTzStr, new ParsePosition(0));
+				if (d != null) {
+					return new Nullable<Date>(d);
+				}
+			}
+		}
 		String dateTzStr = dateStr.endsWith("Z") ? dateStr : (dateStr + "Z");
-		SimpleDateFormat df = new SimpleDateFormat(DEFAULT_DATEFORMAT, Locale.ROOT);
-		df.setTimeZone(LocaleUtil.TIMEZONE_UTC);
-		Date d = df.parse(dateTzStr, new ParsePosition(0));
-		if (d == null) {
-		    df = new SimpleDateFormat(ALTERNATIVE_DATEFORMAT, Locale.ROOT);
-		    df.setTimeZone(LocaleUtil.TIMEZONE_UTC);
-		    d = df.parse(dateTzStr, new ParsePosition(0));
+		for (String fStr : DATE_FORMATS) {
+			SimpleDateFormat df = new SimpleDateFormat(fStr, Locale.ROOT);
+			df.setTimeZone(LocaleUtil.TIMEZONE_UTC);
+			Date d = df.parse(dateTzStr, new ParsePosition(0));
+			if (d != null) {
+				return new Nullable<Date>(d);
+			}
 		}
-		if (d == null) {
-			throw new InvalidFormatException("Date " + dateTzStr + " not well formated, "
-			        + "expected format " + DEFAULT_DATEFORMAT + " or " + ALTERNATIVE_DATEFORMAT);
+		//if you're here, no pattern matched, throw exception
+		StringBuilder sb = new StringBuilder();
+		int i = 0;
+		for (String fStr : TZ_DATE_FORMATS) {
+			if (i++ > 0) {
+				sb.append(", ");
+			}
+			sb.append(fStr);
 		}
-		return new Nullable<Date>(d);
+		for (String fStr : DATE_FORMATS) {
+			sb.append(", ").append(fStr);
+		}
+		throw new InvalidFormatException("Date " + dateStr + " not well formatted, "
+		        + "expected format in: "+sb.toString());
 	}
 
