@@ -26,17 +26,14 @@
     }
 
     // Grab the table stream.
-    DocumentEntry tableProps;
-    try {
-        tableProps =
-            (DocumentEntry)directory.getEntry(name);
-    } catch(FileNotFoundException fnfe) {
+    if (!directory.hasEntry(name)) {
         throw new IllegalStateException("Table Stream '" + name + "' wasn't found - Either the document is corrupt, or is Word95 (or earlier)");
     }
 
     // read in the table stream.
-    _tableStream = new byte[tableProps.getSize()];
-    directory.createDocumentInputStream(name).read(_tableStream);
+    InputStream is = directory.createDocumentInputStream(name);
+    _tableStream = IOUtils.toByteArray(is);
+    is.close();
 
     _fib.fillVariableFields(_mainStream, _tableStream);
 
