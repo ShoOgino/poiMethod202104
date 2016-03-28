@@ -1,6 +1,18 @@
-    private void open(InputStream biffStream) {
-        input = biffStream;
-        ris = new RecordInputStream(biffStream);
-        prepare();
+    private void open(InputStream biffStream) throws IOException {
+        BufferedInputStream bis = (biffStream instanceof BufferedInputStream) 
+            ? (BufferedInputStream)biffStream
+            : new BufferedInputStream(biffStream, 8);
+
+        if (NPOIFSFileSystem.hasPOIFSHeader(bis)) {
+            NPOIFSFileSystem poifs = new NPOIFSFileSystem(bis);
+            try {
+                open(poifs);
+            } finally {
+                poifs.close();
+            }
+        } else {
+            ris = new RecordInputStream(bis);
+            prepare();
+        }
     }
 

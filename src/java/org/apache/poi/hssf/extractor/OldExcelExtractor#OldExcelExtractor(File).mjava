@@ -1,28 +1,30 @@
     public OldExcelExtractor(File f) throws IOException {
+        NPOIFSFileSystem poifs = null;
         try {
-            open(new NPOIFSFileSystem(f));
-        } catch (OldExcelFormatException oe) {
-            FileInputStream biffStream = new FileInputStream(f);
-            try {
-                open(biffStream);
-            } catch (RuntimeException e2) {
-                // ensure that the stream is properly closed here if an Exception
-                // is thrown while opening
-                biffStream.close();
-
-                throw e2;
+            poifs = new NPOIFSFileSystem(f);
+            open(poifs);
+            return;
+        } catch (OldExcelFormatException e) {
+            // will be handled by workaround below
+            if (poifs != null) {
+                poifs.close();
             }
         } catch (NotOLE2FileException e) {
-            FileInputStream biffStream = new FileInputStream(f);
-            try {
-                open(biffStream);
-            } catch (RuntimeException e2) {
-                // ensure that the stream is properly closed here if an Exception
-                // is thrown while opening
-                biffStream.close();
-
-                throw e2;
+            // will be handled by workaround below
+            if (poifs != null) {
+                poifs.close();
             }
+        }
+        
+        @SuppressWarnings("resource")
+        FileInputStream biffStream = new FileInputStream(f);
+        try {
+            open(biffStream);
+        } catch (IOException e)  {
+            // ensure that the stream is properly closed here if an Exception
+            // is thrown while opening
+            biffStream.close();
+            throw e;
         }
     }
 
