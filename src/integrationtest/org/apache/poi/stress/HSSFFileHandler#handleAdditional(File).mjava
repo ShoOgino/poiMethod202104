@@ -1,0 +1,34 @@
+	@Override
+	public void handleAdditional(File file) throws Exception {
+		// redirect stdout as the examples often write lots of text
+		PrintStream oldOut = System.out;
+		try {
+			System.setOut(new PrintStream(new OutputStream() {
+				@Override
+				public void write(int b) throws IOException {
+				}
+			}));
+
+			BiffViewer.main(new String[]{file.getAbsolutePath()});
+
+			assertFalse("Expected Extraction to fail for file " + file + " and handler " + this + ", but did not fail!",
+					EXPECTED_ADDITIONAL_FAILURES.contains(file.getParentFile().getName() + "/" + file.getName()));
+		} catch (OldExcelFormatException e) {
+			// old excel formats are not supported here
+		} catch (EncryptedDocumentException e) {
+			if(!EXPECTED_ADDITIONAL_FAILURES.contains(file.getParentFile().getName() + "/" + file.getName())) {
+				throw e;
+			}
+		} catch (RecordFormatException e) {
+			if(!EXPECTED_ADDITIONAL_FAILURES.contains(file.getParentFile().getName() + "/" + file.getName())) {
+				throw e;
+			}
+		} catch (RuntimeException e) {
+			if(!EXPECTED_ADDITIONAL_FAILURES.contains(file.getParentFile().getName() + "/" + file.getName())) {
+				throw e;
+			}
+		} finally {
+			System.setOut(oldOut);
+		}
+	}
+
