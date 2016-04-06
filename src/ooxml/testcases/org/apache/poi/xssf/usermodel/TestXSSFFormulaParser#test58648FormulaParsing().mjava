@@ -1,0 +1,29 @@
+    @Test
+    public void test58648FormulaParsing() {
+        Workbook wb = XSSFTestDataSamples.openSampleWorkbook("58648.xlsx");
+
+        FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
+
+        for (int i = 0; i < wb.getNumberOfSheets(); i++) {
+            Sheet xsheet = wb.getSheetAt(i);
+
+            for (Row row : xsheet) {
+                for (Cell cell : row) {
+                    if (cell.getCellType() == HSSFCell.CELL_TYPE_FORMULA) {
+                        try {
+                            evaluator.evaluateFormulaCell(cell);
+                        } catch (Exception e) {
+                            CellReference cellRef = new CellReference(cell.getRowIndex(), cell.getColumnIndex());
+                            throw new RuntimeException("error at: " + cellRef.toString(), e);
+                        }
+                    }
+                }
+            }
+        }
+
+        Sheet sheet = wb.getSheet("my-sheet");
+        Cell cell = sheet.getRow(1).getCell(4);
+
+        assertEquals(5d, cell.getNumericCellValue(), 0d);
+    }
+
