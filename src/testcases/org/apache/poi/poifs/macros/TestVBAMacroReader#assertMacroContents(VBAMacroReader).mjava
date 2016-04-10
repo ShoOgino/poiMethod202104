@@ -1,0 +1,29 @@
+    protected void assertMacroContents(VBAMacroReader r) throws IOException {
+        Map<String,String> contents = r.readMacros();
+        
+        assertFalse(contents.isEmpty());
+        assertEquals(5, contents.size());
+        
+        // Check the ones without scripts
+        String[] noScripts = new String[] { "ThisWorkbook",
+                "Sheet1", "Sheet2", "Sheet3" };
+        for (String entry : noScripts) {
+            assertTrue(entry, contents.containsKey(entry));
+            
+            String content = contents.get(entry);
+            assertContains(content, "Attribute VB_Exposed = True");
+            assertContains(content, "Attribute VB_Customizable = True");
+            assertContains(content, "Attribute VB_TemplateDerived = False");
+            assertContains(content, "Attribute VB_GlobalNameSpace = False");
+            assertContains(content, "Attribute VB_Exposed = True");
+        }
+        
+        // Check the script one
+        String content = contents.get("Module1");
+        assertContains(content, "Attribute VB_Name = \"Module1\"");
+        assertContains(content, "Attribute TestMacro.VB_Description = \"This is a test macro\"");
+
+        // And the macro itself
+        assertContains(content, testMacroNoSub);
+    }
+
