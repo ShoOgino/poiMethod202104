@@ -1,0 +1,36 @@
+    public void extract(File input, File outputDir) throws IOException {
+        if (! input.exists()) throw new FileNotFoundException(input.toString());
+        System.err.print("Extracting VBA Macros from " + input + " to ");
+        if (outputDir != null) {
+            if (! outputDir.exists()) outputDir.mkdir();
+            System.err.println(outputDir);
+        } else {
+            System.err.println("STDOUT");
+        }
+        
+        VBAMacroReader reader = new VBAMacroReader(input);
+        Map<String,String> macros = reader.readMacros();
+        reader.close();
+        
+        final String divider = "---------------------------------------";
+        for (String macro : macros.keySet()) {
+            if (outputDir == null) {
+                System.out.println(divider);
+                System.out.println(macro);
+                System.out.println("");
+                System.out.println(macros.get(macro));
+            } else {
+                File out = new File(outputDir, macro + ".vba");
+                FileOutputStream fout = new FileOutputStream(out);
+                OutputStreamWriter fwriter = new OutputStreamWriter(fout, StringUtil.UTF8);
+                fwriter.write(macros.get(macro));
+                fwriter.close();
+                fout.close();
+                System.out.println("Extracted " + out);
+            }
+        }
+        if (outputDir == null) {
+            System.out.println(divider);
+        }
+    }
+
