@@ -1,0 +1,32 @@
+    /**
+     * Extract macros from XLSM or XLS file. Automatically detects ZIP (XLSM, DOCX, etc) files.
+     * 
+     * @param in
+     * @return
+     * @throws IOException
+     */
+    public Map<String, String> extractMacros(InputStream in) throws IOException {
+        PushbackInputStream bpin = new PushbackInputStream(in, 2);
+        byte[] header = new byte[2];
+        if (bpin.read(header) != 2) {
+            throw new IllegalArgumentException("Invalid InputStream: cannot read 2 bytes");
+        }
+        bpin.unread(header);
+        if (header[0] == 'P' && header[1] == 'K') {
+            ZipInputStream zis = new ZipInputStream(bpin);
+            ZipEntry zipEntry;
+            while ((zipEntry = zis.getNextEntry()) != null) {
+                if ("xl/vbaProject.bin".equals(zipEntry.getName())) {
+                    try {
+                        return extractMacrosFromPOIFSInputStream(zis);
+                    } finally {
+                        zis.closeEntry();
+                    }
+                }
+            }
+            return null;
+        } else {
+            return extractMacrosFromPOIFSInputStream(bpin);
+        }
+    }
+
