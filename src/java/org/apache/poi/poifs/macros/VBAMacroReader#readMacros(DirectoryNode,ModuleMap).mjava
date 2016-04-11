@@ -5,7 +5,7 @@
             String name = entry.getName();
             DocumentNode document = (DocumentNode)entry;
             DocumentInputStream dis = new DocumentInputStream(document);
-            if ("dir".equals(name)) {
+            if ("dir".equalsIgnoreCase(name)) {
                 // process DIR
                 RLEDecompressingInputStream in = new RLEDecompressingInputStream(dis);
                 String streamName = null;
@@ -24,9 +24,7 @@
                         modules.charset = Charset.forName("Cp" + codepage);
                         break;
                     case 0x001A: // STREAMNAME
-                        byte[] streamNameBuf = new byte[len];
-                        int count = in.read(streamNameBuf);
-                        streamName = new String(streamNameBuf, 0, count, modules.charset);
+                        streamName = readString(in, len, modules.charset);
                         break;
                     case 0x0031: // MODULEOFFSET
                         int moduleOffset = in.readInt();
@@ -51,7 +49,8 @@
                     }
                 }
                 in.close();
-            } else if (!name.startsWith("__SRP") && !name.startsWith("_VBA_PROJECT")) {
+            } else if (!startsWithIgnoreCase(name, "__SRP")
+                    && !startsWithIgnoreCase(name, "_VBA_PROJECT")) {
                 // process module, skip __SRP and _VBA_PROJECT since these do not contain macros
                 Module module = modules.get(name);
                 final InputStream in;
