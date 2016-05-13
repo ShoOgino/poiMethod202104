@@ -1,0 +1,33 @@
+    public HeadersFooters(HSLFSheet sheet, short headerFooterType) {
+        _sheet = sheet;
+        
+        @SuppressWarnings("resource")
+        HSLFSlideShow ppt = _sheet.getSlideShow();
+        Document doc = ppt.getDocumentRecord();
+        
+        // detect if this ppt was saved in Office2007
+        String tag = ppt.getSlideMasters().get(0).getProgrammableTag();
+        _ppt2007 = "___PPT12".equals(tag);
+
+        SheetContainer sc = _sheet.getSheetContainer();
+        HeadersFootersContainer hdd = (HeadersFootersContainer)sc.findFirstOfType(RecordTypes.HeadersFooters.typeID);
+        // boolean ppt2007 = sc.findFirstOfType(RecordTypes.RoundTripContentMasterId.typeID) != null;
+
+        if (hdd == null) {
+            for (Record ch : doc.getChildRecords()) {
+                if (ch instanceof HeadersFootersContainer
+                    && ((HeadersFootersContainer) ch).getOptions() == headerFooterType) {
+                    hdd = (HeadersFootersContainer) ch;
+                    break;
+                }
+            }
+        }
+        
+        if (hdd == null) {
+            hdd = new HeadersFootersContainer(headerFooterType);
+            Record lst = doc.findFirstOfType(RecordTypes.List.typeID);
+            doc.addChildAfter(hdd, lst);
+        }
+        _container = hdd;
+    }
+
