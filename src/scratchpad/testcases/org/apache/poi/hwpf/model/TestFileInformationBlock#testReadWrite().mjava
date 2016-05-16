@@ -1,32 +1,14 @@
+    @Test
     public void testReadWrite() throws Exception {
+        final FibBase expected = _fileInformationBlock.getFibBase();
         int size = _fileInformationBlock.getSize();
         byte[] buf = new byte[size];
+        expected.serialize(buf, 0);
 
-        _fileInformationBlock.getFibBase().serialize(buf, 0);
+        FileInformationBlock newFileInformationBlock = new FileInformationBlock(buf);
+        FibBase actual = newFileInformationBlock.getFibBase();
 
-        FileInformationBlock newFileInformationBlock = new FileInformationBlock(
-                buf);
-
-        final Field[] fields;
-        try {
-            fields = AccessController.doPrivileged(new PrivilegedExceptionAction<Field[]>() {
-                @Override
-                @SuppressForbidden("Test only")
-                public Field[] run() throws Exception {
-                    final Field[] fields = FileInformationBlock.class.getSuperclass().getDeclaredFields();
-                    AccessibleObject.setAccessible(fields, true);
-                    return fields;
-                }
-            });
-        } catch (PrivilegedActionException pae) {
-            throw pae.getException();
-        }
-
-        for (int x = 0; x < fields.length; x++) {
-            assertEquals(fields[x].get(_fileInformationBlock),
-                    fields[x].get(newFileInformationBlock));
-        }
-        
+        assertReflectEquals(expected, actual);
         assertNotNull(_fileInformationBlock.toString());
     }
 
