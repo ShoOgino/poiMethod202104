@@ -1,75 +1,79 @@
 	/**
 	 * Get text out of the simple file
+	 * @throws XmlException
+	 * @throws OpenXML4JException
 	 */
-	public void testGetSimpleText() throws Exception {
-		new XSLFPowerPointExtractor(xmlA).close();
+    @Test
+    public void testGetSimpleText()
+    throws IOException, XmlException, OpenXML4JException {
+        XMLSlideShow xmlA = openPPTX("sample.pptx");
+        @SuppressWarnings("resource")
+        OPCPackage pkg = xmlA.getPackage();
+
+	    new XSLFPowerPointExtractor(xmlA).close();
 		new XSLFPowerPointExtractor(pkg).close();
-		
-		XSLFPowerPointExtractor extractor = 
+
+		XSLFPowerPointExtractor extractor =
 			new XSLFPowerPointExtractor(xmlA);
 		extractor.getText();
-		
+
 		String text = extractor.getText();
 		assertTrue(text.length() > 0);
-		
+
 		// Check Basics
 		assertTrue(text.startsWith("Lorem ipsum dolor sit amet\n"));
-		assertTrue(text.contains("amet\n\n"));
+		assertContains(text, "amet\n\n");
 
 		// Our placeholder master text
 		// This shouldn't show up in the output
-		String masterText =
-         "Click to edit Master title style\n" +
-         "Click to edit Master subtitle style\n" +
-         "\n\n\n\n\n\n" +
-         "Click to edit Master title style\n" +
-         "Click to edit Master text styles\n" +
-         "Second level\n" +
-         "Third level\n" +
-         "Fourth level\n" +
-         "Fifth level\n";
-		
+	    // String masterText =
+	    //     "Click to edit Master title style\n" +
+        //     "Click to edit Master subtitle style\n" +
+        //     "\n\n\n\n\n\n" +
+        //     "Click to edit Master title style\n" +
+        //     "Click to edit Master text styles\n" +
+        //     "Second level\n" +
+        //     "Third level\n" +
+        //     "Fourth level\n" +
+        //     "Fifth level\n";
+
 		// Just slides, no notes
 		text = extractor.getText(true, false, false);
-		assertEquals(
-				"Lorem ipsum dolor sit amet\n" +
-				"Nunc at risus vel erat tempus posuere. Aenean non ante.\n" +
-				"\n" +
-				"Lorem ipsum dolor sit amet\n" +
-				"Lorem\n" +
-				"ipsum\n" +
-				"dolor\n" +
-				"sit\n" +
-				"amet\n" +
-				"\n"
-				, text
-		);
-		
+		String slideText =
+	        "Lorem ipsum dolor sit amet\n" +
+            "Nunc at risus vel erat tempus posuere. Aenean non ante.\n" +
+            "\n" +
+            "Lorem ipsum dolor sit amet\n" +
+            "Lorem\n" +
+            "ipsum\n" +
+            "dolor\n" +
+            "sit\n" +
+            "amet\n" +
+            "\n";
+		assertEquals(slideText, text);
+
 		// Just notes, no slides
 		text = extractor.getText(false, true);
-		assertEquals(
-				"\n\n\n\n", text
-		);
-		
+		assertEquals("\n\n\n\n", text);
+
 		// Both
 		text = extractor.getText(true, true, false);
-		assertEquals(
-				"Lorem ipsum dolor sit amet\n" +
-				"Nunc at risus vel erat tempus posuere. Aenean non ante.\n" +
+		String bothText =
+	        "Lorem ipsum dolor sit amet\n" +
+            "Nunc at risus vel erat tempus posuere. Aenean non ante.\n" +
             "\n\n\n" +
-				"Lorem ipsum dolor sit amet\n" +
-				"Lorem\n" +
-				"ipsum\n" +
-				"dolor\n" +
-				"sit\n" +
-				"amet\n" +
-				"\n\n\n"
-				, text
-		);
-		
+            "Lorem ipsum dolor sit amet\n" +
+            "Lorem\n" +
+            "ipsum\n" +
+            "dolor\n" +
+            "sit\n" +
+            "amet\n" +
+            "\n\n\n";
+        assertEquals(bothText, text);
+
 		// With Slides and Master Text
-      text = extractor.getText(true, false, true);
-      assertEquals(
+        text = extractor.getText(true, false, true);
+        String smText =
             "Lorem ipsum dolor sit amet\n" +
             "Nunc at risus vel erat tempus posuere. Aenean non ante.\n" +
             "\n" +
@@ -79,13 +83,12 @@
             "dolor\n" +
             "sit\n" +
             "amet\n" +
-            "\n"
-            , text
-      );
-		
+            "\n";
+        assertEquals(smText, text);
+
 		// With Slides, Notes and Master Text
-      text = extractor.getText(true, true, true);
-      assertEquals(
+        text = extractor.getText(true, true, true);
+        String snmText =
             "Lorem ipsum dolor sit amet\n" +
             "Nunc at risus vel erat tempus posuere. Aenean non ante.\n" +
             "\n" +
@@ -96,18 +99,16 @@
             "dolor\n" +
             "sit\n" +
             "amet\n" +
-            "\n\n\n"
-            , text
-      );
-		
+            "\n\n\n";
+        assertEquals(snmText, text);
+
 		// Via set defaults
 		extractor.setSlidesByDefault(false);
 		extractor.setNotesByDefault(true);
 		text = extractor.getText();
-		assertEquals(
-				"\n\n\n\n", text
-		);
-		
+		assertEquals("\n\n\n\n", text);
+
 		extractor.close();
+		xmlA.close();
 	}
 
