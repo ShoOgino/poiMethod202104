@@ -1,4 +1,5 @@
-	public void testNamedRangeThatLooksLikeCell() {
+	@Test
+	public void testNamedRangeThatLooksLikeCell() throws IOException {
 		HSSFWorkbook wb = new HSSFWorkbook();
 		HSSFSheet sheet = wb.createSheet("Sheet1");
 		HSSFName name = wb.createName();
@@ -10,8 +11,9 @@
 			ptgs = HSSFFormulaParser.parse("count(pfy1)", wb);
 		} catch (IllegalArgumentException e) {
 			if (e.getMessage().equals("Specified colIx (1012) is out of range")) {
-				throw new AssertionFailedError("Identified bug 45354");
+				fail("Identified bug 45354");
 			}
+			wb.close();
 			throw e;
 		}
 		confirmTokenClasses(ptgs, NamePtg.class, FuncVarPtg.class);
@@ -21,11 +23,12 @@
 		assertEquals("COUNT(pfy1)", cell.getCellFormula());
 		try {
 			cell.setCellFormula("count(pf1)");
-			throw new AssertionFailedError("Expected formula parse execption");
+			fail("Expected formula parse execption");
 		} catch (FormulaParseException e) {
 			confirmParseException(e,
 					"Specified named range 'pf1' does not exist in the current workbook.");
 		}
 		cell.setCellFormula("count(fp1)"); // plain cell ref, col is in range
+		wb.close();
 	}
 
