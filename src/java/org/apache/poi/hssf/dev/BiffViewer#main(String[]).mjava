@@ -31,24 +31,33 @@
 			pw = new PrintWriter(new OutputStreamWriter(System.out, Charset.defaultCharset()));
 		}
 
-		NPOIFSFileSystem fs = new NPOIFSFileSystem(cmdArgs.getFile(), true);
-        InputStream is = getPOIFSInputStream(fs);
-		
-		if (cmdArgs.shouldOutputRawHexOnly()) {
-			int size = is.available();
-			byte[] data = new byte[size];
+        try {
+            NPOIFSFileSystem fs = new NPOIFSFileSystem(cmdArgs.getFile(), true);
+            try {
+                InputStream is = getPOIFSInputStream(fs);
 
-			is.read(data);
-			HexDump.dump(data, 0, System.out, 0);
-		} else {
-			boolean dumpInterpretedRecords = cmdArgs.shouldDumpRecordInterpretations();
-			boolean dumpHex = cmdArgs.shouldDumpBiffHex();
-			boolean zeroAlignHexDump = dumpInterpretedRecords;  // TODO - fix non-zeroAlign
-			runBiffViewer(pw, is, dumpInterpretedRecords, dumpHex, zeroAlignHexDump,
-					cmdArgs.suppressHeader());
-		}
-		is.close();
-        fs.close();
-		pw.close();
+                try {
+                    if (cmdArgs.shouldOutputRawHexOnly()) {
+                        int size = is.available();
+                        byte[] data = new byte[size];
+
+                        is.read(data);
+                        HexDump.dump(data, 0, System.out, 0);
+                    } else {
+                        boolean dumpInterpretedRecords = cmdArgs.shouldDumpRecordInterpretations();
+                        boolean dumpHex = cmdArgs.shouldDumpBiffHex();
+                        boolean zeroAlignHexDump = dumpInterpretedRecords;  // TODO - fix non-zeroAlign
+                        runBiffViewer(pw, is, dumpInterpretedRecords, dumpHex, zeroAlignHexDump,
+                                cmdArgs.suppressHeader());
+                    }
+                } finally {
+                    is.close();
+                }
+            } finally {
+                fs.close();
+            }
+        } finally {
+            pw.close();
+        }
 	}
 
