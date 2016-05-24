@@ -13,24 +13,11 @@
         if (fill.isSetSrgbClr()) {
             fill.unsetSrgbClr();
         }
-        
-        CTSRgbColor rgb = fill.addNewSrgbClr();
-        
-        float[] rgbaf = color.getRGBComponents(null);
-        int r = color.getRed(), g = color.getGreen(), b = color.getBlue();
-        if (rgbaf[0]*255f == r && rgbaf[1]*255f == g && rgbaf[2]*255f == b) {
-            rgb.setVal(new byte[]{(byte)r, (byte)g, (byte)b });
-        } else {
-            rgb.addNewRed().setVal((int)(100000 * rgbaf[0]));
-            rgb.addNewGreen().setVal((int)(100000 * rgbaf[1]));
-            rgb.addNewBlue().setVal((int)(100000 * rgbaf[2]));
-        }
 
-        // alpha (%)
-        if (rgbaf.length == 4 && rgbaf[3] < 1f) {
-            rgb.addNewAlpha().setVal((int)(100000 * rgbaf[3]));
+        if (fill.isSetScrgbClr()) {
+            fill.unsetScrgbClr();
         }
-
+        
         if (fill.isSetHslClr()) {
             fill.unsetHslClr();
         }
@@ -43,12 +30,33 @@
             fill.unsetSchemeClr();
         }
         
-        if (fill.isSetScrgbClr()) {
-            fill.unsetScrgbClr();
-        }
-        
         if (fill.isSetSysClr()) {
             fill.unsetSysClr();
+        }
+
+        float[] rgbaf = color.getRGBComponents(null);
+        boolean addAlpha = (rgbaf.length == 4 && rgbaf[3] < 1f);
+        CTPositiveFixedPercentage alphaPct;
+        
+        // see office open xml part 4 - 5.1.2.2.30 and 5.1.2.2.32
+        if (isInt(rgbaf[0]) && isInt(rgbaf[1]) && isInt(rgbaf[2])) {
+            // sRGB has a gamma of 2.2
+            CTSRgbColor rgb = fill.addNewSrgbClr();
+            
+            byte rgbBytes[] = { (byte)color.getRed(), (byte)color.getGreen(), (byte)color.getBlue() };
+            rgb.setVal(rgbBytes);
+            alphaPct = (addAlpha) ? rgb.addNewAlpha() : null;
+        } else {
+            CTScRgbColor rgb = fill.addNewScrgbClr();
+            rgb.setR(DrawPaint.srgb2lin(rgbaf[0]));
+            rgb.setG(DrawPaint.srgb2lin(rgbaf[1]));
+            rgb.setB(DrawPaint.srgb2lin(rgbaf[2]));
+            alphaPct = (addAlpha) ? rgb.addNewAlpha() : null;
+        }
+
+        // alpha (%)
+        if (alphaPct != null) {
+            alphaPct.setVal((int)(100000 * rgbaf[3]));
         }
     }
 

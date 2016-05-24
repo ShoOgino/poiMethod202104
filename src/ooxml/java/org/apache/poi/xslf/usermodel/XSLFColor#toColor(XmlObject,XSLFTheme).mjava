@@ -6,9 +6,7 @@
                 int h = hsl.getHue2();
                 int s = hsl.getSat2();
                 int l = hsl.getLum2();
-                // This conversion is not correct and differs from PowerPoint.
-                // TODO: Revisit and improve.
-                color = Color.getHSBColor(h / 60000f, s / 100000f, l / 100000f);
+                color = DrawPaint.HSL2RGB(h / 60000d, s / 1000d, l / 1000d, 1d);
             } else if (ch instanceof CTPresetColor) {
                 CTPresetColor prst = (CTPresetColor)ch;
                 String colorName = prst.getVal().toString();
@@ -27,13 +25,11 @@
                 CTColor ctColor = theme.getCTColor(colorRef);
                 if(ctColor != null) color = toColor(ctColor, null);
             } else if (ch instanceof CTScRgbColor) {
-                // same as CTSRgbColor but with values expressed in percents
+                // color in percentage is in linear RGB color space, i.e. needs to be gamma corrected for AWT color
                 CTScRgbColor scrgb = (CTScRgbColor)ch;
-                int r = scrgb.getR();
-                int g = scrgb.getG();
-                int b = scrgb.getB();
-                color = new Color(255 * r / 100000, 255 * g / 100000, 255 * b / 100000);
+                color = new Color(DrawPaint.lin2srgb(scrgb.getR()), DrawPaint.lin2srgb(scrgb.getG()), DrawPaint.lin2srgb(scrgb.getB()));
             } else if (ch instanceof CTSRgbColor) {
+                // color in sRGB color space, i.e. same as AWT Color
                 CTSRgbColor srgb = (CTSRgbColor)ch;
                 byte[] val = srgb.getVal();
                 color = new Color(0xFF & val[0], 0xFF & val[1], 0xFF & val[2]);
