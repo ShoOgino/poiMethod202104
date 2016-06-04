@@ -1,7 +1,61 @@
     public void draw(Graphics2D graphics) {
-        Drawable d = getDrawable(graphics);
+        Drawable d = getGroupShape(graphics);
         if (d != null) {
             d.draw(graphics);
+            return;
         }
+
+        TableShape<?,?> ts = getShape();
+        DrawPaint drawPaint = DrawFactory.getInstance(graphics).getPaint(ts);
+        final int rows = ts.getNumberOfRows();
+        final int cols = ts.getNumberOfColumns();
+        
+        // draw background boxes
+        for (int row=0; row<rows; row++) {
+            for (int col=0; col<cols; col++) {
+                TableCell<?,?> tc = ts.getCell(row, col);
+                if (tc == null || tc.isMerged()) {
+                    continue;
+                }
+
+                Paint fillPaint = drawPaint.getPaint(graphics, tc.getFillStyle().getPaint());
+                graphics.setPaint(fillPaint);
+                Rectangle2D cellAnc = tc.getAnchor();
+                graphics.fill(cellAnc);
+                
+                for (BorderEdge edge : BorderEdge.values()) {
+                    StrokeStyle stroke = tc.getBorderStyle(edge);
+                    if (stroke == null) {
+                        continue;
+                    }
+                    graphics.setStroke(getStroke(stroke));
+                    Paint linePaint = drawPaint.getPaint(graphics, stroke.getPaint());
+                    graphics.setPaint(linePaint);
+
+                    double x=cellAnc.getX(), y=cellAnc.getY(), w=cellAnc.getWidth(), h=cellAnc.getHeight();
+                    Line2D line;
+                    switch (edge) {
+                        default:
+                        case bottom:
+                            line = new Line2D.Double(x-borderSize, y+h, x+w+borderSize, y+h);
+                            break;
+                        case left:
+                            line = new Line2D.Double(x, y, x, y+h+borderSize);
+                            break;
+                        case right:
+                            line = new Line2D.Double(x+w, y, x+w, y+h+borderSize);
+                            break;
+                        case top:
+                            line = new Line2D.Double(x-borderSize, y, x+w+borderSize, y);
+                            break;
+                    }
+
+                    graphics.draw(line);
+                }
+            }
+        }
+
+        // draw text
+        drawContent(graphics);
     }
 

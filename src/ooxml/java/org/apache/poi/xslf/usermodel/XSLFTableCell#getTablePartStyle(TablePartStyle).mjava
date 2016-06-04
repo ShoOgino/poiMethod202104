@@ -1,0 +1,53 @@
+    /**
+     * Retrieves the part style depending on the location of this cell
+     *
+     * @param tablePartStyle the part to be returned, usually this is null
+     *  and only set when used as a helper method
+     * @return the table part style
+     */
+    private CTTablePartStyle getTablePartStyle(TablePartStyle tablePartStyle) {
+        CTTable ct = table.getCTTable();
+        if (!ct.isSetTblPr()) {
+            return null;
+        }
+
+        CTTableProperties pr = ct.getTblPr();
+        boolean bandRow = (pr.isSetBandRow() && pr.getBandRow());
+        boolean firstRow = (pr.isSetFirstRow() && pr.getFirstRow());
+        boolean lastRow = (pr.isSetLastRow() && pr.getLastRow());
+        boolean bandCol = (pr.isSetBandCol() && pr.getBandCol());
+        boolean firstCol = (pr.isSetFirstCol() && pr.getFirstCol());
+        boolean lastCol = (pr.isSetLastCol() && pr.getLastCol());
+
+        TablePartStyle tps;
+        if (tablePartStyle != null) {
+            tps = tablePartStyle;
+        } else if (row == 0 && firstRow) {
+            tps = TablePartStyle.firstRow;
+        } else if (row == table.getNumberOfRows()-1 && lastRow) {
+            tps = TablePartStyle.lastRow;
+        } else if (col == 0 && firstCol) {
+            tps = TablePartStyle.firstCol;
+        } else if (col == table.getNumberOfColumns()-1 && lastCol) {
+            tps = TablePartStyle.lastCol;
+        } else {
+            tps = TablePartStyle.wholeTbl;
+
+            int br = row + (firstRow ? 1 : 0);
+            int bc = col + (firstCol ? 1 : 0);
+            if (bandRow && (br & 1) == 0) {
+                tps = TablePartStyle.band1H;
+            } else if (bandCol && (bc & 1) == 0) {
+                tps = TablePartStyle.band1V;
+            }
+        }
+
+        XSLFTableStyle tabStyle = table.getTableStyle();
+        if (tabStyle == null) {
+            return null;
+        }
+
+        CTTablePartStyle part = tabStyle.getTablePartStyle(tps);
+        return (part == null) ? tabStyle.getTablePartStyle(TablePartStyle.wholeTbl) : part;
+    }
+

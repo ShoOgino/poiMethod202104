@@ -9,25 +9,35 @@
         if (htc.isEmpty()) {
             throw new IllegalStateException("HSLFTable without HSLFTableCells");
         }
-
-        Collections.sort(htc, new TableCellComparator());
-
-        List<HSLFTableCell[]> lst = new ArrayList<HSLFTableCell[]>();
-        List<HSLFTableCell> row = new ArrayList<HSLFTableCell>();
-
-        double y0 = htc.get(0).getAnchor().getY();
+        
+        SortedSet<Double> colSet = new TreeSet<Double>();
+        SortedSet<Double> rowSet = new TreeSet<Double>();
+        
+        // #1 pass - determine cols and rows
         for (HSLFTableCell sh : htc) {
             Rectangle2D anchor = sh.getAnchor();
-            boolean isNextRow = (anchor.getY() > y0);
-            if (isNextRow) {
-                y0 = anchor.getY();
-                lst.add(row.toArray(new HSLFTableCell[row.size()]));
-                row.clear();
-            }
-            row.add(sh);
+            colSet.add(anchor.getX());
+            rowSet.add(anchor.getY());
         }
-        lst.add(row.toArray(new HSLFTableCell[row.size()]));
-
-        cells = lst.toArray(new HSLFTableCell[lst.size()][]);
+        cells = new HSLFTableCell[rowSet.size()][colSet.size()];
+        
+        List<Double> colLst = new ArrayList<Double>(colSet);
+        List<Double> rowLst = new ArrayList<Double>(rowSet);
+        
+        // #2 pass - assign shape to table cells
+        for (HSLFTableCell sh : htc) {
+            Rectangle2D anchor = sh.getAnchor();
+            int row = rowLst.indexOf(anchor.getY());
+            int col = colLst.indexOf(anchor.getX());
+            assert(row != -1 && col != -1);
+            cells[row][col] = sh;
+            
+            // determine gridSpan / rowSpan
+            int gridSpan = calcSpan(colLst, anchor.getWidth(), col);
+            int rowSpan = calcSpan(rowLst, anchor.getHeight(), row);
+            
+            sh.setGridSpan(gridSpan);
+            sh.setRowSpan(rowSpan);
+        }        
     }
 

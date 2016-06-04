@@ -1,0 +1,32 @@
+    @SuppressWarnings("resource")
+    @Override
+    public PaintStyle getFillPaint() {
+        Color c = getFillColor();
+        if (c != null) {
+            return DrawPaint.createSolidPaint(c);
+        }
+
+        CTTablePartStyle tps = getTablePartStyle(null);
+        if (tps == null || !tps.isSetTcStyle()) {
+            tps = getTablePartStyle(TablePartStyle.wholeTbl);
+            if (tps == null || !tps.isSetTcStyle()) {
+                return null;
+            }
+        }
+
+        XMLSlideShow slideShow = table.getSheet().getSlideShow();
+        assert(slideShow != null);
+        XSLFTheme theme = slideShow.getSlides().get(0).getTheme();
+        CTFillProperties pr = tps.getTcStyle().getFill();
+
+          for (XmlObject obj : pr.selectPath("*")) {
+              PaintStyle paint = XSLFShape.selectPaint(obj, null, slideShow.getPackagePart(), theme);
+
+              if (paint != null) {
+                  return paint;
+              }
+          }
+
+          return null;
+    }
+
