@@ -1,11 +1,16 @@
 	private static EvaluationWorkbook createEvaluationWorkbook(Workbook wb) {
 		if (wb instanceof HSSFWorkbook) {
 			return HSSFEvaluationWorkbook.create((HSSFWorkbook) wb);
+		} else {
+		    try {
+		        // TODO: check if this is Java 9 compatible ...
+		        Class<?> evalWB = Class.forName("org.apache.poi.xssf.usermodel.XSSFEvaluationWorkbook");
+		        Class<?> xssfWB = Class.forName("org.apache.poi.xssf.usermodel.XSSFWorkbook");
+		        Method createM = evalWB.getDeclaredMethod("create", xssfWB);
+		        return (EvaluationWorkbook)createM.invoke(null, wb);
+		    } catch (Exception e) {
+		        throw new IllegalArgumentException("Unexpected workbook type (" + wb.getClass().getName() + ") - check for poi-ooxml and poi-ooxml schemas jar in the classpath", e);
+		    }
 		}
-// TODO rearrange POI build to allow this
-//		if (wb instanceof XSSFWorkbook) {
-//			return XSSFEvaluationWorkbook.create((XSSFWorkbook) wb);
-//		}
-		throw new IllegalArgumentException("Unexpected workbook type (" + wb.getClass().getName() + ")");
 	}
 
