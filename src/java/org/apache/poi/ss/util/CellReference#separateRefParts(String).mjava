@@ -11,27 +11,12 @@
     private static CellRefParts separateRefParts(String reference) {
         int plingPos = reference.lastIndexOf(SHEET_NAME_DELIMITER);
         final String sheetName = parseSheetName(reference, plingPos);
-        String row;
-        String col;
-        int start = plingPos+1;
+        String cell = reference.substring(plingPos+1).toUpperCase(Locale.ROOT);
+        Matcher matcher = CELL_REF_PATTERN.matcher(cell);
+        if (!matcher.matches()) throw new IllegalArgumentException("Invalid CellReference: " + reference);
+        String col = matcher.group(1);
+        String row = matcher.group(2);
 
-        int length = reference.length();
-
-        int loc = start;
-        // skip initial dollars
-        if (reference.charAt(loc)==ABSOLUTE_REFERENCE_MARKER) {
-            loc++;
-        }
-        // step over column name chars until first digit (or dollars) for row number.
-        for (; loc < length; loc++) {
-            char ch = reference.charAt(loc);
-            if (Character.isDigit(ch) || ch == ABSOLUTE_REFERENCE_MARKER) {
-                break;
-            }
-        }
-
-        col = reference.substring(start,loc).toUpperCase(Locale.ROOT);
-        row = reference.substring(loc);
         CellRefParts cellRefParts = new CellRefParts(sheetName, row, col);
         return cellRefParts;
     }
