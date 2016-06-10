@@ -1,76 +1,76 @@
-	/**
-	 * Note - caller should reset {@link #_pointer} upon <code>null</code> result
-	 * @return The sheet name as an identifier <code>null</code> if '!' is not found in the right place
-	 */
-	private SheetIdentifier parseSheetName() {
-		String bookName;
-		if (look == '[') {
-			StringBuilder sb = new StringBuilder();
-			GetChar();
-			while (look != ']') {
-				sb.append(look);
-				GetChar();
-			}
-			GetChar();
-			bookName = sb.toString();
-		} else {
-			bookName = null;
-		}
-
-		if (look == '\'') {
-			StringBuffer sb = new StringBuffer();
-
-			Match('\'');
-			boolean done = look == '\'';
-			while(!done) {
-				sb.append(look);
-				GetChar();
-				if(look == '\'')
-				{
-					Match('\'');
-					done = look != '\'';
-				}
-			}
-
-			NameIdentifier iden = new NameIdentifier(sb.toString(), true);
-			// quoted identifier - can't concatenate anything more
-			SkipWhite();
-			if (look == '!') {
-				GetChar();
-				return new SheetIdentifier(bookName, iden);
-			}
-			// See if it's a multi-sheet range, eg Sheet1:Sheet3!A1
-            if (look == ':') {
-                return parseSheetRange(bookName, iden);
+    /**
+     * Note - caller should reset {@link #_pointer} upon <code>null</code> result
+     * @return The sheet name as an identifier <code>null</code> if '!' is not found in the right place
+     */
+    private SheetIdentifier parseSheetName() {
+        String bookName;
+        if (look == '[') {
+            StringBuilder sb = new StringBuilder();
+            GetChar();
+            while (look != ']') {
+                sb.append(look);
+                GetChar();
             }
-			return null;
-		}
+            GetChar();
+            bookName = sb.toString();
+        } else {
+            bookName = null;
+        }
 
-		// unquoted sheet names must start with underscore or a letter
-		if (look =='_' || Character.isLetter(look)) {
-			StringBuilder sb = new StringBuilder();
-			// can concatenate idens with dots
-			while (isUnquotedSheetNameChar(look)) {
-				sb.append(look);
-				GetChar();
-			}
-            NameIdentifier iden = new NameIdentifier(sb.toString(), false);
-			SkipWhite();
-			if (look == '!') {
-				GetChar();
-				return new SheetIdentifier(bookName, iden);
-			}
+        if (look == '\'') {
+            StringBuffer sb = new StringBuffer();
+
+            Match('\'');
+            boolean done = look == '\'';
+            while(!done) {
+                sb.append(look);
+                GetChar();
+                if(look == '\'')
+                {
+                    Match('\'');
+                    done = look != '\'';
+                }
+            }
+
+            NameIdentifier iden = new NameIdentifier(sb.toString(), true);
+            // quoted identifier - can't concatenate anything more
+            SkipWhite();
+            if (look == '!') {
+                GetChar();
+                return new SheetIdentifier(bookName, iden);
+            }
             // See if it's a multi-sheet range, eg Sheet1:Sheet3!A1
             if (look == ':') {
                 return parseSheetRange(bookName, iden);
             }
-			return null;
-		}
-		if (look == '!' && bookName != null) {
-		    // Raw book reference, without a sheet
+            return null;
+        }
+
+        // unquoted sheet names must start with underscore or a letter
+        if (look =='_' || Character.isLetter(look)) {
+            StringBuilder sb = new StringBuilder();
+            // can concatenate idens with dots
+            while (isUnquotedSheetNameChar(look)) {
+                sb.append(look);
+                GetChar();
+            }
+            NameIdentifier iden = new NameIdentifier(sb.toString(), false);
+            SkipWhite();
+            if (look == '!') {
+                GetChar();
+                return new SheetIdentifier(bookName, iden);
+            }
+            // See if it's a multi-sheet range, eg Sheet1:Sheet3!A1
+            if (look == ':') {
+                return parseSheetRange(bookName, iden);
+            }
+            return null;
+        }
+        if (look == '!' && bookName != null) {
+            // Raw book reference, without a sheet
             GetChar();
-		    return new SheetIdentifier(bookName, null);
-		}
-		return null;
-	}
+            return new SheetIdentifier(bookName, null);
+        }
+        return null;
+    }
 
