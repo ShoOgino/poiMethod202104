@@ -1,36 +1,38 @@
-	/**
-	 * factors (without ^ or % )
-	 */
-	private ParseNode parseSimpleFactor() {
-		SkipWhite();
-		switch(look) {
-			case '#':
-				return new ParseNode(ErrPtg.valueOf(parseErrorLiteral()));
-			case '-':
-				Match('-');
-				return parseUnary(false);
-			case '+':
-				Match('+');
-				return parseUnary(true);
-			case '(':
-				Match('(');
-				ParseNode inside = unionExpression();
-				Match(')');
-				return new ParseNode(ParenthesisPtg.instance, inside);
-			case '"':
-				return new ParseNode(new StringPtg(parseStringLiteral()));
-			case '{':
-				Match('{');
-				ParseNode arrayNode = parseArray();
-				Match('}');
-				return arrayNode;
-		}
-		if (IsAlpha(look) || Character.isDigit(look) || look == '\'' || look == '['){
-			return parseRangeExpression();
-		}
-		if (look == '.') {
-			return new ParseNode(parseNumber());
-		}
-		throw expected("cell ref or constant literal");
-	}
+    /**
+     * factors (without ^ or % )
+     */
+    private ParseNode parseSimpleFactor() {
+        SkipWhite();
+        switch(look) {
+            case '#':
+                return new ParseNode(ErrPtg.valueOf(parseErrorLiteral()));
+            case '-':
+                Match('-');
+                return parseUnary(false);
+            case '+':
+                Match('+');
+                return parseUnary(true);
+            case '(':
+                Match('(');
+                ParseNode inside = unionExpression();
+                Match(')');
+                return new ParseNode(ParenthesisPtg.instance, inside);
+            case '"':
+                return new ParseNode(new StringPtg(parseStringLiteral()));
+            case '{':
+                Match('{');
+                ParseNode arrayNode = parseArray();
+                Match('}');
+                return arrayNode;
+        }
+        // named ranges and tables can start with underscore or backslash
+        // see https://support.office.com/en-us/article/Define-and-use-names-in-formulas-4d0f13ac-53b7-422e-afd2-abd7ff379c64?ui=en-US&rs=en-US&ad=US#bmsyntax_rules_for_names
+        if (IsAlpha(look) || Character.isDigit(look) || look == '\'' || look == '[' || look == '_' || look == '\\' ) {
+            return parseRangeExpression();
+        }
+        if (look == '.') {
+            return new ParseNode(parseNumber());
+        }
+        throw expected("cell ref or constant literal");
+    }
 

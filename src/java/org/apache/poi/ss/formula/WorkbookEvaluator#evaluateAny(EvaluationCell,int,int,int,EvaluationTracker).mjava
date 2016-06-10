@@ -1,91 +1,91 @@
-	/**
-	 * @return never <code>null</code>, never {@link BlankEval}
-	 */
-	private ValueEval evaluateAny(EvaluationCell srcCell, int sheetIndex,
-				int rowIndex, int columnIndex, EvaluationTracker tracker) {
+    /**
+     * @return never <code>null</code>, never {@link BlankEval}
+     */
+    private ValueEval evaluateAny(EvaluationCell srcCell, int sheetIndex,
+                int rowIndex, int columnIndex, EvaluationTracker tracker) {
 
-		// avoid tracking dependencies to cells that have constant definition
-		boolean shouldCellDependencyBeRecorded = _stabilityClassifier == null ? true
-					: !_stabilityClassifier.isCellFinal(sheetIndex, rowIndex, columnIndex);
-		if (srcCell == null || srcCell.getCellType() != Cell.CELL_TYPE_FORMULA) {
-			ValueEval result = getValueFromNonFormulaCell(srcCell);
-			if (shouldCellDependencyBeRecorded) {
-				tracker.acceptPlainValueDependency(_workbookIx, sheetIndex, rowIndex, columnIndex, result);
-			}
-			return result;
-		}
+        // avoid tracking dependencies to cells that have constant definition
+        boolean shouldCellDependencyBeRecorded = _stabilityClassifier == null ? true
+                    : !_stabilityClassifier.isCellFinal(sheetIndex, rowIndex, columnIndex);
+        if (srcCell == null || srcCell.getCellType() != Cell.CELL_TYPE_FORMULA) {
+            ValueEval result = getValueFromNonFormulaCell(srcCell);
+            if (shouldCellDependencyBeRecorded) {
+                tracker.acceptPlainValueDependency(_workbookIx, sheetIndex, rowIndex, columnIndex, result);
+            }
+            return result;
+        }
 
-		FormulaCellCacheEntry cce = _cache.getOrCreateFormulaCellEntry(srcCell);
-		if (shouldCellDependencyBeRecorded || cce.isInputSensitive()) {
-			tracker.acceptFormulaDependency(cce);
-		}
-		IEvaluationListener evalListener = _evaluationListener;
-		ValueEval result;
-		if (cce.getValue() == null) {
-			if (!tracker.startEvaluate(cce)) {
-				return ErrorEval.CIRCULAR_REF_ERROR;
-			}
-			OperationEvaluationContext ec = new OperationEvaluationContext(this, _workbook, sheetIndex, rowIndex, columnIndex, tracker);
+        FormulaCellCacheEntry cce = _cache.getOrCreateFormulaCellEntry(srcCell);
+        if (shouldCellDependencyBeRecorded || cce.isInputSensitive()) {
+            tracker.acceptFormulaDependency(cce);
+        }
+        IEvaluationListener evalListener = _evaluationListener;
+        ValueEval result;
+        if (cce.getValue() == null) {
+            if (!tracker.startEvaluate(cce)) {
+                return ErrorEval.CIRCULAR_REF_ERROR;
+            }
+            OperationEvaluationContext ec = new OperationEvaluationContext(this, _workbook, sheetIndex, rowIndex, columnIndex, tracker);
 
-			try {
+            try {
 
-				Ptg[] ptgs = _workbook.getFormulaTokens(srcCell);
-				if (evalListener == null) {
-					result = evaluateFormula(ec, ptgs);
-				} else {
-					evalListener.onStartEvaluate(srcCell, cce);
-					result = evaluateFormula(ec, ptgs);
-					evalListener.onEndEvaluate(cce, result);
-				}
+                Ptg[] ptgs = _workbook.getFormulaTokens(srcCell);
+                if (evalListener == null) {
+                    result = evaluateFormula(ec, ptgs);
+                } else {
+                    evalListener.onStartEvaluate(srcCell, cce);
+                    result = evaluateFormula(ec, ptgs);
+                    evalListener.onEndEvaluate(cce, result);
+                }
 
-				tracker.updateCacheResult(result);
-			}
-			 catch (NotImplementedException e) {
-				throw addExceptionInfo(e, sheetIndex, rowIndex, columnIndex);
-			 } catch (RuntimeException re) {
-				 if (re.getCause() instanceof WorkbookNotFoundException && _ignoreMissingWorkbooks) {
- 					logInfo(re.getCause().getMessage() + " - Continuing with cached value!");
- 					switch(srcCell.getCachedFormulaResultType()) {
-	 					case Cell.CELL_TYPE_NUMERIC:
-	 						result = new NumberEval(srcCell.getNumericCellValue());
-	 						break;
-	 					case Cell.CELL_TYPE_STRING:
-	 						result =  new StringEval(srcCell.getStringCellValue());
-	 						break;
-	 					case Cell.CELL_TYPE_BLANK:
-	 						result = BlankEval.instance;
-	 						break;
-	 					case Cell.CELL_TYPE_BOOLEAN:
-	 						result =  BoolEval.valueOf(srcCell.getBooleanCellValue());
-	 						break;
-	 					case Cell.CELL_TYPE_ERROR:
-							result =  ErrorEval.valueOf(srcCell.getErrorCellValue());
-							break;
-	 					case Cell.CELL_TYPE_FORMULA:
-						default:
-							throw new RuntimeException("Unexpected cell type '" + srcCell.getCellType()+"' found!");
- 					}
-				 } else {
-					 throw re;
-				 }
-			 } finally {
-				tracker.endEvaluate(cce);
-			}
-		} else {
-			if(evalListener != null) {
-				evalListener.onCacheHit(sheetIndex, rowIndex, columnIndex, cce.getValue());
-			}
-			return cce.getValue();
-		}
-		if (isDebugLogEnabled()) {
-			String sheetName = getSheetName(sheetIndex);
-			CellReference cr = new CellReference(rowIndex, columnIndex);
-			logDebug("Evaluated " + sheetName + "!" + cr.formatAsString() + " to " + result.toString());
-		}
-		// Usually (result === cce.getValue())
-		// But sometimes: (result==ErrorEval.CIRCULAR_REF_ERROR, cce.getValue()==null)
-		// When circular references are detected, the cache entry is only updated for
-		// the top evaluation frame
-		return result;
-	}
+                tracker.updateCacheResult(result);
+            }
+             catch (NotImplementedException e) {
+                throw addExceptionInfo(e, sheetIndex, rowIndex, columnIndex);
+             } catch (RuntimeException re) {
+                 if (re.getCause() instanceof WorkbookNotFoundException && _ignoreMissingWorkbooks) {
+                     logInfo(re.getCause().getMessage() + " - Continuing with cached value!");
+                     switch(srcCell.getCachedFormulaResultType()) {
+                         case Cell.CELL_TYPE_NUMERIC:
+                             result = new NumberEval(srcCell.getNumericCellValue());
+                             break;
+                         case Cell.CELL_TYPE_STRING:
+                             result =  new StringEval(srcCell.getStringCellValue());
+                             break;
+                         case Cell.CELL_TYPE_BLANK:
+                             result = BlankEval.instance;
+                             break;
+                         case Cell.CELL_TYPE_BOOLEAN:
+                             result =  BoolEval.valueOf(srcCell.getBooleanCellValue());
+                             break;
+                         case Cell.CELL_TYPE_ERROR:
+                            result =  ErrorEval.valueOf(srcCell.getErrorCellValue());
+                            break;
+                         case Cell.CELL_TYPE_FORMULA:
+                        default:
+                            throw new RuntimeException("Unexpected cell type '" + srcCell.getCellType()+"' found!");
+                     }
+                 } else {
+                     throw re;
+                 }
+             } finally {
+                tracker.endEvaluate(cce);
+            }
+        } else {
+            if(evalListener != null) {
+                evalListener.onCacheHit(sheetIndex, rowIndex, columnIndex, cce.getValue());
+            }
+            return cce.getValue();
+        }
+        if (isDebugLogEnabled()) {
+            String sheetName = getSheetName(sheetIndex);
+            CellReference cr = new CellReference(rowIndex, columnIndex);
+            logDebug("Evaluated " + sheetName + "!" + cr.formatAsString() + " to " + result.toString());
+        }
+        // Usually (result === cce.getValue())
+        // But sometimes: (result==ErrorEval.CIRCULAR_REF_ERROR, cce.getValue()==null)
+        // When circular references are detected, the cache entry is only updated for
+        // the top evaluation frame
+        return result;
+    }
 

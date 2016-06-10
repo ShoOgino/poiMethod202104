@@ -1,65 +1,65 @@
-	/**
-	 * Note - Excel function names are 'case aware but not case sensitive'.  This method may end
-	 * up creating a defined name record in the workbook if the specified name is not an internal
-	 * Excel function, and has not been encountered before.
-	 * 
-	 * Side effect: creates workbook name if name is not recognized (name is probably a UDF)
-	 *
-	 * @param name case preserved function name (as it was entered/appeared in the formula).
-	 */
-	private ParseNode function(String name) {
-		Ptg nameToken = null;
-		if(!AbstractFunctionPtg.isBuiltInFunctionName(name)) {
-			// user defined function
-			// in the token tree, the name is more or less the first argument
+    /**
+     * Note - Excel function names are 'case aware but not case sensitive'.  This method may end
+     * up creating a defined name record in the workbook if the specified name is not an internal
+     * Excel function, and has not been encountered before.
+     * 
+     * Side effect: creates workbook name if name is not recognized (name is probably a UDF)
+     *
+     * @param name case preserved function name (as it was entered/appeared in the formula).
+     */
+    private ParseNode function(String name) {
+        Ptg nameToken = null;
+        if(!AbstractFunctionPtg.isBuiltInFunctionName(name)) {
+            // user defined function
+            // in the token tree, the name is more or less the first argument
 
-			if (_book == null) {
-				// Only test cases omit the book (expecting it not to be needed)
-				throw new IllegalStateException("Need book to evaluate name '" + name + "'");
-			}
-			// Check to see if name is a named range in the workbook
-			EvaluationName hName = _book.getName(name, _sheetIndex);
-			if (hName != null) {
-				if (!hName.isFunctionName()) {
-					throw new FormulaParseException("Attempt to use name '" + name
-							+ "' as a function, but defined name in workbook does not refer to a function");
-				}
-	
-				// calls to user-defined functions within the workbook
-				// get a Name token which points to a defined name record
-				nameToken = hName.createPtg();
-			} else {
-				// Check if name is an external names table
-				nameToken = _book.getNameXPtg(name, null);
-				if (nameToken == null) {
-					// name is not an internal or external name
-					if (log.check(POILogger.WARN)) {
-						log.log(POILogger.WARN,
-								"FormulaParser.function: Name '" + name + "' is completely unknown in the current workbook.");
-					}
-					// name is probably the name of an unregistered User-Defined Function
-					switch (_book.getSpreadsheetVersion()) {
-						case EXCEL97:
-							// HSSFWorkbooks require a name to be added to Workbook defined names table
-							addName(name);
-							hName = _book.getName(name, _sheetIndex);
-							nameToken = hName.createPtg();
-							break;
-						case EXCEL2007:
-							// XSSFWorkbooks store formula names as strings.
-							nameToken = new NameXPxg(name);
-							break;
-						default:
-							throw new IllegalStateException("Unexpected spreadsheet version: " + _book.getSpreadsheetVersion().name());
-					}
-				}
-			}
-		}
+            if (_book == null) {
+                // Only test cases omit the book (expecting it not to be needed)
+                throw new IllegalStateException("Need book to evaluate name '" + name + "'");
+            }
+            // Check to see if name is a named range in the workbook
+            EvaluationName hName = _book.getName(name, _sheetIndex);
+            if (hName != null) {
+                if (!hName.isFunctionName()) {
+                    throw new FormulaParseException("Attempt to use name '" + name
+                            + "' as a function, but defined name in workbook does not refer to a function");
+                }
+    
+                // calls to user-defined functions within the workbook
+                // get a Name token which points to a defined name record
+                nameToken = hName.createPtg();
+            } else {
+                // Check if name is an external names table
+                nameToken = _book.getNameXPtg(name, null);
+                if (nameToken == null) {
+                    // name is not an internal or external name
+                    if (log.check(POILogger.WARN)) {
+                        log.log(POILogger.WARN,
+                                "FormulaParser.function: Name '" + name + "' is completely unknown in the current workbook.");
+                    }
+                    // name is probably the name of an unregistered User-Defined Function
+                    switch (_book.getSpreadsheetVersion()) {
+                        case EXCEL97:
+                            // HSSFWorkbooks require a name to be added to Workbook defined names table
+                            addName(name);
+                            hName = _book.getName(name, _sheetIndex);
+                            nameToken = hName.createPtg();
+                            break;
+                        case EXCEL2007:
+                            // XSSFWorkbooks store formula names as strings.
+                            nameToken = new NameXPxg(name);
+                            break;
+                        default:
+                            throw new IllegalStateException("Unexpected spreadsheet version: " + _book.getSpreadsheetVersion().name());
+                    }
+                }
+            }
+        }
 
-		Match('(');
-		ParseNode[] args = Arguments();
-		Match(')');
+        Match('(');
+        ParseNode[] args = Arguments();
+        Match(')');
 
-		return getFunction(name, nameToken, args);
-	}
+        return getFunction(name, nameToken, args);
+    }
 
