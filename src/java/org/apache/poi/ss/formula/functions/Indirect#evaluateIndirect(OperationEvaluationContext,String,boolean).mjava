@@ -1,5 +1,9 @@
-	private static ValueEval evaluateIndirect(OperationEvaluationContext ec, String text,
+	private static ValueEval evaluateIndirect(final OperationEvaluationContext ec, String text,
 			boolean isA1style) {
+	    
+	    ec.getRowIndex();
+	    ec.getColumnIndex();
+
 		// Search backwards for '!' because sheet names can contain '!'
 		int plingPos = text.lastIndexOf('!');
 
@@ -22,15 +26,24 @@
 
 		String refStrPart1;
 		String refStrPart2;
-
-		int colonPos = refText.indexOf(':');
-		if (colonPos < 0) {
-			refStrPart1 = refText.trim();
-			refStrPart2 = null;
-		} else {
-			refStrPart1 = refText.substring(0, colonPos).trim();
-			refStrPart2 = refText.substring(colonPos + 1).trim();
-		}
-		return ec.getDynamicReference(workbookName, sheetName, refStrPart1, refStrPart2, isA1style);
+        if (Table.isStructuredReference.matcher(refText).matches()) { // The argument is structured reference
+            Area3DPxg areaPtg = null;
+            try{
+                areaPtg = FormulaParser.parseStructuredReference(refText, (FormulaParsingWorkbook) ec.getWorkbook(), ec.getRowIndex());
+            } catch(FormulaParseException e) {
+                return ErrorEval.REF_INVALID;
+            }
+            return ec.getArea3DEval(areaPtg);
+        } else { // The argumnet is regular reference
+    		int colonPos = refText.indexOf(':');
+    		if (colonPos < 0) {
+     			refStrPart1 = refText.trim();
+     			refStrPart2 = null;			
+    		} else {
+    			refStrPart1 = refText.substring(0, colonPos).trim();
+    			refStrPart2 = refText.substring(colonPos + 1).trim();
+    		}
+    		return ec.getDynamicReference(workbookName, sheetName, refStrPart1, refStrPart2, isA1style);
+        }
 	}
 
