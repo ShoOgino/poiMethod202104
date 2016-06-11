@@ -1,0 +1,42 @@
+    /**
+     * 
+     * Calculates the xpath of the root element for the table. This will be the common part
+     * of all the mapping's xpaths
+     * Note: this function caches the result for performance. To flush the cache {@link #updateHeaders()} must be called.
+     * 
+     * @return the xpath of the table's root element
+     */
+    public String getCommonXpath() {
+        if (commonXPath == null) {
+            String[] commonTokens = {};
+            for (CTTableColumn column : getTableColumns()) {
+                if (column.getXmlColumnPr()!=null) {
+                    String xpath = column.getXmlColumnPr().getXpath();
+                    String[] tokens =  xpath.split("/");
+                    if (commonTokens.length==0) {
+                        commonTokens = tokens;
+                        
+                    } else {
+                        final int maxLength = Math.min(commonTokens.length, tokens.length);
+                         
+                        for (int i =0; i<maxLength; i++) {
+                            if (!commonTokens[i].equals(tokens[i])) {
+                             List<String> subCommonTokens = Arrays.asList(commonTokens).subList(0, i);
+                             
+                             String[] container = {};
+                             
+                             commonTokens = subCommonTokens.toArray(container);
+                             break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            commonTokens[0] = "";
+            commonXPath = StringUtil.join(commonTokens, "/");
+        }
+        
+        return commonXPath;
+    }
+
