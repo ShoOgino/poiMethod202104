@@ -1,33 +1,34 @@
-    public void writeTo( HWPFOutputStream wordDocumentStream,
+    public void writeTo(
+            HWPFOutputStream wordDocumentStream,
             HWPFOutputStream tableStream ) throws IOException
     {
 
-    int offset = wordDocumentStream.getOffset();
-    int len = _sections.size();
-    PlexOfCps plex = new PlexOfCps(SED_SIZE);
+        int offset = wordDocumentStream.getOffset();
+        int len = _sections.size();
+        PlexOfCps plex = new PlexOfCps(SED_SIZE);
 
-    for (int x = 0; x < len; x++)
-    {
-      SEPX sepx = _sections.get(x);
-      byte[] grpprl = sepx.getGrpprl();
+        for (int x = 0; x < len; x++)
+        {
+            SEPX sepx = _sections.get(x);
+            byte[] grpprl = sepx.getGrpprl();
 
-      // write the sepx to the document stream. starts with a 2 byte size
-      // followed by the grpprl
-      byte[] shortBuf = new byte[2];
-      LittleEndian.putShort(shortBuf, 0, (short)grpprl.length);
+            // write the sepx to the document stream. starts with a 2 byte size
+            // followed by the grpprl
+            byte[] shortBuf = new byte[2];
+            LittleEndian.putShort(shortBuf, 0, (short)grpprl.length);
 
-      wordDocumentStream.write(shortBuf);
-      wordDocumentStream.write(grpprl);
+            wordDocumentStream.write(shortBuf);
+            wordDocumentStream.write(grpprl);
 
-      // set the fc in the section descriptor
-      SectionDescriptor sed = sepx.getSectionDescriptor();
-      sed.setFc(offset);
+            // set the fc in the section descriptor
+            SectionDescriptor sed = sepx.getSectionDescriptor();
+            sed.setFc(offset);
 
-      // add the section descriptor bytes to the PlexOfCps.
+            // add the section descriptor bytes to the PlexOfCps.
 
             /* original line */
             GenericPropertyNode property = new GenericPropertyNode(
-                    sepx.getStart(), sepx.getEnd(), sed.toByteArray() );
+                            sepx.getStart(), sepx.getEnd(), sed.toByteArray() );
             /*
              * Line using Ryan's FCtoCP() conversion method - unable to observe
              * any effect on our testcases when using this code - piers
@@ -41,10 +42,10 @@
             // tpt.getCharIndex( sepx.getStartBytes() ),
             // tpt.getCharIndex( sepx.getEndBytes() ), sed.toByteArray() );
 
-      plex.addProperty(property);
+            plex.addProperty(property);
 
-      offset = wordDocumentStream.getOffset();
+            offset = wordDocumentStream.getOffset();
+        }
+        tableStream.write(plex.toByteArray());
     }
-    tableStream.write(plex.toByteArray());
-  }
 
