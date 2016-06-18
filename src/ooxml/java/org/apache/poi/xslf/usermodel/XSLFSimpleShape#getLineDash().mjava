@@ -1,20 +1,17 @@
     /**
-     * @return  a preset line dashing scheme to stroke thr shape outline
+     * @return  a preset line dashing scheme to stroke the shape outline
      */
     public LineDash getLineDash() {
 
         PropertyFetcher<LineDash> fetcher = new PropertyFetcher<LineDash>() {
             public boolean fetch(XSLFShape shape) {
-                CTShapeProperties spPr = shape.getSpPr();
-                CTLineProperties ln = spPr.getLn();
-                if (ln != null) {
-                    CTPresetLineDashProperties ctDash = ln.getPrstDash();
-                    if (ctDash != null) {
-                        setValue(LineDash.fromOoxmlId(ctDash.getVal().intValue()));
-                        return true;
-                    }
+                CTLineProperties ln = getLn(shape, false);
+                if (ln == null || !ln.isSetPrstDash()) {
+                    return false;
                 }
-                return false;
+
+                setValue(LineDash.fromOoxmlId(ln.getPrstDash().getVal().intValue()));
+                return true;
             }
         };
         fetchShapeProperty(fetcher);
@@ -22,11 +19,8 @@
         LineDash dash = fetcher.getValue();
         if (dash == null) {
             CTLineProperties defaultLn = getDefaultLineProperties();
-            if (defaultLn != null) {
-                CTPresetLineDashProperties ctDash = defaultLn.getPrstDash();
-                if (ctDash != null) {
-                    dash = LineDash.fromOoxmlId(ctDash.getVal().intValue());
-                }
+            if (defaultLn != null && defaultLn.isSetPrstDash()) {
+                dash = LineDash.fromOoxmlId(defaultLn.getPrstDash().getVal().intValue());
             }
         }
         return dash;

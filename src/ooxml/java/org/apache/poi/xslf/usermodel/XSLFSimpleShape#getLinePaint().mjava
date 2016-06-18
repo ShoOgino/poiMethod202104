@@ -1,35 +1,27 @@
     protected PaintStyle getLinePaint() {
-        final XSLFTheme theme = getSheet().getTheme();
+        XSLFSheet sheet = getSheet();
+        final XSLFTheme theme = sheet.getTheme();
         PropertyFetcher<PaintStyle> fetcher = new PropertyFetcher<PaintStyle>() {
             public boolean fetch(XSLFShape shape) {
-                CTLineProperties spPr = shape.getSpPr().getLn();
-                if (spPr != null) {
-                    if (spPr.isSetNoFill()) {
-                        setValue(null); // use it as 'nofill' value
-                        return true;
-                    }
+                CTLineProperties spPr = getLn(shape, false);
+                XSLFFillProperties fp = XSLFPropertiesDelegate.getFillDelegate(spPr);
+                PackagePart pp = shape.getSheet().getPackagePart();
+                PaintStyle paint = selectPaint(fp, null, pp, theme);
+                if (paint != null) {
+                    setValue(paint);
+                    return true;
+                }
 
-                    PaintStyle paint = null;
-                    PackagePart pp = getSheet().getPackagePart();
-                    for (XmlObject obj : spPr.selectPath("*")) {
-                        paint = selectPaint(obj, null, pp, theme);
-                        if (paint != null) {
-                            setValue(paint);
-                            return true;
-                        }
-                    }
-
-                    CTShapeStyle style = shape.getSpStyle();
-                    if (style != null) {
-                        paint = selectPaint(style.getLnRef(), theme);
-                        if (paint != null) {
-                            setValue(paint);
-                            return true;
-                        }
-                    }
+                CTShapeStyle style = shape.getSpStyle();
+                if (style != null) {
+                    fp = XSLFPropertiesDelegate.getFillDelegate(style.getLnRef());
+                    paint = selectPaint(fp, null, pp, theme);
+                }
+                if (paint != null) {
+                    setValue(paint);
+                    return true;
                 }
                 return false;
-
             }
         };
         fetchShapeProperty(fetcher);
@@ -46,9 +38,10 @@
         int idx = (int)lnRef.getIdx();
         CTSchemeColor phClr = lnRef.getSchemeClr();
         if(idx > 0){
-            XmlObject lnProps = theme.getXmlObject().
-                    getThemeElements().getFmtScheme().getLnStyleLst().selectPath("*")[idx - 1];
-            paint = getPaint(lnProps, phClr);
+            CTLineProperties props = theme.getXmlObject().getThemeElements().getFmtScheme().getLnStyleLst().getLnArray(idx - 1);
+            XSLFFillProperties fp = XSLFPropertiesDelegate.getFillDelegate(props);
+            PackagePart pp = sheet.getPackagePart();
+            paint = selectPaint(fp, phClr, pp, theme);
         }
 
         return paint;

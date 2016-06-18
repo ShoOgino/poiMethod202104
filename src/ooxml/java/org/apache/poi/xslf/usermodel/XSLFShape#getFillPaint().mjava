@@ -2,59 +2,39 @@
         final XSLFTheme theme = getSheet().getTheme();
         PropertyFetcher<PaintStyle> fetcher = new PropertyFetcher<PaintStyle>() {
             public boolean fetch(XSLFShape shape) {
-                XmlObject pr = null;
-                try {
-                    pr = shape.getSpPr();
-                    if (((CTShapeProperties)pr).isSetNoFill()) {
-                        setValue(null);
-                        return true;
-                    }                    
-                } catch (IllegalStateException e) {}
-                // trying background properties now
-                if (pr == null) {
-                    pr = shape.getBgPr();
+                XSLFFillProperties fp = XSLFPropertiesDelegate.getFillDelegate(shape.getShapeProperties());
+                if (fp == null) {
+                    return false;
                 }
-                if (pr == null) {
-                    pr = shape.getGrpSpPr();
-                }
-                if (pr == null) {
-                    if (shape.getXmlObject() instanceof CTBackground) {
-                        pr = shape.getXmlObject();
-                    }
+
+                if (fp.isSetNoFill()) {
+                    setValue(null);
+                    return true;
                 }
                 
-                if (pr == null) return false;
-                
-                PaintStyle paint = null;
-                PackagePart pp = getSheet().getPackagePart();
-                for (XmlObject obj : pr.selectPath("*")) {
-                    paint = selectPaint(obj, null, pp, theme);
-                    if (paint != null) {
-                        setValue(paint);
-                        return true;
-                    }
+                PackagePart pp = shape.getSheet().getPackagePart();
+                PaintStyle paint = selectPaint(fp, null, pp, theme);
+                if (paint != null) {
+                    setValue(paint);
+                    return true;
                 }
+
+                CTShapeStyle style = shape.getSpStyle();
+                if (style != null) {
+                    fp = XSLFPropertiesDelegate.getFillDelegate(style.getFillRef());
+                    paint = selectPaint(fp, null, pp, theme);
+                }
+                if (paint != null) {
+                    setValue(paint);
+                    return true;
+                }
+                
                 
                 return false;
             }
         };
         fetchShapeProperty(fetcher);
 
-        PaintStyle paint = fetcher.getValue();
-        if (paint != null) return paint;
-        
-        // fill color was not found, check if it is defined in the theme
-        // get a reference to a fill style within the style matrix.
-        CTStyleMatrixReference fillRef = null;
-        if (fillRef == null) {
-            CTShapeStyle style = getSpStyle();
-            if (style != null) fillRef = style.getFillRef();
-        }
-        if (fillRef == null) {
-            fillRef = getBgRef();
-        }
-        paint = selectPaint(fillRef, theme);
-
-        return paint;
+        return fetcher.getValue();
     }
 

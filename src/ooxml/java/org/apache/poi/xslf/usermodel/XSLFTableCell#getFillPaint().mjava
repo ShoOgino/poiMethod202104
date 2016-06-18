@@ -1,9 +1,15 @@
     @SuppressWarnings("resource")
     @Override
     public PaintStyle getFillPaint() {
-        Color c = getFillColor();
-        if (c != null) {
-            return DrawPaint.createSolidPaint(c);
+        XSLFSheet sheet = getSheet();
+        XSLFTheme theme = sheet.getTheme();
+        XmlObject props = getCellProperties(false);
+        XSLFFillProperties fp = XSLFPropertiesDelegate.getFillDelegate(props);
+        if (fp != null) {
+            PaintStyle paint = selectPaint(fp, null, sheet.getPackagePart(), theme);
+            if (paint != null) {
+                return paint;
+            }
         }
 
         CTTablePartStyle tps = getTablePartStyle(null);
@@ -14,19 +20,24 @@
             }
         }
 
-        XMLSlideShow slideShow = table.getSheet().getSlideShow();
-        assert(slideShow != null);
-        XSLFTheme theme = slideShow.getSlides().get(0).getTheme();
-        CTFillProperties pr = tps.getTcStyle().getFill();
-
-          for (XmlObject obj : pr.selectPath("*")) {
-              PaintStyle paint = XSLFShape.selectPaint(obj, null, slideShow.getPackagePart(), theme);
-
-              if (paint != null) {
-                  return paint;
-              }
-          }
-
-          return null;
+        XMLSlideShow slideShow = sheet.getSlideShow();
+        CTTableStyleCellStyle tcStyle = tps.getTcStyle();
+        if (tcStyle.isSetFill()) {
+            props = tcStyle.getFill();
+        } else if (tcStyle.isSetFillRef()) {
+            props = tcStyle.getFillRef();
+        } else {
+            return null;
+        }
+        
+        fp = XSLFPropertiesDelegate.getFillDelegate(props);
+        if (fp != null)  {
+            PaintStyle paint = XSLFShape.selectPaint(fp, null, slideShow.getPackagePart(), theme);
+            if (paint != null) {
+                return paint;
+            }
+        }
+        
+        return null;
     }
 
