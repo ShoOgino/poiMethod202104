@@ -1,47 +1,13 @@
     /**
      * Shift merged regions
-     *
+     * 
      * @param startRow the row to start shifting
      * @param endRow   the row to end shifting
      * @param n        the number of rows to shift
-     * @return an array of affected cell regions
-     * 
-     * This should be kept in sync with {@link org.apache.poi.hssf.usermodel.HSSFSheet#shiftMerged(int, int, int)}
+     * @return an array of merged cell regions
+     * @deprecated POI 3.15 beta 2. Use {@link #shiftMergedRegions(int, int, int)} instead.
      */
     public List<CellRangeAddress> shiftMerged(int startRow, int endRow, int n) {
-        List<CellRangeAddress> shiftedRegions = new ArrayList<CellRangeAddress>();
-        Set<Integer> removedIndices = new HashSet<Integer>();
-        //move merged regions completely if they fall within the new region boundaries when they are shifted
-        int size = sheet.getNumMergedRegions();
-        for (int i = 0; i < size; i++) {
-            CellRangeAddress merged = sheet.getMergedRegion(i);
-
-            boolean inStart = (merged.getFirstRow() >= startRow || merged.getLastRow() >= startRow);
-            boolean inEnd = (merged.getFirstRow() <= endRow || merged.getLastRow() <= endRow);
-
-            //don't check if it's not within the shifted area
-            if (!inStart || !inEnd) {
-                continue;
-            }
-
-            //only shift if the region outside the shifted rows is not merged too
-            if (!merged.containsRow(startRow - 1) && !merged.containsRow(endRow + 1)) {
-                merged.setFirstRow(merged.getFirstRow() + n);
-                merged.setLastRow(merged.getLastRow() + n);
-                //have to remove/add it back
-                shiftedRegions.add(merged);
-                removedIndices.add(i);
-            }
-        }
-        
-        if(!removedIndices.isEmpty()) {
-            sheet.removeMergedRegions(removedIndices);
-        }
-
-        //read so it doesn't get shifted again
-        for (CellRangeAddress region : shiftedRegions) {
-            sheet.addMergedRegion(region);
-        }
-        return shiftedRegions;
+        return shiftMergedRegions(startRow, endRow, n);
     }
 
