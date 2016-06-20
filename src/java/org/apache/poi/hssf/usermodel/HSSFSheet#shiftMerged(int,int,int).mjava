@@ -1,0 +1,39 @@
+    /**
+     * Shifts, grows, or shrinks the merged regions due to a row shift
+     *  
+     * @param startRow the start-index of the rows to shift, zero-based
+     * @param endRow the end-index of the rows to shift, zero-based
+     * @param n how far to shift, negative to shift up
+     */
+    private void shiftMerged(int startRow, int endRow, int n) {
+        List<CellRangeAddress> shiftedRegions = new ArrayList<CellRangeAddress>();
+        //move merged regions completely if they fall within the new region boundaries when they are shifted
+        for (int i = 0; i < getNumMergedRegions(); i++) {
+            CellRangeAddress merged = getMergedRegion(i);
+
+            boolean inStart = (merged.getFirstRow() >= startRow || merged.getLastRow() >= startRow);
+            boolean inEnd = (merged.getFirstRow() <= endRow || merged.getLastRow() <= endRow);
+
+            //don't check if it's not within the shifted area
+            if (!inStart || !inEnd) {
+                continue;
+            }
+
+            //only shift if the region outside the shifted rows is not merged too
+            if (!merged.containsRow(startRow - 1) &&
+                    !merged.containsRow(endRow + 1)) {
+                merged.setFirstRow(merged.getFirstRow() + n);
+                merged.setLastRow(merged.getLastRow() + n);
+                //have to remove/add it back
+                shiftedRegions.add(merged);
+                removeMergedRegion(i);
+                i = i - 1; // we have to back up now since we removed one
+            }
+        }
+
+        //read so it doesn't get shifted again
+        for (CellRangeAddress region : shiftedRegions) {
+            this.addMergedRegion(region);
+        }
+    }
+

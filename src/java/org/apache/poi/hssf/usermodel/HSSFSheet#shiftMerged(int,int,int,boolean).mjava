@@ -1,42 +1,13 @@
     /**
-     * Shifts the merged regions left or right depending on mode
-     * <p/>
-     * TODO: MODE , this is only row specific
-     *
+     * Shifts, grows, or shrinks the merged regions due to a row shift
+     * 
      * @param startRow the start-index of the rows to shift, zero-based
      * @param endRow the end-index of the rows to shift, zero-based
      * @param n how far to shift, negative to shift up
      * @param isRow unused, kept for backwards compatibility
+     * @deprecated POI 3.15 beta 2. This will be made private in future releases.
      */
     protected void shiftMerged(int startRow, int endRow, int n, boolean isRow) {
-        List<CellRangeAddress> shiftedRegions = new ArrayList<CellRangeAddress>();
-        //move merged regions completely if they fall within the new region boundaries when they are shifted
-        for (int i = 0; i < getNumMergedRegions(); i++) {
-            CellRangeAddress merged = getMergedRegion(i);
-
-            boolean inStart = (merged.getFirstRow() >= startRow || merged.getLastRow() >= startRow);
-            boolean inEnd = (merged.getFirstRow() <= endRow || merged.getLastRow() <= endRow);
-
-            //don't check if it's not within the shifted area
-            if (!inStart || !inEnd) {
-                continue;
-            }
-
-            //only shift if the region outside the shifted rows is not merged too
-            if (!SheetUtil.containsCell(merged, startRow - 1, 0) &&
-                    !SheetUtil.containsCell(merged, endRow + 1, 0)) {
-                merged.setFirstRow(merged.getFirstRow() + n);
-                merged.setLastRow(merged.getLastRow() + n);
-                //have to remove/add it back
-                shiftedRegions.add(merged);
-                removeMergedRegion(i);
-                i = i - 1; // we have to back up now since we removed one
-            }
-        }
-
-        //read so it doesn't get shifted again
-        for (CellRangeAddress region : shiftedRegions) {
-            this.addMergedRegion(region);
-        }
+        shiftMerged(startRow, endRow, n);
     }
 
