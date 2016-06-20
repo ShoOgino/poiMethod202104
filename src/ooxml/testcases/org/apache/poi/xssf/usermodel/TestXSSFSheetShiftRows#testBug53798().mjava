@@ -1,44 +1,44 @@
     @Test
-	public void testBug53798() throws IOException {
-		// NOTE that for HSSF (.xls) negative shifts combined with positive ones do work as expected  
-		Workbook wb = XSSFTestDataSamples.openSampleWorkbook("53798.xlsx");
+    public void testBug53798() throws IOException {
+        // NOTE that for HSSF (.xls) negative shifts combined with positive ones do work as expected  
+        Workbook wb = XSSFTestDataSamples.openSampleWorkbook("53798.xlsx");
 
-		Sheet testSheet	= wb.getSheetAt(0);
-		// 1) corrupted xlsx (unreadable data in the first row of a shifted group) already comes about  
-		// when shifted by less than -1 negative amount (try -2)
-		testSheet.shiftRows(3, 3, -2);
-		
-		Row newRow = null; Cell newCell = null;
-		// 2) attempt to create a new row IN PLACE of a removed row by a negative shift causes corrupted 
-		// xlsx file with  unreadable data in the negative shifted row. 
-		// NOTE it's ok to create any other row.
-		newRow = testSheet.createRow(3);
-		newCell = newRow.createCell(0);
-		newCell.setCellValue("new Cell in row "+newRow.getRowNum());
-		
-		// 3) once a negative shift has been made any attempt to shift another group of rows 
-		// (note: outside of previously negative shifted rows) by a POSITIVE amount causes POI exception: 
-		// org.apache.xmlbeans.impl.values.XmlValueDisconnectedException.
-		// NOTE: another negative shift on another group of rows is successful, provided no new rows in  
-		// place of previously shifted rows were attempted to be created as explained above.
+        Sheet testSheet    = wb.getSheetAt(0);
+        // 1) corrupted xlsx (unreadable data in the first row of a shifted group) already comes about  
+        // when shifted by less than -1 negative amount (try -2)
+        testSheet.shiftRows(3, 3, -2);
+        
+        Row newRow = null; Cell newCell = null;
+        // 2) attempt to create a new row IN PLACE of a removed row by a negative shift causes corrupted 
+        // xlsx file with  unreadable data in the negative shifted row. 
+        // NOTE it's ok to create any other row.
+        newRow = testSheet.createRow(3);
+        newCell = newRow.createCell(0);
+        newCell.setCellValue("new Cell in row "+newRow.getRowNum());
+        
+        // 3) once a negative shift has been made any attempt to shift another group of rows 
+        // (note: outside of previously negative shifted rows) by a POSITIVE amount causes POI exception: 
+        // org.apache.xmlbeans.impl.values.XmlValueDisconnectedException.
+        // NOTE: another negative shift on another group of rows is successful, provided no new rows in  
+        // place of previously shifted rows were attempted to be created as explained above.
 
-		// -- CHANGE the shift to positive once the behaviour of the above has been tested
-		testSheet.shiftRows(6, 7, 1); 
-		
-		Workbook read = XSSFTestDataSamples.writeOutAndReadBack(wb);
-		wb.close();
-		assertNotNull(read);
-		
-		Sheet readSheet = read.getSheetAt(0);
-		verifyCellContent(readSheet, 0, "0.0");
-		verifyCellContent(readSheet, 1, "3.0");
-		verifyCellContent(readSheet, 2, "2.0");
-		verifyCellContent(readSheet, 3, "new Cell in row 3");
-		verifyCellContent(readSheet, 4, "4.0");
-		verifyCellContent(readSheet, 5, "5.0");
-		verifyCellContent(readSheet, 6, null);
-		verifyCellContent(readSheet, 7, "6.0");
-		verifyCellContent(readSheet, 8, "7.0");
-		read.close();
-	}
+        // -- CHANGE the shift to positive once the behaviour of the above has been tested
+        testSheet.shiftRows(6, 7, 1); 
+        
+        Workbook read = XSSFTestDataSamples.writeOutAndReadBack(wb);
+        wb.close();
+        assertNotNull(read);
+        
+        Sheet readSheet = read.getSheetAt(0);
+        verifyCellContent(readSheet, 0, "0.0");
+        verifyCellContent(readSheet, 1, "3.0");
+        verifyCellContent(readSheet, 2, "2.0");
+        verifyCellContent(readSheet, 3, "new Cell in row 3");
+        verifyCellContent(readSheet, 4, "4.0");
+        verifyCellContent(readSheet, 5, "5.0");
+        verifyCellContent(readSheet, 6, null);
+        verifyCellContent(readSheet, 7, "6.0");
+        verifyCellContent(readSheet, 8, "7.0");
+        read.close();
+    }
 
