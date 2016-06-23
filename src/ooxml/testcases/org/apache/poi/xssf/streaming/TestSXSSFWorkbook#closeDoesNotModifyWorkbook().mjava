@@ -2,7 +2,8 @@
     public void closeDoesNotModifyWorkbook() throws IOException, InvalidFormatException {
         final String filename = "SampleSS.xlsx";
         final File file = POIDataSamples.getSpreadSheetInstance().getFile(filename);
-        SXSSFWorkbook wb;
+        SXSSFWorkbook wb = null;
+        XSSFWorkbook xwb = null;
         
         // Some tests commented out because close() modifies the file
         // See bug 58779
@@ -16,8 +17,20 @@
         //assertCloseDoesNotModifyFile(filename, wb);
         
         // InputStream
-        wb = new SXSSFWorkbook(new XSSFWorkbook(new FileInputStream(file)));
-        assertCloseDoesNotModifyFile(filename, wb);
+        FileInputStream fis = new FileInputStream(file);
+        try {
+            xwb = new XSSFWorkbook(fis);
+            wb = new SXSSFWorkbook(xwb);
+            assertCloseDoesNotModifyFile(filename, wb);
+        } finally {
+            if (xwb != null) {
+                xwb.close();
+            }
+            if (wb != null) {
+                wb.close();
+            }
+            fis.close();
+        }
         
         // OPCPackage
         //wb = new SXSSFWorkbook(new XSSFWorkbook(OPCPackage.open(file)));
