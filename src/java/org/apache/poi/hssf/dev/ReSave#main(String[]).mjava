@@ -1,8 +1,13 @@
     public static void main(String[] args) throws Exception {
         boolean initDrawing = false;
+        boolean saveToMemory = false;
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
         for(String filename : args) {
-            if(filename.equals("-dg")) initDrawing = true;
-            else {
+            if(filename.equals("-dg")) {
+                initDrawing = true;
+            } else if(filename.equals("-bos")) {
+                saveToMemory = true;
+            } else {
                 System.out.print("reading " + filename + "...");
                 FileInputStream is = new FileInputStream(filename);
                 HSSFWorkbook wb = new HSSFWorkbook(is);
@@ -15,18 +20,26 @@
                             /*HSSFPatriarch dg =*/ sheet.getDrawingPatriarch();
                         }
                     }
-    
-                    String outputFile = filename.replace(".xls", "-saved.xls");
-                    System.out.print("saving to " + outputFile + "...");
-                    FileOutputStream out = new FileOutputStream(outputFile);
+
+                    OutputStream os;
+                    if (saveToMemory) {
+                        bos.reset();
+                        os = bos;
+                    } else {
+                        String outputFile = filename.replace(".xls", "-saved.xls");
+                        System.out.print("saving to " + outputFile + "...");
+                        os = new FileOutputStream(outputFile);
+                    }
+                    
                     try {
-                        wb.write(out);
+                        wb.write(os);
                     } finally {
-                        out.close();
+                        os.close();
                     }
                     System.out.println("done");
                 } finally {
                     wb.close();
+                    is.close();
                 }
             }
         }
