@@ -1,18 +1,18 @@
     private String convertCellValueToString() {
 
         switch (_cellType) {
-            case CELL_TYPE_BLANK:
+            case BLANK:
                 return "";
-            case CELL_TYPE_BOOLEAN:
+            case BOOLEAN:
                 return ((BoolErrRecord) _record).getBooleanValue() ? "TRUE" : "FALSE";
-            case CELL_TYPE_STRING:
+            case STRING:
                 int sstIndex = ((LabelSSTRecord)_record).getSSTIndex();
                 return _book.getWorkbook().getSSTString(sstIndex).getString();
-            case CELL_TYPE_NUMERIC:
+            case NUMERIC:
                 return NumberToTextConverter.toText(((NumberRecord)_record).getValue());
-            case CELL_TYPE_ERROR:
+            case ERROR:
                    return FormulaError.forInt(((BoolErrRecord)_record).getErrorValue()).getString();
-            case CELL_TYPE_FORMULA:
+            case FORMULA:
                 // should really evaluate, but HSSFCell can't call HSSFFormulaEvaluator
                 // just use cached formula result instead
                 break;
@@ -21,16 +21,18 @@
         }
         FormulaRecordAggregate fra = ((FormulaRecordAggregate)_record);
         FormulaRecord fr = fra.getFormulaRecord();
-        switch (fr.getCachedResultType()) {
-            case CELL_TYPE_BOOLEAN:
+        switch (CellType.forInt(fr.getCachedResultType())) {
+            case BOOLEAN:
                 return fr.getCachedBooleanValue() ? "TRUE" : "FALSE";
-            case CELL_TYPE_STRING:
+            case STRING:
                 return fra.getStringValue();
-            case CELL_TYPE_NUMERIC:
+            case NUMERIC:
                 return NumberToTextConverter.toText(fr.getValue());
-            case CELL_TYPE_ERROR:
-                   return FormulaError.forInt(fr.getCachedErrorValue()).getString();
+            case ERROR:
+                return FormulaError.forInt(fr.getCachedErrorValue()).getString();
+            default:
+                throw new IllegalStateException("Unexpected formula result type (" + _cellType + ")");
         }
-        throw new IllegalStateException("Unexpected formula result type (" + _cellType + ")");
+        
     }
 

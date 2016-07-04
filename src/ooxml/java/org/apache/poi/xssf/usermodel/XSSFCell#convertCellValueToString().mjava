@@ -1,19 +1,19 @@
     private String convertCellValueToString() {
-        int cellType = getCellType();
+        CellType cellType = getCellType();
 
         switch (cellType) {
-            case CELL_TYPE_BLANK:
+            case BLANK:
                 return "";
-            case CELL_TYPE_BOOLEAN:
-                return TRUE_AS_STRING.equals(_cell.getV()) ? "TRUE" : "FALSE";
-            case CELL_TYPE_STRING:
+            case BOOLEAN:
+                return TRUE_AS_STRING.equals(_cell.getV()) ? TRUE : FALSE;
+            case STRING:
                 int sstIndex = Integer.parseInt(_cell.getV());
                 XSSFRichTextString rt = new XSSFRichTextString(_sharedStringSource.getEntryAt(sstIndex));
                 return rt.getString();
-            case CELL_TYPE_NUMERIC:
-            case CELL_TYPE_ERROR:
+            case NUMERIC:
+            case ERROR:
                 return _cell.getV();
-            case CELL_TYPE_FORMULA:
+            case FORMULA:
                 // should really evaluate, but HSSFCell can't call HSSFFormulaEvaluator
                 // just use cached formula result instead
                 break;
@@ -23,20 +23,26 @@
         cellType = getBaseCellType(false);
         String textValue = _cell.getV();
         switch (cellType) {
-            case CELL_TYPE_BOOLEAN:
+            case BOOLEAN:
                 if (TRUE_AS_STRING.equals(textValue)) {
-                    return "TRUE";
+                    return TRUE;
                 }
                 if (FALSE_AS_STRING.equals(textValue)) {
-                    return "FALSE";
+                    return FALSE;
                 }
                 throw new IllegalStateException("Unexpected boolean cached formula value '"
                     + textValue + "'.");
-            case CELL_TYPE_STRING:
-            case CELL_TYPE_NUMERIC:
-            case CELL_TYPE_ERROR:
+                
+            case STRING:
+                // fall-through
+            case NUMERIC:
+                // fall-through
+            case ERROR:
                 return textValue;
+                
+            default:
+                throw new IllegalStateException("Unexpected formula result type (" + cellType + ")");
         }
-        throw new IllegalStateException("Unexpected formula result type (" + cellType + ")");
+        
     }
 

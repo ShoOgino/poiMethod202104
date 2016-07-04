@@ -1,0 +1,30 @@
+    /**
+     * Use this to create new cells within the row and return it.
+     *
+     * @param columnIndex - the column number this cell represents
+     * @param type - the cell's data type
+     * @return XSSFCell a high level representation of the created cell.
+     * @throws IllegalArgumentException if the specified cell type is invalid, columnIndex < 0
+     *   or greater than 16384, the maximum number of columns supported by the SpreadsheetML format (.xlsx)
+     */
+    @Override
+    public XSSFCell createCell(int columnIndex, CellType type) {
+        // Performance optimization for bug 57840: explicit boxing is slightly faster than auto-unboxing, though may use more memory
+        final Integer colI = new Integer(columnIndex); // NOSONAR
+        CTCell ctCell;
+        XSSFCell prev = _cells.get(colI);
+        if(prev != null){
+            ctCell = prev.getCTCell();
+            ctCell.set(CTCell.Factory.newInstance());
+        } else {
+            ctCell = _row.addNewC();
+        }
+        XSSFCell xcell = new XSSFCell(this, ctCell);
+        xcell.setCellNum(columnIndex);
+        if (type != CellType.BLANK) {
+            xcell.setCellType(type);
+        }
+        _cells.put(colI, xcell);
+        return xcell;
+    }
+
