@@ -16,6 +16,10 @@
                 return new ExcelExtractor(poifsDir);
             }
         }
+        if (poifsDir.hasEntry(OLD_WORKBOOK_DIR_ENTRY_NAME)) {
+            throw new OldExcelFormatException("Old Excel Spreadsheet format (1-95) "
+                    + "found. Please call OldExcelExtractor directly for basic text extraction");
+        }
         
         // Ask Scratchpad, or fail trying
         Class<?> cls = getScratchpadClass();
@@ -23,6 +27,8 @@
             Method m = cls.getDeclaredMethod("createExtractor", DirectoryNode.class);
             POITextExtractor ext = (POITextExtractor)m.invoke(null, poifsDir);
             if (ext != null) return ext;
+        } catch (IllegalArgumentException iae) {
+            throw iae;
         } catch (Exception e) {
             throw new IllegalArgumentException("Error creating Scratchpad Extractor", e);
         }
