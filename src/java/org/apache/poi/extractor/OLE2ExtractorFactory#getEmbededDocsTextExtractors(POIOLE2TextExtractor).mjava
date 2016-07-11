@@ -9,9 +9,9 @@
             throws IOException
     {
         // All the embedded directories we spotted
-        ArrayList<Entry> dirs = new ArrayList<Entry>();
+        List<Entry> dirs = new ArrayList<Entry>();
         // For anything else not directly held in as a POIFS directory
-        ArrayList<InputStream> nonPOIFS = new ArrayList<InputStream>();
+        List<InputStream> nonPOIFS = new ArrayList<InputStream>();
 
         // Find all the embedded directories
         DirectoryEntry root = ext.getRoot();
@@ -29,7 +29,15 @@
                 }
             }
         } else {
-            // TODO Ask scratchpad
+            // Ask Scratchpad, or fail trying
+            Class<?> cls = getScratchpadClass();
+            try {
+                Method m = cls.getDeclaredMethod(
+                        "identifyEmbeddedResources", POIOLE2TextExtractor.class, List.class, List.class);
+                m.invoke(null, ext, dirs, nonPOIFS);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Error checking for Scratchpad embedded resources", e);
+            }
         }
 
         // Create the extractors
@@ -49,10 +57,10 @@
             } catch (IllegalArgumentException ie) {
                 // Ignore, just means it didn't contain
                 //  a format we support as yet
-                // TODO Should we log this?
+                LOGGER.log(POILogger.WARN, ie);
             } catch (Exception xe) {
                 // Ignore, invalid format
-                // TODO Should we log this?
+                LOGGER.log(POILogger.WARN, xe);
             }
         }
         return e.toArray(new POITextExtractor[e.size()]);
