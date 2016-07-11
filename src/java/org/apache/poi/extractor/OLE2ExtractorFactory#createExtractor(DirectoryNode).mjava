@@ -1,0 +1,24 @@
+    /**
+     * Create the Extractor, if possible. Generally needs the Scratchpad jar.
+     * Note that this won't check for embedded OOXML resources either, use
+     *  {@link org.apache.poi.extractor.ExtractorFactory} for that.
+     */
+    public static POITextExtractor createExtractor(DirectoryNode poifsDir)
+            throws IOException, OpenXML4JException, XmlException
+    {
+        // Look for certain entries in the stream, to figure it
+        // out from
+        for (String workbookName : WORKBOOK_DIR_ENTRY_NAMES) {
+            if (poifsDir.hasEntry(workbookName)) {
+                if (getPreferEventExtractor()) {
+                    return new EventBasedExcelExtractor(poifsDir);
+                }
+                return new ExcelExtractor(poifsDir);
+            }
+        }
+
+        // TODO Try to ask the Scratchpad
+
+        throw new IllegalArgumentException("No supported documents found in the OLE2 stream");
+    }
+
