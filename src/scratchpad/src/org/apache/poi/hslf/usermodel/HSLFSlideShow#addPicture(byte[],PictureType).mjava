@@ -1,15 +1,13 @@
 	@Override
 	public HSLFPictureData addPicture(byte[] data, PictureType format) throws IOException {
-	    if (format == null || format.nativeId == -1) {
-	        throw new IllegalArgumentException("Unsupported picture format: " + format); 
-	    }
-	    
-	    byte[] uid = HSLFPictureData.getChecksum(data);
-
-		for (HSLFPictureData pd : getPictureData()) {
-		    if (Arrays.equals(pd.getUID(), uid)) {
-		        return pd;
-		    }
+		if (format == null || format.nativeId == -1) {
+			throw new IllegalArgumentException("Unsupported picture format: " + format); 
+		}
+		
+		HSLFPictureData pd = findPictureData(data);
+		if (pd != null) {
+			// identical picture was already added to the SlideShow
+			return pd;
 		}
 		
 		EscherContainerRecord bstore;
@@ -33,6 +31,7 @@
 		bse.setRecordId(EscherBSERecord.RECORD_ID);
 		bse.setOptions((short) (0x0002 | (format.nativeId << 4)));
 		bse.setSize(pict.getRawData().length + 8);
+		byte[] uid = HSLFPictureData.getChecksum(data);
 		bse.setUid(uid);
 
 		bse.setBlipTypeMacOS((byte) format.nativeId);
