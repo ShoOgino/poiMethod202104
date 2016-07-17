@@ -26,11 +26,9 @@
             String match = m.group();
             String symbol = match.substring(match.indexOf('$') + 1, match.indexOf('-'));
             if (symbol.indexOf('$') > -1) {
-                StringBuffer sb = new StringBuffer();
-                sb.append(symbol.substring(0, symbol.indexOf('$')));
-                sb.append('\\');
-                sb.append(symbol.substring(symbol.indexOf('$'), symbol.length()));
-                symbol = sb.toString();
+                symbol = symbol.substring(0, symbol.indexOf('$')) +
+                        '\\' +
+                        symbol.substring(symbol.indexOf('$'), symbol.length());
             }
             formatStr = m.replaceAll(symbol);
             m = localePatternGroup.matcher(formatStr);
@@ -50,16 +48,16 @@
             return createDateFormat(formatStr, cellValue);
         }
         // Excel supports fractions in format strings, which Java doesn't
-        if (formatStr.indexOf("#/") >= 0 || formatStr.indexOf("?/") >= 0) {
+        if (formatStr.contains("#/") || formatStr.contains("?/")) {
             String[] chunks = formatStr.split(";");
-            for (int i = 0; i < chunks.length; i++){
-                String chunk = chunks[i].replaceAll("\\?", "#");
+            for (String chunk1 : chunks) {
+                String chunk = chunk1.replaceAll("\\?", "#");
                 Matcher matcher = fractionStripper.matcher(chunk);
                 chunk = matcher.replaceAll(" ");
                 chunk = chunk.replaceAll(" +", " ");
                 Matcher fractionMatcher = fractionPattern.matcher(chunk);
                 //take the first match
-                if (fractionMatcher.find()){
+                if (fractionMatcher.find()) {
                     String wholePart = (fractionMatcher.group(1) == null) ? "" : defaultFractionWholePartFormat;
                     return new FractionFormat(wholePart, fractionMatcher.group(3));
                 }
