@@ -38,6 +38,7 @@
                     }
                 }
             } catch (FileNotFoundException e) {
+                logger.log(POILogger.INFO, "Ignoring FileNotFoundException while extracting Word document", e.getLocalizedMessage());
                 // ignored here
             }
         //} else if(ext instanceof PowerPointExtractor) {
@@ -61,22 +62,23 @@
             return new POITextExtractor[0];
         }
 
-        ArrayList<POITextExtractor> e = new ArrayList<POITextExtractor>();
+        ArrayList<POITextExtractor> textExtractors = new ArrayList<POITextExtractor>();
         for (Entry dir : dirs) {
-            e.add(createExtractor((DirectoryNode) dir));
+            textExtractors.add(createExtractor((DirectoryNode) dir));
         }
         for (InputStream nonPOIF : nonPOIFS) {
             try {
-                 e.add(createExtractor(nonPOIF));
-            } catch (IllegalArgumentException ie) {
+                 textExtractors.add(createExtractor(nonPOIF));
+            } catch (IllegalArgumentException e) {
                 // Ignore, just means it didn't contain
                 //  a format we support as yet
-            } catch (XmlException xe) {
-                 throw new IOException(xe.getMessage());
-            } catch (OpenXML4JException oe) {
-                 throw new IOException(oe.getMessage());
+                logger.log(POILogger.INFO, "Format not supported yet", e.getLocalizedMessage());
+            } catch (XmlException e) {
+                throw new IOException(e.getMessage(), e);
+            } catch (OpenXML4JException e) {
+                throw new IOException(e.getMessage(), e);
             }
         }
-        return e.toArray(new POITextExtractor[e.size()]);
+        return textExtractors.toArray(new POITextExtractor[textExtractors.size()]);
     }
 
