@@ -1,49 +1,49 @@
-  /**
-   * Writes out the word file that is represented by an instance of this class.
-   * 
-   * If {@code stream} is a {@link java.io.FileOutputStream} on a networked drive
-   * or has a high cost/latency associated with each written byte,
-   * consider wrapping the OutputStream in a {@link java.io.BufferedOutputStream}
-   * to improve write performance.
-   *
-   * @param out The OutputStream to write to.
-   * @throws IOException If there is an unexpected IOException from the passed
-   *         in OutputStream.
-   */
-  public void write(OutputStream out)
-    throws IOException
-  {
-    // initialize our streams for writing.
-    HWPFFileSystem docSys = new HWPFFileSystem();
-    HWPFOutputStream wordDocumentStream = docSys.getStream(STREAM_WORD_DOCUMENT);
-    HWPFOutputStream tableStream = docSys.getStream(STREAM_TABLE_1);
-    //HWPFOutputStream dataStream = docSys.getStream("Data");
-    int tableOffset = 0;
+    /**
+     * Writes out the word file that is represented by an instance of this class.
+     * 
+     * If {@code stream} is a {@link java.io.FileOutputStream} on a networked drive
+     * or has a high cost/latency associated with each written byte,
+     * consider wrapping the OutputStream in a {@link java.io.BufferedOutputStream}
+     * to improve write performance.
+     *
+     * @param out The OutputStream to write to.
+     * @throws IOException If there is an unexpected IOException from the passed
+     *         in OutputStream.
+     */
+    public void write(OutputStream out)
+            throws IOException
+            {
+        // initialize our streams for writing.
+        HWPFFileSystem docSys = new HWPFFileSystem();
+        HWPFOutputStream wordDocumentStream = docSys.getStream(STREAM_WORD_DOCUMENT);
+        HWPFOutputStream tableStream = docSys.getStream(STREAM_TABLE_1);
+        //HWPFOutputStream dataStream = docSys.getStream("Data");
+        int tableOffset = 0;
 
-    // FileInformationBlock fib = (FileInformationBlock)_fib.clone();
-    // clear the offsets and sizes in our FileInformationBlock.
-    _fib.clearOffsetsSizes();
+        // FileInformationBlock fib = (FileInformationBlock)_fib.clone();
+        // clear the offsets and sizes in our FileInformationBlock.
+        _fib.clearOffsetsSizes();
 
-    // determine the FileInformationBLock size
-    int fibSize = _fib.getSize();
-    fibSize  += POIFSConstants.SMALLER_BIG_BLOCK_SIZE -
-        (fibSize % POIFSConstants.SMALLER_BIG_BLOCK_SIZE);
+        // determine the FileInformationBLock size
+        int fibSize = _fib.getSize();
+        fibSize  += POIFSConstants.SMALLER_BIG_BLOCK_SIZE -
+                (fibSize % POIFSConstants.SMALLER_BIG_BLOCK_SIZE);
 
-    // preserve space for the FileInformationBlock because we will be writing
-    // it after we write everything else.
-    byte[] placeHolder = new byte[fibSize];
-    wordDocumentStream.write(placeHolder);
-    int mainOffset = wordDocumentStream.getOffset();
+        // preserve space for the FileInformationBlock because we will be writing
+        // it after we write everything else.
+        byte[] placeHolder = new byte[fibSize];
+        wordDocumentStream.write(placeHolder);
+        int mainOffset = wordDocumentStream.getOffset();
 
-    // write out the StyleSheet.
-    _fib.setFcStshf(tableOffset);
-    _ss.writeTo(tableStream);
-    _fib.setLcbStshf(tableStream.getOffset() - tableOffset);
-    tableOffset = tableStream.getOffset();
+        // write out the StyleSheet.
+        _fib.setFcStshf(tableOffset);
+        _ss.writeTo(tableStream);
+        _fib.setLcbStshf(tableStream.getOffset() - tableOffset);
+        tableOffset = tableStream.getOffset();
 
-    // get fcMin and fcMac because we will be writing the actual text with the
-    // complex table.
-    int fcMin = mainOffset;
+        // get fcMin and fcMac because we will be writing the actual text with the
+        // complex table.
+        int fcMin = mainOffset;
 
         /*
          * clx (encoding of the sprm lists for a complex file and piece table
@@ -53,13 +53,13 @@
          * Microsoft Office Word 97-2007 Binary File Format (.doc)
          * Specification; Page 23 of 210
          */
-    
-    // write out the Complex table, includes text.
-    _fib.setFcClx(tableOffset);
-    _cft.writeTo(wordDocumentStream, tableStream);
-    _fib.setLcbClx(tableStream.getOffset() - tableOffset);
-    tableOffset = tableStream.getOffset();
-    int fcMac = wordDocumentStream.getOffset();
+
+        // write out the Complex table, includes text.
+        _fib.setFcClx(tableOffset);
+        _cft.writeTo(wordDocumentStream, tableStream);
+        _fib.setLcbClx(tableStream.getOffset() - tableOffset);
+        tableOffset = tableStream.getOffset();
+        int fcMac = wordDocumentStream.getOffset();
 
         /*
          * dop (document properties record) Written immediately after the end of
@@ -70,11 +70,11 @@
          * Specification; Page 23 of 210
          */
 
-    // write out the DocumentProperties.
-    _fib.setFcDop(tableOffset);
-    _dop.writeTo(tableStream);
-    _fib.setLcbDop(tableStream.getOffset() - tableOffset);
-    tableOffset = tableStream.getOffset();
+        // write out the DocumentProperties.
+        _fib.setFcDop(tableOffset);
+        _dop.writeTo(tableStream);
+        _fib.setLcbDop(tableStream.getOffset() - tableOffset);
+        tableOffset = tableStream.getOffset();
 
         /*
          * plcfBkmkf (table recording beginning CPs of bookmarks) Written
@@ -110,11 +110,11 @@
          * Specification; Page 24 of 210
          */
 
-    // write out the CHPBinTable.
-    _fib.setFcPlcfbteChpx(tableOffset);
-    _cbt.writeTo(wordDocumentStream, tableStream, fcMin, _cft.getTextPieceTable());
-    _fib.setLcbPlcfbteChpx(tableStream.getOffset() - tableOffset);
-    tableOffset = tableStream.getOffset();
+        // write out the CHPBinTable.
+        _fib.setFcPlcfbteChpx(tableOffset);
+        _cbt.writeTo(wordDocumentStream, tableStream, fcMin, _cft.getTextPieceTable());
+        _fib.setLcbPlcfbteChpx(tableStream.getOffset() - tableOffset);
+        tableOffset = tableStream.getOffset();
 
         /*
          * plcfbtePapx (bin table for PAP FKPs) Written immediately after the
@@ -124,11 +124,11 @@
          * Specification; Page 24 of 210
          */
 
-    // write out the PAPBinTable.
-    _fib.setFcPlcfbtePapx(tableOffset);
-    _pbt.writeTo(wordDocumentStream, tableStream, _cft.getTextPieceTable());
-    _fib.setLcbPlcfbtePapx(tableStream.getOffset() - tableOffset);
-    tableOffset = tableStream.getOffset();
+        // write out the PAPBinTable.
+        _fib.setFcPlcfbtePapx(tableOffset);
+        _pbt.writeTo(wordDocumentStream, tableStream, _cft.getTextPieceTable());
+        _fib.setLcbPlcfbtePapx(tableStream.getOffset() - tableOffset);
+        tableOffset = tableStream.getOffset();
 
         /*
          * plcfendRef (endnote reference position table) Written immediately
@@ -144,20 +144,20 @@
         _endnotesTables.writeTxt( _fib, tableStream );
         tableOffset = tableStream.getOffset();
 
-    /*
-     * plcffld*** (table of field positions and statuses for annotation
-     * subdocument) Written immediately after the previously recorded table,
-     * if the ******* subdocument contains fields.
-     * 
-     * Microsoft Office Word 97-2007 Binary File Format (.doc)
-     * Specification; Page 24 of 210
-     */
+        /*
+         * plcffld*** (table of field positions and statuses for annotation
+         * subdocument) Written immediately after the previously recorded table,
+         * if the ******* subdocument contains fields.
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 24 of 210
+         */
 
-    if ( _fieldsTables != null )
-    {
-        _fieldsTables.write( _fib, tableStream );
-        tableOffset = tableStream.getOffset();
-    }
+        if ( _fieldsTables != null )
+        {
+            _fieldsTables.write( _fib, tableStream );
+            tableOffset = tableStream.getOffset();
+        }
 
         /*
          * plcffndRef (footnote reference position table) Written immediately
@@ -181,11 +181,11 @@
          * Specification; Page 25 of 210
          */
 
-    // write out the SectionTable.
-    _fib.setFcPlcfsed(tableOffset);
-    _st.writeTo(wordDocumentStream, tableStream);
-    _fib.setLcbPlcfsed(tableStream.getOffset() - tableOffset);
-    tableOffset = tableStream.getOffset();
+        // write out the SectionTable.
+        _fib.setFcPlcfsed(tableOffset);
+        _st.writeTo(wordDocumentStream, tableStream);
+        _fib.setLcbPlcfsed(tableStream.getOffset() - tableOffset);
+        tableOffset = tableStream.getOffset();
 
         // write out the list tables
         if ( _lt != null )
@@ -241,72 +241,72 @@
          * Specification; Page 27 of 210
          */
 
-    // write out the saved-by table.
-    if (_sbt != null)
-    {
-      _fib.setFcSttbSavedBy(tableOffset);
-      _sbt.writeTo(tableStream);
-      _fib.setLcbSttbSavedBy(tableStream.getOffset() - tableOffset);
+        // write out the saved-by table.
+        if (_sbt != null)
+        {
+            _fib.setFcSttbSavedBy(tableOffset);
+            _sbt.writeTo(tableStream);
+            _fib.setLcbSttbSavedBy(tableStream.getOffset() - tableOffset);
 
-      tableOffset = tableStream.getOffset();
-    }
-    
-    // write out the revision mark authors table.
-    if (_rmat != null)
-    {
-      _fib.setFcSttbfRMark(tableOffset);
-      _rmat.writeTo(tableStream);
-      _fib.setLcbSttbfRMark(tableStream.getOffset() - tableOffset);
+            tableOffset = tableStream.getOffset();
+        }
 
-      tableOffset = tableStream.getOffset();
-    }
+        // write out the revision mark authors table.
+        if (_rmat != null)
+        {
+            _fib.setFcSttbfRMark(tableOffset);
+            _rmat.writeTo(tableStream);
+            _fib.setLcbSttbfRMark(tableStream.getOffset() - tableOffset);
 
-    // write out the FontTable.
-    _fib.setFcSttbfffn(tableOffset);
-    _ft.writeTo(tableStream);
-    _fib.setLcbSttbfffn(tableStream.getOffset() - tableOffset);
-    tableOffset = tableStream.getOffset();
+            tableOffset = tableStream.getOffset();
+        }
 
-    // set some variables in the FileInformationBlock.
-    _fib.getFibBase().setFcMin(fcMin);
-    _fib.getFibBase().setFcMac(fcMac);
-    _fib.setCbMac(wordDocumentStream.getOffset());
+        // write out the FontTable.
+        _fib.setFcSttbfffn(tableOffset);
+        _ft.writeTo(tableStream);
+        _fib.setLcbSttbfffn(tableStream.getOffset() - tableOffset);
+        tableOffset = tableStream.getOffset();
 
-    // make sure that the table, doc and data streams use big blocks.
-    byte[] mainBuf = wordDocumentStream.toByteArray();
-    if (mainBuf.length < 4096)
-    {
-      byte[] tempBuf = new byte[4096];
-      System.arraycopy(mainBuf, 0, tempBuf, 0, mainBuf.length);
-      mainBuf = tempBuf;
-    }
+        // set some variables in the FileInformationBlock.
+        _fib.getFibBase().setFcMin(fcMin);
+        _fib.getFibBase().setFcMac(fcMac);
+        _fib.setCbMac(wordDocumentStream.getOffset());
+
+        // make sure that the table, doc and data streams use big blocks.
+        byte[] mainBuf = wordDocumentStream.toByteArray();
+        if (mainBuf.length < 4096)
+        {
+            byte[] tempBuf = new byte[4096];
+            System.arraycopy(mainBuf, 0, tempBuf, 0, mainBuf.length);
+            mainBuf = tempBuf;
+        }
 
         // Table1 stream will be used
         _fib.getFibBase().setFWhichTblStm( true );
 
-    // write out the FileInformationBlock.
-    //_fib.serialize(mainBuf, 0);
-    _fib.writeTo(mainBuf, tableStream);
+        // write out the FileInformationBlock.
+        //_fib.serialize(mainBuf, 0);
+        _fib.writeTo(mainBuf, tableStream);
 
-    byte[] tableBuf = tableStream.toByteArray();
-    if (tableBuf.length < 4096)
-    {
-      byte[] tempBuf = new byte[4096];
-      System.arraycopy(tableBuf, 0, tempBuf, 0, tableBuf.length);
-      tableBuf = tempBuf;
-    }
+        byte[] tableBuf = tableStream.toByteArray();
+        if (tableBuf.length < 4096)
+        {
+            byte[] tempBuf = new byte[4096];
+            System.arraycopy(tableBuf, 0, tempBuf, 0, tableBuf.length);
+            tableBuf = tempBuf;
+        }
 
-    byte[] dataBuf = _dataStream;
-    if (dataBuf == null)
-    {
-      dataBuf = new byte[4096];
-    }
-    if (dataBuf.length < 4096)
-    {
-      byte[] tempBuf = new byte[4096];
-      System.arraycopy(dataBuf, 0, tempBuf, 0, dataBuf.length);
-      dataBuf = tempBuf;
-    }
+        byte[] dataBuf = _dataStream;
+        if (dataBuf == null)
+        {
+            dataBuf = new byte[4096];
+        }
+        if (dataBuf.length < 4096)
+        {
+            byte[] tempBuf = new byte[4096];
+            System.arraycopy(dataBuf, 0, tempBuf, 0, dataBuf.length);
+            dataBuf = tempBuf;
+        }
 
         // create new document preserving order of entries
         NPOIFSFileSystem pfs = new NPOIFSFileSystem();
