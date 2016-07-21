@@ -1,4 +1,4 @@
-    private void write(POIFSFileSystem outFS, boolean preserveNodes) throws IOException {
+    private void write(NPOIFSFileSystem outFS, boolean copyAllOtherNodes) throws IOException {
         // read properties and pictures, with old encryption settings where appropriate 
         if (_pictures == null) {
            readPictures();
@@ -29,7 +29,7 @@
 
         // Write the PPT stream into the POIFS layer
         ByteArrayInputStream bais = new ByteArrayInputStream(_docstream);
-        outFS.createDocument(bais,"PowerPoint Document");
+        outFS.createOrUpdateDocument(bais,"PowerPoint Document");
         writtenEntries.add("PowerPoint Document");
         
         currentUser.setEncrypted(encryptedSS.getDocumentEncryptionAtom() != null);
@@ -44,15 +44,15 @@
                 p.write(pict);
                 encryptedSS.encryptPicture(pict.getBuf(), offset);
             }
-            outFS.createDocument(
+            outFS.createOrUpdateDocument(
                 new ByteArrayInputStream(pict.getBuf(), 0, pict.size()), "Pictures"
             );
             writtenEntries.add("Pictures");
             pict.close();
         }
 
-        // If requested, write out any other streams we spot
-        if (preserveNodes) {
+        // If requested, copy over any other streams we spot, eg Macros
+        if (copyAllOtherNodes) {
             EntryUtils.copyNodes(directory.getFileSystem(), outFS, writtenEntries);
         }
     }
