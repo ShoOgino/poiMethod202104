@@ -1,17 +1,22 @@
+    @Override
     public int read(byte[] b, int off, int len) throws IOException {
         int total = 0;
         
-        if (available() <= 0) return -1;
+        if (available() <= 0) {
+            return -1;
+        }
 
+        final int chunkMask = getChunkMask();
         while (len > 0) {
-            if (_chunk == null) {
+            if (!_chunkIsValid) {
                 try {
-                    _chunk = nextChunk();
+                    nextChunk();
+                    _chunkIsValid = true;
                 } catch (GeneralSecurityException e) {
                     throw new EncryptedDocumentException(e.getMessage(), e);
                 }
             }
-            int count = (int)(chunkSize - (_pos & chunkMask));
+            int count = (int)(_chunk.length - (_pos & chunkMask));
             int avail = available();
             if (avail == 0) {
                 return total;
@@ -21,8 +26,9 @@
             off += count;
             len -= count;
             _pos += count;
-            if ((_pos & chunkMask) == 0)
-                _chunk = null;
+            if ((_pos & chunkMask) == 0) {
+                _chunkIsValid = false;
+            }
             total += count;
         }
 

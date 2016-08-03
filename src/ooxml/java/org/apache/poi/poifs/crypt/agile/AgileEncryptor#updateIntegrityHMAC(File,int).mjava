@@ -11,14 +11,14 @@
         // as the integrity hmac needs to contain the StreamSize,
         // it's not possible to calculate it on-the-fly while buffering
         // TODO: add stream size parameter to getDataStream()
-        AgileEncryptionVerifier ver = builder.getVerifier();
+        AgileEncryptionVerifier ver = (AgileEncryptionVerifier)getEncryptionInfo().getVerifier();
         HashAlgorithm hashAlgo = ver.getHashAlgorithm();
         Mac integrityMD = CryptoFunctions.getMac(hashAlgo);
         integrityMD.init(new SecretKeySpec(integritySalt, hashAlgo.jceHmacId));
 
         byte buf[] = new byte[1024];
         LittleEndian.putLong(buf, 0, oleStreamSize);
-        integrityMD.update(buf, 0, LittleEndian.LONG_SIZE);
+        integrityMD.update(buf, 0, LittleEndianConsts.LONG_SIZE);
         
         InputStream fis = new FileInputStream(tmpFile);
         try {
@@ -32,7 +32,7 @@
         
         byte hmacValue[] = integrityMD.doFinal();
         
-        AgileEncryptionHeader header = builder.getHeader();
+        AgileEncryptionHeader header = (AgileEncryptionHeader)getEncryptionInfo().getHeader();
         int blockSize = header.getBlockSize();
         byte iv[] = CryptoFunctions.generateIv(header.getHashAlgorithmEx(), header.getKeySalt(), kIntegrityValueBlock, blockSize);
         Cipher cipher = CryptoFunctions.getCipher(getSecretKey(), header.getCipherAlgorithm(), header.getChainingMode(), iv, Cipher.ENCRYPT_MODE);

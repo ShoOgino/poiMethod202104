@@ -1,0 +1,42 @@
+    protected void writeChunk(boolean continued) throws IOException {
+        if (_pos == 0) {
+            return;
+        }
+
+        int posInChunk = (int)(_pos & getChunkMask());
+
+        // normally posInChunk is 0, i.e. on the next chunk (-> index-1)
+        // but if called on close(), posInChunk is somewhere within the chunk data
+        int index = (int)(_pos >> _chunkBits);
+        boolean lastChunk;
+        if (posInChunk==0) {
+            index--;
+            posInChunk = _chunk.length;
+            lastChunk = false;
+        } else {
+            // pad the last chunk
+            lastChunk = true;
+        }
+
+        int ciLen;
+        try {
+            if (_chunkSize == STREAMING) {
+                if (continued) {
+                    ciLen = _cipher.update(_chunk, 0, posInChunk, _chunk);
+                } else {
+                    ciLen = _cipher.doFinal(_chunk, 0, posInChunk, _chunk);
+                }
+
+                // reset stream (not only) in case we were interrupted by plain stream parts
+                _pos = 0;
+            } else {
+                _cipher = initCipherForBlock(_cipher, index, lastChunk);
+                ciLen = _cipher.doFinal(_chunk, 0, posInChunk, _chunk);
+            }
+        } catch (GeneralSecurityException e) {
+            throw new IOException("can't re-/initialize cipher", e);
+        }
+
+        out.write(_chunk, 0, ciLen);
+    }
+

@@ -1,9 +1,8 @@
     /**
      * initialize the builder from scratch
      */
+    @Override
     public void initialize(EncryptionInfo info, CipherAlgorithm cipherAlgorithm, HashAlgorithm hashAlgorithm, int keyBits, int blockSize, ChainingMode chainingMode) {
-        this.info = info;
-
         if (cipherAlgorithm == null) {
             cipherAlgorithm = CipherAlgorithm.aes128;
         }
@@ -38,9 +37,13 @@
         if (!found) {
             throw new EncryptedDocumentException("KeySize "+keyBits+" not allowed for Cipher "+cipherAlgorithm.toString());
         }
-        header = new StandardEncryptionHeader(cipherAlgorithm, hashAlgorithm, keyBits, blockSize, chainingMode);
-        verifier = new StandardEncryptionVerifier(cipherAlgorithm, hashAlgorithm, keyBits, blockSize, chainingMode);
-        decryptor = new StandardDecryptor(this);
-        encryptor = new StandardEncryptor(this);
+        info.setHeader(new StandardEncryptionHeader(cipherAlgorithm, hashAlgorithm, keyBits, blockSize, chainingMode));
+        info.setVerifier(new StandardEncryptionVerifier(cipherAlgorithm, hashAlgorithm, keyBits, blockSize, chainingMode));
+        StandardDecryptor dec = new StandardDecryptor();
+        dec.setEncryptionInfo(info);
+        info.setDecryptor(dec);
+        StandardEncryptor enc = new StandardEncryptor();
+        enc.setEncryptionInfo(info);
+        info.setEncryptor(enc);
     }
 

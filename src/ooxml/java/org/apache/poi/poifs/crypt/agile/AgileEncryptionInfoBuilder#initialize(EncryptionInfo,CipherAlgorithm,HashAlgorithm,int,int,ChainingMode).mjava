@@ -1,7 +1,5 @@
     @Override
-    public void initialize(EncryptionInfo ei, CipherAlgorithm cipherAlgorithm, HashAlgorithm hashAlgorithm, int keyBits, int blockSize, ChainingMode chainingMode) {
-        this.info = ei;
-
+    public void initialize(EncryptionInfo info, CipherAlgorithm cipherAlgorithm, HashAlgorithm hashAlgorithm, int keyBits, int blockSize, ChainingMode chainingMode) {
         if (cipherAlgorithm == null) {
             cipherAlgorithm = CipherAlgorithm.aes128;
         }
@@ -30,9 +28,13 @@
         if (!found) {
             throw new EncryptedDocumentException("KeySize "+keyBits+" not allowed for Cipher "+cipherAlgorithm.toString());
         }
-        header = new AgileEncryptionHeader(cipherAlgorithm, hashAlgorithm, keyBits, blockSize, chainingMode);
-        verifier = new AgileEncryptionVerifier(cipherAlgorithm, hashAlgorithm, keyBits, blockSize, chainingMode);
-        decryptor = new AgileDecryptor(this);
-        encryptor = new AgileEncryptor(this);
+        info.setHeader(new AgileEncryptionHeader(cipherAlgorithm, hashAlgorithm, keyBits, blockSize, chainingMode));
+        info.setVerifier(new AgileEncryptionVerifier(cipherAlgorithm, hashAlgorithm, keyBits, blockSize, chainingMode));
+        AgileDecryptor dec = new AgileDecryptor();
+        dec.setEncryptionInfo(info);
+        info.setDecryptor(dec);
+        AgileEncryptor enc = new AgileEncryptor();
+        enc.setEncryptionInfo(info);
+        info.setEncryptor(enc);
     }
 

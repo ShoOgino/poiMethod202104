@@ -6,7 +6,7 @@
     protected static Record[] normalizeRecords(Record records[]) {
         // http://msdn.microsoft.com/en-us/library/office/gg615594(v=office.14).aspx
         // repeated slideIds can be overwritten, i.e. ignored
-        
+
         UserEditAtom uea = null;
         PersistPtrHolder pph = null;
         TreeMap<Integer,Integer> slideLocations = new TreeMap<Integer,Integer>();
@@ -20,7 +20,7 @@
                 uea = (UserEditAtom)pdr;
                 continue;
             }
-            
+
             if (pdr instanceof PersistPtrHolder) {
                 if (pph != null) {
                     duplicatedCount++;
@@ -28,16 +28,18 @@
                 pph = (PersistPtrHolder)pdr;
                 for (Map.Entry<Integer,Integer> me : pph.getSlideLocationsLookup().entrySet()) {
                     Integer oldOffset = slideLocations.put(me.getKey(), me.getValue());
-                    if (oldOffset != null) obsoleteOffsets.add(oldOffset);
+                    if (oldOffset != null) {
+                        obsoleteOffsets.add(oldOffset);
+                    }
                 }
                 continue;
             }
-            
+
             recordMap.put(pdr.getLastOnDiskOffset(), r);
         }
-        
+
         assert(uea != null && pph != null && uea.getPersistPointersOffset() == pph.getLastOnDiskOffset());
-        
+
         recordMap.put(pph.getLastOnDiskOffset(), pph);
         recordMap.put(uea.getLastOnDiskOffset(), uea);
 
@@ -50,11 +52,11 @@
         for (Map.Entry<Integer,Integer> me : slideLocations.entrySet()) {
             pph.addSlideLookup(me.getKey(), me.getValue());
         }
-        
+
         for (Integer oldOffset : obsoleteOffsets) {
             recordMap.remove(oldOffset);
         }
-        
+
         return recordMap.values().toArray(new Record[recordMap.size()]);
     }
 

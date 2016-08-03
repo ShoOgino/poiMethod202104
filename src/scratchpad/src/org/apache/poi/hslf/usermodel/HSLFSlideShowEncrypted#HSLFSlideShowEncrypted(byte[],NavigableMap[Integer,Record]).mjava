@@ -4,7 +4,9 @@
         UserEditAtom userEditAtomWithEncryption = null;
         for (Map.Entry<Integer, Record> me : recordMap.descendingMap().entrySet()) {
             Record r = me.getValue();
-            if (!(r instanceof UserEditAtom)) continue;
+            if (!(r instanceof UserEditAtom)) {
+                continue;
+            }
             UserEditAtom uea = (UserEditAtom)r;
             if (uea.getEncryptSessionPersistIdRef() != -1) {
                 userEditAtomWithEncryption = uea;
@@ -20,7 +22,7 @@
         Record r = recordMap.get(userEditAtomWithEncryption.getPersistPointersOffset());
         assert(r instanceof PersistPtrHolder);
         PersistPtrHolder ptr = (PersistPtrHolder)r;
-        
+
         Integer encOffset = ptr.getSlideLocationsLookup().get(userEditAtomWithEncryption.getEncryptSessionPersistIdRef());
         if (encOffset == null) {
             // encryption info doesn't exist anymore
@@ -28,7 +30,7 @@
             dea = null;
             return;
         }
-        
+
         r = recordMap.get(encOffset);
         if (r == null) {
             r = Record.buildRecordAtOffset(docstream, encOffset);
@@ -37,7 +39,7 @@
         assert(r instanceof DocumentEncryptionAtom);
         this.dea = (DocumentEncryptionAtom)r;
         decryptInit();
-        
+
         String pass = Biff8EncryptionKey.getCurrentUserPassword();
         if(!dec.verifyPassword(pass != null ? pass : Decryptor.DEFAULT_PASSWORD)) {
             throw new EncryptedPowerPointFileException("PowerPoint file is encrypted. The correct password needs to be set via Biff8EncryptionKey.setCurrentUserPassword()");

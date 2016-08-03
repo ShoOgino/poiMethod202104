@@ -1,16 +1,28 @@
     protected OutputStream encryptRecord(OutputStream plainStream, int persistId, Record record) {
-        boolean isPlain = (dea == null 
+        boolean isPlain = (dea == null
             || record instanceof UserEditAtom
             || record instanceof PersistPtrHolder
             || record instanceof DocumentEncryptionAtom
         );
-        if (isPlain) return plainStream;
 
-        encryptInit();
-        setPersistId(persistId);
-        
-        if (cyos == null) {
-            cyos = new CipherOutputStream(plainStream, cipher);
+        try {
+            if (isPlain) {
+                if (cyos != null) {
+                    // write cached data to stream
+                    cyos.flush();
+                }
+                return plainStream;
+            }
+
+            encryptInit();
+
+            if (cyos == null) {
+                enc.setChunkSize(-1);
+                cyos = enc.getDataStream(plainStream);
+            }
+            cyos.initCipherForBlock(persistId, false);
+        } catch (Exception e) {
+            throw new EncryptedPowerPointFileException(e);
         }
         return cyos;
     }
