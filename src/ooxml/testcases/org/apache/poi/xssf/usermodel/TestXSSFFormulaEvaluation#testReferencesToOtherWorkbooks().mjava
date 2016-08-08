@@ -41,7 +41,9 @@
             evaluator.evaluate(cXSL_cell);
             fail("Without a fix for #56752, shouldn't be able to evaluate a " +
                  "reference to a non-provided linked workbook");
-        } catch(Exception e) {}
+        } catch(Exception e) {
+            // expected here
+        }
         
         // Setup the environment
         Map<String,FormulaEvaluator> evaluators = new HashMap<String, FormulaEvaluator>();
@@ -58,8 +60,19 @@
                 evaluator.evaluate(c);
             }
         }
+        // And evaluate the other way too
+        evaluator.evaluateAll();
         
-        // Evaluate and check results
+        // Static evaluator won't work, as no references passed in
+        try {
+            XSSFFormulaEvaluator.evaluateAllFormulaCells(wb);
+            fail("Static method lacks references, shouldn't work");
+        } catch(Exception e) {
+            // expected here
+        }
+        
+        
+        // Evaluate specific cells and check results
         assertEquals("\"Hello!\"",  evaluator.evaluate(cXSLX_cell).formatAsString());
         assertEquals("\"Test A1\"", evaluator.evaluate(cXSLX_sNR).formatAsString());
         assertEquals("142.0",   evaluator.evaluate(cXSLX_gNR).formatAsString());
@@ -83,7 +96,9 @@
         try {
             cXSLX_nw_cell.setCellFormula("[alt.xlsx]Sheet1!$A$1");
             fail("New workbook not linked, shouldn't be able to add");
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            // expected here
+        }
         
         // Link and re-try
         Workbook alt = new XSSFWorkbook();

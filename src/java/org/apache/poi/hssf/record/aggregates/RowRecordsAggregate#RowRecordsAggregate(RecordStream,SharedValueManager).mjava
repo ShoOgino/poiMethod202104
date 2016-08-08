@@ -1,41 +1,41 @@
-	/**
-	 * @param rs record stream with all {@link SharedFormulaRecord}
-	 * {@link ArrayRecord}, {@link TableRecord} {@link MergeCellsRecord} Records removed
-	 * @param svm an initialised {@link SharedValueManager} (from the shared formula, array
-	 * and table records of the current sheet).  Never <code>null</code>.
-	 */
-	public RowRecordsAggregate(RecordStream rs, SharedValueManager svm) {
-		this(svm);
-		while(rs.hasNext()) {
-			Record rec = rs.getNext();
-			switch (rec.getSid()) {
-				case RowRecord.sid:
-					insertRow((RowRecord) rec);
-					continue;
+    /**
+     * @param rs record stream with all {@link SharedFormulaRecord}
+     * {@link ArrayRecord}, {@link TableRecord} {@link MergeCellsRecord} Records removed
+     * @param svm an initialised {@link SharedValueManager} (from the shared formula, array
+     * and table records of the current sheet).  Never <code>null</code>.
+     */
+    public RowRecordsAggregate(RecordStream rs, SharedValueManager svm) {
+        this(svm);
+        while(rs.hasNext()) {
+            Record rec = rs.getNext();
+            switch (rec.getSid()) {
+                case RowRecord.sid:
+                    insertRow((RowRecord) rec);
+                    continue;
                 case DConRefRecord.sid:
                     addUnknownRecord(rec);
                     continue;
                 case DBCellRecord.sid:
-					// end of 'Row Block'.  Should only occur after cell records
-					// ignore DBCELL records because POI generates them upon re-serialization
-					continue;
-			}
-			if (rec instanceof UnknownRecord) {
-				// might need to keep track of where exactly these belong
-				addUnknownRecord(rec);
-				while (rs.peekNextSid() == ContinueRecord.sid) {
-					addUnknownRecord(rs.getNext());
-				}
-				continue;
-			}
-			if (rec instanceof MulBlankRecord) {
-				_valuesAgg.addMultipleBlanks((MulBlankRecord) rec);
-				continue;
-			}
-			if (!(rec instanceof CellValueRecordInterface)) {
-				throw new RuntimeException("Unexpected record type (" + rec.getClass().getName() + ")");
-			}
-			_valuesAgg.construct((CellValueRecordInterface)rec, rs, svm);
-		}
-	}
+                    // end of 'Row Block'.  Should only occur after cell records
+                    // ignore DBCELL records because POI generates them upon re-serialization
+                    continue;
+            }
+            if (rec instanceof UnknownRecord) {
+                // might need to keep track of where exactly these belong
+                addUnknownRecord(rec);
+                while (rs.peekNextSid() == ContinueRecord.sid) {
+                    addUnknownRecord(rs.getNext());
+                }
+                continue;
+            }
+            if (rec instanceof MulBlankRecord) {
+                _valuesAgg.addMultipleBlanks((MulBlankRecord) rec);
+                continue;
+            }
+            if (!(rec instanceof CellValueRecordInterface)) {
+                throw new RuntimeException("Unexpected record type (" + rec.getClass().getName() + ")");
+            }
+            _valuesAgg.construct((CellValueRecordInterface)rec, rs, svm);
+        }
+    }
 

@@ -6,8 +6,7 @@
      * @param validate if true, validates the XML againts the XML Schema
      * @throws SAXException
      * @throws ParserConfigurationException 
-     * @throws TransformerException 
-     * @throws InvalidFormatException
+     * @throws TransformerException
      */
     public void exportToXML(OutputStream os, String encoding, boolean validate) throws SAXException, ParserConfigurationException, TransformerException{
         List<XSSFSingleXmlCell> singleXMLCells = map.getRelatedSingleXMLCell();
@@ -17,10 +16,10 @@
 
         Document doc = DocumentHelper.createDocument();
 
-        Element root = null;
+        final Element root;
 
         if (isNamespaceDeclared()) {
-            root=doc.createElementNS(getNamespace(),rootElement);
+            root = doc.createElementNS(getNamespace(),rootElement);
         } else {
             root = doc.createElementNS("", rootElement);
         }
@@ -41,7 +40,6 @@
             tableMappings.put(commonXPath, table);
         }
 
-
         Collections.sort(xpaths,this);
 
         for(String xpath : xpaths) {
@@ -56,8 +54,7 @@
                     XSSFCell cell = simpleXmlCell.getReferencedCell();
                     if (cell!=null) {
                         Node currentNode = getNodeByXPath(xpath,doc.getFirstChild(),doc,false);
-                        STXmlDataType.Enum dataType = simpleXmlCell.getXmlDataType();
-                        mapCellOnNode(cell,currentNode,dataType);
+                        mapCellOnNode(cell,currentNode);
                         
                         //remove nodes which are empty in order to keep the output xml valid
                         if("".equals(currentNode.getTextContent()) && currentNode.getParentNode() != null) {
@@ -91,30 +88,21 @@
                                 XSSFXmlColumnPr pointer = tableColumns.get(j-startColumnIndex);
                                 String localXPath = pointer.getLocalXPath();
                                 Node currentNode = getNodeByXPath(localXPath,tableRootNode,doc,false);
-                                STXmlDataType.Enum dataType = pointer.getXmlDataType();
 
-
-                                mapCellOnNode(cell,currentNode,dataType);
+                                mapCellOnNode(cell,currentNode);
                             }
-
                         }
-
                     }
-
-
-
                 }
-            } else {
+            } /*else {
                 // TODO:  implement filtering management in xpath
-            }
+            }*/
         }
 
         boolean isValid = true;
         if (validate) {
             isValid =isValid(doc);
         }
-
-
 
         if (isValid) {
 
