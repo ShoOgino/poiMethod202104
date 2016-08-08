@@ -1,0 +1,34 @@
+        @Override
+        protected int invokeCipher(int totalBytes, boolean doFinal) {
+            final int pos = (int)getPos();
+            final byte xorArray[] = getEncryptionInfo().getDecryptor().getSecretKey().getEncoded();
+            final byte chunk[] = getChunk();
+            final byte plain[] = getPlain();
+            final int posInChunk = pos & getChunkMask();
+            
+            /*
+             * From: http://social.msdn.microsoft.com/Forums/en-US/3dadbed3-0e68-4f11-8b43-3a2328d9ebd5
+             * 
+             * The initial value for XorArrayIndex is as follows:
+             * XorArrayIndex = (FileOffset + Data.Length) % 16
+             * 
+             * The FileOffset variable in this context is the stream offset into the Workbook stream at
+             * the time we are about to write each of the bytes of the record data.
+             * This (the value) is then incremented after each byte is written. 
+             */
+            final int xorArrayIndex = _initialOffset+_recordEnd+(pos-_recordStart);
+            
+            for (int i=0; pos+i < _recordEnd && i < totalBytes; i++) {
+                // The following is taken from the Libre Office implementation
+                // It seems that the encrypt and decrypt method is mixed up
+                // in the MS-OFFCRYPTO docs
+                byte value = plain[posInChunk+i];
+                value = rotateLeft(value, 3);
+                value ^= xorArray[(xorArrayIndex+i) & 0x0F];
+                chunk[posInChunk+i] = value;
+            }
+
+            // the other bytes will be encoded, when setNextRecordSize is called the next time
+            return totalBytes;
+        }
+

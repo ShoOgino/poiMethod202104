@@ -1,17 +1,23 @@
 	public FilePassRecord(RecordInputStream in) {
-		_encryptionType = in.readUShort();
-
-		switch (_encryptionType) {
-			case ENCRYPTION_XOR:
-			    _keyData = new XorKeyData();
-			    break;
-			case ENCRYPTION_OTHER:
-			    _keyData = new Rc4KeyData();
-				break;
-			default:
-				throw new RecordFormatException("Unknown encryption type " + _encryptionType);
-		}
-
-		_keyData.read(in);
+        dataLength = in.remaining();
+		encryptionType = in.readUShort();
+		
+		EncryptionMode preferredMode;
+        switch (encryptionType) {
+            case ENCRYPTION_XOR:
+                preferredMode = EncryptionMode.xor;
+                break;
+            case ENCRYPTION_OTHER:
+                preferredMode = EncryptionMode.cryptoAPI;
+                break;
+            default:
+                throw new EncryptedDocumentException("invalid encryption type");
+        }
+		
+		try {
+            encryptionInfo = new EncryptionInfo(in, preferredMode);
+        } catch (IOException e) {
+            throw new EncryptedDocumentException(e);
+        }
 	}
 

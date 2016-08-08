@@ -1,0 +1,21 @@
+    private static void confirmValid(boolean expectedResult, String docIdHex,
+            String saltDataHex, String saltHashHex, String password) throws GeneralSecurityException {
+        byte[] docId = readFromString(docIdHex);
+        byte[] saltData = readFromString(saltDataHex);
+        byte[] saltHash = readFromString(saltHashHex);
+
+        EncryptionInfo ei = new EncryptionInfo(EncryptionMode.binaryRC4);
+        BinaryRC4EncryptionVerifier ver = (BinaryRC4EncryptionVerifier)ei.getVerifier();
+        ver.setSalt(docId);
+        ver.setEncryptedVerifier(saltData);
+        ver.setEncryptedVerifierHash(saltHash);
+
+        String pass = password == null ? Decryptor.DEFAULT_PASSWORD : password;
+        boolean actResult = ei.getDecryptor().verifyPassword(pass);
+        if (expectedResult) {
+            assertTrue("validate failed", actResult);
+        } else {
+            assertFalse("validate succeeded unexpectedly", actResult);
+        }        
+    }
+
