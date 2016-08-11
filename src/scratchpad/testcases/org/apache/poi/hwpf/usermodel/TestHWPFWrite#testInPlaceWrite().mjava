@@ -1,0 +1,29 @@
+   /**
+    * Writing to the file we opened from - note, uses a temp file to
+    *  avoid changing our test files!
+    */
+   @SuppressWarnings("resource")
+   public void testInPlaceWrite() throws Exception {
+       // Setup as a copy of a known-good file
+       final File file = TempFile.createTempFile("TestDocument", ".doc");
+       IOUtils.copy(
+               POIDataSamples.getDocumentInstance().openResourceAsStream("SampleDoc.doc"),
+               new FileOutputStream(file)
+       );
+
+       // Open from the temp file in read-write mode
+       HWPFDocument doc = new HWPFDocument(new NPOIFSFileSystem(file, false).getRoot());
+       Range r = doc.getRange();
+       assertEquals("I am a test document\r", r.getParagraph(0).text());
+
+       // Change
+       r.replaceText("X XX a test document\r", false);
+
+       // Save in-place, close, re-open and check
+       doc.write();
+       doc.close();
+
+       doc = new HWPFDocument(new NPOIFSFileSystem(file).getRoot());
+       assertEquals("X XX a test document\r", r.getParagraph(0).text());
+   }
+
