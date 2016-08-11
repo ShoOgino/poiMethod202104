@@ -294,22 +294,18 @@
             dataBuf = tempBuf;
         }
 
-        // create new document preserving order of entries
-        // TODO Check "copyOtherEntries" and tweak behaviour based on that
-        // TODO That's needed for in-place write
+        // Create a new document preserving order of entries / Update existing
         boolean docWritten = false;
         boolean dataWritten = false;
         boolean objectPoolWritten = false;
         boolean tableWritten = false;
         boolean propertiesWritten = false;
-        for ( Iterator<Entry> iter = directory.getEntries(); iter.hasNext(); )
-        {
-            Entry entry = iter.next();
+        for (Entry entry : directory) {
             if ( entry.getName().equals( STREAM_WORD_DOCUMENT ) )
             {
                 if ( !docWritten )
                 {
-                    pfs.createDocument( new ByteArrayInputStream( mainBuf ),
+                    pfs.createOrUpdateDocument( new ByteArrayInputStream( mainBuf ),
                             STREAM_WORD_DOCUMENT );
                     docWritten = true;
                 }
@@ -318,7 +314,11 @@
             {
                 if ( !objectPoolWritten )
                 {
-                    _objectPool.writeTo( pfs.getRoot() );
+                    if ( copyOtherEntries ) {
+                        _objectPool.writeTo( pfs.getRoot() );
+                    } else {
+                        // Object pool is already there, no need to change/copy
+                    }
                     objectPoolWritten = true;
                 }
             }
@@ -327,7 +327,7 @@
             {
                 if ( !tableWritten )
                 {
-                    pfs.createDocument( new ByteArrayInputStream( tableBuf ),
+                    pfs.createOrUpdateDocument( new ByteArrayInputStream( tableBuf ),
                             STREAM_TABLE_1 );
                     tableWritten = true;
                 }
@@ -347,29 +347,29 @@
             {
                 if ( !dataWritten )
                 {
-                    pfs.createDocument( new ByteArrayInputStream( dataBuf ),
+                    pfs.createOrUpdateDocument( new ByteArrayInputStream( dataBuf ),
                             STREAM_DATA );
                     dataWritten = true;
                 }
             }
-            else
+            else if ( copyOtherEntries )
             {
                 EntryUtils.copyNodeRecursively( entry, pfs.getRoot() );
             }
         }
 
         if ( !docWritten )
-            pfs.createDocument( new ByteArrayInputStream( mainBuf ),
+            pfs.createOrUpdateDocument( new ByteArrayInputStream( mainBuf ),
                     STREAM_WORD_DOCUMENT );
         if ( !tableWritten )
-            pfs.createDocument( new ByteArrayInputStream( tableBuf ),
+            pfs.createOrUpdateDocument( new ByteArrayInputStream( tableBuf ),
                     STREAM_TABLE_1 );
         if ( !propertiesWritten )
             writeProperties( pfs );
         if ( !dataWritten )
-            pfs.createDocument( new ByteArrayInputStream( dataBuf ),
+            pfs.createOrUpdateDocument( new ByteArrayInputStream( dataBuf ),
                     STREAM_DATA );
-        if ( !objectPoolWritten )
+        if ( !objectPoolWritten && copyOtherEntries )
             _objectPool.writeTo( pfs.getRoot() );
 
         this.directory = pfs.getRoot();
