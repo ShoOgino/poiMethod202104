@@ -1,0 +1,43 @@
+    private void updateEncryptionRecord() {
+        FilePassRecord fpr = null;
+        int fprPos = -1;
+        for (Record r : records.getRecords()) {
+            fprPos++;
+            if (r instanceof FilePassRecord) {
+                fpr = (FilePassRecord)r;
+                break;
+            }
+        }
+        
+        String password = Biff8EncryptionKey.getCurrentUserPassword();
+        if (password == null) {
+            if (fpr != null) {
+                // need to remove password data
+                records.remove(fprPos);
+            }
+            return;
+        } else {
+            // create password record
+            if (fpr == null) {
+                fpr = new FilePassRecord(EncryptionMode.binaryRC4);
+                records.add(1, fpr);
+            }
+            
+            // check if the password has been changed
+            EncryptionInfo ei = fpr.getEncryptionInfo();
+            byte encVer[] = ei.getVerifier().getEncryptedVerifier();
+            try {
+                Decryptor dec = ei.getDecryptor();
+                Encryptor enc = ei.getEncryptor();
+                if (encVer == null || !dec.verifyPassword(password)) {
+                    enc.confirmPassword(password);
+                } else {
+                    SecretKey sk = dec.getSecretKey();
+                    ei.getEncryptor().setSecretKey(sk);
+                }
+            } catch (GeneralSecurityException e) {
+                throw new EncryptedDocumentException("can't validate/update encryption setting", e);
+            }
+        }
+    }
+

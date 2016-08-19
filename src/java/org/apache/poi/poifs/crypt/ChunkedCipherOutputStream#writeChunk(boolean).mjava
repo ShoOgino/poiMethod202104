@@ -1,5 +1,5 @@
     protected void writeChunk(boolean continued) throws IOException {
-        if (_pos == 0) {
+        if (_pos == 0 || _totalPos == _written) {
             return;
         }
 
@@ -21,14 +21,18 @@
         int ciLen;
         try {
             boolean doFinal = true;
+            long oldPos = _pos;
+            // reset stream (not only) in case we were interrupted by plain stream parts
+            // this also needs to be set to prevent an endless loop
+            _pos = 0;
             if (_chunkSize == STREAMING) {
                 if (continued) {
                     doFinal = false;
                 }
-                // reset stream (not only) in case we were interrupted by plain stream parts
-                _pos = 0;
             } else {
                 _cipher = initCipherForBlock(_cipher, index, lastChunk);
+                // restore pos - only streaming chunks will be reset
+                _pos = oldPos;
             }
             ciLen = invokeCipher(posInChunk, doFinal);
         } catch (GeneralSecurityException e) {
@@ -36,5 +40,7 @@
         }
 
         out.write(_chunk, 0, ciLen);
+        _plainByteFlags.clear();
+        _written += ciLen;
     }
 

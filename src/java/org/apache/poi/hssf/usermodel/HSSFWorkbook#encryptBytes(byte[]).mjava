@@ -1,0 +1,58 @@
+    @SuppressWarnings("resource")
+    protected void encryptBytes(byte buf[]) {
+        int initialOffset = 0;
+        FilePassRecord fpr = null;
+        for (Record r : workbook.getRecords()) {
+            initialOffset += r.getRecordSize();
+            if (r instanceof FilePassRecord) {
+                fpr = (FilePassRecord)r;
+                break;
+            }
+        }
+        if (fpr == null) {
+            return;
+        }
+        
+        LittleEndianByteArrayInputStream plain = new LittleEndianByteArrayInputStream(buf, 0);
+        LittleEndianByteArrayOutputStream leos = new LittleEndianByteArrayOutputStream(buf, 0);
+        Encryptor enc = fpr.getEncryptionInfo().getEncryptor();
+        enc.setChunkSize(Biff8DecryptingStream.RC4_REKEYING_INTERVAL);
+        byte tmp[] = new byte[1024];
+        try {
+            ChunkedCipherOutputStream os = enc.getDataStream(leos, initialOffset);
+            int totalBytes = 0;
+            while (totalBytes < buf.length) {
+                plain.read(tmp, 0, 4);
+                final int sid = LittleEndian.getUShort(tmp, 0);
+                final int len = LittleEndian.getUShort(tmp, 2);
+                boolean isPlain = Biff8DecryptingStream.isNeverEncryptedRecord(sid);
+                os.setNextRecordSize(len, isPlain);
+                os.writePlain(tmp, 0, 4);
+                if (sid == BoundSheetRecord.sid) {
+                    // special case for the field_1_position_of_BOF (=lbPlyPos) field of
+                    // the BoundSheet8 record which must be unencrypted
+                    byte bsrBuf[] = new byte[len];
+                    plain.readFully(bsrBuf);
+                    os.writePlain(bsrBuf, 0, 4);
+                    os.write(bsrBuf, 4, len-4);
+                } else {
+                    int todo = len;
+                    while (todo > 0) {
+                        int nextLen = Math.min(todo, tmp.length);
+                        plain.readFully(tmp, 0, nextLen);
+                        if (isPlain) {
+                            os.writePlain(tmp, 0, nextLen);
+                        } else {
+                            os.write(tmp, 0, nextLen);
+                        }
+                        todo -= nextLen;
+                    }
+                }
+                totalBytes += 4 + len;
+            }
+            os.close();
+        } catch (Exception e) {
+            throw new EncryptedDocumentException(e);
+        }
+    }
+

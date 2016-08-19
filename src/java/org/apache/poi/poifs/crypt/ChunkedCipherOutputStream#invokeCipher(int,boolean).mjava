@@ -8,10 +8,16 @@
      * @throws ShortBufferException 
      */
     protected int invokeCipher(int posInChunk, boolean doFinal) throws GeneralSecurityException {
-        if (doFinal) {
-            return _cipher.doFinal(_chunk, 0, posInChunk, _chunk);
-        } else {
-            return _cipher.update(_chunk, 0, posInChunk, _chunk);
+        byte plain[] = (_plainByteFlags.isEmpty()) ? null : _chunk.clone();
+
+        int ciLen = (doFinal)
+            ? _cipher.doFinal(_chunk, 0, posInChunk, _chunk)
+            : _cipher.update(_chunk, 0, posInChunk, _chunk);
+        
+        for (int i = _plainByteFlags.nextSetBit(0); i >= 0 && i < posInChunk; i = _plainByteFlags.nextSetBit(i+1)) {
+            _chunk[i] = plain[i];
         }
+        
+        return ciLen;
     }
 
