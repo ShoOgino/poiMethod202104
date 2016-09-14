@@ -8,7 +8,7 @@
      * @throws EvaluationException If references could not be resolved or comparison
      * operators and operands didn't match.
      */
-    private static boolean fullfillsConditions(TwoDEval db, int row, TwoDEval cdb)
+    private static boolean fullfillsConditions(AreaEval db, int row, AreaEval cdb)
             throws EvaluationException {
         // Only one row must match to accept the input, so rows are ORed.
         // Each row is made up of cells where each cell is a condition,
@@ -22,20 +22,15 @@
                 // special column that accepts formulas.
                 boolean columnCondition = true;
                 ValueEval condition = null;
-                try {
-                    // The condition to apply.
-                    condition = solveReference(cdb.getValue(conditionRow, column));
-                } catch (java.lang.RuntimeException e) {
-                    // It might be a special formula, then it is ok if it fails.
-                    columnCondition = false;
-                }
+                
+                // The condition to apply.
+                condition = resolveReference(cdb, conditionRow, column);
+                
                 // If the condition is empty it matches.
                 if(condition instanceof BlankEval)
                     continue;
                 // The column in the DB to apply the condition to.
-                ValueEval targetHeader = solveReference(cdb.getValue(0, column));
-                targetHeader = solveReference(targetHeader);
-
+                ValueEval targetHeader = resolveReference(cdb, 0, column);
 
                 if(!(targetHeader instanceof StringValueEval)) {
                     throw new EvaluationException(ErrorEval.VALUE_INVALID);
@@ -47,14 +42,14 @@
 
                 if(columnCondition == true) { // normal column condition
                     // Should not throw, checked above.
-                    ValueEval value = db.getValue(
-                            row, getColumnForName(targetHeader, db));
+                    ValueEval value = resolveReference(db, row, getColumnForName(targetHeader, db));
                     if(!testNormalCondition(value, condition)) {
                         matches = false;
                         break;
                     }
                 } else { // It's a special formula condition.
-                    if(getStringFromValueEval(condition).isEmpty()) {
+                    // TODO: Check whether the condition cell contains a formula and return #VALUE! if it doesn't.
+                    if(OperandResolver.coerceValueToString(condition).isEmpty()) {
                         throw new EvaluationException(ErrorEval.VALUE_INVALID);
                     }
                     throw new NotImplementedException(
