@@ -1,0 +1,26 @@
+    private static ZipEntrySource openZipEntrySourceStream(FileInputStream fis) throws InvalidOperationException {
+        final ThresholdInputStream zis;
+        // Acquire a resource that is needed to read the next level of openZipEntrySourceStream
+        try {
+            // open the zip input stream
+            zis = ZipHelper.openZipStream(fis);
+        } catch (final IOException e) {
+            // If the source cannot be acquired, abort (no resources to free at this level)
+            throw new InvalidOperationException("Could not open the file input stream", e);
+        }
+        
+        // If an error occurs while reading the next level of openZipEntrySourceStream, free the acquired resource
+        try {
+            // read from the zip input stream
+            return openZipEntrySourceStream(zis);
+        } catch (final Exception e) {
+            try {
+                // abort: close the zip input stream
+                zis.close();
+            } catch (final IOException e2) {
+                throw new InvalidOperationException("Failed to read the zip entry source stream and could not close the zip input stream", e2);
+            }
+            throw new InvalidOperationException("Failed to read the zip entry source stream");
+        }
+    }
+
