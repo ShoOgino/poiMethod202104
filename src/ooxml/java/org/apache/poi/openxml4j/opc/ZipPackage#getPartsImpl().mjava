@@ -31,7 +31,7 @@
                     this.contentTypeManager = new ZipContentTypeManager(
                             getZipArchive().getInputStream(entry), this);
                 } catch (IOException e) {
-                    throw new InvalidFormatException(e.getMessage());
+                    throw new InvalidFormatException(e.getMessage(), e);
                 }
                 break;
             }
@@ -47,10 +47,10 @@
             while (entries.hasMoreElements()) {
                 final ZipEntry entry = entries.nextElement();
                 final String name = entry.getName();
-                if ("mimetype".equals(name)) {
+                if (MIMETYPE.equals(name)) {
                     hasMimetype = true;
                 }
-                if ("settings.xml".equals(name)) {
+                if (SETTINGS_XML.equals(name)) {
                     hasSettingsXML = true;
                 }
                 numEntries++;
@@ -85,10 +85,10 @@
             String contentType = contentTypeManager.getContentType(partName);
             if (contentType != null && contentType.equals(ContentTypes.RELATIONSHIPS_PART)) {
                 try {
-                    partList.put(partName, new ZipPackagePart(this, entry,
-                                                              partName, contentType));
+                    PackagePart part = new ZipPackagePart(this, entry, partName, contentType);
+                    partList.put(partName, part);
                 } catch (InvalidOperationException e) {
-                    throw new InvalidFormatException(e.getMessage());
+                    throw new InvalidFormatException(e.getMessage(), e);
                 }
             }
         }
@@ -100,17 +100,16 @@
             PackagePartName partName = buildPartName(entry);
             if(partName == null) continue;
 
-            String contentType = contentTypeManager
-                    .getContentType(partName);
+            String contentType = contentTypeManager.getContentType(partName);
             if (contentType != null && contentType.equals(ContentTypes.RELATIONSHIPS_PART)) {
                 // Already handled
             }
             else if (contentType != null) {
                 try {
-                    partList.put(partName, new ZipPackagePart(this, entry,
-                            partName, contentType));
+                    PackagePart part = new ZipPackagePart(this, entry, partName, contentType);
+                    partList.put(partName, part);
                 } catch (InvalidOperationException e) {
-                    throw new InvalidFormatException(e.getMessage());
+                    throw new InvalidFormatException(e.getMessage(), e);
                 }
             } else {
                 throw new InvalidFormatException(
