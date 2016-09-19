@@ -9,11 +9,21 @@
      * @throws IllegalArgumentException
      *             If the specified input stream not an instance of
      *             ZipInputStream.
+     * @throws IOException
+     *            if input stream cannot be opened, read, or closed
      */
     ZipPackage(InputStream in, PackageAccess access) throws IOException {
         super(access);
-        @SuppressWarnings("resource")
         ThresholdInputStream zis = ZipHelper.openZipStream(in);
-        this.zipArchive = new ZipInputStreamZipEntrySource(zis);
+        try {
+            this.zipArchive = new ZipInputStreamZipEntrySource(zis);
+        } catch (final IOException e) {
+            try {
+                zis.close();
+            } catch (final IOException e2) {
+                throw new IOException("Failed to close zip input stream while cleaning up. " + e.getMessage(), e2);
+            }
+            throw new IOException("Failed to read zip entry source", e);
+        }
     }
 
