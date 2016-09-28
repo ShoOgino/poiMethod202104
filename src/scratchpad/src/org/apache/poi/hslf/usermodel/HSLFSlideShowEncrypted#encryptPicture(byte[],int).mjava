@@ -1,46 +1,44 @@
     protected void encryptPicture(byte[] pictstream, int offset) {
-        if (dea == null) return;
-        
+        if (dea == null) {
+            return;
+        }
+
         encryptInit();
-        setPersistId(0);
+
+        LittleEndianByteArrayOutputStream los = new LittleEndianByteArrayOutputStream(pictstream, offset);
+        ChunkedCipherOutputStream ccos = null;
 
         try {
+            enc.setChunkSize(-1);
+            ccos = enc.getDataStream(los, 0);
             int recInst = fieldRecInst.getValue(LittleEndian.getUShort(pictstream, offset));
             int recType = LittleEndian.getUShort(pictstream, offset+2);
-            int rlen = (int)LittleEndian.getUInt(pictstream, offset+4);
-            cipher.doFinal(pictstream, offset, 8, pictstream, offset);
+            final int rlen = (int)LittleEndian.getUInt(pictstream, offset+4);
+
+            ccos.write(pictstream, offset, 8);
+            ccos.flush();
             offset += 8;
-            int endOffset = offset + rlen; 
+            int endOffset = offset + rlen;
 
             if (recType == 0xF007) {
                 // TOOD: get a real example file ... to actual test the FBSE entry
                 // not sure where the foDelay block is
-                
+
                 // File BLIP Store Entry (FBSE)
-                cipher.doFinal(pictstream, offset, 1, pictstream, offset); // btWin32
-                offset++;
-                cipher.doFinal(pictstream, offset, 1, pictstream, offset); // btMacOS
-                offset++;
-                cipher.doFinal(pictstream, offset, 16, pictstream, offset); // rgbUid
-                offset += 16;
-                cipher.doFinal(pictstream, offset, 2, pictstream, offset); // tag
-                offset += 2;
-                cipher.doFinal(pictstream, offset, 4, pictstream, offset); // size
-                offset += 4;
-                cipher.doFinal(pictstream, offset, 4, pictstream, offset); // cRef
-                offset += 4;
-                cipher.doFinal(pictstream, offset, 4, pictstream, offset); // foDelay
-                offset += 4;
-                int cbName = LittleEndian.getUShort(pictstream, offset+1);
-                cipher.doFinal(pictstream, offset+0, 1, pictstream, offset+0); // unused1
-                cipher.doFinal(pictstream, offset+1, 1, pictstream, offset+1); // cbName
-                cipher.doFinal(pictstream, offset+2, 1, pictstream, offset+2); // unused2
-                cipher.doFinal(pictstream, offset+3, 1, pictstream, offset+3); // unused3
-                offset += 4;
+                int cbName = LittleEndian.getUShort(pictstream, offset+33);
+                
+                for (int part : BLIB_STORE_ENTRY_PARTS) {
+                    ccos.write(pictstream, offset, part);
+                    ccos.flush();
+                    offset += part;
+                }
+                
                 if (cbName > 0) {
-                    cipher.doFinal(pictstream, offset, cbName, pictstream, offset); // nameData
+                    ccos.write(pictstream, offset, cbName);
+                    ccos.flush();
                     offset += cbName;
                 }
+                
                 if (offset == endOffset) {
                     return; // no embedded blip
                 }
@@ -49,31 +47,44 @@
                 // update header data
                 recInst = fieldRecInst.getValue(LittleEndian.getUShort(pictstream, offset));
                 recType = LittleEndian.getUShort(pictstream, offset+2);
-                // rlen = (int) LittleEndian.getUInt(pictstream, offset+4);
-                cipher.doFinal(pictstream, offset, 8, pictstream, offset);
+                ccos.write(pictstream, offset, 8);
+                ccos.flush();
                 offset += 8;
             }
-            
+
             int rgbUidCnt = (recInst == 0x217 || recInst == 0x3D5 || recInst == 0x46B || recInst == 0x543 ||
                 recInst == 0x6E1 || recInst == 0x6E3 || recInst == 0x6E5 || recInst == 0x7A9) ? 2 : 1;
-                
+
             for (int i=0; i<rgbUidCnt; i++) {
-                cipher.doFinal(pictstream, offset, 16, pictstream, offset); // rgbUid 1/2
+                ccos.write(pictstream, offset, 16); // rgbUid 1/2
+                ccos.flush();
                 offset += 16;
             }
-            
+
             if (recType == 0xF01A || recType == 0XF01B || recType == 0XF01C) {
-                cipher.doFinal(pictstream, offset, 34, pictstream, offset); // metafileHeader
+                ccos.write(pictstream, offset, 34); // metafileHeader
                 offset += 34;
+                ccos.flush();
             } else {
-                cipher.doFinal(pictstream, offset, 1, pictstream, offset); // tag
+                ccos.write(pictstream, offset, 1); // tag
                 offset += 1;
+                ccos.flush();
             }
-            
+
             int blipLen = endOffset - offset;
-            cipher.doFinal(pictstream, offset, blipLen, pictstream, offset);
-        } catch (GeneralSecurityException e) {
-            throw new CorruptPowerPointFileException(e);
-        }       
+            ccos.write(pictstream, offset, blipLen);
+            ccos.flush();
+        } catch (Exception e) {
+            throw new EncryptedPowerPointFileException(e);
+        } finally {
+            try {
+                if (ccos != null) {
+                    ccos.close();
+                }
+                los.close();
+            } catch (IOException e) {
+                throw new EncryptedPowerPointFileException(e);
+            }
+        }
     }
 

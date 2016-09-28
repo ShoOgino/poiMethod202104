@@ -1,0 +1,27 @@
+    protected void write(byte[] b, int off, int len, boolean writePlain) throws IOException {
+        if (len == 0) {
+            return;
+        }
+
+        if (len < 0 || b.length < off+len) {
+            throw new IOException("not enough bytes in your input buffer");
+        }
+
+        final int chunkMask = getChunkMask();
+        while (len > 0) {
+            int posInChunk = (int)(_pos & chunkMask);
+            int nextLen = Math.min(_chunk.length-posInChunk, len);
+            System.arraycopy(b, off, _chunk, posInChunk, nextLen);
+            if (writePlain) {
+                _plainByteFlags.set(posInChunk, posInChunk+nextLen);
+            }
+            _pos += nextLen;
+            _totalPos += nextLen;
+            off += nextLen;
+            len -= nextLen;
+            if ((_pos & chunkMask) == 0) {
+                writeChunk(len > 0);
+            }
+        }
+    }
+

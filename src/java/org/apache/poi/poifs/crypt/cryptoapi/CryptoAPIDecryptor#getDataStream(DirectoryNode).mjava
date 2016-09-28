@@ -1,57 +1,6 @@
-    /**
-     * Decrypt the Document-/SummaryInformation and other optionally streams.
-     * Opposed to other crypto modes, cryptoapi is record based and can't be used
-     * to stream-decrypt a whole file
-     * 
-     * @see <a href="http://msdn.microsoft.com/en-us/library/dd943321(v=office.12).aspx">2.3.5.4 RC4 CryptoAPI Encrypted Summary Stream</a>
-     */
-    public InputStream getDataStream(DirectoryNode dir)
+    @Override
+    public ChunkedCipherInputStream getDataStream(DirectoryNode dir)
     throws IOException, GeneralSecurityException {
-        NPOIFSFileSystem fsOut = new NPOIFSFileSystem();
-        DocumentNode es = (DocumentNode) dir.getEntry("EncryptedSummary");
-        DocumentInputStream dis = dir.createDocumentInputStream(es);
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        IOUtils.copy(dis, bos);
-        dis.close();
-        SeekableByteArrayInputStream sbis = new SeekableByteArrayInputStream(bos.toByteArray());
-        LittleEndianInputStream leis = new LittleEndianInputStream(sbis);
-        int streamDescriptorArrayOffset = (int) leis.readUInt();
-        /* int streamDescriptorArraySize = (int) */ leis.readUInt();
-        sbis.skip(streamDescriptorArrayOffset - 8);
-        sbis.setBlock(0);
-        int encryptedStreamDescriptorCount = (int) leis.readUInt();
-        StreamDescriptorEntry entries[] = new StreamDescriptorEntry[encryptedStreamDescriptorCount];
-        for (int i = 0; i < encryptedStreamDescriptorCount; i++) {
-            StreamDescriptorEntry entry = new StreamDescriptorEntry();
-            entries[i] = entry;
-            entry.streamOffset = (int) leis.readUInt();
-            entry.streamSize = (int) leis.readUInt();
-            entry.block = leis.readUShort();
-            int nameSize = leis.readUByte();
-            entry.flags = leis.readUByte();
-            // boolean isStream = StreamDescriptorEntry.flagStream.isSet(entry.flags);
-            entry.reserved2 = leis.readInt();
-            entry.streamName = StringUtil.readUnicodeLE(leis, nameSize);
-            leis.readShort();
-            assert(entry.streamName.length() == nameSize);
-        }
-
-        for (StreamDescriptorEntry entry : entries) {
-            sbis.seek(entry.streamOffset);
-            sbis.setBlock(entry.block);
-            InputStream is = new BoundedInputStream(sbis, entry.streamSize);
-            fsOut.createDocument(is, entry.streamName);
-            is.close();
-        }
-
-        leis.close();
-        sbis.close();
-        sbis = null;
-        bos.reset();
-        fsOut.writeFilesystem(bos);
-        fsOut.close();
-        _length = bos.size();
-        ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
-        return bis;
+        throw new IOException("not supported");
     }
 

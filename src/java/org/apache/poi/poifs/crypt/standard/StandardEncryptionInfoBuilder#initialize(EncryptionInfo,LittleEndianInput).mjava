@@ -1,15 +1,17 @@
     /**
      * initialize the builder from a stream
      */
+    @Override
     public void initialize(EncryptionInfo info, LittleEndianInput dis) throws IOException {
-        this.info = info;
-        
         /* int hSize = */ dis.readInt();
-        header = new StandardEncryptionHeader(dis);
-        verifier = new StandardEncryptionVerifier(dis, header);
+        StandardEncryptionHeader header = new StandardEncryptionHeader(dis);
+        info.setHeader(header);
+        info.setVerifier(new StandardEncryptionVerifier(dis, header));
 
         if (info.getVersionMinor() == 2 && (info.getVersionMajor() == 3 || info.getVersionMajor() == 4)) {
-            decryptor = new StandardDecryptor(this);
+            StandardDecryptor dec = new StandardDecryptor();
+            dec.setEncryptionInfo(info);
+            info.setDecryptor(dec);
         }
     }
 

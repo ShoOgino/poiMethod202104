@@ -1,0 +1,40 @@
+        @Override
+        protected int invokeCipher(int posInChunk, boolean doFinal) {
+            if (posInChunk == 0) {
+                return 0;
+            }
+
+            final int start = Math.max(posInChunk-(_recordEnd-_recordStart), 0);
+
+            final BitSet plainBytes = getPlainByteFlags();
+            final byte xorArray[] = getEncryptionInfo().getEncryptor().getSecretKey().getEncoded();
+            final byte chunk[] = getChunk();
+            final byte plain[] = (plainBytes.isEmpty()) ? null : chunk.clone();
+
+            /*
+             * From: http://social.msdn.microsoft.com/Forums/en-US/3dadbed3-0e68-4f11-8b43-3a2328d9ebd5
+             *
+             * The initial value for XorArrayIndex is as follows:
+             * XorArrayIndex = (FileOffset + Data.Length) % 16
+             *
+             * The FileOffset variable in this context is the stream offset into the Workbook stream at
+             * the time we are about to write each of the bytes of the record data.
+             * This (the value) is then incremented after each byte is written.
+             */
+            // ... also need to handle invocation in case of a filled chunk
+            int xorArrayIndex = _recordEnd+(start-_recordStart);
+
+            for (int i=start; i < posInChunk; i++) {
+                byte value = chunk[i];
+                value ^= xorArray[(xorArrayIndex++) & 0x0F];
+                value = rotateLeft(value, 8-3);
+                chunk[i] = value;
+            }
+
+            for (int i = plainBytes.nextSetBit(start); i >= 0 && i < posInChunk; i = plainBytes.nextSetBit(i+1)) {
+                chunk[i] = plain[i];
+            }
+
+            return posInChunk;
+        }
+

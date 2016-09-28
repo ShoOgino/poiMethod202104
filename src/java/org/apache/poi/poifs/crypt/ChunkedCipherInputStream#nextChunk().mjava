@@ -1,14 +1,28 @@
-    private byte[] nextChunk() throws GeneralSecurityException, IOException {
-        int index = (int)(_pos >> chunkBits);
-        initCipherForBlock(_cipher, index);
-        
-        if (_lastIndex != index) {
-            super.skip((index - _lastIndex) << chunkBits);
+    private void nextChunk() throws GeneralSecurityException, IOException {
+        if (_chunkSize != -1) {
+            int index = (int)(_pos >> _chunkBits);
+            initCipherForBlock(_cipher, index);
+
+            if (_lastIndex != index) {
+                super.skip((index - _lastIndex) << _chunkBits);
+            }
+
+            _lastIndex = index + 1;
         }
 
-        byte[] block = new byte[Math.min(super.available(), chunkSize)];
-        super.read(block, 0, block.length);
-        _lastIndex = index + 1;
-        return _cipher.doFinal(block);
+        final int todo = (int)Math.min(_size, _chunk.length);
+        int readBytes = 0, totalBytes = 0;
+        do {
+            readBytes = super.read(_plain, totalBytes, todo-totalBytes);
+            totalBytes += Math.max(0, readBytes);
+        } while (readBytes != -1 && totalBytes < todo);
+
+        if (readBytes == -1 && _pos+totalBytes < _size && _size < Integer.MAX_VALUE) {
+            throw new EOFException("buffer underrun");
+        }
+
+        System.arraycopy(_plain, 0, _chunk, 0, totalBytes);
+
+        invokeCipher(totalBytes, _chunkSize > -1);
     }
 

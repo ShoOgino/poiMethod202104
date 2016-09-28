@@ -1,54 +1,43 @@
     protected void decryptPicture(byte[] pictstream, int offset) {
-        if (dea == null) return;
-        
+        if (dea == null) {
+            return;
+        }
+
         decryptInit();
-        setPersistId(0);
-        
+
         try {
             // decrypt header and read length to be decrypted
-            cipher.doFinal(pictstream, offset, 8, pictstream, offset);
+            decryptPicBytes(pictstream, offset, 8);
             int recInst = fieldRecInst.getValue(LittleEndian.getUShort(pictstream, offset));
             int recType = LittleEndian.getUShort(pictstream, offset+2);
             int rlen = (int)LittleEndian.getUInt(pictstream, offset+4);
             offset += 8;
-            int endOffset = offset + rlen; 
+            int endOffset = offset + rlen;
 
             if (recType == 0xF007) {
                 // TOOD: get a real example file ... to actual test the FBSE entry
                 // not sure where the foDelay block is
-                
+
                 // File BLIP Store Entry (FBSE)
-                cipher.doFinal(pictstream, offset, 1, pictstream, offset); // btWin32
-                offset++;
-                cipher.doFinal(pictstream, offset, 1, pictstream, offset); // btMacOS
-                offset++;
-                cipher.doFinal(pictstream, offset, 16, pictstream, offset); // rgbUid
-                offset += 16;
-                cipher.doFinal(pictstream, offset, 2, pictstream, offset); // tag
-                offset += 2;
-                cipher.doFinal(pictstream, offset, 4, pictstream, offset); // size
-                offset += 4;
-                cipher.doFinal(pictstream, offset, 4, pictstream, offset); // cRef
-                offset += 4;
-                cipher.doFinal(pictstream, offset, 4, pictstream, offset); // foDelay
-                offset += 4;
-                cipher.doFinal(pictstream, offset+0, 1, pictstream, offset+0); // unused1
-                cipher.doFinal(pictstream, offset+1, 1, pictstream, offset+1); // cbName
-                cipher.doFinal(pictstream, offset+2, 1, pictstream, offset+2); // unused2
-                cipher.doFinal(pictstream, offset+3, 1, pictstream, offset+3); // unused3
-                int cbName = LittleEndian.getUShort(pictstream, offset+1);
-                offset += 4;
+                for (int part : BLIB_STORE_ENTRY_PARTS) {
+                    decryptPicBytes(pictstream, offset, part);
+                }
+                offset += 36;
+                
+                int cbName = LittleEndian.getUShort(pictstream, offset-3);
                 if (cbName > 0) {
-                    cipher.doFinal(pictstream, offset, cbName, pictstream, offset); // nameData
+                    // read nameData
+                    decryptPicBytes(pictstream, offset, cbName);
                     offset += cbName;
                 }
+                
                 if (offset == endOffset) {
                     return; // no embedded blip
                 }
                 // fall through, read embedded blip now
 
                 // update header data
-                cipher.doFinal(pictstream, offset, 8, pictstream, offset);
+                decryptPicBytes(pictstream, offset, 8);
                 recInst = fieldRecInst.getValue(LittleEndian.getUShort(pictstream, offset));
                 recType = LittleEndian.getUShort(pictstream, offset+2);
                 // rlen = (int)LittleEndian.getUInt(pictstream, offset+4);
@@ -57,24 +46,29 @@
 
             int rgbUidCnt = (recInst == 0x217 || recInst == 0x3D5 || recInst == 0x46B || recInst == 0x543 ||
                 recInst == 0x6E1 || recInst == 0x6E3 || recInst == 0x6E5 || recInst == 0x7A9) ? 2 : 1;
-            
+
+            // rgbUid 1/2
             for (int i=0; i<rgbUidCnt; i++) {
-                cipher.doFinal(pictstream, offset, 16, pictstream, offset); // rgbUid 1/2
+                decryptPicBytes(pictstream, offset, 16);
                 offset += 16;
             }
-            
+
+            int nextBytes;
             if (recType == 0xF01A || recType == 0XF01B || recType == 0XF01C) {
-                cipher.doFinal(pictstream, offset, 34, pictstream, offset); // metafileHeader
-                offset += 34;
+                // metafileHeader
+                nextBytes = 34;
             } else {
-                cipher.doFinal(pictstream, offset, 1, pictstream, offset); // tag
-                offset += 1;
+                // tag
+                nextBytes = 1;
             }
             
+            decryptPicBytes(pictstream, offset, nextBytes);
+            offset += nextBytes;
+
             int blipLen = endOffset - offset;
-            cipher.doFinal(pictstream, offset, blipLen, pictstream, offset);
-        } catch (GeneralSecurityException e) {
+            decryptPicBytes(pictstream, offset, blipLen);
+        } catch (Exception e) {
             throw new CorruptPowerPointFileException(e);
-        }       
+        }
     }
 

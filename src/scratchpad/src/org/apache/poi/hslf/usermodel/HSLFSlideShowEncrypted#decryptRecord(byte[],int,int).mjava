@@ -1,17 +1,33 @@
     protected void decryptRecord(byte[] docstream, int persistId, int offset) {
-        if (dea == null) return;
+        if (dea == null) {
+            return;
+        }
 
         decryptInit();
-        setPersistId(persistId);
-        
+        dec.setChunkSize(-1);
+        LittleEndianByteArrayInputStream lei = new LittleEndianByteArrayInputStream(docstream, offset);
+        ChunkedCipherInputStream ccis = null;
         try {
+            ccis = dec.getDataStream(lei, docstream.length-offset, 0);
+            ccis.initCipherForBlock(persistId);
+
             // decrypt header and read length to be decrypted
-            cipher.update(docstream, offset, 8, docstream, offset);
+            readFully(ccis, docstream, offset, 8);
             // decrypt the rest of the record
             int rlen = (int)LittleEndian.getUInt(docstream, offset+4);
-            cipher.update(docstream, offset+8, rlen, docstream, offset+8);
-        } catch (GeneralSecurityException e) {
-            throw new CorruptPowerPointFileException(e);
-        }       
-    }        
+            readFully(ccis, docstream, offset+8, rlen);
+
+        } catch (Exception e) {
+            throw new EncryptedPowerPointFileException(e);
+        } finally {
+            try {
+                if (ccis != null) {
+                    ccis.close();
+                }
+                lei.close();
+            } catch (IOException e) {
+                throw new EncryptedPowerPointFileException(e);
+            }
+        }
+    }
 

@@ -1,0 +1,24 @@
+	public Biff8DecryptingStream(InputStream in, int initialOffset, EncryptionInfo info) throws RecordFormatException {
+        try {
+    	    byte initialBuf[] = new byte[initialOffset];
+    	    InputStream stream;
+    	    if (initialOffset == 0) {
+    	        stream = in;
+    	    } else {
+    	        stream = new PushbackInputStream(in, initialOffset);
+    	        ((PushbackInputStream)stream).unread(initialBuf);
+    	    }
+    	    
+            this.info = info;
+            Decryptor dec = this.info.getDecryptor();
+            dec.setChunkSize(RC4_REKEYING_INTERVAL);
+            ccis = (ChunkedCipherInputStream)dec.getDataStream(stream, Integer.MAX_VALUE, 0);
+            
+            if (initialOffset > 0) {
+                ccis.readFully(initialBuf);
+            }
+        } catch (Exception e) {
+            throw new RecordFormatException(e);
+        }
+	}
+
