@@ -1,28 +1,31 @@
     /**
-     * Create a pivot table and set area of source, source sheet and a position for pivot table
-     * @param source Area from where data will be collected
-     * @param position A reference to the cell where the table will start
-     * @param sourceSheet The sheet where source will be collected from
+     * Create a pivot table using the AreaReference range on sourceSheet, at the given position.
+     * If the source reference contains a sheet name, it must match the sourceSheet
+     * @param source location of pivot data
+     * @param position A reference to the top left cell where the pivot table will start
+     * @param sourceSheet The sheet containing the source data, if the source reference doesn't contain a sheet name
+     * @throws IllegalArgumentException if source references a sheet different than sourceSheet
      * @return The pivot table
      */
     @Beta
-    public XSSFPivotTable createPivotTable(AreaReference source, CellReference position, Sheet sourceSheet) {
+    public XSSFPivotTable createPivotTable(final AreaReference source, CellReference position, Sheet sourceSheet) {
         final String sourceSheetName = source.getFirstCell().getSheetName();
         if(sourceSheetName != null && !sourceSheetName.equalsIgnoreCase(sourceSheet.getSheetName())) {
             throw new IllegalArgumentException("The area is referenced in another sheet than the "
                     + "defined source sheet " + sourceSheet.getSheetName() + ".");
         }
-        XSSFPivotTable pivotTable = createPivotTable();
-        //Creates default settings for the pivot table
-        pivotTable.setDefaultPivotTableDefinition();
 
-        //Set sources and references
-        pivotTable.createSourceReferences(source, position, sourceSheet);
-
-        //Create cachefield/s and empty SharedItems
-        pivotTable.getPivotCacheDefinition().createCacheFields(sourceSheet);
-        pivotTable.createDefaultDataColumns();
-
-        return pivotTable;
-    }
+        return createPivotTable(position, sourceSheet, new PivotTableReferenceConfigurator() {
+                public void configureReference(CTWorksheetSource wsSource) {
+                    final String[] firstCell = source.getFirstCell().getCellRefParts();
+                    final String firstRow = firstCell[1];
+                    final String firstCol = firstCell[2];
+                    final String[] lastCell = source.getLastCell().getCellRefParts();
+                    final String lastRow = lastCell[1];
+                    final String lastCol = lastCell[2];
+                    final String ref = firstCol+firstRow+':'+lastCol+lastRow; //or just source.formatAsString()
+                    wsSource.setRef(ref);
+                }
+            });
+        }
 
