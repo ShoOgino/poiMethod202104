@@ -6,10 +6,17 @@
    public void testInPlaceWrite() throws Exception {
        // Setup as a copy of a known-good file
        final File file = TempFile.createTempFile("TestDocument", ".doc");
-       IOUtils.copy(
-               POIDataSamples.getDocumentInstance().openResourceAsStream("SampleDoc.doc"),
-               new FileOutputStream(file)
-       );
+       InputStream inputStream = POIDataSamples.getDocumentInstance().openResourceAsStream("SampleDoc.doc");
+       try {
+           FileOutputStream outputStream = new FileOutputStream(file);
+           try {
+               IOUtils.copy(inputStream, outputStream);
+           } finally {
+               outputStream.close();
+           }
+       } finally {
+           inputStream.close();
+       }
 
        // Open from the temp file in read-write mode
        HWPFDocument doc = new HWPFDocument(new NPOIFSFileSystem(file, false).getRoot());
@@ -24,6 +31,8 @@
        doc.close();
 
        doc = new HWPFDocument(new NPOIFSFileSystem(file).getRoot());
+       r = doc.getRange();
        assertEquals("X XX a test document\r", r.getParagraph(0).text());
+       doc.close();
    }
 

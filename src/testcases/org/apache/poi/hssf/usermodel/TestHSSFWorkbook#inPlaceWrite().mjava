@@ -2,10 +2,17 @@
     public void inPlaceWrite() throws Exception {
         // Setup as a copy of a known-good file
         final File file = TempFile.createTempFile("TestHSSFWorkbook", ".xls");
-        IOUtils.copy(
-                POIDataSamples.getSpreadSheetInstance().openResourceAsStream("SampleSS.xls"),
-                new FileOutputStream(file)
-        );
+        InputStream inputStream = POIDataSamples.getSpreadSheetInstance().openResourceAsStream("SampleSS.xls");
+        try {
+            FileOutputStream outputStream = new FileOutputStream(file);
+            try {
+                IOUtils.copy(inputStream, outputStream);
+            } finally {
+                outputStream.close();
+            }
+        } finally {
+            inputStream.close();
+        }
         
         // Open from the temp file in read-write mode
         HSSFWorkbook wb = new HSSFWorkbook(new NPOIFSFileSystem(file, false));
@@ -23,5 +30,7 @@
         wb = new HSSFWorkbook(new NPOIFSFileSystem(file));
         assertEquals(1, wb.getNumberOfSheets());
         assertEquals("Changed!", wb.getSheetAt(0).getRow(0).getCell(0).toString());
+
+        wb.close();
     }
 
