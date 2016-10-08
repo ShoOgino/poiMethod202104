@@ -6,19 +6,26 @@
                 for (HSLFSlideMaster master : _show.getSlideMasters()) {
                     for(HSLFShape sh : master.getShapes()){
                         if(sh instanceof HSLFTextShape){
-                            if(HSLFMasterSheet.isPlaceholder(sh)) {
-                                // don't bother about boiler
-                                // plate text on master
-                                // sheets
+                            HSLFTextShape hsh = (HSLFTextShape)sh;
+                            final String text = hsh.getText();
+                            if (text == null || "".equals(text) || "*".equals(text)) {
                                 continue;
                             }
-                            HSLFTextShape tsh = (HSLFTextShape)sh;
-                            String text = tsh.getText();
-                            if (text != null){
-                                ret.append(text);
-                                if (!text.endsWith("\n")) {
-                                    ret.append("\n");
+                            
+                            if (HSLFMasterSheet.isPlaceholder(sh)) {
+                                // check for metro shape of complex placeholder
+                                boolean isMetro = new HSLFMetroShape<HSLFShape>(sh).hasMetroBlob();
+                                
+                                if (!isMetro) {
+                                    // don't bother about boiler plate text on master sheets
+                                    LOG.log(POILogger.INFO, "Ignoring boiler plate (placeholder) text on slide master:", text);
+                                    continue;
                                 }
+                            }
+                            
+                            ret.append(text);
+                            if (!text.endsWith("\n")) {
+                                ret.append("\n");
                             }
                         }
                     }
