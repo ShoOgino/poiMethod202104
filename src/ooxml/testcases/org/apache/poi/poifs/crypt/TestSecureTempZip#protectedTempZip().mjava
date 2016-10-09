@@ -4,7 +4,6 @@
      */
     @Test
     public void protectedTempZip() throws IOException, GeneralSecurityException, XmlException, OpenXML4JException {
-        final File tmpFile = TempFile.createTempFile("protectedXlsx", ".zip");
         File tikaProt = XSSFTestDataSamples.getSampleFile("protected_passtika.xlsx");
         FileInputStream fis = new FileInputStream(tikaProt);
         POIFSFileSystem poifs = new POIFSFileSystem(fis);
@@ -13,19 +12,11 @@
         boolean passOk = dec.verifyPassword("tika");
         assertTrue(passOk);
 
-        // generate session key
-        SecureRandom sr = new SecureRandom();
-        byte[] ivBytes = new byte[16], keyBytes = new byte[16];
-        sr.nextBytes(ivBytes);
-        sr.nextBytes(keyBytes);
-        
         // extract encrypted ooxml file and write to custom encrypted zip file 
         InputStream is = dec.getDataStream(poifs);
-        copyToFile(is, tmpFile, CipherAlgorithm.aes128, keyBytes, ivBytes);
-        is.close();
         
         // provide ZipEntrySource to poi which decrypts on the fly
-        ZipEntrySource source = fileToSource(tmpFile, CipherAlgorithm.aes128, keyBytes, ivBytes);
+        ZipEntrySource source = AesZipFileZipEntrySource.createZipEntrySource(is);
 
         // test the source
         OPCPackage opc = OPCPackage.open(source);
@@ -47,6 +38,5 @@
         source.close();
         poifs.close();
         fis.close();
-        tmpFile.delete();
     }
 
