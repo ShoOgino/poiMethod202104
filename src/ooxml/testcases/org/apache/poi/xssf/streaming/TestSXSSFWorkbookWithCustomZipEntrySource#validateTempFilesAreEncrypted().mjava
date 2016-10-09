@@ -1,0 +1,22 @@
+    @Test
+    public void validateTempFilesAreEncrypted() throws IOException {
+        TempFileRecordingSXSSFWorkbookWithCustomZipEntrySource workbook = new TempFileRecordingSXSSFWorkbookWithCustomZipEntrySource();
+        SXSSFSheet sheet1 = workbook.createSheet(sheetName);
+        SXSSFRow row1 = sheet1.createRow(1);
+        SXSSFCell cell1 = row1.createCell(1);
+        cell1.setCellValue(cellValue);
+        ByteArrayOutputStream os = new ByteArrayOutputStream(8192);
+        workbook.write(os);
+        workbook.close();
+        List<File> tempFiles = workbook.getTempFiles();
+        assertEquals(1, tempFiles.size());
+        File tempFile = tempFiles.get(0);
+        assertTrue("tempFile exists?", tempFile.exists());
+        byte[] data = IOUtils.toByteArray(new FileInputStream(tempFile));
+        String text = new String(data, UTF_8);
+        assertFalse(text.contains(sheetName));
+        assertFalse(text.contains(cellValue));
+        workbook.dispose();
+        assertFalse("tempFile deleted after dispose?", tempFile.exists());
+    }
+

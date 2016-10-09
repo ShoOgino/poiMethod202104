@@ -1,17 +1,19 @@
         @Override
         public void write(OutputStream stream) throws IOException {
             flushSheets();
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
+            EncryptedTempData tempData = new EncryptedTempData();
+            OutputStream os = tempData.getOutputStream();
             getXSSFWorkbook().write(os);
+            os.close();
             ZipEntrySource source = null;
             try {
                 // provide ZipEntrySource to poi which decrypts on the fly
-                source = AesZipFileZipEntrySource.createZipEntrySource(new ByteArrayInputStream(os.toByteArray()));
+                source = AesZipFileZipEntrySource.createZipEntrySource(tempData.getInputStream());
                 injectData(source, stream);
             } catch (GeneralSecurityException e) {
                 throw new IOException(e);
             } finally {
-                source.close();
+                IOUtils.closeQuietly(source);
             }
         }
 
