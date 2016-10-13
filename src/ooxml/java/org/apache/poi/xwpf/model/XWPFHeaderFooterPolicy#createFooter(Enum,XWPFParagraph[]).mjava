@@ -3,24 +3,27 @@
      * supplied (and previously unattached!) paragraphs are
      * added to.
      */
-    public XWPFFooter createFooter(Enum type, XWPFParagraph[] pars) throws IOException {
-        XWPFRelation relation = XWPFRelation.FOOTER;
-        String pStyle = "Footer";
-        int i = getRelationIndex(relation);
-        FtrDocument ftrDoc = FtrDocument.Factory.newInstance();
-        
-        XWPFFooter wrapper = (XWPFFooter) doc.createRelationship(relation, XWPFFactory.getInstance(), i);
-        wrapper.setXWPFDocument(doc);
+    public XWPFFooter createFooter(Enum type, XWPFParagraph[] pars) {
+        XWPFFooter footer = getFooter(type);
 
-        CTHdrFtr ftr = buildFtr(type, pStyle, wrapper, pars);
-        wrapper.setHeaderFooter(ftr);
+        if (footer == null) {
+            FtrDocument ftrDoc = FtrDocument.Factory.newInstance();
 
-        OutputStream outputStream = wrapper.getPackagePart().getOutputStream();
-        ftrDoc.setFtr(ftr);
+            XWPFRelation relation = XWPFRelation.FOOTER;
+            int i = getRelationIndex(relation);
 
-        assignFooter(wrapper, type);
-        ftrDoc.save(outputStream, DEFAULT_XML_OPTIONS);
-        outputStream.close();
-        return wrapper;
+            XWPFFooter wrapper = (XWPFFooter) doc.createRelationship(relation,
+                    XWPFFactory.getInstance(), i);
+            wrapper.setXWPFDocument(doc);
+
+            String pStyle = "Footer";
+            CTHdrFtr ftr = buildFtr(type, pStyle, wrapper, pars);
+            wrapper.setHeaderFooter(ftr);
+            ftrDoc.setFtr(ftr);
+            assignFooter(wrapper, type);
+            footer = wrapper;
+        }
+
+        return footer;
     }
 
