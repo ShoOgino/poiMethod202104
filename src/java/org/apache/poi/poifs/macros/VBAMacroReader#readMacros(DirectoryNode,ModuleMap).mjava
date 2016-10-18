@@ -16,6 +16,7 @@
                     // process DIR
                     RLEDecompressingInputStream in = new RLEDecompressingInputStream(dis);
                     String streamName = null;
+                    String streamNameUnicode = null;
                     int recordId = 0;
                     try {
                         while (true) {
@@ -35,6 +36,14 @@
                                 break;
                             case STREAMNAME:
                                 streamName = readString(in, recordLength, modules.charset);
+                                int reserved = in.readShort();
+                                if (reserved != STREAMNAME_RESERVED) {
+                                    throw new IOException("Expected x0032 after stream name before Unicode stream name, but found: "+
+                                            Integer.toHexString(reserved));
+                                }
+                                int unicodeNameRecordLength = in.readInt();
+                                streamNameUnicode = readUnicodeString(in, unicodeNameRecordLength);
+                                //do something with this at some point
                                 break;
                             case MODULEOFFSET:
                                 readModule(in, streamName, modules);
