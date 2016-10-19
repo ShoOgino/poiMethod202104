@@ -1,0 +1,31 @@
+    //It isn't pretty, but it works...
+    private Map<String, String> getMacrosFromHSLF(String fileName) throws IOException {
+        InputStream is = null;
+        NPOIFSFileSystem npoifs = null;
+        try {
+            is = new FileInputStream(POIDataSamples.getSlideShowInstance().getFile(fileName));
+            npoifs = new NPOIFSFileSystem(is);
+            //TODO: should we run the VBAMacroReader on this npoifs?
+            //TBD: We know that ppt typically don't store macros in the regular place,
+            //but _can_ they?
+
+            HSLFSlideShow ppt = new HSLFSlideShow(npoifs);
+
+            //get macro persist id
+            DocInfoListContainer list = (DocInfoListContainer)ppt.getDocumentRecord().findFirstOfType(RecordTypes.List.typeID);
+            VBAInfoContainer vbaInfo = (VBAInfoContainer)list.findFirstOfType(RecordTypes.VBAInfo.typeID);
+            VBAInfoAtom vbaAtom = (VBAInfoAtom)vbaInfo.findFirstOfType(RecordTypes.VBAInfoAtom.typeID);
+            long persistId = vbaAtom.getPersistIdRef();
+            for (HSLFObjectData objData : ppt.getEmbeddedObjects()) {
+                if (objData.getExOleObjStg().getPersistId() == persistId) {
+                    return new VBAMacroReader(objData.getData()).readMacros();
+                }
+            }
+
+        } finally {
+            IOUtils.closeQuietly(npoifs);
+            IOUtils.closeQuietly(is);
+        }
+        return null;
+    }
+
