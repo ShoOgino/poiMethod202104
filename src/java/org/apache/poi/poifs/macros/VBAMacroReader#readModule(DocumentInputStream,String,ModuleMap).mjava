@@ -1,0 +1,25 @@
+    private static void readModule(DocumentInputStream dis, String name, ModuleMap modules) throws IOException {
+        Module module = modules.get(name);
+        // TODO Refactor this to fetch dir then do the rest
+        if (module == null) {
+            // no DIR stream with offsets yet, so store the compressed bytes for later
+            module = new Module();
+            modules.put(name, module);
+            module.read(dis);
+        } else if (module.buf == null) { //if we haven't already read the bytes for the module keyed off this name...
+            if (module.offset == null) {
+                //This should not happen. bug 59858
+                throw new IOException("Module offset for '" + name + "' was never read.");
+            }
+            // we know the offset already, so decompress immediately on-the-fly
+            long skippedBytes = dis.skip(module.offset);
+            if (skippedBytes != module.offset) {
+                throw new IOException("tried to skip " + module.offset + " bytes, but actually skipped " + skippedBytes + " bytes");
+            }
+            InputStream stream = new RLEDecompressingInputStream(dis);
+            module.read(stream);
+            stream.close();
+        }
+        
+    }
+
