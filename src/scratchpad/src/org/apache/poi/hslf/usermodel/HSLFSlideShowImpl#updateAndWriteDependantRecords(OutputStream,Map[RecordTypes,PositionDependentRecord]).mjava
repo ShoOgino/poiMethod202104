@@ -1,19 +1,19 @@
-	/**
+    /**
      * This is a helper functions, which is needed for adding new position dependent records
      * or finally write the slideshow to a file.
-	 *
-	 * @param os the stream to write to, if null only the references are updated
-	 * @param interestingRecords a map of interesting records (PersistPtrHolder and UserEditAtom)
-	 *        referenced by their RecordType. Only the very last of each type will be saved to the map.
-	 *        May be null, if not needed. 
-	 * @throws IOException
-	 */
-	public void updateAndWriteDependantRecords(OutputStream os, Map<RecordTypes,PositionDependentRecord> interestingRecords)
-	throws IOException {
+     *
+     * @param os                 the stream to write to, if null only the references are updated
+     * @param interestingRecords a map of interesting records (PersistPtrHolder and UserEditAtom)
+     *                           referenced by their RecordType. Only the very last of each type will be saved to the map.
+     *                           May be null, if not needed.
+     * @throws IOException
+     */
+    public void updateAndWriteDependantRecords(OutputStream os, Map<RecordTypes, PositionDependentRecord> interestingRecords)
+            throws IOException {
         // For position dependent records, hold where they were and now are
         // As we go along, update, and hand over, to any Position Dependent
         //  records we happen across
-        Map<Integer,Integer> oldToNewPositions = new HashMap<Integer,Integer>();
+        Map<Integer, Integer> oldToNewPositions = new HashMap<Integer, Integer>();
 
         // First pass - figure out where all the position dependent
         //   records are going to end up, in the new scheme
@@ -24,72 +24,72 @@
         CountingOS cos = new CountingOS();
         for (Record record : _records) {
             // all top level records are position dependent
-            assert(record instanceof PositionDependentRecord);
-            PositionDependentRecord pdr = (PositionDependentRecord)record;
+            assert (record instanceof PositionDependentRecord);
+            PositionDependentRecord pdr = (PositionDependentRecord) record;
             int oldPos = pdr.getLastOnDiskOffset();
             int newPos = cos.size();
             pdr.setLastOnDiskOffset(newPos);
             if (oldPos != UNSET_OFFSET) {
                 // new records don't need a mapping, as they aren't in a relation yet
-                oldToNewPositions.put(oldPos,newPos);
+                oldToNewPositions.put(oldPos, newPos);
             }
 
             // Grab interesting records as they come past
             // this will only save the very last record of each type
             RecordTypes saveme = null;
-            int recordType = (int)record.getRecordType();
+            int recordType = (int) record.getRecordType();
             if (recordType == RecordTypes.PersistPtrIncrementalBlock.typeID) {
                 saveme = RecordTypes.PersistPtrIncrementalBlock;
-                ptr = (PersistPtrHolder)pdr;
+                ptr = (PersistPtrHolder) pdr;
             } else if (recordType == RecordTypes.UserEditAtom.typeID) {
                 saveme = RecordTypes.UserEditAtom;
-                usr = (UserEditAtom)pdr;
+                usr = (UserEditAtom) pdr;
             }
             if (interestingRecords != null && saveme != null) {
-                interestingRecords.put(saveme,pdr);
+                interestingRecords.put(saveme, pdr);
             }
-            
+
             // Dummy write out, so the position winds on properly
             record.writeOut(cos);
         }
         cos.close();
-        
+
         if (usr == null || ptr == null) {
             throw new HSLFException("UserEditAtom or PersistPtr can't be determined.");
         }
-        
-        Map<Integer,Integer> persistIds = new HashMap<Integer,Integer>();
-        for (Map.Entry<Integer,Integer> entry : ptr.getSlideLocationsLookup().entrySet()) {
+
+        Map<Integer, Integer> persistIds = new HashMap<Integer, Integer>();
+        for (Map.Entry<Integer, Integer> entry : ptr.getSlideLocationsLookup().entrySet()) {
             persistIds.put(oldToNewPositions.get(entry.getValue()), entry.getKey());
         }
-        
+
         HSLFSlideShowEncrypted encData = new HSLFSlideShowEncrypted(getDocumentEncryptionAtom());
-        
-	    for (Record record : _records) {
-            assert(record instanceof PositionDependentRecord);
+
+        for (Record record : _records) {
+            assert (record instanceof PositionDependentRecord);
             // We've already figured out their new location, and
             // told them that
             // Tell them of the positions of the other records though
-            PositionDependentRecord pdr = (PositionDependentRecord)record;
+            PositionDependentRecord pdr = (PositionDependentRecord) record;
             Integer persistId = persistIds.get(pdr.getLastOnDiskOffset());
             if (persistId == null) persistId = 0;
-            
+
             // For now, we're only handling PositionDependentRecord's that
             // happen at the top level.
             // In future, we'll need the handle them everywhere, but that's
             // a bit trickier
             pdr.updateOtherRecordReferences(oldToNewPositions);
-            
+
             // Whatever happens, write out that record tree
             if (os != null) {
                 record.writeOut(encData.encryptRecord(os, persistId, record));
             }
         }
-	    
-	    encData.close();
+
+        encData.close();
 
         // Update and write out the Current User atom
-        int oldLastUserEditAtomPos = (int)currentUser.getCurrentEditOffset();
+        int oldLastUserEditAtomPos = (int) currentUser.getCurrentEditOffset();
         Integer newLastUserEditAtomPos = oldToNewPositions.get(oldLastUserEditAtomPos);
         if (newLastUserEditAtomPos == null || usr.getLastOnDiskOffset() != newLastUserEditAtomPos) {
             throw new HSLFException("Couldn't find the new location of the last UserEditAtom that used to be at " + oldLastUserEditAtomPos);

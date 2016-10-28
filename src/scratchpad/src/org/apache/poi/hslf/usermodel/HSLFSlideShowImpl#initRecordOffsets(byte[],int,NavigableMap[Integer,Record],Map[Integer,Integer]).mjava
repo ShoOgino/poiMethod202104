@@ -1,30 +1,30 @@
-    private void initRecordOffsets(byte[] docstream, int usrOffset, NavigableMap<Integer,Record> recordMap, Map<Integer,Integer> offset2id) {
-        while (usrOffset != 0){
+    private void initRecordOffsets(byte[] docstream, int usrOffset, NavigableMap<Integer, Record> recordMap, Map<Integer, Integer> offset2id) {
+        while (usrOffset != 0) {
             UserEditAtom usr = (UserEditAtom) Record.buildRecordAtOffset(docstream, usrOffset);
             recordMap.put(usrOffset, usr);
-            
+
             int psrOffset = usr.getPersistPointersOffset();
-            PersistPtrHolder ptr = (PersistPtrHolder)Record.buildRecordAtOffset(docstream, psrOffset);
+            PersistPtrHolder ptr = (PersistPtrHolder) Record.buildRecordAtOffset(docstream, psrOffset);
             recordMap.put(psrOffset, ptr);
-            
-            for(Map.Entry<Integer,Integer> entry : ptr.getSlideLocationsLookup().entrySet()) {
+
+            for (Map.Entry<Integer, Integer> entry : ptr.getSlideLocationsLookup().entrySet()) {
                 Integer offset = entry.getValue();
                 Integer id = entry.getKey();
                 recordMap.put(offset, null); // reserve a slot for the record
                 offset2id.put(offset, id);
             }
-            
+
             usrOffset = usr.getLastUserEditAtomOffset();
 
             // check for corrupted user edit atom and try to repair it
             // if the next user edit atom offset is already known, we would go into an endless loop
             if (usrOffset > 0 && recordMap.containsKey(usrOffset)) {
                 // a user edit atom is usually located 36 byte before the smallest known record offset 
-                usrOffset = recordMap.firstKey()-36;
+                usrOffset = recordMap.firstKey() - 36;
                 // check that we really are located on a user edit atom
                 int ver_inst = LittleEndian.getUShort(docstream, usrOffset);
-                int type = LittleEndian.getUShort(docstream, usrOffset+2);
-                int len = LittleEndian.getInt(docstream, usrOffset+4);
+                int type = LittleEndian.getUShort(docstream, usrOffset + 2);
+                int len = LittleEndian.getInt(docstream, usrOffset + 4);
                 if (ver_inst == 0 && type == 4085 && (len == 0x1C || len == 0x20)) {
                     logger.log(POILogger.WARN, "Repairing invalid user edit atom");
                     usr.setLastUserEditAtomOffset(usrOffset);
@@ -32,6 +32,6 @@
                     throw new CorruptPowerPointFileException("Powerpoint document contains invalid user edit atom");
                 }
             }
-        }       
+        }
     }
 
