@@ -1,3 +1,4 @@
+    @Test
     public void testSetHeader() throws IOException {
         XWPFDocument sampleDoc = XWPFTestDataSamples.openSampleDocument("SampleDoc.docx");
         // no header is set (yet)
@@ -5,6 +6,7 @@
         assertNull(policy.getDefaultHeader());
         assertNull(policy.getFirstPageHeader());
         assertNull(policy.getDefaultFooter());
+        assertNull(policy.getFirstPageFooter());
 
         CTP ctP1 = CTP.Factory.newInstance();
         CTR ctR1 = ctP1.addNewR();
@@ -44,29 +46,31 @@
         XWPFHeader headerD = policy.createHeader(XWPFHeaderFooterPolicy.DEFAULT, pars);
         XWPFHeader headerF = policy.createHeader(XWPFHeaderFooterPolicy.FIRST);
         // Set a default footer and capture the returned XWPFFooter object.
-        XWPFFooter footer = policy.createFooter(XWPFHeaderFooterPolicy.DEFAULT, pars2);
+        XWPFFooter footerD = policy.createFooter(XWPFHeaderFooterPolicy.DEFAULT, pars2);
+        XWPFFooter footerF = policy.createFooter(XWPFHeaderFooterPolicy.FIRST);
 
         // Ensure the headers and footer were set correctly....
         assertNotNull(policy.getDefaultHeader());
         assertNotNull(policy.getFirstPageHeader());
         assertNotNull(policy.getDefaultFooter());
+        assertNotNull(policy.getFirstPageFooter());
         // ....and that the footer object captured above contains two
         // paragraphs of text.
-        assertEquals(2, footer.getParagraphs().size());
+        assertEquals(2, footerD.getParagraphs().size());
+        assertEquals(0, footerF.getParagraphs().size());
 
         // Check the header created with the paragraph got them, and the one
-        // created without got an empty one
+        // created without got none
         assertEquals(1, headerD.getParagraphs().size());
-        assertEquals(1, headerF.getParagraphs().size());
-
         assertEquals(tText, headerD.getParagraphs().get(0).getText());
-        assertEquals("", headerF.getParagraphs().get(0).getText());
+
+        assertEquals(0, headerF.getParagraphs().size());
 
         // As an additional check, recover the defauls footer and
         // make sure that it contains two paragraphs of text and that
         // both do hold what is expected.
-        footer = policy.getDefaultFooter();
-        XWPFParagraph[] paras = footer.getParagraphs().toArray(new XWPFParagraph[0]);
+        footerD = policy.getDefaultFooter();
+        XWPFParagraph[] paras = footerD.getParagraphs().toArray(new XWPFParagraph[0]);
 
         assertEquals(2, paras.length);
         assertEquals("First paragraph for the footer", paras[0].getText());
@@ -75,12 +79,15 @@
 
         // Add some text to the empty header
         String fText1 = "New Text!";
-        headerF.getParagraphs().get(0).insertNewRun(0).setText(fText1);
-        // TODO Add another paragraph and check
-
+        String fText2 = "More Text!";
+        headerF.createParagraph().insertNewRun(0).setText(fText1);
+        headerF.createParagraph().insertNewRun(0).setText(fText2);
+//        headerF.getParagraphs().get(0).insertNewRun(0).setText(fText1);
+    
         // Check it
         assertEquals(tText, headerD.getParagraphs().get(0).getText());
         assertEquals(fText1, headerF.getParagraphs().get(0).getText());
+        assertEquals(fText2, headerF.getParagraphs().get(1).getText());
 
 
         // Save, re-open, ensure it's all still there
@@ -90,7 +97,7 @@
         assertNotNull(policy.getFirstPageHeader());
         assertNull(policy.getEvenPageHeader());
         assertNotNull(policy.getDefaultFooter());
-        assertNull(policy.getFirstPageFooter());
+        assertNotNull(policy.getFirstPageFooter());
         assertNull(policy.getEvenPageFooter());
 
         // Check the new headers still have their text
@@ -98,13 +105,16 @@
         headerF = policy.getFirstPageHeader();
         assertEquals(tText, headerD.getParagraphs().get(0).getText());
         assertEquals(fText1, headerF.getParagraphs().get(0).getText());
+        assertEquals(fText2, headerF.getParagraphs().get(1).getText());
 
         // Check the new footers have their new text too
-        footer = policy.getDefaultFooter();
-        paras = footer.getParagraphs().toArray(new XWPFParagraph[0]);
+        footerD = policy.getDefaultFooter();
+        paras = footerD.getParagraphs().toArray(new XWPFParagraph[0]);
+        footerF = policy.getFirstPageFooter();
 
         assertEquals(2, paras.length);
         assertEquals("First paragraph for the footer", paras[0].getText());
         assertEquals("Second paragraph for the footer", paras[1].getText());
+        assertEquals(1, footerF.getParagraphs().size());
     }
 
