@@ -18,50 +18,47 @@
 		log( versionBffr.toString(), Project.MSG_INFO ) ;
 		
 		log( "Using input file: " + excelFileName, Project.MSG_INFO ) ;
+
+        workbookUtil = ExcelAntWorkbookUtilFactory.getInstance(excelFileName);
 		
-		Workbook targetWorkbook = loadWorkbook() ;
-		if( targetWorkbook == null ) {
-			log( "Unable to load " + excelFileName + 
-					            ".  Verify the file exists and can be read.",
-					            Project.MSG_ERR ) ;
-			return ;
-		}
-		if( tests.size() > 0 ) {
+		for (ExcelAntTest test : tests) {
+			log("executing test: " + test.getName(), Project.MSG_DEBUG);
 
-			for (ExcelAntTest test : tests) {
-				log("executing test: " + test.getName(), Project.MSG_DEBUG);
-
-				workbookUtil = ExcelAntWorkbookUtilFactory.getInstance(excelFileName);
-
-				for (ExcelAntUserDefinedFunction eaUdf : functions) {
-					try {
-						workbookUtil.addFunction(eaUdf.getFunctionAlias(), eaUdf.getClassName());
-					} catch (Exception e) {
-						throw new BuildException(e.getMessage(), e);
-					}
-				}
-				test.setWorkbookUtil(workbookUtil);
-
-				if (precision != null && precision.getValue() > 0) {
-					log("setting precision for the test " + test.getName(), Project.MSG_VERBOSE);
-					test.setPrecision(precision.getValue());
-				}
-
-				test.execute();
-
-				if (test.didTestPass()) {
-					successCount++;
-				} else {
-					if (failOnError) {
-						throw new BuildException("Test " + test.getName() + " failed.");
-					}
-				}
-				totalCount++;
-
-				workbookUtil = null;
+			if (workbookUtil == null) {
+			    workbookUtil = ExcelAntWorkbookUtilFactory.getInstance(excelFileName);
 			}
-			log( successCount + "/" + totalCount + " tests passed.", Project.MSG_INFO ) ;
-			workbookUtil = null ;
+
+			for (ExcelAntUserDefinedFunction eaUdf : functions) {
+				try {
+					workbookUtil.addFunction(eaUdf.getFunctionAlias(), eaUdf.getClassName());
+				} catch (Exception e) {
+					throw new BuildException(e.getMessage(), e);
+				}
+			}
+			test.setWorkbookUtil(workbookUtil);
+
+			if (precision != null && precision.getValue() > 0) {
+				log("setting precision for the test " + test.getName(), Project.MSG_VERBOSE);
+				test.setPrecision(precision.getValue());
+			}
+
+			test.execute();
+
+			if (test.didTestPass()) {
+				successCount++;
+			} else {
+				if (failOnError) {
+					throw new BuildException("Test " + test.getName() + " failed.");
+				}
+			}
+			totalCount++;
+
+			workbookUtil = null;
 		}
+
+		if( !tests.isEmpty() ) {
+		    log( successCount + "/" + totalCount + " tests passed.", Project.MSG_INFO );
+		}
+        workbookUtil = null;
 	}
 
