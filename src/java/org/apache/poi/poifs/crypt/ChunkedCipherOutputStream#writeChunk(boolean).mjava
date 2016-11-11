@@ -1,17 +1,17 @@
     protected void writeChunk(boolean continued) throws IOException {
-        if (_pos == 0 || _totalPos == _written) {
+        if (pos == 0 || totalPos == written) {
             return;
         }
 
-        int posInChunk = (int)(_pos & getChunkMask());
+        int posInChunk = (int)(pos & getChunkMask());
 
         // normally posInChunk is 0, i.e. on the next chunk (-> index-1)
         // but if called on close(), posInChunk is somewhere within the chunk data
-        int index = (int)(_pos >> _chunkBits);
+        int index = (int)(pos >> chunkBits);
         boolean lastChunk;
         if (posInChunk==0) {
             index--;
-            posInChunk = _chunk.length;
+            posInChunk = chunk.length;
             lastChunk = false;
         } else {
             // pad the last chunk
@@ -21,26 +21,26 @@
         int ciLen;
         try {
             boolean doFinal = true;
-            long oldPos = _pos;
+            long oldPos = pos;
             // reset stream (not only) in case we were interrupted by plain stream parts
             // this also needs to be set to prevent an endless loop
-            _pos = 0;
-            if (_chunkSize == STREAMING) {
+            pos = 0;
+            if (chunkSize == STREAMING) {
                 if (continued) {
                     doFinal = false;
                 }
             } else {
-                _cipher = initCipherForBlock(_cipher, index, lastChunk);
+                cipher = initCipherForBlock(cipher, index, lastChunk);
                 // restore pos - only streaming chunks will be reset
-                _pos = oldPos;
+                pos = oldPos;
             }
             ciLen = invokeCipher(posInChunk, doFinal);
         } catch (GeneralSecurityException e) {
             throw new IOException("can't re-/initialize cipher", e);
         }
 
-        out.write(_chunk, 0, ciLen);
-        _plainByteFlags.clear();
-        _written += ciLen;
+        out.write(chunk, 0, ciLen);
+        plainByteFlags.clear();
+        written += ciLen;
     }
 
