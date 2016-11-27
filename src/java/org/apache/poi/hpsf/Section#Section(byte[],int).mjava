@@ -1,5 +1,5 @@
     /**
-     * <p>Creates a {@link Section} instance from a byte array.</p>
+     * Creates a {@link Section} instance from a byte array.
      *
      * @param src Contains the complete property set stream.
      * @param offset The position in the stream that points to the
@@ -9,9 +9,7 @@
      * supported.
      */
     @SuppressWarnings("unchecked")
-    public Section(final byte[] src, final int offset)
-    throws UnsupportedEncodingException
-    {
+    public Section(final byte[] src, final int offset) throws UnsupportedEncodingException {
         int o1 = offset;
 
         /*
@@ -63,82 +61,59 @@
          *    one looks for property ID 1 and extracts the codepage number. The
          *    seconds pass reads the other properties.
          */
-        properties = new Property[propertyCount];
-
         /* Pass 1: Read the property list. */
         int pass1Offset = o1;
-        final List<PropertyListEntry> propertyList = new ArrayList<PropertyListEntry>(propertyCount);
-        PropertyListEntry ple;
-        for (int i = 0; i < properties.length; i++)
-        {
-            ple = new PropertyListEntry();
-
+        long cpOffset = -1;
+        final TreeBidiMap<Long,Long> offset2Id = new TreeBidiMap<Long,Long>();
+        for (int i = 0; i < propertyCount; i++) {
             /* Read the property ID. */
-            ple.id = (int) LittleEndian.getUInt(src, pass1Offset);
+            long id = LittleEndian.getUInt(src, pass1Offset);
             pass1Offset += LittleEndian.INT_SIZE;
 
             /* Offset from the section's start. */
-            ple.offset = (int) LittleEndian.getUInt(src, pass1Offset);
+            long off = LittleEndian.getUInt(src, pass1Offset);
             pass1Offset += LittleEndian.INT_SIZE;
 
-            /* Add the entry to the property list. */
-            propertyList.add(ple);
-        }
-
-        /* Sort the property list by ascending offsets: */
-        Collections.sort(propertyList);
-
-        /* Calculate the properties' lengths. */
-        for (int i = 0; i < propertyCount - 1; i++)
-        {
-            PropertyListEntry ple1 = propertyList.get(i);
-            PropertyListEntry ple2 = propertyList.get(i + 1);
-            ple1.length = ple2.offset - ple1.offset;
-        }
-        if (propertyCount > 0)
-        {
-            ple = propertyList.get(propertyCount - 1);
-            ple.length = size - ple.offset;
+            offset2Id.put(off, id);
+            
+            if (id == PropertyIDMap.PID_CODEPAGE) {
+                cpOffset = off;
+            }
         }
 
         /* Look for the codepage. */
         int codepage = -1;
-        for (final Iterator<PropertyListEntry> i = propertyList.iterator();
-             codepage == -1 && i.hasNext();)
-        {
-            ple = i.next();
+        if (cpOffset != -1) {
+            /* Read the property's value type. It must be VT_I2. */
+            long o = this.offset + cpOffset;
+            final long type = LittleEndian.getUInt(src, (int)o);
+            o += LittleEndian.INT_SIZE;
 
-            /* Read the codepage if the property ID is 1. */
-            if (ple.id == PropertyIDMap.PID_CODEPAGE)
-            {
-                /* Read the property's value type. It must be
-                 * VT_I2. */
-                int o = (int) (this.offset + ple.offset);
-                final long type = LittleEndian.getUInt(src, o);
-                o += LittleEndian.INT_SIZE;
-
-                if (type != Variant.VT_I2)
-                    throw new HPSFRuntimeException
-                        ("Value type of property ID 1 is not VT_I2 but " +
-                         type + ".");
-
-                /* Read the codepage number. */
-                codepage = LittleEndian.getUShort(src, o);
+            if (type != Variant.VT_I2) {
+                throw new HPSFRuntimeException
+                    ("Value type of property ID 1 is not VT_I2 but " +
+                     type + ".");
             }
+
+            /* Read the codepage number. */
+            codepage = LittleEndian.getUShort(src, (int)o);
         }
+        
 
         /* Pass 2: Read all properties - including the codepage property,
          * if available. */
-        int i1 = 0;
-        for (final Iterator<PropertyListEntry> i = propertyList.iterator(); i.hasNext();)
-        {
-            ple = i.next();
-            Property p = new Property(ple.id, src,
-                    this.offset + ple.offset,
-                    ple.length, codepage);
-            if (p.getID() == PropertyIDMap.PID_CODEPAGE)
-                p = new Property(p.getID(), p.getType(), Integer.valueOf(codepage));
-            properties[i1++] = p;
+        for (Map.Entry<Long,Long> me : offset2Id.entrySet()) {
+            long off = me.getKey();
+            long id = me.getValue();
+            Property p;
+            if (id == PropertyIDMap.PID_CODEPAGE) {
+                p = new Property(PropertyIDMap.PID_CODEPAGE, Variant.VT_I2, codepage);
+            } else {
+                int pLen = propLen(offset2Id, off, size);
+                long o = this.offset + off;
+                p = new Property(id, src, o, pLen, codepage);
+            }
+            properties.put(id, p);
         }
 
         /*

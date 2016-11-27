@@ -1,37 +1,28 @@
     /**
-     * <p>Puts a {@link CustomProperty} that has not yet a valid ID into this
-     * map. The method will allocate a suitable ID for the custom property:</p>
+     * Puts a {@link CustomProperty} that has not yet a valid ID into this
+     * map. The method will allocate a suitable ID for the custom property:
      *
      * <ul>
+     * <li>If there is already a property with the same name, take the ID
+     * of that property.
      *
-     * <li><p>If there is already a property with the same name, take the ID
-     * of that property.</p></li>
-     *
-     * <li><p>Otherwise find the highest ID and use its value plus one.</p></li>
-     *
+     * <li>Otherwise find the highest ID and use its value plus one.
      * </ul>
      *
      * @param customProperty
-     * @return If the was already a property with the same name, the
+     * @return If there was already a property with the same name, the old property
      * @throws ClassCastException
      */
-    private Object put(final CustomProperty customProperty) throws ClassCastException
-    {
+    private Object put(final CustomProperty customProperty) throws ClassCastException {
         final String name = customProperty.getName();
 
         /* Check whether a property with this name is in the map already. */
-        final Long oldId = dictionaryNameToID.get(name);
-        if (oldId != null)
-            customProperty.setID(oldId.longValue());
-        else
-        {
-            long max = 1;
-            for (Long long1 : dictionaryIDToName.keySet()) {
-                final long id = long1.longValue();
-                if (id > max)
-                    max = id;
-            }
-            customProperty.setID(max + 1);
+        final Long oldId = (name == null) ? null :  dictionary.getKey(name);
+        if (oldId != null) {
+            customProperty.setID(oldId);
+        } else {
+            long lastKey = (dictionary.isEmpty()) ? 0 : dictionary.lastKey();
+            customProperty.setID(Math.max(lastKey,PropertyIDMap.PID_MAX) + 1);
         }
         return this.put(name, customProperty);
     }

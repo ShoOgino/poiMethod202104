@@ -1,8 +1,8 @@
     /**
-     * <p>Reads a dictionary.</p>
+     * Reads a dictionary.
      *
      * @param src The byte array containing the bytes making out the dictionary.
-     * @param offset At this offset within <var>src </var> the dictionary
+     * @param offset At this offset within {@code src} the dictionary
      *        starts.
      * @param length The dictionary contains at most this many bytes.
      * @param codepage The codepage of the string values.
@@ -10,15 +10,14 @@
      * @throws UnsupportedEncodingException if the dictionary's codepage is not
      *         (yet) supported.
      */
-    protected Map<?, ?> readDictionary(final byte[] src, final long offset,
-                                 final int length, final int codepage)
-    throws UnsupportedEncodingException
-    {
+    protected Map<?, ?> readDictionary(final byte[] src, final long offset, final int length, final int codepage)
+    throws UnsupportedEncodingException {
         /* Check whether "offset" points into the "src" array". */
-        if (offset < 0 || offset > src.length)
+        if (offset < 0 || offset > src.length) {
             throw new HPSFRuntimeException
                 ("Illegal offset " + offset + " while HPSF stream contains " +
                  length + " bytes.");
+        }
         int o = (int) offset;
 
         /*
@@ -27,13 +26,10 @@
         final long nrEntries = LittleEndian.getUInt(src, o);
         o += LittleEndian.INT_SIZE;
 
-        final Map<Object, Object> m = new LinkedHashMap<Object, Object>(
-                (int) nrEntries, (float) 1.0 );
+        final Map<Object, Object> m = new LinkedHashMap<Object, Object>((int) nrEntries, (float) 1.0 );
 
-        try
-        {
-            for (int i = 0; i < nrEntries; i++)
-            {
+        try {
+            for (int i = 0; i < nrEntries; i++) {
                 /* The key. */
                 final Long id = Long.valueOf(LittleEndian.getUInt(src, o));
                 o += LittleEndian.INT_SIZE;
@@ -48,17 +44,13 @@
 
                 /* Read the string. */
                 final StringBuffer b = new StringBuffer();
-                switch (codepage)
-                {
+                switch (codepage) {
                     case -1:
-                    {
                         /* Without a codepage the length is equal to the number of
                          * bytes. */
                         b.append(new String(src, o, (int) sLength, Charset.forName("ASCII")));
                         break;
-                    }
                     case CodePageUtil.CP_UNICODE:
-                    {
                         /* The length is the number of characters, i.e. the number
                          * of bytes is twice the number of the characters. */
                         final int nrBytes = (int) (sLength * 2);
@@ -68,36 +60,30 @@
                             h[i2] = src[o + i2 + 1];
                             h[i2 + 1] = src[o + i2];
                         }
-                        b.append(new String(h, 0, nrBytes,
-                                CodePageUtil.codepageToEncoding(codepage)));
+                        b.append(new String(h, 0, nrBytes, CodePageUtil.codepageToEncoding(codepage)));
                         break;
-                    }
                     default:
-                    {
                         /* For encodings other than Unicode the length is the number
                          * of bytes. */
-                        b.append(new String(src, o, (int) sLength,
-                                 VariantSupport.codepageToEncoding(codepage)));
+                        b.append(new String(src, o, (int) sLength, CodePageUtil.codepageToEncoding(codepage)));
                         break;
-                    }
                 }
 
                 /* Strip 0x00 characters from the end of the string: */
-                while (b.length() > 0 && b.charAt(b.length() - 1) == 0x00)
+                while (b.length() > 0 && b.charAt(b.length() - 1) == 0x00) {
                     b.setLength(b.length() - 1);
-                if (codepage == CodePageUtil.CP_UNICODE)
-                {
-                    if (sLength % 2 == 1)
-                        sLength++;
-                    o += (sLength + sLength);
                 }
-                else
+                if (codepage == CodePageUtil.CP_UNICODE) {
+                    if (sLength % 2 == 1) {
+                        sLength++;
+                    }
+                    o += (sLength + sLength);
+                } else {
                     o += sLength;
+                }
                 m.put(id, b.toString());
             }
-        }
-        catch (RuntimeException ex)
-        {
+        } catch (RuntimeException ex) {
             final POILogger l = POILogFactory.getLogger(getClass());
             l.log(POILogger.WARN,
                     "The property set's dictionary contains bogus data. "
