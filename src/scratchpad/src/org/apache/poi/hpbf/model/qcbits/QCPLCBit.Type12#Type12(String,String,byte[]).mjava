@@ -1,37 +1,38 @@
 		private Type12(String thingType, String bitType, byte[] data) {
 			super(thingType, bitType, data);
 
+            int cntPlcs = getNumberOfPLCs();
+			
 			// How many hyperlinks do we really have?
 			// (zero hyperlinks gets numberOfPLCs=1)
-			if(data.length == 0x34) {
-				hyperlinks = new String[0];
-			} else {
-				hyperlinks = new String[numberOfPLCs];
-			}
+            hyperlinks = new String[data.length == 0x34 ? 0 : cntPlcs];
 
 			// We have 4 bytes, then the start point of each
 			//  hyperlink, then the end point of the text.
-			preData = new int[1+numberOfPLCs+1];
+			int preData[] = new int[1+cntPlcs+1];
 			for(int i=0; i<preData.length; i++) {
 				preData[i] = (int)LittleEndian.getUInt(data, 8+(i*4));
 			}
+			setPreData(preData);
 
 			// Then we have a whole bunch of stuff, which grows
 			//  with the number of hyperlinks
 			// For now, we think these are shorts
-			int at = 8+4+(numberOfPLCs*4)+4;
+			int at = 8+4+(cntPlcs*4)+4;
 			int until = 0x34;
-			if(numberOfPLCs == 1 && hyperlinks.length == 1) {
+			if(cntPlcs == 1 && hyperlinks.length == 1) {
 				until = oneStartsAt;
-			} else if(numberOfPLCs >= 2) {
-				until = twoStartsAt + (numberOfPLCs-2)*threePlusIncrement;
+			} else if(cntPlcs >= 2) {
+				until = twoStartsAt + (cntPlcs-2)*threePlusIncrement;
 			}
 
-			plcValA = new long[(until-at)/2];
-			plcValB = new long[0];
+			long plcValA[] = new long[(until-at)/2];
+			long plcValB[] = new long[0];
 			for(int i=0; i<plcValA.length; i++) {
 				plcValA[i] = LittleEndian.getUShort(data, at+(i*2));
 			}
+            setPlcValA(plcValA);
+            setPlcValB(plcValB);
 
 			// Finally, we have a series of lengths + hyperlinks
 			at = until;
