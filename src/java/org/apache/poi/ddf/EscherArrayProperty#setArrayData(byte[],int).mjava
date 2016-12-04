@@ -1,6 +1,6 @@
     /**
      * We have this method because the way in which arrays in escher works
-     * is screwed for seemly arbitary reasons.  While most properties are
+     * is screwed for seemly arbitrary reasons.  While most properties are
      * fairly consistent and have a predictable array size, escher arrays
      * have special cases.
      *
@@ -10,20 +10,24 @@
      */
     public int setArrayData(byte[] data, int offset) {
         if (emptyComplexPart){
-            _complexData = new byte[0];
-        } else {
-            short numElements = LittleEndian.getShort(data, offset);
-            // LittleEndian.getShort(data, offset + 2); // numReserved
-            short sizeOfElements = LittleEndian.getShort(data, offset + 4);
-
-            int arraySize = getActualSizeOfElements(sizeOfElements) * numElements;
-            if (arraySize == _complexData.length) {
-                // The stored data size in the simple block excludes the header size
-                _complexData = new byte[arraySize + 6];
-                sizeIncludesHeaderSize = false;
-            }
-            System.arraycopy(data, offset, _complexData, 0, _complexData.length );
+            resizeComplexData(0, 0);
+            return 0;
         }
-        return _complexData.length;
+        
+        short numElements = LittleEndian.getShort(data, offset);
+        // LittleEndian.getShort(data, offset + 2); // numReserved
+        short sizeOfElements = LittleEndian.getShort(data, offset + 4);
+
+        // TODO: this part is strange - it doesn't make sense to compare
+        // the size of the existing data when setting a new data array ...
+        int arraySize = getArraySizeInBytes(numElements, sizeOfElements);
+        if (arraySize - FIXED_SIZE == getComplexData().length) {
+            // The stored data size in the simple block excludes the header size
+            sizeIncludesHeaderSize = false;
+        }
+        int cpySize = Math.min(arraySize, data.length-offset);
+        resizeComplexData(cpySize, 0);
+        System.arraycopy(data, offset, getComplexData(), 0, cpySize);
+        return cpySize;
     }
 
