@@ -1,117 +1,114 @@
-   protected void readProperties(InputStream value) throws IOException {
-      boolean going = true;
-      while (going) {
-         try {
-            // Read in the header
-            int typeID = LittleEndian.readUShort(value);
-            int id     = LittleEndian.readUShort(value);
-            long flags = LittleEndian.readUInt(value);
-            
-            // Turn the Type and ID into helper objects
-            MAPIType type = Types.getById(typeID);
-            MAPIProperty prop = MAPIProperty.get(id);
-            
-            // Wrap properties we don't know about as custom ones
-            if (prop == MAPIProperty.UNKNOWN) {
-                prop = MAPIProperty.createCustom(id, type, "Unknown " + id);
-            }
-            if (type == null) {
-                logger.log(POILogger.WARN, "Invalid type found, expected ", prop.usualType, 
-                        " but got ", typeID, " for property ", prop);
-                going = false;
-                break;
-            }
-            
-            // Sanity check the property's type against the value's type
-            if (prop.usualType != type) {
-                // Is it an allowed substitution?
-                if (type == Types.ASCII_STRING && prop.usualType == Types.UNICODE_STRING ||
-                    type == Types.UNICODE_STRING && prop.usualType == Types.ASCII_STRING) {
-                    // It's fine to go with the specified instead of the normal
-                } else if (prop.usualType == Types.UNKNOWN) {
-                    // We don't know what this property normally is, but it has come
-                    // through with a valid type, so use that
-                    logger.log(POILogger.INFO, "Property definition for ", prop, 
-                            " is missing a type definition, found a value with type ", type);
-                } else {
-                   // Oh dear, something has gone wrong...
-                   logger.log(POILogger.WARN, "Type mismatch, expected ", prop.usualType, 
-                              " but got ", type, " for property ", prop);
-                   going = false;
-                   break;
-                }
-            }
-            
-            // TODO Detect if it is multi-valued, since if it is
-            //  then even fixed-length strings store their multiple
-            //  values in another chunk (much as variable length ones)
-            
-            // Work out how long the "data" is
-            // This might be the actual data, or just a pointer
-            //  to another chunk which holds the data itself
-            boolean isPointer = false;
-            int length = type.getLength();
-            if (! type.isFixedLength()) {
-               isPointer = true;
-               length = 8;
-            }
-            
-            // Grab the data block
-            byte[] data = new byte[length];
-            IOUtils.readFully(value, data);
-            
-            // Skip over any padding
-            if (length < 8) {
-                byte[] padding = new byte[8-length];
-                IOUtils.readFully(value, padding);
-            }
-            
-            // Wrap and store
-            PropertyValue propVal = null;
-            if (isPointer) {
-                // We'll match up the chunk later
-                propVal = new ChunkBasedPropertyValue(prop, flags, data);
-            }
-            else if (type == Types.NULL) {
-                propVal = new NullPropertyValue(prop, flags, data);
-            }
-            else if (type == Types.BOOLEAN) {
-                propVal = new BooleanPropertyValue(prop, flags, data);
-            }
-            else if (type == Types.SHORT) {
-                propVal = new ShortPropertyValue(prop, flags, data);
-            }
-            else if (type == Types.LONG) {
-                propVal = new LongPropertyValue(prop, flags, data);
-            }
-            else if (type == Types.LONG_LONG) {
-                propVal = new LongLongPropertyValue(prop, flags, data);
-            }
-            else if (type == Types.FLOAT) {
-                propVal = new FloatPropertyValue(prop, flags, data);
-            }
-            else if (type == Types.DOUBLE) {
-                propVal = new DoublePropertyValue(prop, flags, data);
-            }
-            else if (type == Types.CURRENCY) {
-                propVal = new CurrencyPropertyValue(prop, flags, data);
-            }
-            else if (type == Types.TIME) {
-                propVal = new TimePropertyValue(prop, flags, data);
-            }
-            // TODO Add in the rest of the types
-            else {
-                propVal = new PropertyValue(prop, flags, data);
-            }
+    protected void readProperties(InputStream value) throws IOException {
+        boolean going = true;
+        while (going) {
+            try {
+                // Read in the header
+                int typeID = LittleEndian.readUShort(value);
+                int id = LittleEndian.readUShort(value);
+                long flags = LittleEndian.readUInt(value);
 
-            if (properties.get(prop) != null) {
-                logger.log(POILogger.WARN, "Duplicate values found for " + prop);
+                // Turn the Type and ID into helper objects
+                MAPIType type = Types.getById(typeID);
+                MAPIProperty prop = MAPIProperty.get(id);
+
+                // Wrap properties we don't know about as custom ones
+                if (prop == MAPIProperty.UNKNOWN) {
+                    prop = MAPIProperty.createCustom(id, type, "Unknown " + id);
+                }
+                if (type == null) {
+                    logger.log(POILogger.WARN, "Invalid type found, expected ",
+                            prop.usualType, " but got ", typeID,
+                            " for property ", prop);
+                    going = false;
+                    break;
+                }
+
+                // Sanity check the property's type against the value's type
+                if (prop.usualType != type) {
+                    // Is it an allowed substitution?
+                    if (type == Types.ASCII_STRING
+                        && prop.usualType == Types.UNICODE_STRING
+                        || type == Types.UNICODE_STRING
+                        && prop.usualType == Types.ASCII_STRING) {
+                        // It's fine to go with the specified instead of the
+                        // normal
+                    } else if (prop.usualType == Types.UNKNOWN) {
+                        // We don't know what this property normally is, but it
+                        // has come
+                        // through with a valid type, so use that
+                        logger.log(POILogger.INFO, "Property definition for ", prop,
+                            " is missing a type definition, found a value with type ", type);
+                    } else {
+                        // Oh dear, something has gone wrong...
+                        logger.log(POILogger.WARN, "Type mismatch, expected ",
+                            prop.usualType, " but got ", type, " for property ", prop);
+                        going = false;
+                        break;
+                    }
+                }
+
+                // TODO Detect if it is multi-valued, since if it is
+                // then even fixed-length strings store their multiple
+                // values in another chunk (much as variable length ones)
+
+                // Work out how long the "data" is
+                // This might be the actual data, or just a pointer
+                // to another chunk which holds the data itself
+                boolean isPointer = false;
+                int length = type.getLength();
+                if (!type.isFixedLength()) {
+                    isPointer = true;
+                    length = 8;
+                }
+
+                // Grab the data block
+                byte[] data = new byte[length];
+                IOUtils.readFully(value, data);
+
+                // Skip over any padding
+                if (length < 8) {
+                    byte[] padding = new byte[8 - length];
+                    IOUtils.readFully(value, padding);
+                }
+
+                // Wrap and store
+                PropertyValue propVal = null;
+                if (isPointer) {
+                    // We'll match up the chunk later
+                    propVal = new ChunkBasedPropertyValue(prop, flags, data);
+                } else if (type == Types.NULL) {
+                    propVal = new NullPropertyValue(prop, flags, data);
+                } else if (type == Types.BOOLEAN) {
+                    propVal = new BooleanPropertyValue(prop, flags, data);
+                } else if (type == Types.SHORT) {
+                    propVal = new ShortPropertyValue(prop, flags, data);
+                } else if (type == Types.LONG) {
+                    propVal = new LongPropertyValue(prop, flags, data);
+                } else if (type == Types.LONG_LONG) {
+                    propVal = new LongLongPropertyValue(prop, flags, data);
+                } else if (type == Types.FLOAT) {
+                    propVal = new FloatPropertyValue(prop, flags, data);
+                } else if (type == Types.DOUBLE) {
+                    propVal = new DoublePropertyValue(prop, flags, data);
+                } else if (type == Types.CURRENCY) {
+                    propVal = new CurrencyPropertyValue(prop, flags, data);
+                } else if (type == Types.TIME) {
+                    propVal = new TimePropertyValue(prop, flags, data);
+                }
+                // TODO Add in the rest of the types
+                else {
+                    propVal = new PropertyValue(prop, flags, data);
+                }
+
+                if (properties.get(prop) != null) {
+                    logger.log(POILogger.WARN,
+                            "Duplicate values found for " + prop);
+                }
+                properties.put(prop, propVal);
+            } catch (BufferUnderrunException e) {
+                // Invalid property, ended short
+                going = false;
             }
-            properties.put(prop, propVal);
-         } catch (BufferUnderrunException e) {
-            // Invalid property, ended short
-            going = false;
-         }
-      }
-   }
+        }
+    }
 
