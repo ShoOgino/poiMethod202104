@@ -1,38 +1,33 @@
-    public TextPieceTable( byte[] documentStream, byte[] tableStream,
-            int offset, int size, int fcMin )
-    {
+    public TextPieceTable(byte[] documentStream, byte[] tableStream,
+                          int offset, int size, int fcMin) {
         // get our plex of PieceDescriptors
-        PlexOfCps pieceTable = new PlexOfCps( tableStream, offset, size,
-                PieceDescriptor.getSizeInBytes() );
+        PlexOfCps pieceTable = new PlexOfCps(tableStream, offset, size,
+                PieceDescriptor.getSizeInBytes());
 
         int length = pieceTable.length();
         PieceDescriptor[] pieces = new PieceDescriptor[length];
 
         // iterate through piece descriptors raw bytes and create
         // PieceDescriptor objects
-        for ( int x = 0; x < length; x++ )
-        {
-            GenericPropertyNode node = pieceTable.getProperty( x );
-            pieces[x] = new PieceDescriptor( node.getBytes(), 0 );
+        for (int x = 0; x < length; x++) {
+            GenericPropertyNode node = pieceTable.getProperty(x);
+            pieces[x] = new PieceDescriptor(node.getBytes(), 0);
         }
 
         // Figure out the cp of the earliest text piece
         // Note that text pieces don't have to be stored in order!
         _cpMin = pieces[0].getFilePosition() - fcMin;
-        for ( int x = 0; x < pieces.length; x++ )
-        {
-            int start = pieces[x].getFilePosition() - fcMin;
-            if ( start < _cpMin )
-            {
+        for (PieceDescriptor piece : pieces) {
+            int start = piece.getFilePosition() - fcMin;
+            if (start < _cpMin) {
                 _cpMin = start;
             }
         }
 
         // using the PieceDescriptors, build our list of TextPieces.
-        for ( int x = 0; x < pieces.length; x++ )
-        {
+        for (int x = 0; x < pieces.length; x++) {
             int start = pieces[x].getFilePosition();
-            GenericPropertyNode node = pieceTable.getProperty( x );
+            GenericPropertyNode node = pieceTable.getProperty(x);
 
             // Grab the start and end, which are in characters
             int nodeStartChars = node.getStart();
@@ -41,30 +36,29 @@
             // What's the relationship between bytes and characters?
             boolean unicode = pieces[x].isUnicode();
             int multiple = 1;
-            if ( unicode )
-            {
+            if (unicode) {
                 multiple = 2;
             }
 
             // Figure out the length, in bytes and chars
-            int textSizeChars = ( nodeEndChars - nodeStartChars );
+            int textSizeChars = (nodeEndChars - nodeStartChars);
             int textSizeBytes = textSizeChars * multiple;
 
             // Grab the data that makes up the piece
             byte[] buf = new byte[textSizeBytes];
-            System.arraycopy( documentStream, start, buf, 0, textSizeBytes );
+            System.arraycopy(documentStream, start, buf, 0, textSizeBytes);
 
             // And now build the piece
-            final TextPiece newTextPiece = new TextPiece( nodeStartChars, nodeEndChars, buf,
-                    pieces[x] );
+            final TextPiece newTextPiece = new TextPiece(nodeStartChars, nodeEndChars, buf,
+                    pieces[x]);
 
-            _textPieces.add( newTextPiece );
+            _textPieces.add(newTextPiece);
         }
 
         // In the interest of our sanity, now sort the text pieces
         // into order, if they're not already
-        Collections.sort( _textPieces );
-        _textPiecesFCOrder = new ArrayList<TextPiece>( _textPieces );
-        Collections.sort( _textPiecesFCOrder, new FCComparator() );
+        Collections.sort(_textPieces);
+        _textPiecesFCOrder = new ArrayList<TextPiece>(_textPieces);
+        Collections.sort(_textPiecesFCOrder, new FCComparator());
     }
 
