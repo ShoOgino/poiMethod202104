@@ -1,37 +1,35 @@
-   public static void loadEmbedded(XSSFWorkbook workbook) throws Exception {
+   public static void loadEmbedded(XSSFWorkbook workbook) throws IOException, InvalidFormatException, OpenXML4JException, XmlException {
        for (PackagePart pPart : workbook.getAllEmbedds()) {
            String contentType = pPart.getContentType();
-           // Excel Workbook - either binary or OpenXML
            if (contentType.equals("application/vnd.ms-excel")) {
+               // Excel Workbook - either binary or OpenXML
                HSSFWorkbook embeddedWorkbook = new HSSFWorkbook(pPart.getInputStream());
-           }
-           // Excel Workbook - OpenXML file format
-           else if (contentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
-               OPCPackage docPackage = OPCPackage.open(pPart.getInputStream());
-               XSSFWorkbook embeddedWorkbook = new XSSFWorkbook(docPackage);
-           }
-           // Word Document - binary (OLE2CDF) file format
-           else if (contentType.equals("application/msword")) {
+               embeddedWorkbook.close();
+           } else if (contentType.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
+               // Excel Workbook - OpenXML file format
+               XSSFWorkbook embeddedWorkbook = new XSSFWorkbook(pPart.getInputStream());
+               embeddedWorkbook.close();
+           } else if (contentType.equals("application/msword")) {
+               // Word Document - binary (OLE2CDF) file format
                HWPFDocument document = new HWPFDocument(pPart.getInputStream());
-           }
-           // Word Document - OpenXML file format
-           else if (contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) {
-               OPCPackage docPackage = OPCPackage.open(pPart.getInputStream());
-               XWPFDocument document = new XWPFDocument(docPackage);
-           }
-           // PowerPoint Document - binary file format
-           else if (contentType.equals("application/vnd.ms-powerpoint")) {
+               document.close();
+           } else if (contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) {
+               // Word Document - OpenXML file format
+               XWPFDocument document = new XWPFDocument(pPart.getInputStream());
+               document.close();
+           } else if (contentType.equals("application/vnd.ms-powerpoint")) {
+               // PowerPoint Document - binary file format
                HSLFSlideShow slideShow = new HSLFSlideShow(pPart.getInputStream());
-           }
-           // PowerPoint Document - OpenXML file format
-           else if (contentType.equals("application/vnd.openxmlformats-officedocument.presentationml.presentation")) {
-               OPCPackage docPackage = OPCPackage.open(pPart.getInputStream());
-               XSLFSlideShow slideShow = new XSLFSlideShow(docPackage);
-           }
-           // Any other type of embedded object.
-           else {
+               slideShow.close();
+           } else if (contentType.equals("application/vnd.openxmlformats-officedocument.presentationml.presentation")) {
+               // PowerPoint Document - OpenXML file format
+               XMLSlideShow slideShow = new XMLSlideShow(pPart.getInputStream());
+               slideShow.close();
+           } else {
+               // Any other type of embedded object.
                System.out.println("Unknown Embedded Document: " + contentType);
                InputStream inputStream = pPart.getInputStream();
+               inputStream.close();
            }
        }
    }
