@@ -1,49 +1,49 @@
-	/**
-	 * Test adding a slide to an empty slideshow
-	 */
-	public void testAddSlideToEmpty() throws Exception {
-		// Doesn't have any slides
-		assertEquals(0, ss_empty.getSlides().size());
+    /**
+     * Test adding a slide to an empty slideshow
+     */
+    @Test
+    public void testAddSlideToEmpty() throws IOException {
+        // Doesn't have any slides
+        assertEquals(0, ss_empty.getSlides().size());
 
-		// Should only have a master SLWT
-		assertEquals(1, ss_empty.getDocumentRecord().getSlideListWithTexts().length);
+        // Should only have a master SLWT
+        assertEquals(1,
+                ss_empty.getDocumentRecord().getSlideListWithTexts().length);
 
-        //grab UserEditAtom
+        // grab UserEditAtom
         UserEditAtom usredit = null;
-        Record[] _records = hss_empty.getRecords();
+        Record[] _records = ss_empty.getSlideShowImpl().getRecords();
         for (Record record : _records) {
-            if(record.getRecordType() == RecordTypes.UserEditAtom.typeID) {
-                usredit = (UserEditAtom)record;
+            if (record.getRecordType() == RecordTypes.UserEditAtom.typeID) {
+                usredit = (UserEditAtom) record;
             }
-       }
-       assertNotNull(usredit);
+        }
+        assertNotNull(usredit);
 
-		// Add one
-		HSLFSlide slide = ss_empty.createSlide();
-		assertEquals(1, ss_empty.getSlides().size());
-		assertEquals(256, slide._getSheetNumber());
-		assertEquals(3, slide._getSheetRefId());
-		assertEquals(1, slide.getSlideNumber());
+        // Add one
+        HSLFSlide slide = ss_empty.createSlide();
+        assertEquals(1, ss_empty.getSlides().size());
+        assertEquals(256, slide._getSheetNumber());
+        assertEquals(3, slide._getSheetRefId());
+        assertEquals(1, slide.getSlideNumber());
         assertEquals(usredit.getMaxPersistWritten(), slide._getSheetRefId());
 
-		// Write out, and read back in
-		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		hss_empty.write(baos);
-		ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+        // Write out, and read back in
+        HSLFSlideShow ss_read = HSLFTestDataSamples
+                .writeOutAndReadBack(ss_empty);
 
-		HSLFSlideShowImpl hss_read = new HSLFSlideShowImpl(bais);
-		HSLFSlideShow ss_read = new HSLFSlideShow(hss_read);
+        // Check it now has a slide
+        assertEquals(1, ss_read.getSlides().size());
 
-		// Check it now has a slide
-		assertEquals(1, ss_read.getSlides().size());
+        // Check it now has two SLWTs
+        assertEquals(2,
+                ss_empty.getDocumentRecord().getSlideListWithTexts().length);
 
-		// Check it now has two SLWTs
-		assertEquals(2, ss_empty.getDocumentRecord().getSlideListWithTexts().length);
-
-		// And check it's as expected
-		slide = ss_read.getSlides().get(0);
-		assertEquals(256, slide._getSheetNumber());
-		assertEquals(3, slide._getSheetRefId());
-		assertEquals(1, slide.getSlideNumber());
-	}
+        // And check it's as expected
+        slide = ss_read.getSlides().get(0);
+        assertEquals(256, slide._getSheetNumber());
+        assertEquals(3, slide._getSheetRefId());
+        assertEquals(1, slide.getSlideNumber());
+        ss_read.close();
+    }
 
