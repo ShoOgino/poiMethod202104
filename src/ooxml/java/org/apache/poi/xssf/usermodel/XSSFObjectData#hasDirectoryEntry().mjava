@@ -1,0 +1,24 @@
+    @Override
+    public boolean hasDirectoryEntry() {
+        InputStream is = null;
+        try {
+            is = getObjectPart().getInputStream();
+
+            // If clearly doesn't do mark/reset, wrap up
+            if (! is.markSupported()) {
+                is = new PushbackInputStream(is, 8);
+            }
+
+            // Ensure that there is at least some data there
+            byte[] header8 = IOUtils.peekFirst8Bytes(is);
+
+            // Try to create
+            return NPOIFSFileSystem.hasPOIFSHeader(header8);
+        } catch (IOException e) {
+            LOG.log(POILogger.WARN, "can't determine if directory entry exists", e);
+            return false;
+        } finally {
+            IOUtils.closeQuietly(is);
+        }
+    }
+

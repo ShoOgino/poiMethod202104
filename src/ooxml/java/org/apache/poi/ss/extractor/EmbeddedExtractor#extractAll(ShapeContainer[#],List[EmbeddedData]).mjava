@@ -1,0 +1,46 @@
+    protected void extractAll(ShapeContainer<?> parent, List<EmbeddedData> embeddings) throws IOException {
+        for (Shape shape : parent) {
+            EmbeddedData data = null;
+            if (shape instanceof ObjectData) {
+                ObjectData od = (ObjectData)shape;
+                try {
+                    if (od.hasDirectoryEntry()) {
+                        data = extractOne((DirectoryNode)od.getDirectory());
+                    } else {
+                        data = new EmbeddedData(od.getFileName(), od.getObjectData(), "binary/octet-stream");
+                    }
+                } catch (Exception e) {
+                    LOG.log(POILogger.WARN, "Entry not found / readable - ignoring OLE embedding", e);
+                }
+            } else if (shape instanceof Picture) {
+                data = extractOne((Picture)shape);
+            } else if (shape instanceof ShapeContainer) {
+                extractAll((ShapeContainer<?>)shape, embeddings);
+            }
+            
+            if (data == null) {
+                continue;
+            }
+
+            data.setShape(shape);
+            String filename = data.getFilename();
+            String extension = (filename == null || filename.indexOf('.') == -1) ? ".bin" : filename.substring(filename.indexOf('.'));
+            
+            // try to find an alternative name
+            if (filename == null || "".equals(filename) || filename.startsWith("MBD") || filename.startsWith("Root Entry")) {
+                filename = shape.getShapeName();
+                if (filename != null) {
+                    filename += extension;
+                }
+            }
+            // default to dummy name
+            if (filename == null || "".equals(filename)) {
+                filename = "picture_"+embeddings.size()+extension;
+            }
+            filename = filename.trim();
+            data.setFilename(filename);
+            
+            embeddings.add(data);
+        }
+    }
+
