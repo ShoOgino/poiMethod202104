@@ -8,42 +8,38 @@
         // Flush the package
         flush();
 
+		if (this.originalPackagePath == null || "".equals(this.originalPackagePath)) {
+		    return;
+		}
+
 		// Save the content
-		if (this.originalPackagePath != null
-				&& !"".equals(this.originalPackagePath)) {
-			File targetFile = new File(this.originalPackagePath);
-			if (targetFile.exists()) {
-				// Case of a package previously open
+		File targetFile = new File(this.originalPackagePath);
+		if (!targetFile.exists()) {
+            throw new InvalidOperationException(
+                "Can't close a package not previously open with the open() method !");
+        }
+		    
+		// Case of a package previously open
+		String tempFileName = generateTempFileName(FileHelper.getDirectory(targetFile)); 
+		File tempFile = TempFile.createTempFile(tempFileName, ".tmp");
 
-				File tempFile = TempFile.createTempFile(
-						generateTempFileName(FileHelper
-								.getDirectory(targetFile)), ".tmp");
-
-				// Save the final package to a temporary file
-				try {
-					save(tempFile);
-				} finally {
-					try {
-						// Close the current zip file, so we can
-						//  overwrite it on all platforms
-						this.zipArchive.close();
-						// Copy the new file over the old one
-						FileHelper.copyFile(tempFile, targetFile);
-					} finally {
-						// Either the save operation succeed or not, we delete the
-						// temporary file
-						if (!tempFile.delete()) {
-							logger
-									.log(POILogger.WARN,"The temporary file: '"
-											+ targetFile.getAbsolutePath()
-											+ "' cannot be deleted ! Make sure that no other application use it.");
-						}
-					}
+		// Save the final package to a temporary file
+		try {
+			save(tempFile);
+		} finally {
+            // Close the current zip file, so we can overwrite it on all platforms
+            IOUtils.closeQuietly(this.zipArchive);
+			try {
+				// Copy the new file over the old one
+				FileHelper.copyFile(tempFile, targetFile);
+			} finally {
+				// Either the save operation succeed or not, we delete the temporary file
+				if (!tempFile.delete()) {
+					LOG.log(POILogger.WARN, "The temporary file: '"
+					+ targetFile.getAbsolutePath()
+					+ "' cannot be deleted ! Make sure that no other application use it.");
 				}
-			} else {
-				throw new InvalidOperationException(
-						"Can't close a package not previously open with the open() method !");
 			}
-		} 
+		}
 	}
 

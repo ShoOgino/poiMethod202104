@@ -14,16 +14,17 @@
 
 		final ZipOutputStream zos;
 		try {
-			if (!(outputStream instanceof ZipOutputStream))
-				zos = new ZipOutputStream(outputStream);
-			else
-				zos = (ZipOutputStream) outputStream;
+			if (!(outputStream instanceof ZipOutputStream)) {
+                zos = new ZipOutputStream(outputStream);
+            } else {
+                zos = (ZipOutputStream) outputStream;
+            }
 
 			// If the core properties part does not exist in the part list,
 			// we save it as well
 			if (this.getPartsByRelationshipType(PackageRelationshipTypes.CORE_PROPERTIES).size() == 0 &&
                 this.getPartsByRelationshipType(PackageRelationshipTypes.CORE_PROPERTIES_ECMA376).size() == 0    ) {
-				logger.log(POILogger.DEBUG,"Save core properties part");
+				LOG.log(POILogger.DEBUG,"Save core properties part");
 				
 				// Ensure that core properties are added if missing
 				getPackageProperties();
@@ -43,42 +44,36 @@
 			}
 
 			// Save package relationships part.
-			logger.log(POILogger.DEBUG,"Save package relationships");
+			LOG.log(POILogger.DEBUG,"Save package relationships");
 			ZipPartMarshaller.marshallRelationshipPart(this.getRelationships(),
 					PackagingURIHelper.PACKAGE_RELATIONSHIPS_ROOT_PART_NAME,
 					zos);
 
 			// Save content type part.
-			logger.log(POILogger.DEBUG,"Save content types part");
+			LOG.log(POILogger.DEBUG,"Save content types part");
 			this.contentTypeManager.save(zos);
 
 			// Save parts.
 			for (PackagePart part : getParts()) {
 				// If the part is a relationship part, we don't save it, it's
 				// the source part that will do the job.
-				if (part.isRelationshipPart())
-					continue;
+				if (part.isRelationshipPart()) {
+                    continue;
+                }
 
-				logger.log(POILogger.DEBUG,"Save part '"
-						+ ZipHelper.getZipItemNameFromOPCName(part
-								.getPartName().getName()) + "'");
-				PartMarshaller marshaller = partMarshallers
-						.get(part._contentType);
+				final PackagePartName ppn = part.getPartName();
+				LOG.log(POILogger.DEBUG,"Save part '" + ZipHelper.getZipItemNameFromOPCName(ppn.getName()) + "'");
+				PartMarshaller marshaller = partMarshallers.get(part._contentType);
+				String errMsg = "The part " + ppn.getURI() + " failed to be saved in the stream with marshaller ";
+
 				if (marshaller != null) {
 					if (!marshaller.marshall(part, zos)) {
-						throw new OpenXML4JException(
-								"The part "
-										+ part.getPartName().getURI()
-										+ " fail to be saved in the stream with marshaller "
-										+ marshaller);
+						throw new OpenXML4JException(errMsg + marshaller);
 					}
 				} else {
-					if (!defaultPartMarshaller.marshall(part, zos))
-						throw new OpenXML4JException(
-								"The part "
-										+ part.getPartName().getURI()
-										+ " fail to be saved in the stream with marshaller "
-										+ defaultPartMarshaller);
+					if (!defaultPartMarshaller.marshall(part, zos)) {
+                        throw new OpenXML4JException(errMsg + defaultPartMarshaller);
+                    }
 				}
 			}
 			zos.close();
@@ -87,8 +82,8 @@
 			throw e;
 		} catch (Exception e) {
             throw new OpenXML4JRuntimeException(
-                    "Fail to save: an error occurs while saving the package : "
-							+ e.getMessage(), e);
+                "Fail to save: an error occurs while saving the package : "
+				+ e.getMessage(), e);
 		}
     }
 
