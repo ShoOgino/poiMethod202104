@@ -2,12 +2,11 @@
      * Decrypt the Document-/SummaryInformation and other optionally streams.
      * Opposed to other crypto modes, cryptoapi is record based and can't be used
      * to stream-decrypt a whole file
-     * 
+     *
      * @see <a href="http://msdn.microsoft.com/en-us/library/dd943321(v=office.12).aspx">2.3.5.4 RC4 CryptoAPI Encrypted Summary Stream</a>
      */
     public POIFSFileSystem getSummaryEntries(DirectoryNode root, String encryptedStream)
     throws IOException, GeneralSecurityException {
-        POIFSFileSystem fsOut = new POIFSFileSystem();
         // HSLF: encryptedStream
         // HSSF: encryption
         DocumentNode es = (DocumentNode) root.getEntry(encryptedStream);
@@ -17,6 +16,7 @@
         dis.close();
         CryptoAPIDocumentInputStream sbis = new CryptoAPIDocumentInputStream(this, bos.toByteArray());
         LittleEndianInputStream leis = new LittleEndianInputStream(sbis);
+        POIFSFileSystem fsOut = null;
         try {
             int streamDescriptorArrayOffset = (int) leis.readUInt();
             /* int streamDescriptorArraySize = (int) */ leis.readUInt();
@@ -41,7 +41,8 @@
                 leis.readShort();
                 assert(entry.streamName.length() == nameSize);
             }
-    
+
+            fsOut = new POIFSFileSystem();
             for (StreamDescriptorEntry entry : entries) {
                 sbis.seek(entry.streamOffset);
                 sbis.setBlock(entry.block);
@@ -49,11 +50,19 @@
                 fsOut.createDocument(is, entry.streamName);
                 is.close();
             }
+        } catch (Exception e) {
+            IOUtils.closeQuietly(fsOut);
+            if (e instanceof GeneralSecurityException) {
+                throw (GeneralSecurityException)e;
+            } else if (e instanceof IOException) {
+                throw (IOException)e;
+            } else {
+                throw new IOException("summary entries can't be read", e);
+            }
         } finally {
             IOUtils.closeQuietly(leis);
             IOUtils.closeQuietly(sbis);
         }
-        sbis = null;
         return fsOut;
     }
 
