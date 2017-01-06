@@ -28,8 +28,7 @@
                 return create(fs, password);
             } catch (RuntimeException e) {
                 // ensure that the file-handle is closed again
-                fs.close();
-                
+                IOUtils.closeQuietly(fs);
                 throw e;
             }
         } catch(OfficeXmlFileException e) {
@@ -37,20 +36,18 @@
             OPCPackage pkg = OPCPackage.open(file, readOnly ? PackageAccess.READ : PackageAccess.READ_WRITE);
             try {
                 return new XSSFWorkbook(pkg);
-            } catch (IOException ioe) {
-                // ensure that file handles are closed (use revert() to not re-write the file)
+            } catch (Exception ioe) {
+                // ensure that file handles are closed - use revert() to not re-write the file
                 pkg.revert();
-                //pkg.close();
+                // do not pkg.close();
 
-                // rethrow exception
-                throw ioe;
-            } catch (RuntimeException ioe) {
-                // ensure that file handles are closed (use revert() to not re-write the file)
-                pkg.revert();
-                //pkg.close();
-
-                // rethrow exception
-                throw ioe;
+                if (ioe instanceof IOException) {
+                    throw (IOException)ioe;
+                } else if (ioe instanceof RuntimeException) {
+                    throw (RuntimeException)ioe;
+                } else {
+                    throw new IOException(ioe);
+                }
             }
         }
     }
