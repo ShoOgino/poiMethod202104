@@ -24,24 +24,20 @@
      *                             file system.
      */
     public void checkUpdatedDoc() throws OpenXML4JException, IOException {
-        Workbook workbook = null;
-        Sheet sheet = null;
-        Row row = null;
-        Cell cell = null;
-        PackagePart pPart = null;
-        Iterator<PackagePart> pIter = null;
-        List<PackagePart> embeddedDocs = this.doc.getAllEmbedds();
-        if (embeddedDocs != null && !embeddedDocs.isEmpty()) {
-            pIter = embeddedDocs.iterator();
-            while (pIter.hasNext()) {
-                pPart = pIter.next();
-                if (pPart.getPartName().getExtension().equals(BINARY_EXTENSION) ||
-                        pPart.getPartName().getExtension().equals(OPENXML_EXTENSION)) {
-                    workbook = WorkbookFactory.create(pPart.getInputStream());
-                    sheet = workbook.getSheetAt(SHEET_NUM);
-                    row = sheet.getRow(ROW_NUM);
-                    cell = row.getCell(CELL_NUM);
+        for (PackagePart pPart : this.doc.getAllEmbedds()) {
+            String ext = pPart.getPartName().getExtension();
+            if (BINARY_EXTENSION.equals(ext) || OPENXML_EXTENSION.equals(ext)) {
+                InputStream is = pPart.getInputStream();
+                Workbook workbook = null;
+                try {
+                    workbook = WorkbookFactory.create(is);
+                    Sheet sheet = workbook.getSheetAt(SHEET_NUM);
+                    Row row = sheet.getRow(ROW_NUM);
+                    Cell cell = row.getCell(CELL_NUM);
                     assertEquals(cell.getNumericCellValue(), NEW_VALUE, 0.0001);
+                } finally {
+                    IOUtils.closeQuietly(workbook);
+                    IOUtils.closeQuietly(is);
                 }
             }
         }
