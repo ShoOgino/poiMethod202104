@@ -1,33 +1,12 @@
     @Test
-    public void testExtractFromEmbeded() throws Exception {
-        POIFSFileSystem fs = new POIFSFileSystem(
-                POIDataSamples.getSpreadSheetInstance().openResourceAsStream("excel_with_embeded.xls")
-        );
-        HSLFSlideShowImpl ss;
-
-        DirectoryNode dirA = (DirectoryNode)
-                fs.getRoot().getEntry("MBD0000A3B6");
-        DirectoryNode dirB = (DirectoryNode)
-                fs.getRoot().getEntry("MBD0000A3B3");
-
-        assertNotNull(dirA.getEntry("PowerPoint Document"));
-        assertNotNull(dirB.getEntry("PowerPoint Document"));
-
-        // Check the first file
-        ss = new HSLFSlideShowImpl(dirA);
-        ppe.close();
-        ppe = new PowerPointExtractor(ss);
-        assertEquals("Sample PowerPoint file\nThis is the 1st file\nNot much too it\n",
-                ppe.getText(true, false)
-        );
-
-        // And the second
-        ss = new HSLFSlideShowImpl(dirB);
-        ppe.close();
-        ppe = new PowerPointExtractor(ss);
-        assertEquals("Sample PowerPoint file\nThis is the 2nd file\nNot much too it either\n",
-                ppe.getText(true, false)
-        );
+    public void testExtractFromEmbeded() throws IOException {
+        InputStream is = POIDataSamples.getSpreadSheetInstance().openResourceAsStream("excel_with_embeded.xls");
+        POIFSFileSystem fs = new POIFSFileSystem(is);
+        DirectoryNode root = fs.getRoot();
+        PowerPointExtractor ppe1 = assertExtractFromEmbedded(root, "MBD0000A3B6", "Sample PowerPoint file\nThis is the 1st file\nNot much too it\n");
+        PowerPointExtractor ppe2 = assertExtractFromEmbedded(root, "MBD0000A3B3", "Sample PowerPoint file\nThis is the 2nd file\nNot much too it either\n");
+        ppe2.close();
+        ppe1.close();
         fs.close();
     }
 

@@ -4,12 +4,15 @@
      */
     @SuppressWarnings("resource")
     @Test
-    public void testDifferentPOIFS() throws Exception {
+    public void testDifferentPOIFS() throws IOException {
         // Open the two filesystems
-        DirectoryNode[] files = new DirectoryNode[2];
-        files[0] = (new POIFSFileSystem(slTests.openResourceAsStream("basic_test_ppt_file.ppt"))).getRoot();
-        NPOIFSFileSystem npoifsFileSystem = new NPOIFSFileSystem(slTests.getFile("basic_test_ppt_file.ppt"));
-        files[1] = npoifsFileSystem.getRoot();
+        File pptFile = slTests.getFile("basic_test_ppt_file.ppt");
+        InputStream is1 = new FileInputStream(pptFile);
+        OPOIFSFileSystem opoifs = new OPOIFSFileSystem(is1);
+        is1.close();
+        NPOIFSFileSystem npoifs = new NPOIFSFileSystem(pptFile);
+        
+        DirectoryNode[] files = { opoifs.getRoot(), npoifs.getRoot() };
 
         // Open directly
         for (DirectoryNode dir : files) {
@@ -17,13 +20,15 @@
             assertEquals(expectText, extractor.getText());
         }
 
-        // Open via a HWPFDocument
+        // Open via a HSLFSlideShow
         for (DirectoryNode dir : files) {
             HSLFSlideShowImpl slideshow = new HSLFSlideShowImpl(dir);
             PowerPointExtractor extractor = new PowerPointExtractor(slideshow);
             assertEquals(expectText, extractor.getText());
+            extractor.close();
+            slideshow.close();
         }
 
-        npoifsFileSystem.close();
+        npoifs.close();
     }
 
