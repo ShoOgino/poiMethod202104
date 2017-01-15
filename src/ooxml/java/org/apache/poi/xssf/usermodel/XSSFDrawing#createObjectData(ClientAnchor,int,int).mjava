@@ -1,0 +1,77 @@
+    @Override
+    public XSSFObjectData createObjectData(ClientAnchor anchor, int storageId, int pictureIndex) {
+        XSSFSheet sh = getSheet();
+        PackagePart sheetPart = sh.getPackagePart();
+        long shapeId = newShapeId();
+
+        // add reference to OLE part
+        PackagePartName olePN;
+        try {
+            olePN = PackagingURIHelper.createPartName( "/xl/embeddings/oleObject"+storageId+".bin" );
+        } catch (InvalidFormatException e) {
+            throw new POIXMLException(e);
+        }
+        PackageRelationship olePR = sheetPart.addRelationship( olePN, TargetMode.INTERNAL, POIXMLDocument.OLE_OBJECT_REL_TYPE );
+
+        // add reference to image part
+        XSSFPictureData imgPD = sh.getWorkbook().getAllPictures().get(pictureIndex);
+        PackagePartName imgPN = imgPD.getPackagePart().getPartName();
+        PackageRelationship imgSheetPR = sheetPart.addRelationship( imgPN, TargetMode.INTERNAL, PackageRelationshipTypes.IMAGE_PART );
+        PackageRelationship imgDrawPR = getPackagePart().addRelationship( imgPN, TargetMode.INTERNAL, PackageRelationshipTypes.IMAGE_PART );
+
+
+        // add OLE part metadata to sheet
+        CTWorksheet cwb = sh.getCTWorksheet();
+        CTOleObjects oo = cwb.isSetOleObjects() ? cwb.getOleObjects() : cwb.addNewOleObjects();
+
+        CTOleObject ole1 = oo.addNewOleObject();
+        ole1.setProgId("Package");
+        ole1.setShapeId(shapeId);
+        ole1.setId(olePR.getId());
+
+        XmlCursor cur1 = ole1.newCursor();
+        cur1.toEndToken();
+        cur1.beginElement("objectPr", XSSFRelation.NS_SPREADSHEETML);
+        cur1.insertAttributeWithValue("id", PackageRelationshipTypes.CORE_PROPERTIES_ECMA376_NS, imgSheetPR.getId());
+        cur1.insertAttributeWithValue("defaultSize", "0");
+        cur1.beginElement("anchor", XSSFRelation.NS_SPREADSHEETML);
+        cur1.insertAttributeWithValue("moveWithCells", "1");
+
+        CTTwoCellAnchor ctAnchor = createTwoCellAnchor((XSSFClientAnchor)anchor);
+        
+        XmlCursor cur2 = ctAnchor.newCursor();
+        cur2.copyXmlContents(cur1);
+        cur2.dispose();
+
+        cur1.toParent();
+        cur1.toFirstChild();
+        cur1.setName(new QName(XSSFRelation.NS_SPREADSHEETML, "from"));
+        cur1.toNextSibling();
+        cur1.setName(new QName(XSSFRelation.NS_SPREADSHEETML, "to"));
+
+        cur1.dispose();
+
+        // add a new shape and link OLE & image part
+        CTShape ctShape = ctAnchor.addNewSp();
+        ctShape.set(XSSFObjectData.prototype());
+        ctShape.getSpPr().setXfrm(createXfrm((XSSFClientAnchor)anchor));
+        
+        // workaround for not having the vmlDrawing filled
+        CTBlipFillProperties blipFill = ctShape.getSpPr().addNewBlipFill();
+        blipFill.addNewBlip().setEmbed(imgDrawPR.getId());
+        blipFill.addNewStretch().addNewFillRect();
+        
+        CTNonVisualDrawingProps cNvPr = ctShape.getNvSpPr().getCNvPr();
+        cNvPr.setId(shapeId);
+
+        XmlCursor extCur = cNvPr.getExtLst().getExtArray(0).newCursor();
+        extCur.toFirstChild();
+        extCur.setAttributeText(new QName("spid"), "_x0000_s"+shapeId);
+        extCur.dispose();
+
+        XSSFObjectData shape = new XSSFObjectData(this, ctShape);
+        shape.anchor = (XSSFClientAnchor)anchor;
+
+        return shape;
+    }
+

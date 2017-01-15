@@ -1,15 +1,5 @@
-    /**
-     * Adds a new OLE Package Shape 
-     * 
-     * @param anchor       the client anchor describes how this picture is
-     *                     attached to the sheet.
-     * @param storageId    the storageId returned by {@link HSSFWorkbook#addOlePackage(POIFSFileSystem,String,String,String)}
-     * @param pictureIndex the index of the picture (used as preview image) in the
-     *                     workbook collection of pictures.
-     *
-     * @return newly created shape
-     */
-    public HSSFObjectData createObjectData(HSSFClientAnchor anchor, int storageId, int pictureIndex) {
+    @Override
+    public HSSFObjectData createObjectData(ClientAnchor anchor, int storageId, int pictureIndex) {
         ObjRecord obj = new ObjRecord();
 
         CommonObjectDataSubRecord ftCmo = new CommonObjectDataSubRecord();
@@ -28,15 +18,15 @@
         FtCfSubRecord ftCf = new FtCfSubRecord();
         HSSFPictureData pictData = getSheet().getWorkbook().getAllPictures().get(pictureIndex-1);
         switch (pictData.getFormat()) {
-	        case HSSFWorkbook.PICTURE_TYPE_WMF:
-	        case HSSFWorkbook.PICTURE_TYPE_EMF:
+	        case Workbook.PICTURE_TYPE_WMF:
+	        case Workbook.PICTURE_TYPE_EMF:
 	        	// this needs patch #49658 to be applied to actually work 
 	            ftCf.setFlags(FtCfSubRecord.METAFILE_BIT);
 	            break;
-	        case HSSFWorkbook.PICTURE_TYPE_DIB:
-	        case HSSFWorkbook.PICTURE_TYPE_PNG:
-	        case HSSFWorkbook.PICTURE_TYPE_JPEG:
-	        case HSSFWorkbook.PICTURE_TYPE_PICT:
+	        case Workbook.PICTURE_TYPE_DIB:
+	        case Workbook.PICTURE_TYPE_PNG:
+	        case Workbook.PICTURE_TYPE_JPEG:
+	        case Workbook.PICTURE_TYPE_PICT:
 	            ftCf.setFlags(FtCfSubRecord.BITMAP_BIT);
 	            break;
 	        default:
@@ -60,14 +50,16 @@
         DirectoryEntry oleRoot;
         try {
             DirectoryNode dn = _sheet.getWorkbook().getDirectory();
-        	if (dn == null) throw new FileNotFoundException();
+        	if (dn == null) {
+                throw new FileNotFoundException();
+            }
         	oleRoot = (DirectoryEntry)dn.getEntry(entryName);
         } catch (FileNotFoundException e) {
         	throw new IllegalStateException("trying to add ole shape without actually adding data first - use HSSFWorkbook.addOlePackage first", e);
         }
         
         // create picture shape, which need to be minimal modified for oleshapes
-        HSSFPicture shape = new HSSFPicture(null, anchor);
+        HSSFPicture shape = new HSSFPicture(null, (HSSFClientAnchor)anchor);
         shape.setPictureIndex(pictureIndex);
         EscherContainerRecord spContainer = shape.getEscherContainer();
         EscherSpRecord spRecord = spContainer.getChildById(EscherSpRecord.RECORD_ID);
