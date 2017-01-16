@@ -2,30 +2,31 @@
      * Tests that we can work with both {@link POIFSFileSystem}
      *  and {@link NPOIFSFileSystem}
      */
+    @Test
     public void testDifferentPOIFS() throws Exception {
-       POIDataSamples docTests = POIDataSamples.getDocumentInstance();
-       
        // Open the two filesystems
-       DirectoryNode[] files = new DirectoryNode[2];
-       POIFSFileSystem poifs = new POIFSFileSystem(docTests.openResourceAsStream("test2.doc"));
-       files[0] = poifs.getRoot();
-       NPOIFSFileSystem npoifsFileSystem = new NPOIFSFileSystem(docTests.getFile("test2.doc"));
-       files[1] = npoifsFileSystem.getRoot();
+       File file = docTests.getFile("test2.doc");
+       InputStream is = new FileInputStream(file);
+       OPOIFSFileSystem opoifs = new OPOIFSFileSystem(is);
+       is.close();
+       NPOIFSFileSystem npoifs = new NPOIFSFileSystem(file);
+       
+       DirectoryNode[] files = { opoifs.getRoot(), npoifs.getRoot() };
        
        // Open directly 
        for(DirectoryNode dir : files) {
           WordExtractor extractor = new WordExtractor(dir);
-          assertEquals(p_text1_block, extractor.getText());
+          assertEqualsTrim(p_text1_block, extractor.getText());
        }
 
        // Open via a HWPFDocument
        for(DirectoryNode dir : files) {
           HWPFDocument doc = new HWPFDocument(dir);
           WordExtractor extractor = new WordExtractor(doc);
-          assertEquals(p_text1_block, extractor.getText());
+          assertEqualsTrim(p_text1_block, extractor.getText());
+          extractor.close();
        }
        
-       poifs.close();
-       npoifsFileSystem.close();
+       npoifs.close();
     }
 

@@ -3,35 +3,38 @@
     * and without that you'll hit an ArrayIndexOutOfBoundsException after
     * reading junk
     */
-   public void test54233() throws Exception {
-       DocumentInputStream dis;
-       NPOIFSFileSystem fs = 
-               new NPOIFSFileSystem(_samples.openResourceAsStream("TestNon4ByteBoundary.doc"));
-       
-       dis = fs.createDocumentInputStream(SummaryInformation.DEFAULT_STREAM_NAME);
-       SummaryInformation si = (SummaryInformation)PropertySetFactory.create(dis);
-       
-       dis = fs.createDocumentInputStream(DocumentSummaryInformation.DEFAULT_STREAM_NAME);
-       DocumentSummaryInformation dsi = (DocumentSummaryInformation)PropertySetFactory.create(dis);
-      
+   @Test
+   public void test54233() throws IOException, NoPropertySetStreamException, MarkUnsupportedException {
+       InputStream is = _samples.openResourceAsStream("TestNon4ByteBoundary.doc");
+       NPOIFSFileSystem fs = new NPOIFSFileSystem(is);
+       is.close();
+
+       SummaryInformation si = (SummaryInformation)
+           PropertySetFactory.create(fs.getRoot(), SummaryInformation.DEFAULT_STREAM_NAME);
+       DocumentSummaryInformation dsi = (DocumentSummaryInformation)
+           PropertySetFactory.create(fs.getRoot(), DocumentSummaryInformation.DEFAULT_STREAM_NAME);
+
        // Test
        assertEquals("Microsoft Word 10.0", si.getApplicationName());
        assertEquals("", si.getTitle());
        assertEquals("", si.getAuthor());
        assertEquals("Cour de Justice", dsi.getCompany());
-       
-       
+
+
        // Write out and read back, should still be valid
        POIDocument doc = new HPSFPropertiesOnlyDocument(fs);
        ByteArrayOutputStream baos = new ByteArrayOutputStream();
        doc.write(baos);
        ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
        doc = new HPSFPropertiesOnlyDocument(new NPOIFSFileSystem(bais));
-       
+
        // Check properties are still there
        assertEquals("Microsoft Word 10.0", si.getApplicationName());
        assertEquals("", si.getTitle());
        assertEquals("", si.getAuthor());
        assertEquals("Cour de Justice", dsi.getCompany());
+
+       doc.close();
+       fs.close();
    }
 

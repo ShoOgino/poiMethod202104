@@ -1,12 +1,11 @@
 	/**
-	 * Test that we can get data from two different
-	 *  embeded word documents
-	 * @throws Exception
+	 * Test that we can get data from two different embedded word documents
 	 */
-	public void testExtractFromEmbeded() throws Exception {
-		POIFSFileSystem fs = new POIFSFileSystem(POIDataSamples.getSpreadSheetInstance().openResourceAsStream(filename3));
-		HWPFDocument doc;
-		WordExtractor extractor3;
+    @Test
+	public void testExtractFromEmbeded() throws IOException {
+	    InputStream is = POIDataSamples.getSpreadSheetInstance().openResourceAsStream("excel_with_embeded.xls");
+		POIFSFileSystem fs = new POIFSFileSystem(is);
+		is.close();
 
 		DirectoryNode dirA = (DirectoryNode) fs.getRoot().getEntry("MBD0000A3B7");
 		DirectoryNode dirB = (DirectoryNode) fs.getRoot().getEntry("MBD0000A3B2");
@@ -19,24 +18,30 @@
 		assertNotNull(dirB.getEntry("WordDocument"));
 
 		// Check each in turn
-		doc = new HWPFDocument(dirA);
-		extractor3 = new WordExtractor(doc);
+        HWPFDocument docA = new HWPFDocument(dirA);
+		WordExtractor extractorA = new WordExtractor(docA);
 
-		assertNotNull(extractor3.getText());
-		assertTrue(extractor3.getText().length() > 20);
-		assertEquals("I am a sample document\r\nNot much on me\r\nI am document 1\r\n", extractor3
-				.getText());
-		assertEquals("Sample Doc 1", extractor3.getSummaryInformation().getTitle());
-		assertEquals("Sample Test", extractor3.getSummaryInformation().getSubject());
+		assertNotNull(extractorA.getText());
+		assertTrue(extractorA.getText().length() > 20);
+		assertEqualsTrim("I am a sample document\r\nNot much on me\r\nI am document 1\r\n", extractorA.getText());
+		assertEquals("Sample Doc 1", extractorA.getSummaryInformation().getTitle());
+		assertEquals("Sample Test", extractorA.getSummaryInformation().getSubject());
 
-		doc = new HWPFDocument(dirB);
-		extractor3 = new WordExtractor(doc);
+		HWPFDocument docB = new HWPFDocument(dirB);
+		WordExtractor extractorB = new WordExtractor(docB);
 
-		assertNotNull(extractor3.getText());
-		assertTrue(extractor3.getText().length() > 20);
-		assertEquals("I am another sample document\r\nNot much on me\r\nI am document 2\r\n",
-				extractor3.getText());
-		assertEquals("Sample Doc 2", extractor3.getSummaryInformation().getTitle());
-		assertEquals("Another Sample Test", extractor3.getSummaryInformation().getSubject());
+		assertNotNull(extractorB.getText());
+		assertTrue(extractorB.getText().length() > 20);
+		assertEqualsTrim("I am another sample document\r\nNot much on me\r\nI am document 2\r\n", extractorB.getText());
+		assertEquals("Sample Doc 2", extractorB.getSummaryInformation().getTitle());
+		assertEquals("Another Sample Test", extractorB.getSummaryInformation().getSubject());
+
+		extractorA.close();
+		docA.close();
+
+		extractorB.close();
+		docB.close();
+		
+		fs.close();
 	}
 
