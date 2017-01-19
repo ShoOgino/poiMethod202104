@@ -1,0 +1,49 @@
+    public void drawString(byte[] text, Rectangle2D bounds, int dx[]) {
+        HwmfFont font = prop.getFont();
+        if (font == null || text == null || text.length == 0) {
+            return;
+        }
+        
+        double fontH = getFontHeight(font);
+        // TODO: another approx. ...
+        double fontW = fontH/1.8;
+        
+        int len = text.length;
+        Charset charset = (font.getCharSet().getCharset() == null)?
+                DEFAULT_CHARSET : font.getCharSet().getCharset();
+        String textString = new String(text, charset);
+        AttributedString as = new AttributedString(textString);
+        if (dx == null || dx.length == 0) {
+            addAttributes(as, font);
+        } else {
+            for (int i=0; i<len; i++) {
+                addAttributes(as, font);
+                // Tracking works as a prefix/advance space on characters whereas
+                // dx[...] is the complete width of the current char
+                // therefore we need to add the additional/suffix width to the next char
+                if (i<len-1) {
+                    as.addAttribute(TextAttribute.TRACKING, (dx[i]-fontW)/fontH, i+1, i+2);
+                }
+            }
+        }
+        
+        
+        double angle = Math.toRadians(-font.getEscapement()/10.);
+        
+        
+        final AffineTransform at = graphicsCtx.getTransform();
+        try {
+            graphicsCtx.translate(bounds.getX(), bounds.getY()+fontH);
+            graphicsCtx.rotate(angle);
+            if (prop.getBkMode() == HwmfBkMode.OPAQUE) {
+                // TODO: validate bounds
+                graphicsCtx.setBackground(prop.getBackgroundColor().getColor());
+                graphicsCtx.fill(new Rectangle2D.Double(0, 0, bounds.getWidth(), bounds.getHeight()));
+            }
+            graphicsCtx.setColor(prop.getTextColor().getColor());
+            graphicsCtx.drawString(as.getIterator(), 0, 0); // (float)bounds.getX(), (float)bounds.getY());
+        } finally {
+            graphicsCtx.setTransform(at);
+        }
+    }
+
