@@ -1,0 +1,30 @@
+    @Test
+    public void testMacText() throws Exception {
+        InputStream is =
+                POIDataSamples.getSpreadSheetInstance().openResourceAsStream("SimpleEMF_mac.emf");
+        HemfExtractor ex = new HemfExtractor(is);
+
+        long lastY = -1;
+        long lastX = -1;
+        long fudgeFactorX = 1000;//derive this from the font information!
+        StringBuilder sb = new StringBuilder();
+        for (HemfRecord record : ex) {
+            if (record.getRecordType().equals(HemfRecordType.exttextoutw)) {
+                HemfText.ExtTextOutW extTextOutW = (HemfText.ExtTextOutW) record;
+                if (lastY > -1 && lastY != extTextOutW.getY()) {
+                    sb.append("\n");
+                    lastX = -1;
+                }
+                if (lastX > -1 && extTextOutW.getX() - lastX > fudgeFactorX) {
+                    sb.append(" ");
+                }
+                sb.append(extTextOutW.getText());
+                lastY = extTextOutW.getY();
+                lastX = extTextOutW.getX();
+            }
+        }
+        String txt = sb.toString();
+        assertContains(txt, "Tika http://incubator.apache.org");
+        assertContains(txt, "Latest News\n");
+    }
+

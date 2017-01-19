@@ -1,0 +1,25 @@
+        /**
+         *
+         * @return a list of HemfMultFormatsData
+         */
+        public List<HemfMultiFormatsData> getData() {
+
+            byte[] rawBytes = getRawBytes();
+            //note that raw bytes includes the public comment identifier
+            int currentOffset = 4 + 16;//4 public comment identifier, 16 for outputrect
+            long countFormats = LittleEndian.getUInt(rawBytes, currentOffset);
+            currentOffset += LittleEndian.INT_SIZE;
+            List<EmrFormat> emrFormatList = new ArrayList<EmrFormat>();
+            for (long i = 0; i < countFormats; i++) {
+                emrFormatList.add(new EmrFormat(rawBytes, currentOffset));
+                currentOffset += 4 * LittleEndian.INT_SIZE;
+            }
+            List<HemfMultiFormatsData> list = new ArrayList<HemfMultiFormatsData>();
+            for (EmrFormat emrFormat : emrFormatList) {
+                byte[] data = new byte[emrFormat.size];
+                System.arraycopy(rawBytes, emrFormat.offset-4, data, 0, emrFormat.size);
+                list.add(new HemfMultiFormatsData(emrFormat.signature, emrFormat.version, data));
+            }
+            return list;
+        }
+

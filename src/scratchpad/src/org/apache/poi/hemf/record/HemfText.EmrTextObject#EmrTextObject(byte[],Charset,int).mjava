@@ -1,0 +1,22 @@
+        EmrTextObject(byte[] emrTextObjBytes, Charset charsetHint, int readSoFar) throws IOException {
+
+            int offset = 0;
+            x = LittleEndian.getUInt(emrTextObjBytes, offset); offset+= LittleEndian.INT_SIZE;
+            y = LittleEndian.getUInt(emrTextObjBytes, offset); offset+= LittleEndian.INT_SIZE;
+            long numCharsLong = LittleEndian.getUInt(emrTextObjBytes, offset); offset += LittleEndian.INT_SIZE;
+            long offString = LittleEndian.getUInt(emrTextObjBytes, offset); offset += LittleEndian.INT_SIZE;
+            int start = (int)offString-offset-readSoFar;
+
+            if (numCharsLong == 0) {
+                rawTextBytes = new byte[0];
+                numChars = 0;
+                return;
+            }
+            if (numCharsLong > Integer.MAX_VALUE) {
+                throw new RecordFormatException("Number of characters can't be > Integer.MAX_VALUE");
+            }
+            numChars = (int)numCharsLong;
+            rawTextBytes = new byte[emrTextObjBytes.length-start];
+            System.arraycopy(emrTextObjBytes, start, rawTextBytes, 0, emrTextObjBytes.length-start);
+        }
+

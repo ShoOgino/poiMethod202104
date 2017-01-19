@@ -1,0 +1,20 @@
+        public WindowsMetafile(byte[] rawBytes) {
+            super(rawBytes);
+            int offset = LittleEndian.INT_SIZE;//public comment identifier
+            int version = LittleEndian.getUShort(rawBytes, offset); offset += LittleEndian.SHORT_SIZE;
+            int reserved = LittleEndian.getUShort(rawBytes, offset); offset += LittleEndian.SHORT_SIZE;
+            offset += LittleEndian.INT_SIZE; //checksum
+            offset += LittleEndian.INT_SIZE; //flags
+            long winMetafileSizeLong = LittleEndian.getUInt(rawBytes, offset); offset += LittleEndian.INT_SIZE;
+            if (winMetafileSizeLong == 0L) {
+                wmfBytes = new byte[0];
+                return;
+            }
+            if (winMetafileSizeLong > Integer.MAX_VALUE) {
+                throw new RecordFormatException("Metafile record length can't be > Integer.MAX_VALUE");
+            }
+            int winMetafileSize = (int)winMetafileSizeLong;
+            wmfBytes = new byte[winMetafileSize];
+            System.arraycopy(rawBytes, offset, wmfBytes, 0, winMetafileSize);
+        }
+

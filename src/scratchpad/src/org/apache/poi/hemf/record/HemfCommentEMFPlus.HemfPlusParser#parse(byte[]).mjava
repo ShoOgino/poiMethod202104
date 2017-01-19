@@ -1,0 +1,32 @@
+        public static List<HemfPlusRecord> parse(byte[] bytes) {
+            List<HemfPlusRecord> records = new ArrayList<HemfPlusRecord>();
+            int offset = 0;
+            while (offset < bytes.length) {
+                if (offset + 12 > bytes.length) {
+                    //if header will go beyond bytes, stop now
+                    //TODO: log or throw
+                    break;
+                }
+                int type = LittleEndian.getUShort(bytes, offset); offset += LittleEndian.SHORT_SIZE;
+                int flags = LittleEndian.getUShort(bytes, offset); offset += LittleEndian.SHORT_SIZE;
+                long sizeLong = LittleEndian.getUInt(bytes, offset); offset += LittleEndian.INT_SIZE;
+                if (sizeLong >= Integer.MAX_VALUE) {
+                    throw new RecordFormatException("size of emf record >= Integer.MAX_VALUE");
+                }
+                int size = (int)sizeLong;
+                long dataSizeLong = LittleEndian.getUInt(bytes, offset); offset += LittleEndian.INT_SIZE;
+                if (dataSizeLong >= Integer.MAX_VALUE) {
+                    throw new RuntimeException("data size of emfplus record cannot be >= Integer.MAX_VALUE");
+                }
+                int dataSize = (int)dataSizeLong;
+                if (dataSize + offset > bytes.length) {
+                    //TODO: log or throw?
+                    break;
+                }
+                HemfPlusRecord record = buildRecord(type, flags, dataSize, offset, bytes);
+                records.add(record);
+                offset += dataSize;
+            }
+            return records;
+        }
+

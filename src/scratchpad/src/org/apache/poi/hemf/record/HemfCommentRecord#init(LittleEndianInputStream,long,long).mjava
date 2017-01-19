@@ -1,0 +1,22 @@
+    @Override
+    public long init(LittleEndianInputStream leis, long recordId, long recordSize) throws IOException {
+        long dataSize = leis.readUInt();  recordSize -= LittleEndian.INT_SIZE;
+
+        byte[] optionalCommentIndentifierBuffer = new byte[4];
+        leis.readFully(optionalCommentIndentifierBuffer);
+        dataSize = dataSize-LittleEndian.INT_SIZE; //size minus the first int which could be a comment identifier
+        recordSize -= LittleEndian.INT_SIZE;
+        long optionalCommentIdentifier = LittleEndian.getInt(optionalCommentIndentifierBuffer) & 0x00FFFFFFFFL;
+        if (optionalCommentIdentifier == COMMENT_EMFSPOOL) {
+            comment = new HemfCommentEMFSpool(readToByteArray(leis, dataSize, recordSize));
+        } else if (optionalCommentIdentifier == COMMENT_EMFPLUS) {
+            comment = new HemfCommentEMFPlus(readToByteArray(leis, dataSize, recordSize));
+        } else if (optionalCommentIdentifier == COMMENT_PUBLIC) {
+            comment = CommentPublicParser.parse(readToByteArray(leis, dataSize, recordSize));
+        } else {
+            comment = new HemfComment(readToByteArray(optionalCommentIndentifierBuffer, leis, dataSize, recordSize));
+        }
+
+        return recordSize;
+    }
+

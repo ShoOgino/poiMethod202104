@@ -1,0 +1,62 @@
+    @Override
+    public long init(LittleEndianInputStream leis, long recordId, long recordSize) throws IOException {
+        if (recordId != 1L) {
+            throw new IOException("Not a valid EMF header. Record type:"+recordId);
+        }
+        //read the record--id and size (2 bytes) have already been read
+        byte[] data = new byte[(int)recordSize];
+        IOUtils.readFully(leis, data);
+
+        int offset = 0;
+
+        //bounds
+        int boundsLeft = LittleEndian.getInt(data, offset); offset += LittleEndian.INT_SIZE;
+        int boundsTop = LittleEndian.getInt(data, offset); offset += LittleEndian.INT_SIZE;
+        int boundsRight = LittleEndian.getInt(data, offset); offset += LittleEndian.INT_SIZE;
+        int boundsBottom = LittleEndian.getInt(data, offset); offset += LittleEndian.INT_SIZE;
+        boundsRectangle = new Rectangle(boundsLeft, boundsTop,
+                boundsRight - boundsLeft, boundsBottom - boundsTop);
+
+        int frameLeft = LittleEndian.getInt(data, offset); offset += LittleEndian.INT_SIZE;
+        int frameTop = LittleEndian.getInt(data, offset); offset += LittleEndian.INT_SIZE;
+        int frameRight = LittleEndian.getInt(data, offset); offset += LittleEndian.INT_SIZE;
+        int frameBottom = LittleEndian.getInt(data, offset); offset += LittleEndian.INT_SIZE;
+        frameRectangle = new Rectangle(frameLeft, frameTop,
+                frameRight - frameLeft, frameBottom - frameTop);
+
+        long recordSignature = LittleEndian.getInt(data, offset); offset += LittleEndian.INT_SIZE;
+        if (recordSignature != 0x464D4520) {
+            throw new IOException("bad record signature: " + recordSignature);
+        }
+
+        long version = LittleEndian.getInt(data, offset); offset += LittleEndian.INT_SIZE;
+        //According to the spec, MSOffice doesn't pay attention to this value.
+        //It _should_ be 0x00010000
+        bytes = LittleEndian.getUInt(data, offset); offset += LittleEndian.INT_SIZE;
+        records = LittleEndian.getUInt(data, offset); offset += LittleEndian.INT_SIZE;
+        handles = LittleEndian.getUShort(data, offset);offset += LittleEndian.SHORT_SIZE;
+        offset += LittleEndian.SHORT_SIZE;//reserved
+        nDescription = LittleEndian.getUInt(data, offset); offset += LittleEndian.INT_SIZE;
+        offDescription = LittleEndian.getUInt(data, offset); offset += LittleEndian.INT_SIZE;
+        nPalEntries = LittleEndian.getUInt(data, offset); offset += LittleEndian.INT_SIZE;
+
+        //should be skips
+        offset += 8;//device
+        offset += 8;//millimeters
+
+
+        if (recordSize+8 >= 100) {
+            hasExtension1 = true;
+            cbPixelFormat = LittleEndian.getUInt(data, offset); offset += LittleEndian.INT_SIZE;
+            offPixelFormat = LittleEndian.getUInt(data, offset); offset += LittleEndian.INT_SIZE;
+            bOpenGL= LittleEndian.getUInt(data, offset); offset += LittleEndian.INT_SIZE;
+        }
+
+        if (recordSize+8 >= 108) {
+            hasExtension2 = true;
+            micrometersX = LittleEndian.getUInt(data, offset); offset += LittleEndian.INT_SIZE;
+            micrometersY = LittleEndian.getUInt(data, offset); offset += LittleEndian.INT_SIZE;
+        }
+        return recordSize;
+    }
+
