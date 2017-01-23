@@ -1,16 +1,16 @@
    @Test
-   public void addBeforeWrite() throws Exception {
-       NPOIFSFileSystem fs = new NPOIFSFileSystem();
+   public void addBeforeWrite() throws IOException {
+       NPOIFSFileSystem fs1 = new NPOIFSFileSystem();
        DocumentEntry miniDoc;
        DocumentEntry normDoc;
        HeaderBlock hdr;
        
        // Initially has Properties + BAT but nothing else
-       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(0));
-       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(1));
-       assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(2));
+       assertEquals(POIFSConstants.END_OF_CHAIN, fs1.getNextBlock(0));
+       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs1.getNextBlock(1));
+       assertEquals(POIFSConstants.UNUSED_BLOCK, fs1.getNextBlock(2));
        
-       hdr = writeOutAndReadHeader(fs);
+       hdr = writeOutAndReadHeader(fs1);
        // No mini stream, and no xbats
        // Will have fat then properties stream
        assertEquals(1, hdr.getBATCount());
@@ -18,14 +18,14 @@
        assertEquals(0, hdr.getPropertyStart());
        assertEquals(POIFSConstants.END_OF_CHAIN, hdr.getSBATStart());
        assertEquals(POIFSConstants.END_OF_CHAIN, hdr.getXBATIndex());
-       assertEquals(POIFSConstants.SMALLER_BIG_BLOCK_SIZE*3, fs.size());
-       
+       assertEquals(POIFSConstants.SMALLER_BIG_BLOCK_SIZE*3, fs1.size());
+       fs1.close();
        
        // Get a clean filesystem to start with
-       fs = new NPOIFSFileSystem();
+       fs1 = new NPOIFSFileSystem();
        
        // Put our test files in a non-standard place
-       DirectoryEntry parentDir = fs.createDirectory("Parent Directory");
+       DirectoryEntry parentDir = fs1.createDirectory("Parent Directory");
        DirectoryEntry testDir = parentDir.createDirectory("Test Directory");
        
        
@@ -41,20 +41,20 @@
 
        
        // Check the mini stream was added, then the main stream
-       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(0));
-       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(1)); 
-       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(2)); // Mini Fat
-       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(3)); // Mini Stream
-       assertEquals(5,                           fs.getNextBlock(4)); // Main Stream
-       assertEquals(6,                           fs.getNextBlock(5));
-       assertEquals(7,                           fs.getNextBlock(6));
-       assertEquals(8,                           fs.getNextBlock(7));
-       assertEquals(9,                           fs.getNextBlock(8));
-       assertEquals(10,                          fs.getNextBlock(9));
-       assertEquals(11,                          fs.getNextBlock(10));
-       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(11));
-       assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(12));
-       assertEquals(POIFSConstants.SMALLER_BIG_BLOCK_SIZE*13, fs.size());
+       assertEquals(POIFSConstants.END_OF_CHAIN, fs1.getNextBlock(0));
+       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs1.getNextBlock(1)); 
+       assertEquals(POIFSConstants.END_OF_CHAIN, fs1.getNextBlock(2)); // Mini Fat
+       assertEquals(POIFSConstants.END_OF_CHAIN, fs1.getNextBlock(3)); // Mini Stream
+       assertEquals(5,                           fs1.getNextBlock(4)); // Main Stream
+       assertEquals(6,                           fs1.getNextBlock(5));
+       assertEquals(7,                           fs1.getNextBlock(6));
+       assertEquals(8,                           fs1.getNextBlock(7));
+       assertEquals(9,                           fs1.getNextBlock(8));
+       assertEquals(10,                          fs1.getNextBlock(9));
+       assertEquals(11,                          fs1.getNextBlock(10));
+       assertEquals(POIFSConstants.END_OF_CHAIN, fs1.getNextBlock(11));
+       assertEquals(POIFSConstants.UNUSED_BLOCK, fs1.getNextBlock(12));
+       assertEquals(POIFSConstants.SMALLER_BIG_BLOCK_SIZE*13, fs1.size());
        
        
        // Check that we can read the right data pre-write
@@ -66,8 +66,9 @@
        
        
        // Write, read, check
-       hdr = writeOutAndReadHeader(fs);
-       fs = writeOutAndReadBack(fs);
+       hdr = writeOutAndReadHeader(fs1);
+       NPOIFSFileSystem fs2 = writeOutAndReadBack(fs1);
+       fs1.close();
        
        // Check the header details - will have the sbat near the start,
        //  then the properties at the end
@@ -79,25 +80,25 @@
        
        // Check the block allocation is unchanged, other than
        //  the properties stream going in at the end
-       assertEquals(12,                          fs.getNextBlock(0)); // Properties
-       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(1));
-       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(2));
-       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(3));
-       assertEquals(5,                           fs.getNextBlock(4));
-       assertEquals(6,                           fs.getNextBlock(5));
-       assertEquals(7,                           fs.getNextBlock(6));
-       assertEquals(8,                           fs.getNextBlock(7));
-       assertEquals(9,                           fs.getNextBlock(8));
-       assertEquals(10,                          fs.getNextBlock(9));
-       assertEquals(11,                          fs.getNextBlock(10));
-       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(11));
-       assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(12));
-       assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(13));
-       assertEquals(POIFSConstants.SMALLER_BIG_BLOCK_SIZE*14, fs.size());
+       assertEquals(12,                          fs2.getNextBlock(0)); // Properties
+       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs2.getNextBlock(1));
+       assertEquals(POIFSConstants.END_OF_CHAIN, fs2.getNextBlock(2));
+       assertEquals(POIFSConstants.END_OF_CHAIN, fs2.getNextBlock(3));
+       assertEquals(5,                           fs2.getNextBlock(4));
+       assertEquals(6,                           fs2.getNextBlock(5));
+       assertEquals(7,                           fs2.getNextBlock(6));
+       assertEquals(8,                           fs2.getNextBlock(7));
+       assertEquals(9,                           fs2.getNextBlock(8));
+       assertEquals(10,                          fs2.getNextBlock(9));
+       assertEquals(11,                          fs2.getNextBlock(10));
+       assertEquals(POIFSConstants.END_OF_CHAIN, fs2.getNextBlock(11));
+       assertEquals(POIFSConstants.END_OF_CHAIN, fs2.getNextBlock(12));
+       assertEquals(POIFSConstants.UNUSED_BLOCK, fs2.getNextBlock(13));
+       assertEquals(POIFSConstants.SMALLER_BIG_BLOCK_SIZE*14, fs2.size());
        
        
        // Check the data
-       DirectoryEntry fsRoot = fs.getRoot();
+       DirectoryEntry fsRoot = fs2.getRoot();
        assertEquals(1, fsRoot.getEntryCount());
        
        parentDir = (DirectoryEntry)fsRoot.getEntry("Parent Directory");
@@ -125,9 +126,10 @@
        
        
        // Recheck the data in all 4 streams
-       fs = writeOutAndReadBack(fs);
+       NPOIFSFileSystem fs3 = writeOutAndReadBack(fs2);
+       fs2.close();
        
-       fsRoot = fs.getRoot();
+       fsRoot = fs3.getRoot();
        assertEquals(1, fsRoot.getEntryCount());
        
        parentDir = (DirectoryEntry)fsRoot.getEntry("Parent Directory");
@@ -146,6 +148,6 @@
        assertContentsMatches(main4106, normDoc);
        
        // All done
-       fs.close();
+       fs3.close();
    }
 

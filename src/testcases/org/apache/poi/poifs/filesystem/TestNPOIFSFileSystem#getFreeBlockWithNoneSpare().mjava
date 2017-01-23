@@ -3,141 +3,142 @@
     *  file needs to be extended and another BAT/XBAT added
     */
    @Test
-   public void getFreeBlockWithNoneSpare() throws Exception {
-      NPOIFSFileSystem fs = new NPOIFSFileSystem(_inst.openResourceAsStream("BlockSize512.zvi"));
+   public void getFreeBlockWithNoneSpare() throws IOException {
+      NPOIFSFileSystem fs1 = new NPOIFSFileSystem(_inst.openResourceAsStream("BlockSize512.zvi"));
       int free;
 
       // We have one BAT at block 99
-      assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(99));
-      assertBATCount(fs, 1, 0);
+      assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs1.getNextBlock(99));
+      assertBATCount(fs1, 1, 0);
       
       // We've spare ones from 100 to 128
       for(int i=100; i<128; i++) {
-         assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(i));
+         assertEquals(POIFSConstants.UNUSED_BLOCK, fs1.getNextBlock(i));
       }
       
       // Check our BAT knows it's free
-      assertEquals(true, fs.getBATBlockAndIndex(0).getBlock().hasFreeSectors());
+      assertEquals(true, fs1.getBATBlockAndIndex(0).getBlock().hasFreeSectors());
       
       // Allocate all the spare ones
       for(int i=100; i<128; i++) {
-         fs.setNextBlock(i, POIFSConstants.END_OF_CHAIN);
+         fs1.setNextBlock(i, POIFSConstants.END_OF_CHAIN);
       }
       
       // BAT is now full, but there's only the one
-      assertEquals(false, fs.getBATBlockAndIndex(0).getBlock().hasFreeSectors());
+      assertEquals(false, fs1.getBATBlockAndIndex(0).getBlock().hasFreeSectors());
       try {
-         assertEquals(false, fs.getBATBlockAndIndex(128).getBlock().hasFreeSectors());
+         assertEquals(false, fs1.getBATBlockAndIndex(128).getBlock().hasFreeSectors());
          fail("Should only be one BAT");
       } catch(IndexOutOfBoundsException e) {}
-      assertBATCount(fs, 1, 0);
+      assertBATCount(fs1, 1, 0);
 
       
       // Now ask for a free one, will need to extend the file
-      assertEquals(129, fs.getFreeBlock());
+      assertEquals(129, fs1.getFreeBlock());
       
-      assertEquals(false, fs.getBATBlockAndIndex(0).getBlock().hasFreeSectors());
-      assertEquals(true, fs.getBATBlockAndIndex(128).getBlock().hasFreeSectors());
-      assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(128));
-      assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(129));
+      assertEquals(false, fs1.getBATBlockAndIndex(0).getBlock().hasFreeSectors());
+      assertEquals(true, fs1.getBATBlockAndIndex(128).getBlock().hasFreeSectors());
+      assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs1.getNextBlock(128));
+      assertEquals(POIFSConstants.UNUSED_BLOCK, fs1.getNextBlock(129));
       
       // We now have 2 BATs, but no XBATs
-      assertBATCount(fs, 2, 0);
+      assertBATCount(fs1, 2, 0);
       
       
       // Fill up to hold 109 BAT blocks
       for(int i=0; i<109; i++) {
-         fs.getFreeBlock();
+         fs1.getFreeBlock();
          int startOffset = i*128;
-         while( fs.getBATBlockAndIndex(startOffset).getBlock().hasFreeSectors() ) {
-            free = fs.getFreeBlock();
-            fs.setNextBlock(free, POIFSConstants.END_OF_CHAIN);
+         while( fs1.getBATBlockAndIndex(startOffset).getBlock().hasFreeSectors() ) {
+            free = fs1.getFreeBlock();
+            fs1.setNextBlock(free, POIFSConstants.END_OF_CHAIN);
          }
       }
       
-      assertEquals(false, fs.getBATBlockAndIndex(109*128-1).getBlock().hasFreeSectors());
+      assertEquals(false, fs1.getBATBlockAndIndex(109*128-1).getBlock().hasFreeSectors());
       try {
-         assertEquals(false, fs.getBATBlockAndIndex(109*128).getBlock().hasFreeSectors());
+         assertEquals(false, fs1.getBATBlockAndIndex(109*128).getBlock().hasFreeSectors());
          fail("Should only be 109 BATs");
       } catch(IndexOutOfBoundsException e) {}
       
       // We now have 109 BATs, but no XBATs
-      assertBATCount(fs, 109, 0);
+      assertBATCount(fs1, 109, 0);
       
       
       // Ask for it to be written out, and check the header
-      HeaderBlock header = writeOutAndReadHeader(fs);
+      HeaderBlock header = writeOutAndReadHeader(fs1);
       assertEquals(109, header.getBATCount());
       assertEquals(0, header.getXBATCount());
       
       
       // Ask for another, will get our first XBAT
-      free = fs.getFreeBlock();
-      assertEquals(false, fs.getBATBlockAndIndex(109*128-1).getBlock().hasFreeSectors());
-      assertEquals(true, fs.getBATBlockAndIndex(110*128-1).getBlock().hasFreeSectors());
+      free = fs1.getFreeBlock();
+      assertEquals(false, fs1.getBATBlockAndIndex(109*128-1).getBlock().hasFreeSectors());
+      assertEquals(true, fs1.getBATBlockAndIndex(110*128-1).getBlock().hasFreeSectors());
       try {
-         assertEquals(false, fs.getBATBlockAndIndex(110*128).getBlock().hasFreeSectors());
+         assertEquals(false, fs1.getBATBlockAndIndex(110*128).getBlock().hasFreeSectors());
          fail("Should only be 110 BATs");
       } catch(IndexOutOfBoundsException e) {}
-      assertBATCount(fs, 110, 1);
+      assertBATCount(fs1, 110, 1);
       
-      header = writeOutAndReadHeader(fs);
+      header = writeOutAndReadHeader(fs1);
       assertEquals(110, header.getBATCount());
       assertEquals(1, header.getXBATCount());
 
       
       // Fill the XBAT, which means filling 127 BATs
       for(int i=109; i<109+127; i++) {
-         fs.getFreeBlock();
+         fs1.getFreeBlock();
          int startOffset = i*128;
-         while( fs.getBATBlockAndIndex(startOffset).getBlock().hasFreeSectors() ) {
-            free = fs.getFreeBlock();
-            fs.setNextBlock(free, POIFSConstants.END_OF_CHAIN);
+         while( fs1.getBATBlockAndIndex(startOffset).getBlock().hasFreeSectors() ) {
+            free = fs1.getFreeBlock();
+            fs1.setNextBlock(free, POIFSConstants.END_OF_CHAIN);
          }
-         assertBATCount(fs, i+1, 1);
+         assertBATCount(fs1, i+1, 1);
       }
       
       // Should now have 109+127 = 236 BATs
-      assertEquals(false, fs.getBATBlockAndIndex(236*128-1).getBlock().hasFreeSectors());
+      assertEquals(false, fs1.getBATBlockAndIndex(236*128-1).getBlock().hasFreeSectors());
       try {
-         assertEquals(false, fs.getBATBlockAndIndex(236*128).getBlock().hasFreeSectors());
+         assertEquals(false, fs1.getBATBlockAndIndex(236*128).getBlock().hasFreeSectors());
          fail("Should only be 236 BATs");
       } catch(IndexOutOfBoundsException e) {}
-      assertBATCount(fs, 236, 1);
+      assertBATCount(fs1, 236, 1);
 
       
       // Ask for another, will get our 2nd XBAT
-      free = fs.getFreeBlock();
-      assertEquals(false, fs.getBATBlockAndIndex(236*128-1).getBlock().hasFreeSectors());
-      assertEquals(true, fs.getBATBlockAndIndex(237*128-1).getBlock().hasFreeSectors());
+      free = fs1.getFreeBlock();
+      assertEquals(false, fs1.getBATBlockAndIndex(236*128-1).getBlock().hasFreeSectors());
+      assertEquals(true, fs1.getBATBlockAndIndex(237*128-1).getBlock().hasFreeSectors());
       try {
-         assertEquals(false, fs.getBATBlockAndIndex(237*128).getBlock().hasFreeSectors());
+         assertEquals(false, fs1.getBATBlockAndIndex(237*128).getBlock().hasFreeSectors());
          fail("Should only be 237 BATs");
       } catch(IndexOutOfBoundsException e) {}
       
       
       // Check the counts now
-      assertBATCount(fs, 237, 2);
+      assertBATCount(fs1, 237, 2);
 
       // Check the header
-      header = writeOutAndReadHeader(fs);
+      header = writeOutAndReadHeader(fs1);
       
       
       // Now, write it out, and read it back in again fully
-      fs = writeOutAndReadBack(fs);
+      NPOIFSFileSystem fs2 = writeOutAndReadBack(fs1);
+      fs1.close();
 
       // Check that it is seen correctly
-      assertBATCount(fs, 237, 2);
+      assertBATCount(fs2, 237, 2);
 
-      assertEquals(false, fs.getBATBlockAndIndex(236*128-1).getBlock().hasFreeSectors());
-      assertEquals(true, fs.getBATBlockAndIndex(237*128-1).getBlock().hasFreeSectors());
+      assertEquals(false, fs2.getBATBlockAndIndex(236*128-1).getBlock().hasFreeSectors());
+      assertEquals(true, fs2.getBATBlockAndIndex(237*128-1).getBlock().hasFreeSectors());
       try {
-         assertEquals(false, fs.getBATBlockAndIndex(237*128).getBlock().hasFreeSectors());
+         assertEquals(false, fs2.getBATBlockAndIndex(237*128).getBlock().hasFreeSectors());
          fail("Should only be 237 BATs");
       } catch(IndexOutOfBoundsException e) {}
 
       
       // All done
-      fs.close();
+      fs2.close();
    }
 
