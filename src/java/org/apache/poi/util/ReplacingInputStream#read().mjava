@@ -1,0 +1,77 @@
+    @Override
+    public int read() throws IOException {
+        // use a simple state machine to figure out what we are doing
+        int next;
+        switch (state) {
+        default:
+        case NOT_MATCHED:
+            // we are not currently matching, replacing, or unbuffering
+            next=super.read();
+            if (pattern[0] != next) {
+                return next;
+            }
+
+            // clear whatever was there
+            Arrays.fill(buf, 0);
+            // make sure we start at 0
+            matchedIndex=0;
+
+            buf[matchedIndex++]=next;
+            if (pattern.length == 1) {
+                // edge-case when the pattern length is 1 we go straight to replacing
+                state=State.REPLACING;
+                // reset replace counter
+                replacedIndex=0;
+            } else {
+                // pattern of length 1
+                state=State.MATCHING;
+            }
+            // recurse to continue matching
+            return read();
+
+        case MATCHING:
+            // the previous bytes matched part of the pattern
+            next=super.read();
+            if (pattern[matchedIndex]==next) {
+                buf[matchedIndex++]=next;
+                if (matchedIndex==pattern.length) {
+                    // we've found a full match!
+                    if (replacement==null || replacement.length==0) {
+                        // the replacement is empty, go straight to NOT_MATCHED
+                        state=State.NOT_MATCHED;
+                        matchedIndex=0;
+                    } else {
+                        // start replacing
+                        state=State.REPLACING;
+                        replacedIndex=0;
+                    }
+                }
+            } else {
+                // mismatch -> unbuffer
+                buf[matchedIndex++]=next;
+                state=State.UNBUFFER;
+                unbufferIndex=0;
+            }
+            return read();
+
+        case REPLACING:
+            // we've fully matched the pattern and are returning bytes from the replacement
+            next=replacement[replacedIndex++];
+            if (replacedIndex==replacement.length) {
+                state=State.NOT_MATCHED;
+                replacedIndex=0;
+            }
+            return next;
+
+        case UNBUFFER:
+            // we partially matched the pattern before encountering a non matching byte
+            // we need to serve up the buffered bytes before we go back to NOT_MATCHED
+            next=buf[unbufferIndex++];
+            if (unbufferIndex==matchedIndex) {
+                state=State.NOT_MATCHED;
+                matchedIndex=0;
+            }
+            return next;
+        }
+    }
+
