@@ -3,23 +3,20 @@
         _runs = new ArrayList<XSLFTextRun>();
         _shape = shape;
 
-        for(XmlObject ch : _p.selectPath("*")){
-            if(ch instanceof CTRegularTextRun){
-                CTRegularTextRun r = (CTRegularTextRun)ch;
-                _runs.add(newTextRun(r));
-            } else if (ch instanceof CTTextLineBreak){
-                CTTextLineBreak br = (CTTextLineBreak)ch;
-                CTRegularTextRun r = CTRegularTextRun.Factory.newInstance();
-                r.setRPr(br.getRPr());
-                r.setT("\n");
-                _runs.add(newTextRun(r));
-            } else if (ch instanceof CTTextField){
-                CTTextField f = (CTTextField)ch;
-                CTRegularTextRun r = CTRegularTextRun.Factory.newInstance();
-                r.setRPr(f.getRPr());
-                r.setT(f.getT());
-                _runs.add(newTextRun(r));
+        XmlCursor c = _p.newCursor();
+        try {
+            if (c.toFirstChild()) {
+                do {
+                    XmlObject r = c.getObject();
+                    if (r instanceof CTTextLineBreak) {
+                        _runs.add(new XSLFLineBreak((CTTextLineBreak)r, this));
+                    } else if (r instanceof CTRegularTextRun || r instanceof CTTextField) {
+                        _runs.add(new XSLFTextRun(r, this));
+                    }
+                } while (c.toNextSibling());
             }
+        } finally {
+            c.dispose();
         }
     }
 

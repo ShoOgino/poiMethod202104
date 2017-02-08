@@ -1,33 +1,33 @@
     private boolean fetchCharacterProperty(CharacterPropertyFetcher<?> fetcher){
         XSLFTextShape shape = _p.getParentShape();
         XSLFSheet sheet = shape.getSheet();
-        boolean ok = false;
 
-        if (_r.isSetRPr()) ok = fetcher.fetch(getRPr(false));
-        if (ok) return true;
+        CTTextCharacterProperties rPr = getRPr(false);
+        if (rPr != null && fetcher.fetch(rPr)) {
+            return true;
+        }
         
-        ok = shape.fetchShapeProperty(fetcher);
-        if (ok) return true;
+        if (shape.fetchShapeProperty(fetcher)) {
+            return true;
+        }
         
         CTPlaceholder ph = shape.getCTPlaceholder();
         if (ph == null){
             // if it is a plain text box then take defaults from presentation.xml
             @SuppressWarnings("resource")
             XMLSlideShow ppt = sheet.getSlideShow();
+            // TODO: determine master shape
             CTTextParagraphProperties themeProps = ppt.getDefaultParagraphStyle(_p.getIndentLevel());
-            if (themeProps != null) {
-                // TODO: determine master shape
-                ok = fetcher.fetch(themeProps);
+            if (themeProps != null && fetcher.fetch(themeProps)) {
+                return true;
             }
         }
-        if (ok) return true;
 
+        // TODO: determine master shape
         CTTextParagraphProperties defaultProps =  _p.getDefaultMasterStyle();
-        if(defaultProps != null) {
-            // TODO: determine master shape
-            ok = fetcher.fetch(defaultProps);
+        if(defaultProps != null && fetcher.fetch(defaultProps)) {
+            return true;
         }
-        if (ok) return true;
 
         return false;
     }

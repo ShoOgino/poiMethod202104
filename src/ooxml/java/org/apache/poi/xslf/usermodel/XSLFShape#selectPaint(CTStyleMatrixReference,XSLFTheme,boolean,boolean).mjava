@@ -1,4 +1,4 @@
-    protected static PaintStyle selectPaint(CTStyleMatrixReference fillRef, final XSLFTheme theme, boolean isLineStyle) {
+    protected static PaintStyle selectPaint(CTStyleMatrixReference fillRef, final XSLFTheme theme, boolean isLineStyle, boolean hasPlaceholder) {
         if (fillRef == null) return null;
         
         // The idx attribute refers to the index of a fill style or
@@ -7,7 +7,6 @@
         // values 1-999 refer to the index of a fill style within the fillStyleLst element
         // values 1001 and above refer to the index of a background fill style within the bgFillStyleLst element.
         int idx = (int)fillRef.getIdx();
-        CTSchemeColor phClr = fillRef.getSchemeClr();
         CTStyleMatrix matrix = theme.getXmlObject().getThemeElements().getFmtScheme();
         final XmlObject styleLst;
         int childIdx;
@@ -26,7 +25,15 @@
             fp = XSLFPropertiesDelegate.getFillDelegate(cur.getObject());
         }
         cur.dispose();
-        
-        return selectPaint(fp, phClr, theme.getPackagePart(), theme);
+            
+        CTSchemeColor phClr = fillRef.getSchemeClr();
+        PaintStyle res =  selectPaint(fp, phClr, theme.getPackagePart(), theme, hasPlaceholder);
+        // check for empty placeholder value
+        // see http://officeopenxml.com/prSlide-color.php - "Color Placeholders within Themes"
+        if (res != null || hasPlaceholder) {
+            return res;
+        }
+        XSLFColor col = new XSLFColor(fillRef, theme, phClr);
+        return DrawPaint.createSolidPaint(col.getColorStyle());
     }
 

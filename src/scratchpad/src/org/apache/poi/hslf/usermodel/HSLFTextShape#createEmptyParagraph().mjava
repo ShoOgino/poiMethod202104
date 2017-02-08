@@ -1,0 +1,58 @@
+    private void createEmptyParagraph() {
+        TextHeaderAtom tha = (TextHeaderAtom)_txtbox.findFirstOfType(TextHeaderAtom._type);
+        if (tha == null) {
+            tha = new TextHeaderAtom();
+            tha.setParentRecord(_txtbox);
+            _txtbox.appendChildRecord(tha);
+        }
+
+        TextBytesAtom tba = (TextBytesAtom)_txtbox.findFirstOfType(TextBytesAtom._type);
+        TextCharsAtom tca = (TextCharsAtom)_txtbox.findFirstOfType(TextCharsAtom._type);
+        if (tba == null && tca == null) {
+            tba = new TextBytesAtom();
+             tba.setText(new byte[0]);
+             _txtbox.appendChildRecord(tba);
+        }
+
+        final String text = ((tba != null) ? tba.getText() : tca.getText());
+        
+        StyleTextPropAtom sta = (StyleTextPropAtom)_txtbox.findFirstOfType(StyleTextPropAtom._type);
+        TextPropCollection paraStyle = null, charStyle = null;
+        if (sta == null) {
+            int parSiz = text.length();
+            sta = new StyleTextPropAtom(parSiz+1);
+            if (_paragraphs.isEmpty()) {
+                paraStyle = sta.addParagraphTextPropCollection(parSiz+1);
+                charStyle = sta.addCharacterTextPropCollection(parSiz+1);
+            } else {
+                for (HSLFTextParagraph htp : _paragraphs) {
+                    int runsLen = 0;
+                    for (HSLFTextRun htr : htp.getTextRuns()) {
+                        runsLen += htr.getLength();
+                        charStyle = sta.addCharacterTextPropCollection(htr.getLength());
+                        htr.setCharacterStyle(charStyle);
+                    }
+                    paraStyle = sta.addParagraphTextPropCollection(runsLen);
+                    htp.setParagraphStyle(paraStyle);
+                }
+                assert (paraStyle != null && charStyle != null);
+            }
+            _txtbox.appendChildRecord(sta);
+        } else {
+            paraStyle = sta.getParagraphStyles().get(0);
+            charStyle = sta.getCharacterStyles().get(0);
+        }
+
+        if (_paragraphs.isEmpty()) {
+            HSLFTextParagraph htp = new HSLFTextParagraph(tha, tba, tca, _paragraphs);
+            htp.setParagraphStyle(paraStyle);
+            htp.setParentShape(this);
+            _paragraphs.add(htp);
+    
+            HSLFTextRun htr = new HSLFTextRun(htp);
+            htr.setCharacterStyle(charStyle);
+            htr.setText(text);
+            htp.addTextRun(htr);
+        }
+    }
+

@@ -1,12 +1,14 @@
     protected PaintStyle getLinePaint() {
         XSLFSheet sheet = getSheet();
         final XSLFTheme theme = sheet.getTheme();
+        final boolean hasPlaceholder = getPlaceholder() != null;
         PropertyFetcher<PaintStyle> fetcher = new PropertyFetcher<PaintStyle>() {
+            @Override
             public boolean fetch(XSLFShape shape) {
                 CTLineProperties spPr = getLn(shape, false);
                 XSLFFillProperties fp = XSLFPropertiesDelegate.getFillDelegate(spPr);
                 PackagePart pp = shape.getSheet().getPackagePart();
-                PaintStyle paint = selectPaint(fp, null, pp, theme);
+                PaintStyle paint = selectPaint(fp, null, pp, theme, hasPlaceholder);
                 if (paint != null) {
                     setValue(paint);
                     return true;
@@ -15,7 +17,7 @@
                 CTShapeStyle style = shape.getSpStyle();
                 if (style != null) {
                     fp = XSLFPropertiesDelegate.getFillDelegate(style.getLnRef());
-                    paint = selectPaint(fp, null, pp, theme);
+                    paint = selectPaint(fp, null, pp, theme, hasPlaceholder);
                 }
                 if (paint != null) {
                     setValue(paint);
@@ -27,11 +29,15 @@
         fetchShapeProperty(fetcher);
 
         PaintStyle paint = fetcher.getValue();
-        if (paint != null) return paint;
+        if (paint != null) {
+            return paint;
+        }
 
         // line color was not found, check if it is defined in the theme
         CTShapeStyle style = getSpStyle();
-        if (style == null) return null;
+        if (style == null) {
+            return null;
+        }
 
         // get a reference to a line style within the style matrix.
         CTStyleMatrixReference lnRef = style.getLnRef();
@@ -41,7 +47,7 @@
             CTLineProperties props = theme.getXmlObject().getThemeElements().getFmtScheme().getLnStyleLst().getLnArray(idx - 1);
             XSLFFillProperties fp = XSLFPropertiesDelegate.getFillDelegate(props);
             PackagePart pp = sheet.getPackagePart();
-            paint = selectPaint(fp, phClr, pp, theme);
+            paint = selectPaint(fp, phClr, pp, theme, hasPlaceholder);
         }
 
         return paint;
