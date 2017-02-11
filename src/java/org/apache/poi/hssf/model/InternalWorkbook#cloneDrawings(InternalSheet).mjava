@@ -15,54 +15,54 @@
 
         //check if the cloned sheet has drawings
         int aggLoc = sheet.aggregateDrawingRecords(drawingManager, false);
-        if(aggLoc != -1) {
-            EscherAggregate agg = (EscherAggregate) sheet.findFirstRecordBySid(EscherAggregate.sid);
-            EscherContainerRecord escherContainer = agg.getEscherContainer();
-            if (escherContainer == null) {
-                return;
-            }
+        if(aggLoc == -1) {
+            return;
+        }
+        
+        EscherAggregate agg = (EscherAggregate) sheet.findFirstRecordBySid(EscherAggregate.sid);
+        EscherContainerRecord escherContainer = agg.getEscherContainer();
+        if (escherContainer == null) {
+            return;
+        }
 
-            EscherDggRecord dgg = drawingManager.getDgg();
+        EscherDggRecord dgg = drawingManager.getDgg();
 
-            //register a new drawing group for the cloned sheet
-            int dgId = drawingManager.findNewDrawingGroupId();
-            dgg.addCluster( dgId, 0 );
-            dgg.setDrawingsSaved(dgg.getDrawingsSaved() + 1);
+        //register a new drawing group for the cloned sheet
+        int dgId = drawingManager.findNewDrawingGroupId();
+        dgg.addCluster( dgId, 0 );
+        dgg.setDrawingsSaved(dgg.getDrawingsSaved() + 1);
 
-            EscherDgRecord dg = null;
-            for(EscherRecord er : escherContainer) {
-                if(er instanceof EscherDgRecord) {
-                    dg = (EscherDgRecord)er;
-                    //update id of the drawing in the cloned sheet
-                    dg.setOptions( (short) ( dgId << 4 ) );
-                } else if (er instanceof EscherContainerRecord){
-                    // iterate over shapes and re-generate shapeId
-                    EscherContainerRecord cp = (EscherContainerRecord)er;
-                    for(Iterator<EscherRecord> spIt = cp.getChildRecords().iterator(); spIt.hasNext();) {
-                        EscherContainerRecord shapeContainer = (EscherContainerRecord)spIt.next();
-                        for(EscherRecord shapeChildRecord : shapeContainer.getChildRecords()) {
-                            int recordId = shapeChildRecord.getRecordId();
-                            if (recordId == EscherSpRecord.RECORD_ID){
-                                if (dg == null) {
-                                    throw new RecordFormatException("EscherDgRecord wasn't set/processed before.");
-                                }
-                                EscherSpRecord sp = (EscherSpRecord)shapeChildRecord;
-                                int shapeId = drawingManager.allocateShapeId((short)dgId, dg);
-                                //allocateShapeId increments the number of shapes. roll back to the previous value
-                                dg.setNumShapes(dg.getNumShapes()-1);
-                                sp.setShapeId(shapeId);
-                            } else if (recordId == EscherOptRecord.RECORD_ID){
-                                EscherOptRecord opt = (EscherOptRecord)shapeChildRecord;
-                                EscherSimpleProperty prop = (EscherSimpleProperty)opt.lookup(
-                                        EscherProperties.BLIP__BLIPTODISPLAY );
-                                if (prop != null){
-                                    int pictureIndex = prop.getPropertyValue();
-                                    // increment reference count for pictures
-                                    EscherBSERecord bse = getBSERecord(pictureIndex);
-                                    bse.setRef(bse.getRef() + 1);
-                                }
-
+        EscherDgRecord dg = null;
+        for(EscherRecord er : escherContainer) {
+            if(er instanceof EscherDgRecord) {
+                dg = (EscherDgRecord)er;
+                //update id of the drawing in the cloned sheet
+                dg.setOptions( (short) ( dgId << 4 ) );
+            } else if (er instanceof EscherContainerRecord){
+                // iterate over shapes and re-generate shapeId
+                for(EscherRecord er2 : (EscherContainerRecord)er) {
+                    for(EscherRecord shapeChildRecord : (EscherContainerRecord)er2) {
+                        int recordId = shapeChildRecord.getRecordId();
+                        if (recordId == EscherSpRecord.RECORD_ID){
+                            if (dg == null) {
+                                throw new RecordFormatException("EscherDgRecord wasn't set/processed before.");
                             }
+                            EscherSpRecord sp = (EscherSpRecord)shapeChildRecord;
+                            int shapeId = drawingManager.allocateShapeId((short)dgId, dg);
+                            //allocateShapeId increments the number of shapes. roll back to the previous value
+                            dg.setNumShapes(dg.getNumShapes()-1);
+                            sp.setShapeId(shapeId);
+                        } else if (recordId == EscherOptRecord.RECORD_ID){
+                            EscherOptRecord opt = (EscherOptRecord)shapeChildRecord;
+                            EscherSimpleProperty prop = (EscherSimpleProperty)opt.lookup(
+                                    EscherProperties.BLIP__BLIPTODISPLAY );
+                            if (prop != null){
+                                int pictureIndex = prop.getPropertyValue();
+                                // increment reference count for pictures
+                                EscherBSERecord bse = getBSERecord(pictureIndex);
+                                bse.setRef(bse.getRef() + 1);
+                            }
+
                         }
                     }
                 }

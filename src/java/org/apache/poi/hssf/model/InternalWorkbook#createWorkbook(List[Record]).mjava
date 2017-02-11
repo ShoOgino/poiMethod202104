@@ -11,147 +11,130 @@
      * @return Workbook object
      */
     public static InternalWorkbook createWorkbook(List<Record> recs) {
-        if (log.check( POILogger.DEBUG )) {
-            log.log(DEBUG, "Workbook (readfile) created with reclen=",
-                    Integer.valueOf(recs.size()));
-        }
+        LOG.log(DEBUG, "Workbook (readfile) created with reclen=", recs.size());
         InternalWorkbook retval = new InternalWorkbook();
         List<Record> records = new ArrayList<Record>(recs.size() / 3);
         retval.records.setRecords(records);
 
-        int k;
-        for (k = 0; k < recs.size(); k++) {
+        boolean eofPassed = false;
+        for (int k = 0; k < recs.size(); k++) {
             Record rec = recs.get(k);
-
-            if (rec.getSid() == EOFRecord.sid) {
-                records.add(rec);
-                if (log.check( POILogger.DEBUG )) {
-                    log.log(DEBUG, "found workbook eof record at " + k);
-                }
-                break;
-            }
+            String logObj;
             switch (rec.getSid()) {
 
+                case EOFRecord.sid :
+                    logObj = "workbook eof";
+                    break;
+
                 case BoundSheetRecord.sid :
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found boundsheet record at " + k);
-                    }
+                    logObj = "boundsheet";
                     retval.boundsheets.add((BoundSheetRecord) rec);
                     retval.records.setBspos( k );
                     break;
 
                 case SSTRecord.sid :
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found sst record at " + k);
-                    }
+                    logObj = "sst";
                     retval.sst = ( SSTRecord ) rec;
                     break;
 
                 case FontRecord.sid :
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found font record at " + k);
-                    }
+                    logObj = "font";
                     retval.records.setFontpos( k );
                     retval.numfonts++;
                     break;
 
                 case ExtendedFormatRecord.sid :
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found XF record at " + k);
-                    }
+                    logObj = "XF";
                     retval.records.setXfpos( k );
                     retval.numxfs++;
                     break;
 
                 case TabIdRecord.sid :
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found tabid record at " + k);
-                    }
+                    logObj = "tabid";
                     retval.records.setTabpos( k );
                     break;
 
                 case ProtectRecord.sid :
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found protect record at " + k);
-                    }
+                    logObj = "protect";
                     retval.records.setProtpos( k );
                     break;
 
                 case BackupRecord.sid :
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found backup record at " + k);
-                    }
+                    logObj = "backup";
                     retval.records.setBackuppos( k );
                     break;
+
                 case ExternSheetRecord.sid :
-                    throw new RuntimeException("Extern sheet is part of LinkTable");
+                    throw new RecordFormatException("Extern sheet is part of LinkTable");
+
                 case NameRecord.sid :
                 case SupBookRecord.sid :
                     // LinkTable can start with either of these
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found SupBook record at " + k);
-                    }
+                    LOG.log(DEBUG, "found SupBook record at " + k);
                     retval.linkTable = new LinkTable(recs, k, retval.records, retval.commentRecords);
                     k+=retval.linkTable.getRecordCount() - 1;
                     continue;
+
                 case FormatRecord.sid :
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found format record at " + k);
-                    }
-                    retval.formats.add((FormatRecord) rec);
-                    retval.maxformatid = retval.maxformatid >= ((FormatRecord)rec).getIndexCode() ? retval.maxformatid : ((FormatRecord)rec).getIndexCode();
+                    logObj = "format";
+                    FormatRecord fr = (FormatRecord) rec;
+                    retval.formats.add(fr);
+                    retval.maxformatid = retval.maxformatid >= fr.getIndexCode() ? retval.maxformatid : fr.getIndexCode();
                     break;
+
                 case DateWindow1904Record.sid :
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found datewindow1904 record at " + k);
-                    }
+                    logObj = "datewindow1904";
                     retval.uses1904datewindowing = ((DateWindow1904Record)rec).getWindowing() == 1;
                     break;
+
                 case PaletteRecord.sid:
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found palette record at " + k);
-                    }
+                    logObj = "palette";
                     retval.records.setPalettepos( k );
                     break;
+
                 case WindowOneRecord.sid:
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found WindowOneRecord at " + k);
-                    }
+                    logObj = "WindowOneRecord";
                     retval.windowOne = (WindowOneRecord) rec;
                     break;
+
                 case WriteAccessRecord.sid:
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found WriteAccess at " + k);
-                    }
+                    logObj = "WriteAccess";
                     retval.writeAccess = (WriteAccessRecord) rec;
                     break;
+
                 case WriteProtectRecord.sid:
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found WriteProtect at " + k);
-                    }
+                    logObj = "WriteProtect";
                     retval.writeProtect = (WriteProtectRecord) rec;
                     break;
+
                 case FileSharingRecord.sid:
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found FileSharing at " + k);
-                    }
+                    logObj = "FileSharing";
                     retval.fileShare = (FileSharingRecord) rec;
                     break;
 
                 case NameCommentRecord.sid:
+                    logObj = "NameComment";
                     final NameCommentRecord ncr = (NameCommentRecord) rec;
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG, "found NameComment at " + k);
-                    }
                     retval.commentRecords.put(ncr.getNameText(), ncr);
                     break;
+
+                case HyperlinkRecord.sid:
+                    // Look for other interesting values that follow the EOFRecord
+                    logObj = "Hyperlink";
+                    retval.hyperlinks.add((HyperlinkRecord)rec);
+                    break;
+
                 default:
-                    if (log.check( POILogger.DEBUG )) {
-                        log.log(DEBUG,  "ignoring record (sid=" + rec.getSid() + ") at " + k);
-                    }
+                    logObj = "(sid=" + rec.getSid() + ")";
                     break;
             }
-            records.add(rec);
+            if (!eofPassed) {
+                records.add(rec);
+            }
+            LOG.log(DEBUG, "found "+logObj+" record at " + k);
+            if (rec.getSid() == EOFRecord.sid) {
+                eofPassed = true;
+            }
         }
         //What if we dont have any ranges and supbooks
         //        if (retval.records.supbookpos == 0) {
@@ -159,25 +142,10 @@
         //            retval.records.namepos    = retval.records.supbookpos + 1;
         //        }
 
-        // Look for other interesting values that
-        //  follow the EOFRecord
-        for ( ; k < recs.size(); k++) {
-            Record rec = recs.get(k);
-            switch (rec.getSid()) {
-                case HyperlinkRecord.sid:
-                    retval.hyperlinks.add((HyperlinkRecord)rec);
-                    break;
-                default:
-                    break;
-            }
-        }
-
         if (retval.windowOne == null) {
             retval.windowOne = createWindowOne();
         }
-        if (log.check( POILogger.DEBUG )) {
-            log.log(DEBUG, "exit create workbook from existing file function");
-        }
+        LOG.log(DEBUG, "exit create workbook from existing file function");
         return retval;
     }
 
