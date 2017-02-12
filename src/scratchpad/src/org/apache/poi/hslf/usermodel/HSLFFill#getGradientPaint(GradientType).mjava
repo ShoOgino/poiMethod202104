@@ -1,9 +1,17 @@
     private GradientPaint getGradientPaint(final GradientType gradientType) {
-        final AbstractEscherOptRecord opt = shape.getEscherOptRecord();
+        AbstractEscherOptRecord opt = shape.getEscherOptRecord();
         final EscherArrayProperty ep = HSLFShape.getEscherProperty(opt, EscherProperties.FILL__SHADECOLORS);
         final int colorCnt = (ep == null) ? 0 : ep.getNumberOfElementsInArray();
 
+        // NOFILLHITTEST can be in the normal escher opt record but also in the tertiary record
+        // the extended bit fields seem to be in the second
+        opt = (AbstractEscherOptRecord)shape.getEscherChild(RecordTypes.EscherUserDefined);
+        EscherSimpleProperty p = HSLFShape.getEscherProperty(opt, EscherProperties.FILL__NOFILLHITTEST);
+        int propVal = (p == null) ? 0 : p.getPropertyValue();
+        final boolean rotateWithShape = FILL_USE_USE_SHAPE_ANCHOR.isSet(propVal) && FILL_USE_SHAPE_ANCHOR.isSet(propVal);
+        
         return new GradientPaint() {
+            @Override
             public double getGradientAngle() {
                 // A value of type FixedPoint, as specified in [MS-OSHARED] section 2.2.1.6,
                 // that specifies the angle of the gradient fill. Zero degrees represents a vertical vector from
@@ -11,6 +19,8 @@
                 int rot = shape.getEscherProperty(EscherProperties.FILL__ANGLE);
                 return 90-Units.fixedPointToDouble(rot);
             }
+            
+            @Override
             public ColorStyle[] getGradientColors() {
                 ColorStyle cs[];
                 if (colorCnt == 0) {
@@ -28,9 +38,12 @@
                 }
                 return cs;
             }
+            
             private ColorStyle wrapColor(Color col) {
                 return (col == null) ? null : DrawPaint.createSolidPaint(col).getSolidColor();
             }
+            
+            @Override
             public float[] getGradientFractions() {
                 float frc[];
                 if (colorCnt == 0) {
@@ -45,9 +58,13 @@
                 }
                 return frc;
             }
+            
+            @Override
             public boolean isRotatedWithShape() {
-                return false;
+                return rotateWithShape;
             }
+            
+            @Override
             public GradientType getGradientType() {
                 return gradientType;
             }

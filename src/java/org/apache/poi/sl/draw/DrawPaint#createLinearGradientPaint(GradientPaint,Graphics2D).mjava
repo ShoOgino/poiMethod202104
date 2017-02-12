@@ -1,22 +1,27 @@
     protected Paint createLinearGradientPaint(GradientPaint fill, Graphics2D graphics) {
+        // TODO: we need to find the two points for gradient - the problem is, which point at the outline
+        // do you take? My solution would be to apply the gradient rotation to the shape in reverse
+        // and then scan the shape for the largest possible horizontal distance
+        
         double angle = fill.getGradientAngle();
+        if (!fill.isRotatedWithShape()) {
+            angle -= shape.getRotation();
+        }
+
         Rectangle2D anchor = DrawShape.getAnchor(graphics, shape);
+        final double h = anchor.getHeight(), w = anchor.getWidth(), x = anchor.getX(), y = anchor.getY();
 
-        AffineTransform at = AffineTransform.getRotateInstance(
-            Math.toRadians(angle),
-            anchor.getX() + anchor.getWidth() / 2,
-            anchor.getY() + anchor.getHeight() / 2);
+        AffineTransform at = AffineTransform.getRotateInstance(Math.toRadians(angle), anchor.getCenterX(), anchor.getCenterY());
 
-        double diagonal = Math.sqrt(anchor.getHeight() * anchor.getHeight() + anchor.getWidth() * anchor.getWidth());
-        Point2D p1 = new Point2D.Double(anchor.getX() + anchor.getWidth() / 2 - diagonal / 2,
-                anchor.getY() + anchor.getHeight() / 2);
+        double diagonal = Math.sqrt(h * h + w * w);
+        Point2D p1 = new Point2D.Double(x + w / 2 - diagonal / 2, y + h / 2);
         p1 = at.transform(p1, null);
 
-        Point2D p2 = new Point2D.Double(anchor.getX() + anchor.getWidth(), anchor.getY() + anchor.getHeight() / 2);
+        Point2D p2 = new Point2D.Double(x + w, y + h / 2);
         p2 = at.transform(p2, null);
-        
-        snapToAnchor(p1, anchor);
-        snapToAnchor(p2, anchor);
+
+//        snapToAnchor(p1, anchor);
+//        snapToAnchor(p2, anchor);
 
         if (p1.equals(p2)) {
             // gradient paint on the same point throws an exception ... and doesn't make sense
@@ -25,27 +30,13 @@
 
         float[] fractions = fill.getGradientFractions();
         Color[] colors = new Color[fractions.length];
-        
+
         int i = 0;
         for (ColorStyle fc : fill.getGradientColors()) {
             // if fc is null, use transparent color to get color of background
             colors[i++] = (fc == null) ? TRANSPARENT : applyColorTransform(fc);
         }
 
-        AffineTransform grAt  = new AffineTransform();
-        if(fill.isRotatedWithShape()) {
-            double rotation = shape.getRotation();
-            if (rotation != 0.) {
-                double centerX = anchor.getX() + anchor.getWidth() / 2;
-                double centerY = anchor.getY() + anchor.getHeight() / 2;
-
-                grAt.translate(centerX, centerY);
-                grAt.rotate(Math.toRadians(-rotation));
-                grAt.translate(-centerX, -centerY);
-            }
-        }
-
-        return new LinearGradientPaint
-            (p1, p2, fractions, colors, CycleMethod.NO_CYCLE, ColorSpaceType.SRGB, grAt);
+        return new LinearGradientPaint(p1, p2, fractions, colors);
     }
 

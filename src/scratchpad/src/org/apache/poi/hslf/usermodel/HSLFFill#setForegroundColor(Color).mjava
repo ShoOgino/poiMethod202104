@@ -3,21 +3,29 @@
      */
     public void setForegroundColor(Color color){
         AbstractEscherOptRecord opt = shape.getEscherOptRecord();
-        if (color == null) {
-            opt.removeEscherProperty(EscherProperties.FILL__FILLCOLOR);
-            HSLFShape.setEscherProperty(opt, EscherProperties.FILL__NOFILLHITTEST, 0x150000);
-        }
-        else {
+        opt.removeEscherProperty(EscherProperties.FILL__FILLOPACITY);
+        opt.removeEscherProperty(EscherProperties.FILL__FILLCOLOR);
+
+        if (color != null) {
             int rgb = new Color(color.getBlue(), color.getGreen(), color.getRed(), 0).getRGB();
             HSLFShape.setEscherProperty(opt, EscherProperties.FILL__FILLCOLOR, rgb);
             int alpha = color.getAlpha();
-            if (alpha == 255) {
-                opt.removeEscherProperty(EscherProperties.FILL__FILLOPACITY);
-            } else {
+            if (alpha < 255) {
                 int alphaFP = Units.doubleToFixedPoint(alpha/255d);
                 HSLFShape.setEscherProperty(opt, EscherProperties.FILL__FILLOPACITY, alphaFP);
             }
-            HSLFShape.setEscherProperty(opt, EscherProperties.FILL__NOFILLHITTEST, 0x150011);
         }
+        
+        EscherSimpleProperty p = HSLFShape.getEscherProperty(opt, EscherProperties.FILL__NOFILLHITTEST);
+        int propVal = (p == null) ? 0 : p.getPropertyValue();
+        propVal = FILL_FILLED.setBoolean(propVal, color != null);
+        propVal = FILL_NO_FILL_HIT_TEST.setBoolean(propVal, color != null);
+        propVal = FILL_USE_FILLED.set(propVal);
+        propVal = FILL_USE_FILL_SHAPE.set(propVal);
+        propVal = FILL_USE_NO_FILL_HIT_TEST.set(propVal);
+        // TODO: check why we always clear this ...
+        propVal = FILL_FILL_SHAPE.clear(propVal);
+
+        HSLFShape.setEscherProperty(opt, EscherProperties.FILL__NOFILLHITTEST, propVal);
     }
 
