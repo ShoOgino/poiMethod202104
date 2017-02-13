@@ -1,0 +1,22 @@
+    /**
+     * @param cell needed for offsets from region anchor
+     * @param region for adjusting relative formulas
+     * @return true/false using the same rules as Data Validation evaluations
+     */
+    private boolean checkFormula(Cell cell, CellRangeAddress region) {
+        ValueEval comp = unwrapEval(workbookEvaluator.evaluate(rule.getFormula1(), ConditionalFormattingEvaluator.getRef(cell), region));
+        
+        // Copied for now from DataValidationEvaluator.ValidationEnum.FORMULA#isValidValue()
+        if (comp instanceof BlankEval) return true;
+        if (comp instanceof ErrorEval) return false;
+        if (comp instanceof BoolEval) {
+            return ((BoolEval) comp).getBooleanValue();
+        }
+        // empirically tested in Excel - 0=false, any other number = true/valid
+        // see test file DataValidationEvaluations.xlsx
+        if (comp instanceof NumberEval) {
+            return ((NumberEval) comp).getNumberValue() != 0;
+        }
+        return false; // anything else is false, such as text
+    }
+

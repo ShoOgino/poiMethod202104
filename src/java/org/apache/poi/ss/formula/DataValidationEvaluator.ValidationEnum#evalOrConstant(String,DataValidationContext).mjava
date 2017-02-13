@@ -1,0 +1,31 @@
+        /**
+         * Evaluate a numeric formula value as either a constant or numeric expression.
+         * Note that Excel treats validations with constraint formulas that evaluate to null as valid,
+         * but evaluations in error or non-numeric are marked invalid.
+         * @param formula
+         * @param context
+         * @return numeric value or null if not defined or the formula evaluates to an empty/missing cell.
+         * @throws NumberFormatException if the formula is non-numeric when it should be
+         */
+        private Double evalOrConstant(String formula, DataValidationContext context) throws NumberFormatException {
+            if (formula == null || formula.trim().isEmpty()) return null; // shouldn't happen, but just in case
+            try {
+                return Double.valueOf(formula);
+            } catch (NumberFormatException e) {
+                // must be an expression, then.  Overloading by Excel in the file formats.
+            }
+            ValueEval eval = context.getEvaluator().getWorkbookEvaluator().evaluate(formula, context.getTarget(), context.getRegion());
+            if (eval instanceof RefEval) {
+                eval = ((RefEval) eval).getInnerValueEval(((RefEval) eval).getFirstSheetIndex());
+            }
+            if (eval instanceof BlankEval) return null;
+            if (eval instanceof NumberEval) return Double.valueOf(((NumberEval) eval).getNumberValue());
+            if (eval instanceof StringEval) {
+                final String value = ((StringEval) eval).getStringValue();
+                if (value == null || value.trim().isEmpty()) return null; 
+                // try to parse the cell value as a double and return it 
+                return Double.valueOf(value);
+            }
+            throw new NumberFormatException("Formula '" + formula + "' evaluates to something other than a number");
+        }
+

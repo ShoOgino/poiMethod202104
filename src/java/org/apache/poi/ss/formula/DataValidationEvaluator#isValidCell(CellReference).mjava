@@ -1,0 +1,37 @@
+    /**
+     * Use the validation returned by {@link #getValidationForCell(Cell)} if you
+     * want the error display details. This is the validation checked by this
+     * method, which attempts to replicate Excel's data validation rules.
+     * <p/>
+     * Note that to properly apply some validations, care must be taken to
+     * offset the base validation formula by the relative position of the
+     * current cell, or the wrong value is checked.
+     * 
+     * @param cell
+     * @return true if the cell has no validation or the cell value passes the
+     *         defined validation, false if it fails
+     */
+    public boolean isValidCell(CellReference cellRef) {
+        final DataValidationContext context = getValidationContextForCell(cellRef);
+
+        if (context == null) return true;
+        
+        final Cell cell = SheetUtil.getCell(workbook.getSheet(cellRef.getSheetName()), cellRef.getRow(), cellRef.getCol());
+        
+        // now we can validate the cell
+        
+        // if empty, return not allowed flag
+        if (   cell == null
+            || isType(cell, CellType.BLANK)  
+            || (isType(cell,CellType.STRING) 
+                && (cell.getStringCellValue() == null || cell.getStringCellValue().isEmpty())
+               )
+           ) {
+            return context.getValidation().getEmptyCellAllowed();
+        }
+        
+        // cell has a value
+        
+        return ValidationEnum.isValid(cell, context);
+    }
+

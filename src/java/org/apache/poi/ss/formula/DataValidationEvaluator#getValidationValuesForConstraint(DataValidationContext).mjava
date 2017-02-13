@@ -1,0 +1,35 @@
+    /**
+     * static so enums can reference it without creating a whole instance
+     * @param cell
+     * @param val
+     * @return returns an unmodifiable {@link List} of {@link ValueEval}s, which may be empty
+     */
+    protected static List<ValueEval> getValidationValuesForConstraint(DataValidationContext context) {
+        final DataValidationConstraint val = context.getValidation().getValidationConstraint();
+        if (val.getValidationType() != ValidationType.LIST) return null;
+        
+        String formula = val.getFormula1();
+        
+        final List<ValueEval> values = new ArrayList<ValueEval>();
+        
+        if (val.getExplicitListValues() != null && val.getExplicitListValues().length > 0) {
+            // assumes parsing interprets the overloaded property right for XSSF
+            for (String s : val.getExplicitListValues()) {
+                if (s != null) values.add(new StringEval(s)); // constructor throws exception on null
+            }
+        } else if (formula != null) {
+            // evaluate formula for cell refs then get their values
+            ValueEval eval = context.getEvaluator().getWorkbookEvaluator().evaluate(formula, context.getTarget(), context.getRegion());
+            // formula is a StringEval if the validation is by a fixed list.  Use the explicit list later.
+            // there is no way from the model to tell if the list is fixed values or formula based.
+            if (eval instanceof TwoDEval) {
+                TwoDEval twod = (TwoDEval) eval;
+                for (int i=0; i < twod.getHeight(); i++) {
+                    final ValueEval cellValue = twod.getValue(i,  0);
+                    values.add(cellValue);
+                }
+            }
+        }
+        return Collections.unmodifiableList(values);
+    }
+

@@ -1,0 +1,29 @@
+    /**
+     * lazy load by sheet since reading can be expensive
+     * 
+     * @param sheet
+     * @return unmodifiable list of rules
+     */
+    protected List<EvaluationConditionalFormatRule> getRules(Sheet sheet) {
+        final String sheetName = sheet.getSheetName();
+        List<EvaluationConditionalFormatRule> rules = formats.get(sheetName);
+        if (rules == null && ! formats.containsKey(sheetName)) {
+            final SheetConditionalFormatting scf = sheet.getSheetConditionalFormatting();
+            final int count = scf.getNumConditionalFormattings();
+            rules = new ArrayList<EvaluationConditionalFormatRule>(count);
+            formats.put(sheetName, rules);
+            for (int i=0; i < count; i++) {
+                ConditionalFormatting f = scf.getConditionalFormattingAt(i);
+                //optimization, as this may be expensive for lots of ranges
+                final CellRangeAddress[] regions = f.getFormattingRanges();
+                for (int r=0; r < f.getNumberOfRules(); r++) {
+                    ConditionalFormattingRule rule = f.getRule(r);
+                    rules.add(new EvaluationConditionalFormatRule(workbookEvaluator, sheet, f, i, rule, r, regions));
+                }
+            }
+            // need them in formatting and priority order so logic works right
+            Collections.sort(rules);
+        }
+        return Collections.unmodifiableList(rules);
+    }
+

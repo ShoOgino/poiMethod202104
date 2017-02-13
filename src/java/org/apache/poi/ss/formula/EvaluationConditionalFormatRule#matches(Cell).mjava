@@ -1,0 +1,40 @@
+    /**
+     * @param cell
+     * @return true if this rule evaluates to true for the given cell
+     */
+    /* package */ boolean matches(Cell cell) {
+        // first check that it is in one of the regions defined for this format
+        CellRangeAddress region = null;
+        for (CellRangeAddress r : regions) {
+            if (r.isInRange(cell)) {
+                region = r;
+                break;
+            }
+        }
+        
+        if (region == null) return false; // cell not in range of this rule
+        
+        final ConditionType ruleType = getRule().getConditionType();
+        
+        // these rules apply to all cells in a region. Specific condition criteria
+        // may specify no special formatting for that value partition, but that's display logic
+        if (ruleType.equals(ConditionType.COLOR_SCALE)
+            || ruleType.equals(ConditionType.DATA_BAR)
+            || ruleType.equals(ConditionType.ICON_SET)) {
+           return true; 
+        }
+        
+        if (ruleType.equals(ConditionType.CELL_VALUE_IS)) {
+            return checkValue(cell, region);
+        }
+        if (ruleType.equals(ConditionType.FORMULA)) {
+            return checkFormula(cell, region);
+        }
+        if (ruleType.equals(ConditionType.FILTER)) {
+            return checkFilter(cell, region);
+        }
+        
+        // TODO: anything else, we don't handle yet, such as top 10
+        return false;
+    }
+

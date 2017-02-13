@@ -1,0 +1,30 @@
+    /**
+     * This checks all applicable {@link ConditionalFormattingRule}s for the cell's sheet, 
+     * in defined "priority" order, returning the matches if any.  This is a property currently
+     * not exposed from <code>CTCfRule</code> in <code>XSSFConditionalFormattingRule</code>.  
+     * <p/>
+     * Most cells will have zero or one applied rule, but it is possible to define multiple rules
+     * that apply at the same time to the same cell, thus the List result.
+     * <p/>
+     * Note that to properly apply conditional rules, care must be taken to offset the base 
+     * formula by the relative position of the current cell, or the wrong value is checked.
+     * This is handled by {@link WorkbookEvaluator#evaluate(String, CellReference, CellRangeAddressBase)}.
+     * 
+     * @param cell NOTE: if no sheet name is specified, this uses the workbook active sheet
+     * @return Unmodifiable List of {@link EvaluationConditionalFormattingRule}s that apply to the current cell value,
+     *         in priority order, as evaluated by Excel (smallest priority # for XSSF, definition order for HSSF), 
+     *         or null if none apply
+     */
+    public List<EvaluationConditionalFormatRule> getConditionalFormattingForCell(final CellReference cellRef) {
+        String sheetName = cellRef.getSheetName();
+        Sheet sheet = null;
+        if (sheetName == null) sheet = workbook.getSheetAt(workbook.getActiveSheetIndex());
+        else sheet = workbook.getSheet(sheetName);
+        
+        final Cell cell = SheetUtil.getCell(sheet, cellRef.getRow(), cellRef.getCol());
+        
+        if (cell == null) return Collections.emptyList();
+        
+        return getConditionalFormattingForCell(cell, cellRef);
+    }
+

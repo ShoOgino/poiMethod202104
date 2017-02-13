@@ -1,0 +1,24 @@
+        /**
+         *
+         * @param value
+         * @param context
+         * @return
+         */
+        protected boolean isValidNumericValue(Double value, final DataValidationContext context) {
+            try {
+                Double t1 = evalOrConstant(context.getFormula1(), context);
+                // per Excel, a blank value for a numeric validation constraint formula validates true
+                if (t1 == null) return true; 
+                Double t2 = null;
+                if (context.getOperator() == OperatorType.BETWEEN || context.getOperator() == OperatorType.NOT_BETWEEN) {
+                    t2 = evalOrConstant(context.getFormula2(), context);
+                    // per Excel, a blank value for a numeric validation constraint formula validates true
+                    if (t2 == null) return true; 
+                }
+                return OperatorEnum.values()[context.getOperator()].isValid(value, t1, t2);
+            } catch (NumberFormatException e) {
+                // one or both formulas are in error, not evaluating to a number, so the validation is false per Excel's behavior.
+                return false;
+            }
+        }
+

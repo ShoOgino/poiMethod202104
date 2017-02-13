@@ -1,0 +1,172 @@
+    private boolean checkFilter(Cell cell, CellRangeAddress region) {
+        final ConditionFilterType filterType = rule.getConditionFilterType();
+        if (filterType == null) return false;
+        
+        // TODO: this could/should be delegated to the Enum type, but that's in the usermodel package,
+        // we may not want evaluation code there.  Of course, maybe the enum should go here in formula,
+        // and not be returned by the SS model, but then we need the XSSF rule to expose the raw OOXML
+        // type value, which isn't ideal either.
+        switch (filterType) {
+        case FILTER:
+            return false; // we don't evaluate HSSF filters yet
+        case TOP_10:
+            // from testing, Excel only operates on numbers and dates (which are stored as numbers) in the range.
+            // numbers stored as text are ignored, but numbers formatted as text are treated as numbers.
+            
+            final ValueAndFormat cv10 = getCellValue(cell);
+            if (! cv10.isNumber()) return false;
+            
+            return getMeaningfulValues(region, false, new ValueFunction() {
+                public Set<ValueAndFormat> evaluate(List<ValueAndFormat> allValues) {
+                    List<ValueAndFormat> values = allValues;
+                    final ConditionFilterData conf = rule.getFilterConfiguration();
+                    
+                    if (! conf.getBottom()) Collections.sort(values, Collections.reverseOrder());
+                    else Collections.sort(values);
+                    
+                    int limit = (int) conf.getRank();
+                    if (conf.getPercent()) limit = allValues.size() * limit / 100;
+                    if (allValues.size() <= limit) return new HashSet<ValueAndFormat>(allValues);
+
+                    return new HashSet<ValueAndFormat>(allValues.subList(0, limit));
+                }
+            }).contains(cv10);
+        case UNIQUE_VALUES:
+            // Per Excel help, "duplicate" means matching value AND format
+            // https://support.office.com/en-us/article/Filter-for-unique-values-or-remove-duplicate-values-ccf664b0-81d6-449b-bbe1-8daaec1e83c2
+            return getMeaningfulValues(region, true, new ValueFunction() {
+                public Set<ValueAndFormat> evaluate(List<ValueAndFormat> allValues) {
+                    List<ValueAndFormat> values = allValues;
+                    Collections.sort(values);
+                    
+                    final Set<ValueAndFormat> unique = new HashSet<ValueAndFormat>();
+                    
+                    for (int i=0; i < values.size(); i++) {
+                        final ValueAndFormat v = values.get(i);
+                        // skip this if the current value matches the next one, or is the last one and matches the previous one
+                        if ( (i < values.size()-1 && v.equals(values.get(i+1)) ) || ( i > 0 && i == values.size()-1 && v.equals(values.get(i-1)) ) ) {
+                            // current value matches next value, skip both
+                            i++;
+                            continue;
+                        }
+                        unique.add(v);
+                    }
+                    
+                    return unique;
+                }
+            }).contains(getCellValue(cell));
+        case DUPLICATE_VALUES:
+            // Per Excel help, "duplicate" means matching value AND format
+            // https://support.office.com/en-us/article/Filter-for-unique-values-or-remove-duplicate-values-ccf664b0-81d6-449b-bbe1-8daaec1e83c2
+            return getMeaningfulValues(region, true, new ValueFunction() {
+                public Set<ValueAndFormat> evaluate(List<ValueAndFormat> allValues) {
+                    List<ValueAndFormat> values = allValues;
+                    Collections.sort(values);
+                    
+                    final Set<ValueAndFormat> dup = new HashSet<ValueAndFormat>();
+                    
+                    for (int i=0; i < values.size(); i++) {
+                        final ValueAndFormat v = values.get(i);
+                        // skip this if the current value matches the next one, or is the last one and matches the previous one
+                        if ( (i < values.size()-1 && v.equals(values.get(i+1)) ) || ( i > 0 && i == values.size()-1 && v.equals(values.get(i-1)) ) ) {
+                            // current value matches next value, add one
+                            dup.add(v);
+                            i++;
+                        }
+                    }
+                    return dup;
+                }
+            }).contains(getCellValue(cell));
+        case ABOVE_AVERAGE:
+            // from testing, Excel only operates on numbers and dates (which are stored as numbers) in the range.
+            // numbers stored as text are ignored, but numbers formatted as text are treated as numbers.
+            
+            final ConditionFilterData conf = rule.getFilterConfiguration();
+
+            // actually ordered, so iteration order is predictable
+            List<ValueAndFormat> values = new ArrayList<ValueAndFormat>(getMeaningfulValues(region, false, new ValueFunction() {
+                public Set<ValueAndFormat> evaluate(List<ValueAndFormat> allValues) {
+                    List<ValueAndFormat> values = allValues;
+                    double total = 0;
+                    ValueEval[] pop = new ValueEval[values.size()];
+                    for (int i=0; i < values.size(); i++) {
+                        ValueAndFormat v = values.get(i);
+                        total += v.value.doubleValue();
+                        pop[i] = new NumberEval(v.value.doubleValue());
+                    }
+                    
+                    final Set<ValueAndFormat> avgSet = new LinkedHashSet<ValueAndFormat>(1);
+                    avgSet.add(new ValueAndFormat(new Double(values.size() == 0 ? 0 : total / values.size()), null));
+                    
+                    final double stdDev = values.size() <= 1 ? 0 : ((NumberEval) AggregateFunction.STDEV.evaluate(pop, 0, 0)).getNumberValue();
+                    avgSet.add(new ValueAndFormat(new Double(stdDev), null));
+                    return avgSet;
+                }
+            }));
+            
+            final ValueAndFormat cv = getCellValue(cell);
+            Double val = cv.isNumber() ? cv.getValue() : null;
+            if (val == null) return false;
+            
+            double avg = values.get(0).value.doubleValue();
+            double stdDev = values.get(1).value.doubleValue();
+            
+            /*
+             * use StdDev, aboveAverage, equalAverage to find:
+             * comparison value
+             * operator type
+             */
+            
+            Double comp = new Double(conf.getStdDev() > 0 ? (avg + (conf.getAboveAverage() ? 1 : -1) * stdDev * conf.getStdDev()) : avg) ;
+            
+            OperatorEnum op = null;
+            if (conf.getAboveAverage()) {
+                if (conf.getEqualAverage()) op = OperatorEnum.GREATER_OR_EQUAL;
+                else op = OperatorEnum.GREATER_THAN;
+            } else {
+                if (conf.getEqualAverage()) op = OperatorEnum.LESS_OR_EQUAL;
+                else op = OperatorEnum.LESS_THAN;
+            }
+            return op != null && op.isValid(val, comp, null);
+        case CONTAINS_TEXT:
+            // implemented both by a cfRule "text" attribute and a formula.  Use the formula.
+            return checkFormula(cell, region);
+        case NOT_CONTAINS_TEXT:
+            // implemented both by a cfRule "text" attribute and a formula.  Use the formula.
+            return checkFormula(cell, region);
+        case BEGINS_WITH:
+            // implemented both by a cfRule "text" attribute and a formula.  Use the formula.
+            return checkFormula(cell, region);
+        case ENDS_WITH:
+            // implemented both by a cfRule "text" attribute and a formula.  Use the formula.
+            return checkFormula(cell, region);
+        case CONTAINS_BLANKS:
+            try {
+                String v = cell.getStringCellValue();
+                // see TextFunction.TRIM for implementation
+                return v == null || v.trim().length() == 0;
+            } catch (Exception e) {
+                // not a valid string value, and not a blank cell (that's checked earlier)
+                return false;
+            }
+        case NOT_CONTAINS_BLANKS:
+            try {
+                String v = cell.getStringCellValue();
+                // see TextFunction.TRIM for implementation
+                return v != null && v.trim().length() > 0;
+            } catch (Exception e) {
+                // not a valid string value, but not blank
+                return true;
+            }
+        case CONTAINS_ERRORS:
+            return cell != null && DataValidationEvaluator.isType(cell, CellType.ERROR);
+        case NOT_CONTAINS_ERRORS:
+            return cell == null || ! DataValidationEvaluator.isType(cell, CellType.ERROR);
+        case TIME_PERIOD:
+            // implemented both by a cfRule "text" attribute and a formula.  Use the formula.
+            return checkFormula(cell, region);
+        default:
+            return false;
+        }
+    }
+
