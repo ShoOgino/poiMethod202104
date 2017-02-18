@@ -1,36 +1,52 @@
     @Override
     void copy(XSLFShape src){
         XSLFGroupShape gr = (XSLFGroupShape)src;
-        
-        // clear shapes
-        clear();
-        
-        // recursively update each shape
-        for(XSLFShape shape : gr.getShapes()) {
-            XSLFShape newShape;
-            if (shape instanceof XSLFTextBox) {
-                newShape = createTextBox();
-            } else if (shape instanceof XSLFAutoShape) {
-                newShape = createAutoShape();
-            } else if (shape instanceof XSLFConnectorShape) {
-                newShape = createConnector();
-            } else if (shape instanceof XSLFFreeformShape) {
-                newShape = createFreeform();
-            } else if (shape instanceof XSLFPictureShape) {
-                XSLFPictureShape p = (XSLFPictureShape)shape;
-                XSLFPictureData pd = p.getPictureData();
-                XSLFPictureData pdNew = getSheet().getSlideShow().addPicture(pd.getData(), pd.getType());
-                newShape = createPicture(pdNew);
-            } else if (shape instanceof XSLFGroupShape) {
-                newShape = createGroup();
-            } else if (shape instanceof XSLFTable) {
-                newShape = createTable();
-            } else {
-                _logger.log(POILogger.WARN, "copying of class "+shape.getClass()+" not supported.");
-                continue;
-            }
 
-            newShape.copy(shape);
+        // recursively update each shape
+        List<XSLFShape> tgtShapes = getShapes();
+        List<XSLFShape> srcShapes = gr.getShapes();
+        
+        // workaround for a call by XSLFSheet.importContent:
+        // if we have already the same amount of child shapes
+        // then assume, that we've been called by import content and only need to update the children
+        if (tgtShapes.size() == srcShapes.size()) {
+            for(int i = 0; i < tgtShapes.size(); i++){
+                XSLFShape s1 = srcShapes.get(i);
+                XSLFShape s2 = tgtShapes.get(i);
+    
+                s2.copy(s1);
+            }
+        } else {
+            // otherwise recreate the shapes from scratch
+            clear();
+            
+            // recursively update each shape
+            for(XSLFShape shape : srcShapes) {
+                XSLFShape newShape;
+                if (shape instanceof XSLFTextBox) {
+                    newShape = createTextBox();
+                } else if (shape instanceof XSLFAutoShape) {
+                    newShape = createAutoShape();
+                } else if (shape instanceof XSLFConnectorShape) {
+                    newShape = createConnector();
+                } else if (shape instanceof XSLFFreeformShape) {
+                    newShape = createFreeform();
+                } else if (shape instanceof XSLFPictureShape) {
+                    XSLFPictureShape p = (XSLFPictureShape)shape;
+                    XSLFPictureData pd = p.getPictureData();
+                    XSLFPictureData pdNew = getSheet().getSlideShow().addPicture(pd.getData(), pd.getType());
+                    newShape = createPicture(pdNew);
+                } else if (shape instanceof XSLFGroupShape) {
+                    newShape = createGroup();
+                } else if (shape instanceof XSLFTable) {
+                    newShape = createTable();
+                } else {
+                    _logger.log(POILogger.WARN, "copying of class "+shape.getClass()+" not supported.");
+                    continue;
+                }
+    
+                newShape.copy(shape);
+            }
         }
     }
 
