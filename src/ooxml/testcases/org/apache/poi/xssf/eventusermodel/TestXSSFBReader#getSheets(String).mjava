@@ -1,0 +1,31 @@
+    private List<String> getSheets(String testFileName) throws Exception {
+        OPCPackage pkg = OPCPackage.open(_ssTests.openResourceAsStream(testFileName));
+        List<String> sheetTexts = new ArrayList<String>();
+        XSSFBReader r = new XSSFBReader(pkg);
+
+//        assertNotNull(r.getWorkbookData());
+        //      assertNotNull(r.getSharedStringsData());
+        assertNotNull(r.getXSSFBStylesTable());
+        XSSFBSharedStringsTable sst = new XSSFBSharedStringsTable(pkg);
+        XSSFBStylesTable xssfbStylesTable = r.getXSSFBStylesTable();
+        XSSFBReader.SheetIterator it = (XSSFBReader.SheetIterator)r.getSheetsData();
+
+        while (it.hasNext()) {
+            InputStream is = it.next();
+            String name = it.getSheetName();
+            TestSheetHandler testSheetHandler = new TestSheetHandler();
+            testSheetHandler.startSheet(name);
+            XSSFBSheetHandler sheetHandler = new XSSFBSheetHandler(is,
+                    xssfbStylesTable,
+                    it.getXSSFBSheetComments(),
+                    sst, testSheetHandler,
+                    new DataFormatter(),
+                    false);
+            sheetHandler.parse();
+            testSheetHandler.endSheet();
+            sheetTexts.add(testSheetHandler.toString());
+        }
+        return sheetTexts;
+
+    }
+

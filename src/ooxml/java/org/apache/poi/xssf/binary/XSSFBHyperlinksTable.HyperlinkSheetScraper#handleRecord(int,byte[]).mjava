@@ -1,0 +1,37 @@
+        @Override
+        public void handleRecord(int recordType, byte[] data) throws XSSFBParseException {
+            if (recordType != XSSFBRecordType.BrtHLink.getId()) {
+                return;
+            }
+            int offset = 0;
+            String relId = "";
+            String location = "";
+            String toolTip = "";
+            String display = "";
+
+            hyperlinkCellRange = XSSFBCellRange.parse(data, offset, hyperlinkCellRange);
+            offset += XSSFBCellRange.length;
+            xlWideStringBuffer.setLength(0);
+            offset += XSSFBUtils.readXLNullableWideString(data, offset, xlWideStringBuffer);
+            relId = xlWideStringBuffer.toString();
+            xlWideStringBuffer.setLength(0);
+            offset += XSSFBUtils.readXLWideString(data, offset, xlWideStringBuffer);
+            location = xlWideStringBuffer.toString();
+            xlWideStringBuffer.setLength(0);
+            offset += XSSFBUtils.readXLWideString(data, offset, xlWideStringBuffer);
+            toolTip = xlWideStringBuffer.toString();
+            xlWideStringBuffer.setLength(0);
+            offset += XSSFBUtils.readXLWideString(data, offset, xlWideStringBuffer);
+            display = xlWideStringBuffer.toString();
+            CellRangeAddress cellRangeAddress = new CellRangeAddress(hyperlinkCellRange.firstRow, hyperlinkCellRange.lastRow, hyperlinkCellRange.firstCol, hyperlinkCellRange.lastCol);
+
+            String url = relIdToHyperlink.get(relId);
+            if (location == null || location.length() == 0) {
+                location = url;
+            }
+
+            hyperlinkRecords.add(
+                    new XSSFHyperlinkRecord(cellRangeAddress, relId, location, toolTip, display)
+            );
+        }
+

@@ -1,0 +1,51 @@
+    /**
+     * Processes the file and returns the text
+     */
+    public String getText() {
+        try {
+            XSSFBSharedStringsTable strings = new XSSFBSharedStringsTable(container);
+            XSSFBReader xssfbReader = new XSSFBReader(container);
+            XSSFBStylesTable styles = xssfbReader.getXSSFBStylesTable();
+            XSSFBReader.SheetIterator iter = (XSSFBReader.SheetIterator) xssfbReader.getSheetsData();
+
+            StringBuffer text = new StringBuffer();
+            SheetTextExtractor sheetExtractor = new SheetTextExtractor();
+            XSSFBHyperlinksTable hyperlinksTable = null;
+            while (iter.hasNext()) {
+                InputStream stream = iter.next();
+                if (includeSheetNames) {
+                    text.append(iter.getSheetName());
+                    text.append('\n');
+                }
+                if (handleHyperlinksInCells) {
+                    hyperlinksTable = new XSSFBHyperlinksTable(iter.getSheetPart());
+                }
+                XSSFBCommentsTable comments = includeCellComments ? iter.getXSSFBSheetComments() : null;
+                processSheet(sheetExtractor, styles, comments, strings, stream);
+                if (includeHeadersFooters) {
+                    sheetExtractor.appendHeaderText(text);
+                }
+                sheetExtractor.appendCellText(text);
+                if (includeTextBoxes) {
+                    processShapes(iter.getShapes(), text);
+                }
+                if (includeHeadersFooters) {
+                    sheetExtractor.appendFooterText(text);
+                }
+                sheetExtractor.reset();
+                stream.close();
+            }
+
+            return text.toString();
+        } catch (IOException e) {
+            System.err.println(e);
+            return null;
+        } catch (SAXException se) {
+            System.err.println(se);
+            return null;
+        } catch (OpenXML4JException o4je) {
+            System.err.println(o4je);
+            return null;
+        }
+    }
+

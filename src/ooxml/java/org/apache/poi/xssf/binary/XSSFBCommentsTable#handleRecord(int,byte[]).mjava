@@ -1,0 +1,29 @@
+    @Override
+    public void handleRecord(int id, byte[] data) throws XSSFBParseException {
+        XSSFBRecordType recordType = XSSFBRecordType.lookup(id);
+        switch (recordType) {
+            case BrtBeginComment:
+                int offset = 0;
+                authorId = XSSFBUtils.castToInt(LittleEndian.getUInt(data)); offset += LittleEndian.INT_SIZE;
+                cellRange = XSSFBCellRange.parse(data, offset, cellRange);
+                offset+= XSSFBCellRange.length;
+                //for strict parsing; confirm that firstRow==lastRow and firstCol==colLats (2.4.28)
+                cellAddress = new CellAddress(cellRange.firstRow, cellRange.firstCol);
+                break;
+            case BrtCommentText:
+                XSSFBRichStr xssfbRichStr = XSSFBRichStr.build(data, 0);
+                comment = xssfbRichStr.getString();
+                break;
+            case BrtEndComment:
+                comments.put(cellAddress, new XSSFBComment(cellAddress, authors.get(authorId), comment));
+                authorId = -1;
+                cellAddress = null;
+                break;
+            case BrtCommentAuthor:
+                authorBuffer.setLength(0);
+                XSSFBUtils.readXLWideString(data, 0, authorBuffer);
+                authors.add(authorBuffer.toString());
+                break;
+        }
+    }
+

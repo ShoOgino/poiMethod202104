@@ -1,0 +1,55 @@
+    @Override
+    public void handleRecord(int id, byte[] data) throws XSSFBParseException {
+        XSSFBRecordType type = XSSFBRecordType.lookup(id);
+
+        switch(type) {
+            case BrtRowHdr:
+                long rw = LittleEndian.getUInt(data, 0);
+                if (rw > 0x00100000L) {//could make sure this is larger than currentRow, according to spec?
+                    throw new XSSFBParseException("Row number beyond allowable range: "+rw);
+                }
+                currentRow = (int)rw;
+                checkMissedComments(currentRow);
+                startRow(currentRow);
+                break;
+            case BrtCellIsst:
+                handleBrtCellIsst(data);
+                break;
+            case BrtCellSt: //TODO: needs test
+                handleCellSt(data);
+                break;
+            case BrtCellRk:
+                handleCellRk(data);
+                break;
+            case BrtCellReal:
+                handleCellReal(data);
+                break;
+            case BrtCellBool:
+                handleBoolean(data);
+                break;
+            case BrtCellError:
+                handleCellError(data);
+                break;
+            case BrtCellBlank:
+                beforeCellValue(data);//read cell info and check for missing comments
+                break;
+            case BrtFmlaString:
+                handleFmlaString(data);
+                break;
+            case BrtFmlaNum:
+                handleFmlaNum(data);
+                break;
+            case BrtFmlaError:
+                handleFmlaError(data);
+                break;
+                //TODO: All the PCDI and PCDIA
+            case BrtEndSheetData:
+                checkMissedComments(CHECK_ALL_ROWS);
+                endRow(lastStartedRow);
+                break;
+            case BrtBeginHeaderFooter:
+                handleHeaderFooter(data);
+                break;
+        }
+    }
+

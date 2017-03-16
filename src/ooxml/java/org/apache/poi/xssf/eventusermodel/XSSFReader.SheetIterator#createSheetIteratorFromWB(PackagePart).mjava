@@ -1,0 +1,29 @@
+        Iterator<XSSFSheetRef> createSheetIteratorFromWB(PackagePart wb) throws IOException {
+
+            XMLSheetRefReader xmlSheetRefReader = new XMLSheetRefReader();
+            XMLReader xmlReader = null;
+            try {
+                xmlReader = SAXHelper.newXMLReader();
+            } catch (ParserConfigurationException e) {
+                throw new POIXMLException(e);
+            } catch (SAXException e) {
+                throw new POIXMLException(e);
+            }
+            xmlReader.setContentHandler(xmlSheetRefReader);
+            try {
+                xmlReader.parse(new InputSource(wb.getInputStream()));
+            } catch (SAXException e) {
+                throw new POIXMLException(e);
+            }
+
+            List<XSSFSheetRef> validSheets = new ArrayList<XSSFSheetRef>();
+            for (XSSFSheetRef xssfSheetRef : xmlSheetRefReader.getSheetRefs()) {
+                //if there's no relationship id, silently skip the sheet
+                String sheetId = xssfSheetRef.getId();
+                if (sheetId != null && sheetId.length() > 0) {
+                    validSheets.add(xssfSheetRef);
+                }
+            }
+            return validSheets.iterator();
+        }
+

@@ -3,7 +3,7 @@
          *
          * @param wb package part holding workbook.xml
          */
-        private SheetIterator(PackagePart wb) throws IOException {
+        SheetIterator(PackagePart wb) throws IOException {
 
             /**
              * The order of sheets is defined by the order of CTSheet elements in workbook.xml
@@ -21,21 +21,10 @@
                         sheetMap.put(rel.getId(), pkg.getPart(relName));
                     }
                 }
-                //step 2. Read array of CTSheet elements, wrap it in a ArayList and construct an iterator
-                //Note, using XMLBeans might be expensive, consider refactoring to use SAX or a plain regexp search
-                CTWorkbook wbBean = WorkbookDocument.Factory.parse(wb.getInputStream(), DEFAULT_XML_OPTIONS).getWorkbook();
-                List<CTSheet> validSheets = new ArrayList<CTSheet>();
-                for (CTSheet ctSheet : wbBean.getSheets().getSheetList()) {
-                    //if there's no relationship id, silently skip the sheet
-                    String sheetId = ctSheet.getId();
-                    if (sheetId != null && sheetId.length() > 0) {
-                        validSheets.add(ctSheet);
-                    }
-                }
-                sheetIterator = validSheets.iterator();
+                //step 2. Read array of CTSheet elements, wrap it in a LinkedList
+                //and construct an iterator
+                sheetIterator = createSheetIteratorFromWB(wb);
             } catch (InvalidFormatException e){
-                throw new POIXMLException(e);
-            } catch (XmlException e){
                 throw new POIXMLException(e);
             }
         }
