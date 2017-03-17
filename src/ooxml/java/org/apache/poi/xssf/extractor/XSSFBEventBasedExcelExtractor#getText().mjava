@@ -3,8 +3,8 @@
      */
     public String getText() {
         try {
-            XSSFBSharedStringsTable strings = new XSSFBSharedStringsTable(container);
-            XSSFBReader xssfbReader = new XSSFBReader(container);
+            XSSFBSharedStringsTable strings = new XSSFBSharedStringsTable(getPackage());
+            XSSFBReader xssfbReader = new XSSFBReader(getPackage());
             XSSFBStylesTable styles = xssfbReader.getXSSFBStylesTable();
             XSSFBReader.SheetIterator iter = (XSSFBReader.SheetIterator) xssfbReader.getSheetsData();
 
@@ -13,23 +13,23 @@
             XSSFBHyperlinksTable hyperlinksTable = null;
             while (iter.hasNext()) {
                 InputStream stream = iter.next();
-                if (includeSheetNames) {
+                if (getIncludeSheetNames()) {
                     text.append(iter.getSheetName());
                     text.append('\n');
                 }
                 if (handleHyperlinksInCells) {
                     hyperlinksTable = new XSSFBHyperlinksTable(iter.getSheetPart());
                 }
-                XSSFBCommentsTable comments = includeCellComments ? iter.getXSSFBSheetComments() : null;
+                XSSFBCommentsTable comments = getIncludeCellComments() ? iter.getXSSFBSheetComments() : null;
                 processSheet(sheetExtractor, styles, comments, strings, stream);
-                if (includeHeadersFooters) {
+                if (getIncludeHeadersFooters()) {
                     sheetExtractor.appendHeaderText(text);
                 }
                 sheetExtractor.appendCellText(text);
-                if (includeTextBoxes) {
+                if (getIncludeTextBoxes()) {
                     processShapes(iter.getShapes(), text);
                 }
-                if (includeHeadersFooters) {
+                if (getIncludeHeadersFooters()) {
                     sheetExtractor.appendFooterText(text);
                 }
                 sheetExtractor.reset();
@@ -38,13 +38,13 @@
 
             return text.toString();
         } catch (IOException e) {
-            System.err.println(e);
+            LOGGER.log(POILogger.WARN, e);
             return null;
         } catch (SAXException se) {
-            System.err.println(se);
+            LOGGER.log(POILogger.WARN, se);
             return null;
         } catch (OpenXML4JException o4je) {
-            System.err.println(o4je);
+            LOGGER.log(POILogger.WARN, o4je);
             return null;
         }
     }
