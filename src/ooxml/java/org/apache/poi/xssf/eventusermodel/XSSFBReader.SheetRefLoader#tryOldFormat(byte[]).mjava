@@ -1,0 +1,23 @@
+        private boolean tryOldFormat(byte[] data) throws XSSFBParseException {
+            //undocumented what is contained in these 8 bytes.
+            //for the non-beta xlsb files, this would be 4, not 8.
+            int offset = 8;
+            long iTabID = LittleEndian.getUInt(data, offset); offset += LittleEndian.INT_SIZE;
+            if (iTabID < 1 || iTabID > 0x0000FFFFL) {
+                throw new XSSFBParseException("table id out of range: "+iTabID);
+            }
+            StringBuilder sb = new StringBuilder();
+            offset += XSSFBUtils.readXLWideString(data, offset, sb);
+            String relId = sb.toString();
+            sb.setLength(0);
+            offset += XSSFBUtils.readXLWideString(data, offset, sb);
+            String name = sb.toString();
+            if (relId != null && relId.trim().length() > 0) {
+                sheets.add(new XSSFSheetRef(relId, name));
+            }
+            if (offset == data.length) {
+                return true;
+            }
+            return false;
+        }
+
