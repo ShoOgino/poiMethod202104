@@ -9,45 +9,52 @@
         int chpTableSize   = LittleEndian.getInt(_mainStream, 0xbc);
         int papTableOffset = LittleEndian.getInt(_mainStream, 0xc0);
         int papTableSize   = LittleEndian.getInt(_mainStream, 0xc4);
-        //int shfTableOffset = LittleEndian.getInt(_mainStream, 0x60);
-        //int shfTableSize   = LittleEndian.getInt(_mainStream, 0x64);
+        int fontTableOffset = LittleEndian.getInt(_mainStream, 0xd0);
+        int fontTableSize = LittleEndian.getInt(_mainStream, 0xd4);
+
+        fontTable = new OldFontTable(_mainStream, fontTableOffset, fontTableSize);
+        //TODO: figure out how to map runs/text pieces to fonts
+        //for now, if there's a non standard codepage in one of the fonts
+        //assume that the doc is in that codepage.
+        guessedCharset = guessCodePage(fontTable);
+
         int complexTableOffset = LittleEndian.getInt(_mainStream, 0x160);
         
         // We need to get hold of the text that makes up the
         //  document, which might be regular or fast-saved
         ComplexFileTable cft = null;
-        StringBuffer text = new StringBuffer();
         if(_fib.getFibBase().isFComplex()) {
-            cft = new ComplexFileTable(
+            cft = new OldComplexFileTable(
                     _mainStream, _mainStream,
-                    complexTableOffset, _fib.getFibBase().getFcMin()
+                    complexTableOffset, _fib.getFibBase().getFcMin(), guessedCharset
             );
-            tpt = cft.getTextPieceTable();
+            tpt = (OldTextPieceTable)cft.getTextPieceTable();
             
-            for(TextPiece tp : tpt.getTextPieces()) {
-                text.append( tp.getStringBuilder() );
-            }
         } else {
             // TODO Discover if these older documents can ever hold Unicode Strings?
             //  (We think not, because they seem to lack a Piece table)
             // TODO Build the Piece Descriptor properly
             //  (We have to fake it, as they don't seem to have a proper Piece table)
-            PieceDescriptor pd = new PieceDescriptor(new byte[] {0,0, 0,0,0,127, 0,0}, 0);
+            PieceDescriptor pd = new PieceDescriptor(new byte[] {0,0, 0,0,0,127, 0,0}, 0, guessedCharset);
             pd.setFilePosition(_fib.getFibBase().getFcMin());
 
             // Generate a single Text Piece Table, with a single Text Piece
             //  which covers all the (8 bit only) text in the file
-            tpt = new TextPieceTable();
+            tpt = new OldTextPieceTable();
             byte[] textData = new byte[_fib.getFibBase().getFcMac()-_fib.getFibBase().getFcMin()];
             System.arraycopy(_mainStream, _fib.getFibBase().getFcMin(), textData, 0, textData.length);
+
+            int numChars = textData.length;
+            if (CodePageUtil.VARIABLE_BYTE_CHARSETS.contains(guessedCharset)) {
+                numChars /= 2;
+            }
+
             TextPiece tp = new TextPiece(
-                    0, textData.length, textData, pd
+                    0, numChars, textData, pd
             );
             tpt.add(tp);
             
-            text.append(tp.getStringBuilder());
         }
-        
         _text = tpt.getText();
 
         // Now we can fetch the character and paragraph properties

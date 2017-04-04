@@ -1,5 +1,6 @@
-    public TextPieceTable(byte[] documentStream, byte[] tableStream,
-                          int offset, int size, int fcMin) {
+    public OldTextPieceTable(byte[] documentStream, byte[] tableStream,
+                             int offset, int size, int fcMin, Charset charset) {
+        //super(documentStream, tableStream, offset, size, fcMin, charset);
         // get our plex of PieceDescriptors
         PlexOfCps pieceTable = new PlexOfCps(tableStream, offset, size,
                 PieceDescriptor.getSizeInBytes());
@@ -11,7 +12,7 @@
         // PieceDescriptor objects
         for (int x = 0; x < length; x++) {
             GenericPropertyNode node = pieceTable.getProperty(x);
-            pieces[x] = new PieceDescriptor(node.getBytes(), 0);
+            pieces[x] = new PieceDescriptor(node.getBytes(), 0, charset);
         }
 
         // Figure out the cp of the earliest text piece
@@ -36,7 +37,8 @@
             // What's the relationship between bytes and characters?
             boolean unicode = pieces[x].isUnicode();
             int multiple = 1;
-            if (unicode) {
+            if (unicode ||
+                    (charset != null && CodePageUtil.VARIABLE_BYTE_CHARSETS.contains(charset))) {
                 multiple = 2;
             }
 
@@ -60,5 +62,6 @@
         Collections.sort(_textPieces);
         _textPiecesFCOrder = new ArrayList<TextPiece>(_textPieces);
         Collections.sort(_textPiecesFCOrder, new FCComparator());
+
     }
 
