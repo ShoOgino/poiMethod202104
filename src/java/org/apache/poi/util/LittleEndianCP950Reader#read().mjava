@@ -1,0 +1,47 @@
+    @Override
+    public int read() {
+        if (offset + 1 > data.length || offset - startOffset > length) {
+            return -1;
+        }
+        trailing = data[offset++] & 0xff;
+        leading = data[offset++] & 0xff;
+        decoder.reset();
+        if (leading < 0x81) {
+            //return trailing alone
+            //there may be some subtleties here
+            return trailing;
+        } else if (leading == 0xf9) {
+            return handleF9(trailing);
+        } else {
+            int ch = (leading << 8) + trailing;
+            if (ch >= range1Low && ch <= range1High) {
+                return handleRange1(leading, trailing);
+            } else if (ch >= range2Low && ch <= range2High) {
+                return handleRange2(leading, trailing);
+            } else if (ch >= range3Low && ch <= range3High) {
+                return handleRange3(leading, trailing);
+            } else if (ch >= range4Low && ch <= range4High) {
+                return handleRange4(leading, trailing);
+            }
+
+            charBuffer.clear();
+            doubleByteBuffer.clear();
+            doubleByteBuffer.put((byte) leading);
+            doubleByteBuffer.put((byte) trailing);
+            doubleByteBuffer.flip();
+            decoder.decode(doubleByteBuffer, charBuffer, true);
+            charBuffer.flip();
+
+            if (charBuffer.length() == 0) {
+                LOGGER.log(POILogger.WARN, "couldn't create char for: "
+                        + Integer.toString((leading & 0xff), 16)
+                        + " " + Integer.toString((trailing & 0xff), 16));
+                return UNMAPPABLE;
+            } else {
+                return Character.codePointAt(charBuffer, 0);
+            }
+        }
+
+
+    }
+
