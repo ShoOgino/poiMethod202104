@@ -1,0 +1,23 @@
+	private void openZipBombFile(String file) throws IOException, OpenXML4JException, XmlException {
+    	try {
+			Workbook wb = XSSFTestDataSamples.openSampleWorkbook(file);
+			wb.close();
+
+			POITextExtractor extractor = ExtractorFactory.createExtractor(HSSFTestDataSamples.getSampleFile("poc-shared-strings.xlsx"));
+			try  {
+				assertNotNull(extractor);
+				extractor.getText();
+			} finally {
+				extractor.close();
+			}
+
+			fail("Should catch an exception because of a ZipBomb");
+		} catch (IllegalStateException e) {
+    		if(!e.getMessage().contains("The text would exceed the max allowed overall size of extracted text.")) {
+				throw e;
+			}
+		} catch (POIXMLException e) {
+    		checkForZipBombException(e);
+		}
+	}
+
