@@ -1,0 +1,27 @@
+    /**
+     *
+     * @param guessedCharset charset that we think this is
+     * @return a new text piece
+     * @throws IllegalStateException if the length isn't correct
+     */
+    private TextPiece buildTextPiece(Charset guessedCharset) throws IllegalStateException {
+        PieceDescriptor pd = new PieceDescriptor(new byte[] {0,0, 0,0,0,127, 0,0}, 0, guessedCharset);
+        pd.setFilePosition(_fib.getFibBase().getFcMin());
+
+        // Generate a single Text Piece Table, with a single Text Piece
+        //  which covers all the (8 bit only) text in the file
+        tpt = new OldTextPieceTable();
+        byte[] textData = new byte[_fib.getFibBase().getFcMac()-_fib.getFibBase().getFcMin()];
+        System.arraycopy(_mainStream, _fib.getFibBase().getFcMin(), textData, 0, textData.length);
+
+        int numChars = textData.length;
+        if (CodePageUtil.DOUBLE_BYTE_CHARSETS.contains(guessedCharset)) {
+            numChars /= 2;
+        }
+
+        return new TextPiece(
+                0, numChars, textData, pd
+        );
+
+    }
+
