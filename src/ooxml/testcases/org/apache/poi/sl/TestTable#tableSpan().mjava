@@ -1,0 +1,49 @@
+    @Test
+    public void tableSpan() throws IOException {
+        String files[] = (xslfOnly) ? new String[]{ "bug60993.pptx" } : new String[]{ "bug60993.pptx", "bug60993.ppt" };
+        for (String f : files) {
+            SlideShow<?,?> ppt = openSampleSlideshow(f);
+            Slide<?,?> slide = ppt.getSlides().get(0);
+            TableShape<?,?> ts = (TableShape<?,?>)slide.getShapes().get(0);
+            int cols = ts.getNumberOfColumns();
+            int rows = ts.getNumberOfRows();
+            for (int r=0; r<rows; r++) {
+                for (int c=0; c<cols; c++) {
+                    TableCell<?,?> tc = ts.getCell(r, c);
+                    int rc = r*10+c;
+                    String msg = f+" (r"+r+",c"+c+")";
+                    switch (rc) {
+                        case 22:
+                        case 51:
+                            if (f.endsWith("ppt")) {
+                                assertNull(msg, tc);
+                            } else {
+                                assertNotNull(msg, tc);
+                                assertTrue(msg, tc.isMerged());
+                            }
+                            break;
+                        case 21:
+                            assertNotNull(msg, tc);
+                            assertEquals(msg, 1, tc.getRowSpan());
+                            assertEquals(msg, 2, tc.getGridSpan());
+                            assertFalse(msg, tc.isMerged());
+                            break;
+                        case 41:
+                            assertNotNull(msg, tc);
+                            assertEquals(msg, 2, tc.getRowSpan());
+                            assertEquals(msg, 1, tc.getGridSpan());
+                            assertFalse(msg, tc.isMerged());
+                            break;
+                        default:
+                            assertNotNull(msg, tc);
+                            assertEquals(msg, 1, tc.getRowSpan());
+                            assertEquals(msg, 1, tc.getGridSpan());
+                            assertFalse(msg, tc.isMerged());
+                            break;
+                    }
+                }
+            }
+            ppt.close();
+        }
+    }
+
