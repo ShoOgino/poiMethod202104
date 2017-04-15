@@ -11,15 +11,18 @@
 		ExcelExtractor ole2Extractor =
 			new ExcelExtractor(HSSFTestDataSamples.openSampleWorkbook("SampleSS.xls"));
 		
-		POITextExtractor[] extractors =
-			new POITextExtractor[] { ooxmlExtractor, ole2Extractor };
+		Map<String, POITextExtractor> extractors = new HashMap<String, POITextExtractor>();
+		extractors.put("SampleSS.xlsx", ooxmlExtractor);
+		extractors.put("SampleSS.xls", ole2Extractor);
 		
-		for (POITextExtractor extractor : extractors) {
+		for (final Entry<String, POITextExtractor> e : extractors.entrySet()) {
+			String filename = e.getKey();
+			POITextExtractor extractor = e.getValue();
 			String text = extractor.getText().replaceAll("[\r\t]", "");
-			assertStartsWith(text, "First Sheet\nTest spreadsheet\n2nd row2nd row 2nd column\n");
+			assertStartsWith(filename, text, "First Sheet\nTest spreadsheet\n2nd row2nd row 2nd column\n");
 			Pattern pattern = Pattern.compile(".*13(\\.0+)?\\s+Sheet3.*", Pattern.DOTALL);
 			Matcher m = pattern.matcher(text);
-			assertTrue(m.matches());			
+			assertTrue(filename, m.matches());
 		}
 
 		ole2Extractor.close();
