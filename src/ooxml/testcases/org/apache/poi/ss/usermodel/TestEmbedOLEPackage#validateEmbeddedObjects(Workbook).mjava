@@ -1,0 +1,18 @@
+    static void validateEmbeddedObjects(Workbook wb) throws IOException {
+        boolean ooxml = wb.getClass().getName().toLowerCase().contains("xssf");
+        byte data[] = (ooxml) ? samplePPTX : samplePPT;
+        Iterator<Integer> shapeIds = Arrays.asList(1025,1026,2049).iterator();
+        EmbeddedExtractor ee = new EmbeddedExtractor();
+        for (Sheet sheet : wb) {
+            Drawing<? extends Shape> pat = sheet.getDrawingPatriarch();
+            for (Shape shape : pat) {
+                assertTrue(shape instanceof ObjectData);
+                ObjectData od = (ObjectData)shape;
+                EmbeddedData ed = ee.extractOne((DirectoryNode)od.getDirectory());
+                assertArrayEquals(data, ed.getEmbeddedData());
+                assertArrayEquals(samplePNG, od.getPictureData().getData());
+                assertEquals((int)shapeIds.next(), od.getShapeId());
+            }
+        }
+    }
+
