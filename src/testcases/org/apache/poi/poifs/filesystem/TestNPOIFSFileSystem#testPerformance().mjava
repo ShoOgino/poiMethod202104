@@ -1,0 +1,72 @@
+   @Ignore("Takes a long time to run")
+   @Test
+   public void testPerformance() throws Exception {
+      int iterations = 200;//1_000;
+
+      System.out.println("OPOI:");
+      long start = System.currentTimeMillis();
+
+      for (int i = 0; i < iterations; i++) {
+         InputStream inputStream = POIDataSamples.getHSMFInstance().openResourceAsStream("lots-of-recipients.msg");
+         try {
+            OPOIFSFileSystem srcFileSystem = new OPOIFSFileSystem(inputStream);
+            OPOIFSFileSystem destFileSystem = new OPOIFSFileSystem();
+
+            copyAllEntries(srcFileSystem.getRoot(), destFileSystem.getRoot());
+
+            File file = File.createTempFile("opoi", ".dat");
+            OutputStream outputStream = new FileOutputStream(file);
+            try {
+               destFileSystem.writeFilesystem(outputStream);
+            } finally {
+               outputStream.close();
+            }
+
+            assertTrue(file.delete());
+            if (i % 10 == 0) System.out.print(".");
+            if (i % 800 == 0 && i > 0) System.out.println();
+         } finally {
+            inputStream.close();
+         }
+      }
+
+      System.out.println();
+      System.out.println("OPOI took: " + (System.currentTimeMillis() - start));
+
+
+      System.out.println();
+      System.out.println("NPOI:");
+      start = System.currentTimeMillis();
+
+      for (int i = 0; i < iterations; i++) {
+
+         InputStream inputStream = POIDataSamples.getHSMFInstance().openResourceAsStream("lots-of-recipients.msg");
+         try {
+            NPOIFSFileSystem srcFileSystem = new NPOIFSFileSystem(inputStream);
+            NPOIFSFileSystem destFileSystem = new NPOIFSFileSystem();
+
+            copyAllEntries(srcFileSystem.getRoot(), destFileSystem.getRoot());
+
+            File file = File.createTempFile("npoi", ".dat");
+            OutputStream outputStream = new FileOutputStream(file);
+            try {
+               destFileSystem.writeFilesystem(outputStream);
+            } finally {
+               outputStream.close();
+            }
+
+            assertTrue(file.delete());
+            if (i % 10 == 0) System.out.print(".");
+            if (i % 800 == 0 && i > 0) System.out.println();
+         } finally {
+            inputStream.close();
+         }
+      }
+
+      System.out.println();
+      System.out.println("NPOI took: " + (System.currentTimeMillis() - start));
+
+      System.out.println();
+      System.out.println();
+   }
+
