@@ -10,32 +10,38 @@
      */
     @SuppressWarnings("unchecked")
     public Section(final byte[] src, final int offset) throws UnsupportedEncodingException {
-        int o1 = offset;
-
         /*
          * Read the format ID.
          */
-        formatID = new ClassID(src, o1);
-        o1 += ClassID.LENGTH;
+        formatID = new ClassID(src, offset);
 
         /*
          * Read the offset from the stream's start and positions to
          * the section header.
          */
-        this.offset = LittleEndian.getUInt(src, o1);
-        o1 = (int) this.offset;
+        int offFix = (int)LittleEndian.getUInt(src, offset + ClassID.LENGTH);
+
+        // some input files have a invalid (padded?) offset, which need to be fixed
+        // search for beginning of size field
+        if (src[offFix] == 0) {
+            for (int i=0; i<3 && src[offFix] == 0; i++,offFix++);
+            // cross check with propertyCount field and the property list field
+            for (int i=0; i<3 && (src[offFix+3] != 0 || src[offFix+7] != 0 || src[offFix+11] != 0); i++,offFix--);
+        }
+
+        this._offset = offFix;
+
+        LittleEndianByteArrayInputStream leis = new LittleEndianByteArrayInputStream(src, offFix);
 
         /*
          * Read the section length.
          */
-        size = (int) LittleEndian.getUInt(src, o1);
-        o1 += LittleEndian.INT_SIZE;
+        size = (int)leis.readUInt();
 
         /*
          * Read the number of properties.
          */
-        final int propertyCount = (int) LittleEndian.getUInt(src, o1);
-        o1 += LittleEndian.INT_SIZE;
+        final int propertyCount = (int)leis.readUInt();
 
         /*
          * Read the properties. The offset is positioned at the first
@@ -62,63 +68,64 @@
          *    seconds pass reads the other properties.
          */
         /* Pass 1: Read the property list. */
-        int pass1Offset = o1;
-        long cpOffset = -1;
         final TreeBidiMap<Long,Long> offset2Id = new TreeBidiMap<Long,Long>();
         for (int i = 0; i < propertyCount; i++) {
             /* Read the property ID. */
-            long id = LittleEndian.getUInt(src, pass1Offset);
-            pass1Offset += LittleEndian.INT_SIZE;
+            long id = (int)leis.readUInt();
 
             /* Offset from the section's start. */
-            long off = LittleEndian.getUInt(src, pass1Offset);
-            pass1Offset += LittleEndian.INT_SIZE;
+            long off = (int)leis.readUInt();
 
             offset2Id.put(off, id);
-            
-            if (id == PropertyIDMap.PID_CODEPAGE) {
-                cpOffset = off;
-            }
         }
+
+        Long cpOffset = offset2Id.getKey((long)PropertyIDMap.PID_CODEPAGE);
 
         /* Look for the codepage. */
         int codepage = -1;
-        if (cpOffset != -1) {
+        if (cpOffset != null) {
             /* Read the property's value type. It must be VT_I2. */
-            long o = this.offset + cpOffset;
-            final long type = LittleEndian.getUInt(src, (int)o);
-            o += LittleEndian.INT_SIZE;
+            leis.setReadIndex((int)(this._offset + cpOffset));
+            final long type = leis.readUInt();
 
             if (type != Variant.VT_I2) {
                 throw new HPSFRuntimeException
-                    ("Value type of property ID 1 is not VT_I2 but " +
-                     type + ".");
+                    ("Value type of property ID 1 is not VT_I2 but " + type + ".");
             }
 
             /* Read the codepage number. */
-            codepage = LittleEndian.getUShort(src, (int)o);
+            codepage =  leis.readUShort();
         }
-        
+
 
         /* Pass 2: Read all properties - including the codepage property,
          * if available. */
         for (Map.Entry<Long,Long> me : offset2Id.entrySet()) {
             long off = me.getKey();
             long id = me.getValue();
-            Property p;
-            if (id == PropertyIDMap.PID_CODEPAGE) {
-                p = new Property(PropertyIDMap.PID_CODEPAGE, Variant.VT_I2, codepage);
-            } else {
-                int pLen = propLen(offset2Id, off, size);
-                long o = this.offset + off;
-                p = new Property(id, src, o, pLen, codepage);
-            }
-            properties.put(id, p);
-        }
 
-        /*
-         * Extract the dictionary (if available).
-         */
-        dictionary = (Map<Long,String>) getProperty(0);
+            int pLen = propLen(offset2Id, off, size);
+            leis.setReadIndex((int)(this._offset + off));
+
+            if (id == PropertyIDMap.PID_DICTIONARY) {
+                leis.mark(100000);
+                if (!readDictionary(leis, pLen, codepage)) {
+                    // there was an error reading the dictionary, maybe because the pid (0) was used wrong
+                    // try reading a property instead
+                    leis.reset();
+                    try {
+                        // fix id
+                        id = Math.max(PropertyIDMap.PID_MAX, offset2Id.inverseBidiMap().lastKey())+1;
+                        setProperty(new MutableProperty(id, leis, pLen, codepage));
+                    } catch (RuntimeException e) {
+                        LOG.log(POILogger.INFO, "Dictionary fallback failed - ignoring property");
+                    }
+                };
+            } else if (id == PropertyIDMap.PID_CODEPAGE) {
+                setCodepage(codepage);
+            } else {
+                setProperty(new MutableProperty(id, leis, pLen, codepage));
+            }
+        }
     }
 

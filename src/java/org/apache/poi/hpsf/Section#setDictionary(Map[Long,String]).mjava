@@ -16,25 +16,27 @@
      */
     public void setDictionary(final Map<Long,String> dictionary) throws IllegalPropertySetDataException {
         if (dictionary != null) {
-            this.dictionary = dictionary;
+            if (this.dictionary == null) {
+                this.dictionary = new TreeMap<Long,String>();
+            }
+            this.dictionary.putAll(dictionary);
+
+            /* If the codepage property (ID 1) for the strings (keys and values)
+             * used in the dictionary is not yet defined, set it to ISO-8859-1. */
+            int cp = getCodepage();
+            if (cp == -1) {
+                setCodepage(Property.DEFAULT_CODEPAGE);
+            }
 
             /* Set the dictionary property (ID 0). Please note that the second
              * parameter in the method call below is unused because dictionaries
              * don't have a type. */
             setProperty(PropertyIDMap.PID_DICTIONARY, -1, dictionary);
-
-            /* If the codepage property (ID 1) for the strings (keys and
-             * values) used in the dictionary is not yet defined, set it to
-             * Unicode. */
-            final Integer codepage = (Integer) getProperty(PropertyIDMap.PID_CODEPAGE);
-            if (codepage == null) {
-                setProperty(PropertyIDMap.PID_CODEPAGE, Variant.VT_I2,
-                            Integer.valueOf(CodePageUtil.CP_UNICODE));
-            }
         } else {
             /* Setting the dictionary to null means to remove property 0.
              * However, it does not mean to remove property 1 (codepage). */
             removeProperty(PropertyIDMap.PID_DICTIONARY);
+            this.dictionary = null;
         }
     }
 

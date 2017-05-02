@@ -1,0 +1,43 @@
+    /**
+     * Writes the section's dictionary.
+     *
+     * @param out The output stream to write to.
+     * @param dictionary The dictionary.
+     * @param codepage The codepage to be used to write the dictionary items.
+     * @return The number of bytes written
+     * @exception IOException if an I/O exception occurs.
+     */
+    private int writeDictionary(final OutputStream out, final int codepage)
+    throws IOException {
+        final byte padding[] = new byte[4];
+        Map<Long,String> dic = getDictionary();
+
+        LittleEndian.putUInt(dic.size(), out);
+        int length = LittleEndianConsts.INT_SIZE;
+        for (Map.Entry<Long,String> ls : dic.entrySet()) {
+
+            LittleEndian.putUInt(ls.getKey(), out);
+            length += LittleEndianConsts.INT_SIZE;
+
+            String value = ls.getValue()+"\0";
+            LittleEndian.putUInt( value.length(), out );
+            length += LittleEndianConsts.INT_SIZE;
+
+            byte bytes[] = CodePageUtil.getBytesInCodePage(value, codepage);
+            out.write(bytes);
+            length += bytes.length;
+
+            if (codepage == CodePageUtil.CP_UNICODE) {
+                int pad = (4 - (length & 0x3)) & 0x3;
+                out.write(padding, 0, pad);
+                length += pad;
+            }
+        }
+
+        int pad = (4 - (length & 0x3)) & 0x3;
+        out.write(padding, 0, pad);
+        length += pad;
+
+        return length;
+    }
+

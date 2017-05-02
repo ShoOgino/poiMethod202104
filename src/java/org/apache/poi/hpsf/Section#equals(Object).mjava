@@ -22,8 +22,9 @@
      * @return {@code true} if the objects are equal, {@code false} if
      * not
      */
+    @Override
     public boolean equals(final Object o) {
-        if (o == null || !(o instanceof Section)) {
+        if (!(o instanceof Section)) {
             return false;
         }
         final Section s = (Section) o;
@@ -31,58 +32,25 @@
             return false;
         }
 
-        /* Compare all properties except 0 and 1 as they must be handled
-         * specially. */
-        Property[] pa1 = new Property[getProperties().length];
-        Property[] pa2 = new Property[s.getProperties().length];
-        System.arraycopy(getProperties(), 0, pa1, 0, pa1.length);
-        System.arraycopy(s.getProperties(), 0, pa2, 0, pa2.length);
+        /* Compare all properties except the dictionary (id 0) and
+         * the codepage (id 1 / ignored) as they must be handled specially. */
+        Set<Long> propIds = new HashSet<Long>(properties.keySet());
+        propIds.addAll(s.properties.keySet());
+        propIds.remove(0L);
+        propIds.remove(1L);
 
-        /* Extract properties 0 and 1 and remove them from the copy of the
-         * arrays. */
-        Property p10 = null;
-        Property p20 = null;
-        for (int i = 0; i < pa1.length; i++) {
-            final long id = pa1[i].getID();
-            if (id == 0) {
-                p10 = pa1[i];
-                pa1 = remove(pa1, i);
-                i--;
+        for (Long id : propIds) {
+            Property p1 = properties.get(id);
+            Property p2 = s.properties.get(id);
+            if (p1 == null || p2 == null || !p1.equals(p2)) {
+                return false;
             }
-            if (id == 1) {
-                pa1 = remove(pa1, i);
-                i--;
-            }
-        }
-        for (int i = 0; i < pa2.length; i++) {
-            final long id = pa2[i].getID();
-            if (id == 0) {
-                p20 = pa2[i];
-                pa2 = remove(pa2, i);
-                i--;
-            }
-            if (id == 1) {
-                pa2 = remove(pa2, i);
-                i--;
-            }
-        }
-
-        /* If the number of properties (not counting property 1) is unequal the
-         * sections are unequal. */
-        if (pa1.length != pa2.length) {
-            return false;
         }
 
         /* If the dictionaries are unequal the sections are unequal. */
-        boolean dictionaryEqual = true;
-        if (p10 != null && p20 != null) {
-            dictionaryEqual = p10.getValue().equals(p20.getValue());
-        } else if (p10 != null || p20 != null) {
-            dictionaryEqual = false;
-        }
-        if (dictionaryEqual) {
-            return Util.equals(pa1, pa2);
-        }
-        return false;
+        Map<Long,String> d1 = getDictionary();
+        Map<Long,String> d2 = s.getDictionary();
+
+        return (d1 == null && d2 == null) || (d1 != null && d2 != null && d1.equals(d2));
     }
 

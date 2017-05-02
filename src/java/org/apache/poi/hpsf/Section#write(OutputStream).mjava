@@ -21,6 +21,17 @@
             return sectionBytes.length;
         }
 
+        /* Writing the section's dictionary it tricky. If there is a dictionary
+         * (property 0) the codepage property (property 1) must be set, too. */
+        int codepage = getCodepage();
+        if (codepage == -1) {
+            String msg =
+                "The codepage property is not set although a dictionary is present. "+
+                "Defaulting to ISO-8859-1.";
+            LOG.log(POILogger.WARN, msg);
+            codepage = Property.DEFAULT_CODEPAGE;
+        }
+
         /* The properties are written to this stream. */
         final ByteArrayOutputStream propertyStream = new ByteArrayOutputStream();
 
@@ -35,76 +46,48 @@
         /* Increase the position variable by the size of the property list so
          * that it points behind the property list and to the beginning of the
          * properties themselves. */
-        position += 2 * LittleEndian.INT_SIZE + getPropertyCount() * 2 * LittleEndian.INT_SIZE;
+        position += 2 * LittleEndianConsts.INT_SIZE + getPropertyCount() * 2 * LittleEndianConsts.INT_SIZE;
 
-        /* Writing the section's dictionary it tricky. If there is a dictionary
-         * (property 0) the codepage property (property 1) must be set, too. */
-        int codepage = -1;
-        if (getProperty(PropertyIDMap.PID_DICTIONARY) != null) {
-            final Object p1 = getProperty(PropertyIDMap.PID_CODEPAGE);
-            if (p1 != null) {
-                if (!(p1 instanceof Integer)) {
-                    throw new IllegalPropertySetDataException
-                        ("The codepage property (ID = 1) must be an " +
-                         "Integer object.");
-                }
-            } else {
-                /* Warning: The codepage property is not set although a
-                 * dictionary is present. In order to cope with this problem we
-                 * add the codepage property and set it to Unicode. */
-                setProperty(PropertyIDMap.PID_CODEPAGE, Variant.VT_I2,
-                            Integer.valueOf(CodePageUtil.CP_UNICODE));
-            }
-            codepage = getCodepage();
-        }
-        
         /* Write the properties and the property list into their respective
          * streams: */
         for (Property p : properties.values()) {
             final long id = p.getID();
 
             /* Write the property list entry. */
-            TypeWriter.writeUIntToStream(propertyListStream, p.getID());
-            TypeWriter.writeUIntToStream(propertyListStream, position);
+            LittleEndian.putUInt(id, propertyListStream);
+            LittleEndian.putUInt(position, propertyListStream);
 
             /* If the property ID is not equal 0 we write the property and all
              * is fine. However, if it equals 0 we have to write the section's
              * dictionary which has an implicit type only and an explicit
              * value. */
-            if (id != 0)
+            if (id != 0) {
                 /* Write the property and update the position to the next
                  * property. */
-                position += p.write(propertyStream, getCodepage());
-            else
-            {
-                if (codepage == -1)
-                    throw new IllegalPropertySetDataException
-                        ("Codepage (property 1) is undefined.");
-                position += writeDictionary(propertyStream, dictionary,
-                                            codepage);
+                position += p.write(propertyStream, codepage);
+            } else {
+                if (codepage == -1) {
+                    throw new IllegalPropertySetDataException("Codepage (property 1) is undefined.");
+                }
+                position += writeDictionary(propertyStream, codepage);
             }
         }
-        propertyStream.close();
-        propertyListStream.close();
 
         /* Write the section: */
-        byte[] pb1 = propertyListStream.toByteArray();
-        byte[] pb2 = propertyStream.toByteArray();
+        int streamLength = LittleEndianConsts.INT_SIZE * 2 + propertyListStream.size() + propertyStream.size();
 
         /* Write the section's length: */
-        TypeWriter.writeToStream(out, LittleEndian.INT_SIZE * 2 +
-                                      pb1.length + pb2.length);
+        LittleEndian.putInt(streamLength, out);
 
         /* Write the section's number of properties: */
-        TypeWriter.writeToStream(out, getPropertyCount());
+        LittleEndian.putInt(getPropertyCount(), out);
 
         /* Write the property list: */
-        out.write(pb1);
+        propertyListStream.writeTo(out);
 
         /* Write the properties: */
-        out.write(pb2);
+        propertyStream.writeTo(out);
 
-        int streamLength = LittleEndian.INT_SIZE * 2 + pb1.length + pb2.length;
         return streamLength;
     }
 
