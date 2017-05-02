@@ -1,0 +1,20 @@
+    @Override
+    public void handleAdditional(File file) throws Exception {
+        Assume.assumeFalse(EXCLUDES_HANDLE_ADD.contains(file.getParentFile().getName()+"/"+file.getName()));
+        if (copyOutput == null) {
+            copyOutput = TempFile.createTempFile("hpsfCopy", "out");
+            copyOutput.deleteOnExit();
+        }
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        PrintStream psNew = new PrintStream(bos);
+        PrintStream ps = System.out;
+        try {
+            System.setOut(psNew);
+            CopyCompare.main(new String[]{file.getAbsolutePath(), copyOutput.getAbsolutePath()});
+            assertEquals("Equal\n", new String(bos.toByteArray(), Charset.forName("UTF-8")));
+        } finally {
+            System.setOut(ps);
+        }
+    }
+

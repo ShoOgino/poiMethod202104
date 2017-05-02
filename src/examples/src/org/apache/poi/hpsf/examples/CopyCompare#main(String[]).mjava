@@ -51,6 +51,7 @@
         final POIFSReader r = new POIFSReader();
         final CopyFile cf = new CopyFile(copyFileName);
         r.registerListener(cf);
+        r.setNotifyEmptyDirectories(true);
         FileInputStream fis = new FileInputStream(originalFileName);
         r.read(fis);
         fis.close();
@@ -60,18 +61,22 @@
 
         /* Read all documents from the original POI file system and compare them
          * with the equivalent document from the copy. */
-        final POIFSFileSystem opfs = new POIFSFileSystem(new File(originalFileName));
-        final POIFSFileSystem cpfs = new POIFSFileSystem(new File(copyFileName));
-
-        final DirectoryEntry oRoot = opfs.getRoot();
-        final DirectoryEntry cRoot = cpfs.getRoot();
-        final StringBuffer messages = new StringBuffer();
-        if (equal(oRoot, cRoot, messages)) {
-            System.out.println("Equal");
-        } else {
+        POIFSFileSystem opfs = null, cpfs = null;
+        try {
+            opfs = new POIFSFileSystem(new File(originalFileName));
+            cpfs = new POIFSFileSystem(new File(copyFileName));
+            
+            final DirectoryEntry oRoot = opfs.getRoot();
+            final DirectoryEntry cRoot = cpfs.getRoot();
+            final StringBuffer messages = new StringBuffer();
+            if (equal(oRoot, cRoot, messages)) {
+                System.out.println("Equal");
+            } else {
             System.out.println("Not equal: " + messages);
+            }
+        } finally {
+            IOUtils.closeQuietly(cpfs);
+            IOUtils.closeQuietly(opfs);
         }
-        cpfs.close();
-        opfs.close();
     }
 
