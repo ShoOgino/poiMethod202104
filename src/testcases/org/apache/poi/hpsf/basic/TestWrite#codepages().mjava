@@ -1,14 +1,13 @@
     /**
-     * <p>Writes and reads back strings using several different codepages and
+     * Writes and reads back strings using several different codepages and
      * checks whether the stuff that has been read back equals the stuff that
-     * was written.</p>
+     * was written.
      */
     @Test
-    public void codepages()
+    public void codepages() throws ReadingNotSupportedException, UnsupportedVariantTypeException, IOException
     {
         Throwable thr = null;
-        final int[] validCodepages = new int[]
-            {CODEPAGE_DEFAULT, CODEPAGE_UTF8, CODEPAGE_UTF16, CODEPAGE_1252};
+        final int[] validCodepages = {CODEPAGE_DEFAULT, CodePageUtil.CP_UTF8, CodePageUtil.CP_UNICODE, CodePageUtil.CP_WINDOWS_1252};
         for (final int cp : validCodepages) {
             if (cp == -1 && !hasProperDefaultCharset())
             {
@@ -17,65 +16,22 @@
                 continue;
             }
 
-            final long t = cp == CODEPAGE_UTF16 ? Variant.VT_LPWSTR
-                                                : Variant.VT_LPSTR;
-            try
-            {
-                check(t, "", cp);
-                check(t, "\u00e4", cp);
-                check(t, "\u00e4\u00f6", cp);
-                check(t, "\u00e4\u00f6\u00fc", cp);
-                check(t, "\u00e4\u00f6\u00fc\u00c4", cp);
-                check(t, "\u00e4\u00f6\u00fc\u00c4\u00d6", cp);
-                check(t, "\u00e4\u00f6\u00fc\u00c4\u00d6\u00dc", cp);
-                check(t, "\u00e4\u00f6\u00fc\u00c4\u00d6\u00dc\u00df", cp);
-                if (cp == CodePageUtil.CP_UTF16 || cp == CodePageUtil.CP_UTF8)
-                    check(t, "\u79D1\u5B78", cp);
+            final long t = (cp == CodePageUtil.CP_UNICODE) ? Variant.VT_LPWSTR : Variant.VT_LPSTR;
+            checkString(t, "\u00e4\u00f6\u00fc\u00c4\u00d6\u00dc\u00df", cp);
+            if (cp == CodePageUtil.CP_UTF16 || cp == CodePageUtil.CP_UTF8) {
+                check(t, "\u79D1\u5B78", cp);
             }
-            catch (Exception ex)
-            {
-                thr = ex;
-            }
-            catch (Error ex)
-            {
-                thr = ex;
-            }
-            if (thr != null)
-                fail(org.apache.poi.hpsf.Util.toString(thr) +
-                     " with codepage " + cp);
         }
 
         final int[] invalidCodepages = new int[] {0, 1, 2, 4711, 815};
         for (int cp : invalidCodepages) {
-            final long type = cp == CODEPAGE_UTF16 ? Variant.VT_LPWSTR
-                                                   : Variant.VT_LPSTR;
-            try
-            {
-                check(type, "", cp);
-                check(type, "\u00e4", cp);
-                check(type, "\u00e4\u00f6", cp);
-                check(type, "\u00e4\u00f6\u00fc", cp);
-                check(type, "\u00e4\u00f6\u00fc\u00c4", cp);
-                check(type, "\u00e4\u00f6\u00fc\u00c4\u00d6", cp);
-                check(type, "\u00e4\u00f6\u00fc\u00c4\u00d6\u00dc", cp);
-                check(type, "\u00e4\u00f6\u00fc\u00c4\u00d6\u00dc\u00df", cp);
-                fail("UnsupportedEncodingException for codepage " + cp +
-                     " expected.");
-            }
-            catch (UnsupportedEncodingException ex)
-            {
+            final long type = (cp == CodePageUtil.CP_UNICODE) ? Variant.VT_LPWSTR : Variant.VT_LPSTR;
+            try {
+                checkString(type, "\u00e4\u00f6\u00fc\u00c4\u00d6\u00dc\u00df", cp);
+                fail("UnsupportedEncodingException for codepage " + cp + " expected.");
+            } catch (UnsupportedEncodingException ex) {
                 /* This is the expected behaviour. */
             }
-            catch (Exception ex)
-            {
-                thr = ex;
-            }
-            catch (Error ex)
-            {
-                thr = ex;
-            }
-            if (thr != null)
-                fail(org.apache.poi.hpsf.Util.toString(thr));
         }
 
     }

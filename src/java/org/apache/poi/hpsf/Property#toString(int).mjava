@@ -1,0 +1,57 @@
+    public String toString(int codepage) {
+        final StringBuffer b = new StringBuffer();
+        b.append("Property[");
+        b.append("id: ");
+        b.append(getID());
+        String idName = getNameFromID();
+        if (idName != null) {
+            b.append(" (");
+            b.append(idName);
+            b.append(")");
+        }
+        b.append(", type: ");
+        b.append(getType());
+        b.append(" (");
+        b.append(getVariantName());
+        b.append(") ");
+        final Object value = getValue();
+        b.append(", value: ");
+        if (value instanceof String) {
+            b.append("\n");
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            try {
+                write(bos, codepage);
+            } catch (Exception e) {
+                LOG.log(POILogger.WARN, "can't serialize string", e);
+            }
+            
+            b.append(" [");
+            // skip length field
+            if(bos.size() > 2*LittleEndianConsts.INT_SIZE) {
+                final String hex = HexDump.dump(bos.toByteArray(), -2*LittleEndianConsts.INT_SIZE, 2*LittleEndianConsts.INT_SIZE);
+                b.append(hex);
+            }
+            b.append("]");
+        } else if (value instanceof byte[]) {
+            b.append("\n");
+            byte[] bytes = (byte[])value;
+            if(bytes.length > 0) {
+                String hex = HexDump.dump(bytes, 0L, 0);
+                b.append(hex);
+            }
+        } else if (type == Variant.VT_EMPTY || type == Variant.VT_NULL) {
+            b.append("null");
+        } else {
+            b.append(value.toString());
+            
+            String decoded = decodeValueFromID();
+            if (decoded != null) {
+                b.append(" (");
+                b.append(decoded);
+                b.append(")");
+            }
+        }
+        b.append(']');
+        return b.toString();
+    }
+

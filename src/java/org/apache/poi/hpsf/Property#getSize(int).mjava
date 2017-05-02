@@ -1,0 +1,36 @@
+    /**
+     * Returns the property's size in bytes. This is always a multiple of 4.
+     *
+     * @return the property's size in bytes
+     *
+     * @exception WritingNotSupportedException if HPSF does not yet support the
+     * property's variant type.
+     */
+    protected int getSize(int codepage) throws WritingNotSupportedException
+    {
+        int length = Variant.getVariantLength(type);
+        if (length >= 0  || type == Variant.VT_EMPTY) {
+            /* Fixed length */
+            return length;
+        }
+        if (length == -2) {
+            /* Unknown length */
+            throw new WritingNotSupportedException(type, null);
+        }
+
+        /* Variable length: */
+        if (type == Variant.VT_LPSTR || type == Variant.VT_LPWSTR) {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            try {
+                length = write(bos, codepage) - 2*LittleEndianConsts.INT_SIZE;
+                /* Pad to multiples of 4. */
+                length += (4 - (length & 0x3)) & 0x3;
+                return length;
+            } catch (IOException e) {
+                throw new WritingNotSupportedException(type, value);
+            }
+        }
+
+        throw new WritingNotSupportedException(type, value);
+    }
+

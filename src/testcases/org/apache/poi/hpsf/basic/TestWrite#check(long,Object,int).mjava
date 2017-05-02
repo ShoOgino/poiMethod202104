@@ -1,48 +1,25 @@
     /**
-     * <p>Writes a property and reads it back in.</p>
+     * Writes a property and reads it back in.
      *
      * @param variantType The property's variant type.
      * @param value The property's value.
      * @param codepage The codepage to use for writing and reading.
      * @throws UnsupportedVariantTypeException if the variant is not supported.
      * @throws IOException if an I/O exception occurs.
-     * @throws ReadingNotSupportedException
-     * @throws UnsupportedEncodingException
      */
-    private void check(final long variantType, final Object value,
-                       final int codepage)
-        throws UnsupportedVariantTypeException, IOException,
-               ReadingNotSupportedException, UnsupportedEncodingException
+    private void check(final long variantType, final Object value, final int codepage)
+    throws UnsupportedVariantTypeException, IOException, ReadingNotSupportedException, UnsupportedEncodingException
     {
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
         VariantSupport.write(out, variantType, value, codepage);
         out.close();
         final byte[] b = out.toByteArray();
         final Object objRead =
-            VariantSupport.read(b, 0, b.length + LittleEndian.INT_SIZE,
-                                variantType, codepage);
-        if (objRead instanceof byte[])
-        {
-            byte[] valueB = (byte[])value;
-            byte[] readB = (byte[])objRead;
-            if (valueB.length != readB.length)
-               fail("Byte arrays are different length - expected " + valueB.length +
-                     " but found " + readB.length);
-
-            final int diff = diff(valueB, readB);
-            if (diff >= 0)
-                fail("Byte arrays are different. First different byte is at " +
-                     "index " + diff + ".");
+            VariantSupport.read(b, 0, b.length + LittleEndianConsts.INT_SIZE, variantType, codepage);
+        if (objRead instanceof byte[]) {
+            assertArrayEquals((byte[])value, (byte[])objRead);
+        } else if (value != null && !value.equals(objRead)) {
+            assertEquals(value, objRead);
         }
-        else
-            if (value != null && !value.equals(objRead))
-            {
-                fail("Expected: \"" + value + "\" but was: \"" + objRead +
-                     "\". Codepage: " + codepage +
-                     (codepage == -1 ?
-                      " (" + System.getProperty("file.encoding") + ")." : "."));
-            }
-            else
-                assertEquals(value, objRead);
     }
 

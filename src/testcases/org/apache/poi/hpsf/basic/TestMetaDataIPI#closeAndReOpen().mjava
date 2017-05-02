@@ -1,49 +1,24 @@
-	/**
-	 * Closes the ByteArrayOutputStream and reads it into a ByteArrayInputStream.
-	 * When finished writing information this method is used in the tests to
-	 * start reading from the created document and then the see if the results match.
-	 */
-	public void closeAndReOpen() throws IOException, HPSFException {
+    /**
+     * Closes the ByteArrayOutputStream and reads it into a ByteArrayInputStream.
+     * When finished writing information this method is used in the tests to
+     * start reading from the created document and then the see if the results match.
+     */
+    private void closeAndReOpen() throws IOException, HPSFException {
+        dsi.write(poifs.getRoot(), DocumentSummaryInformation.DEFAULT_STREAM_NAME);
+        si.write(poifs.getRoot(), SummaryInformation.DEFAULT_STREAM_NAME);
 
-		dsi.write(dir, DocumentSummaryInformation.DEFAULT_STREAM_NAME);
-		si.write(dir, SummaryInformation.DEFAULT_STREAM_NAME);
-
-		si = null;
-		dsi = null;
+        ByteArrayOutputStream bout = new ByteArrayOutputStream();
         poifs.writeFilesystem(bout);
-        bout.flush();
+        poifs.close();
 
-		InputStream is = new ByteArrayInputStream(bout.toByteArray());
-		assertNotNull(is);
-		POIFSFileSystem poifs = new POIFSFileSystem(is);
-		is.close();
+        InputStream is = new ByteArrayInputStream(bout.toByteArray());
+        poifs = new POIFSFileSystem(is);
+        is.close();
 
-		assertNotNull(poifs);
-		/* Read the document summary information. */
-		DirectoryEntry dir = poifs.getRoot();
-
-		DocumentEntry dsiEntry = (DocumentEntry) dir
-				.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME);
-		DocumentInputStream dis = new DocumentInputStream(dsiEntry);
-		PropertySet ps = new PropertySet(dis);
-		dis.close();
-		dsi = new DocumentSummaryInformation(ps);
-
-		try {
-			dsiEntry = (DocumentEntry) dir
-					.getEntry(SummaryInformation.DEFAULT_STREAM_NAME);
-			dis = new DocumentInputStream(dsiEntry);
-			ps = new PropertySet(dis);
-			dis.close();
-			si = new SummaryInformation(ps);
-
-		} catch (FileNotFoundException ex) {
-			/*
-			 * There is no document summary information yet. We have to create a
-			 * new one.
-			 */
-			si = PropertySetFactory.newSummaryInformation();
-			assertNotNull(si);
-		}
-	}
+        /* Read the document summary information. */
+        DirectoryEntry dir = poifs.getRoot();
+        
+        dsi = (DocumentSummaryInformation)PropertySetFactory.create(dir, DocumentSummaryInformation.DEFAULT_STREAM_NAME);;
+        si = (SummaryInformation)PropertySetFactory.create(dir, SummaryInformation.DEFAULT_STREAM_NAME);;
+    }
 

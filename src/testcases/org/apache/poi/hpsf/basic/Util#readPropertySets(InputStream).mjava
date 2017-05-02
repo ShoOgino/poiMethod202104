@@ -1,0 +1,31 @@
+    public static List<POIFile> readPropertySets(final InputStream poiFs)
+    throws FileNotFoundException, IOException {
+        final List<POIFile> files = new ArrayList<POIFile>(7);
+        final POIFSReader r = new POIFSReader();
+        POIFSReaderListener pfl = new POIFSReaderListener() {
+            @Override
+            public void processPOIFSReaderEvent(final POIFSReaderEvent event) {
+                try {
+                    final POIFile f = new POIFile();
+                    f.setName(event.getName());
+                    f.setPath(event.getPath());
+                    final InputStream in = event.getStream();
+                    if (PropertySet.isPropertySetStream(in)) {
+                        f.setBytes(IOUtils.toByteArray(in));
+                        files.add(f);
+                    }
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+            }
+        };
+
+        /* Register the listener for all POI files. */
+        r.registerListener(pfl);
+
+        /* Read the POI filesystem. */
+        r.read(poiFs);
+
+        return files;
+    }
+
