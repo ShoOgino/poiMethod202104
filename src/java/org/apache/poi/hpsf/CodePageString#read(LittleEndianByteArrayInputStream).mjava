@@ -1,0 +1,29 @@
+    void read( LittleEndianByteArrayInputStream lei ) {
+        int offset = lei.getReadIndex();
+        int size = lei.readInt();
+        _value = new byte[size];
+        if (size == 0) {
+            return;
+        }
+
+        // If Size is zero, this field MUST be zero bytes in length. If Size is
+        // nonzero and the CodePage property set's CodePage property has the value CP_WINUNICODE
+        // (0x04B0), then the value MUST be a null-terminated array of 16-bit Unicode characters,
+        // followed by zero padding to a multiple of 4 bytes. If Size is nonzero and the property set's
+        // CodePage property has any other value, it MUST be a null-terminated array of 8-bit characters
+        // from the code page identified by the CodePage property, followed by zero padding to a
+        // multiple of 4 bytes. The string represented by this field MAY contain embedded or additional
+        // trailing null characters and an OLEPS implementation MUST be able to handle such strings.        
+        
+        lei.readFully(_value);
+        if (_value[size - 1] != 0 ) {
+            // TODO Some files, such as TestVisioWithCodepage.vsd, are currently
+            // triggering this for values that don't look like codepages
+            // See Bug #52258 for details
+            String msg = "CodePageString started at offset #" + offset + " is not NULL-terminated";
+            LOG.log(POILogger.WARN, msg);
+        }
+
+        TypedPropertyValue.skipPadding(lei);
+    }
+

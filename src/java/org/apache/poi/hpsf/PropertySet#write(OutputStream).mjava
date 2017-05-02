@@ -13,11 +13,11 @@
         final int nrSections = getSectionCount();
 
         /* Write the property set's header. */
-        TypeWriter.writeToStream(out, (short) getByteOrder());
-        TypeWriter.writeToStream(out, (short) getFormat());
-        TypeWriter.writeToStream(out, getOSVersion());
-        TypeWriter.writeToStream(out, getClassID());
-        TypeWriter.writeToStream(out, nrSections);
+        LittleEndian.putShort(out, (short) getByteOrder());
+        LittleEndian.putShort(out, (short) getFormat());
+        LittleEndian.putInt(getOSVersion(), out);
+        putClassId(out, getClassID());
+        LittleEndian.putInt(nrSections, out);
         int offset = OFFSET_HEADER;
 
         /* Write the section list, i.e. the references to the sections. Each
@@ -30,8 +30,8 @@
             if (formatID == null) {
                 throw new NoFormatIDException();
             }
-            TypeWriter.writeToStream(out, section.getFormatID());
-            TypeWriter.writeUIntToStream(out, offset);
+            putClassId(out, formatID);
+            LittleEndian.putUInt(offset, out);
             try {
                 offset += section.getSize();
             } catch (HPSFRuntimeException ex) {

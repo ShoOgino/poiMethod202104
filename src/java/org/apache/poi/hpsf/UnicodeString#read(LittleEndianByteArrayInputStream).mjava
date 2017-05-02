@@ -1,0 +1,26 @@
+    void read(LittleEndianByteArrayInputStream lei) {
+        final int length = lei.readInt();
+        final int unicodeBytes = length*2;
+        _value = new byte[unicodeBytes];
+        
+        // If Length is zero, this field MUST be zero bytes in length. If Length is
+        // nonzero, this field MUST be a null-terminated array of 16-bit Unicode characters, followed by
+        // zero padding to a multiple of 4 bytes. The string represented by this field SHOULD NOT
+        // contain embedded or additional trailing null characters.
+        
+        if (length == 0) {
+            return;
+        }
+
+        final int offset = lei.getReadIndex();
+        
+        lei.readFully(_value);
+
+        if (_value[unicodeBytes-2] != 0 || _value[unicodeBytes-1] != 0) {
+            String msg = "UnicodeString started at offset #" + offset + " is not NULL-terminated";
+            throw new IllegalPropertySetDataException(msg);
+        }
+        
+        TypedPropertyValue.skipPadding(lei);
+    }
+

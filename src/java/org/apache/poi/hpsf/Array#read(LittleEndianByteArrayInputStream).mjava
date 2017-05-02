@@ -1,0 +1,24 @@
+    void read( LittleEndianByteArrayInputStream lei ) {
+        _header.read(lei);
+
+        long numberOfScalarsLong = _header.getNumberOfScalarValues();
+        if ( numberOfScalarsLong > Integer.MAX_VALUE ) {
+            String msg =
+                "Sorry, but POI can't store array of properties with size of " +
+                numberOfScalarsLong + " in memory";
+            throw new UnsupportedOperationException(msg);
+        }
+        int numberOfScalars = (int) numberOfScalarsLong;
+
+        _values = new TypedPropertyValue[numberOfScalars];
+        int paddedType = (_header._type == Variant.VT_VARIANT) ? 0 : _header._type;
+        for ( int i = 0; i < numberOfScalars; i++ ) {
+            TypedPropertyValue typedPropertyValue = new TypedPropertyValue(paddedType, null);
+            typedPropertyValue.read(lei);
+            _values[i] = typedPropertyValue;
+            if (paddedType != 0) {
+                TypedPropertyValue.skipPadding(lei);
+            }
+        }
+    }
+
