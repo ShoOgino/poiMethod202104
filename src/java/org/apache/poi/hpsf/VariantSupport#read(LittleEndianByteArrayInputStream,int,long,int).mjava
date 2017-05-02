@@ -1,0 +1,91 @@
+    public static Object read( LittleEndianByteArrayInputStream lei,
+            final int length, final long type, final int codepage )
+    throws ReadingNotSupportedException, UnsupportedEncodingException {
+        final int offset = lei.getReadIndex();
+        TypedPropertyValue typedPropertyValue = new TypedPropertyValue( (int) type, null );
+        try {
+            typedPropertyValue.readValue(lei);
+        } catch ( UnsupportedOperationException exc ) {
+            int propLength = Math.min( length, lei.available() );
+            final byte[] v = new byte[propLength];
+            lei.readFully(v, 0, propLength);
+            throw new ReadingNotSupportedException( type, v );
+        }
+
+        switch ( (int) type ) {
+            /*
+             * we have more property types that can be converted into Java
+             * objects, but current API need to be preserved, and it returns
+             * other types as byte arrays. In future major versions it shall be
+             * changed -- sergey
+             */
+            case Variant.VT_EMPTY:
+            case Variant.VT_I1:
+            case Variant.VT_UI1:
+            case Variant.VT_UI2:
+            case Variant.VT_I4:
+            case Variant.VT_UI4:
+            case Variant.VT_I8:
+            case Variant.VT_UI8:
+            case Variant.VT_R4:
+            case Variant.VT_R8:
+                return typedPropertyValue.getValue();
+
+            /*
+             * also for backward-compatibility with prev. versions of POI
+             * --sergey
+             */
+            case Variant.VT_I2:
+                return ( (Short) typedPropertyValue.getValue() ).intValue();
+
+            case Variant.VT_FILETIME:
+                Filetime filetime = (Filetime) typedPropertyValue.getValue();
+                return Util.filetimeToDate( (int) filetime.getHigh(), (int) filetime.getLow() );
+
+            case Variant.VT_LPSTR:
+                CodePageString cpString = (CodePageString) typedPropertyValue.getValue();
+                return cpString.getJavaValue( codepage );
+
+            case Variant.VT_LPWSTR:
+                UnicodeString uniString = (UnicodeString) typedPropertyValue.getValue();
+                return uniString.toJavaString();
+
+            // if(l1 < 0) {
+            /*
+             * YK: reading the ClipboardData packet (VT_CF) is not quite
+             * correct. The size of the data is determined by the first four
+             * bytes of the packet while the current implementation calculates
+             * it in the Section constructor. Test files in Bugzilla 42726 and
+             * 45583 clearly show that this approach does not always work. The
+             * workaround below attempts to gracefully handle such cases instead
+             * of throwing exceptions.
+             *
+             * August 20, 2009
+             */
+            // l1 = LittleEndian.getInt(src, o1); o1 += LittleEndian.INT_SIZE;
+            // }
+            // final byte[] v = new byte[l1];
+            // System.arraycopy(src, o1, v, 0, v.length);
+            // value = v;
+            // break;
+            case Variant.VT_CF:
+                ClipboardData clipboardData = (ClipboardData) typedPropertyValue.getValue();
+                return clipboardData.toByteArray();
+
+            case Variant.VT_BOOL:
+                VariantBool bool = (VariantBool) typedPropertyValue.getValue();
+                return bool.getValue();
+                
+            /*
+             * it is not very good, but what can do without breaking current
+             * API? --sergey
+             */
+            default:
+                final int unpadded = lei.getReadIndex()-offset;
+                lei.setReadIndex(offset);
+                final byte[] v = new byte[unpadded];
+                lei.readFully( v, 0, unpadded );
+                throw new ReadingNotSupportedException( type, v );
+        }
+    }
+
