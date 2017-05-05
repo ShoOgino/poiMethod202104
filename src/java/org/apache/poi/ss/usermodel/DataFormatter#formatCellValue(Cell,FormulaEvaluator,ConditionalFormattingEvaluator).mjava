@@ -1,0 +1,63 @@
+    /**
+     * <p>
+     * Returns the formatted value of a cell as a <tt>String</tt> regardless
+     * of the cell type. If the Excel number format pattern cannot be parsed then the
+     * cell value will be formatted using a default format.
+     * </p>
+     * <p>When passed a null or blank cell, this method will return an empty
+     * String (""). Formula cells will be evaluated using the given
+     * {@link FormulaEvaluator} if the evaluator is non-null. If the
+     * evaluator is null, then the formula String will be returned. The caller
+     * is responsible for setting the currentRow on the evaluator
+     *</p>
+     * <p>
+     * When a ConditionalFormattingEvaluator is present, it is checked first to see
+     * if there is a number format to apply.  If multiple rules apply, the last one is used.
+     * If no ConditionalFormattingEvaluator is present, no rules apply, or the applied
+     * rules do not define a format, the cell's style format is used.
+     * </p>
+     * <p>
+     * The two evaluators should be from the same context, to avoid inconsistencies in cached values.
+     *</p>
+     *
+     * @param cell The cell (can be null)
+     * @param evaluator The FormulaEvaluator (can be null)
+     * @param cfEvaluator ConditionalFormattingEvaluator (can be null)
+     * @return a string value of the cell
+     */
+    public String formatCellValue(Cell cell, FormulaEvaluator evaluator, ConditionalFormattingEvaluator cfEvaluator) {
+        localeChangedObservable.checkForLocaleChange();
+        
+        if (cell == null) {
+            return "";
+        }
+
+        CellType cellType = cell.getCellTypeEnum();
+        if (cellType == CellType.FORMULA) {
+            if (evaluator == null) {
+                return cell.getCellFormula();
+            }
+            cellType = evaluator.evaluateFormulaCellEnum(cell);
+        }
+        switch (cellType) {
+            case NUMERIC :
+
+                if (DateUtil.isCellDateFormatted(cell, cfEvaluator)) {
+                    return getFormattedDateString(cell, cfEvaluator);
+                }
+                return getFormattedNumberString(cell, cfEvaluator);
+
+            case STRING :
+                return cell.getRichStringCellValue().getString();
+
+            case BOOLEAN :
+                return cell.getBooleanCellValue() ? "TRUE" : "FALSE";
+            case BLANK :
+                return "";
+            case ERROR:
+                return FormulaError.forInt(cell.getErrorCellValue()).getString();
+            default:
+                throw new RuntimeException("Unexpected celltype (" + cellType + ")");
+        }
+    }
+
