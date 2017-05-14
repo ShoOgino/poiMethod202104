@@ -17,42 +17,34 @@
      * 
      * @exception IOException if an I/O exception occurs
      */
-    public static POIFile[] readPOIFiles(final File poiFs,
-                                         final String[] poiFiles)
-        throws FileNotFoundException, IOException
-    {
+    public static List<POIFile> readPOIFiles(final File poiFs, final String... poiFiles)
+    throws FileNotFoundException, IOException {
         final List<POIFile> files = new ArrayList<POIFile>();
         POIFSReader r = new POIFSReader();
-        POIFSReaderListener pfl = new POIFSReaderListener()
-        {
+        POIFSReaderListener pfl = new POIFSReaderListener() {
             @Override
-            public void processPOIFSReaderEvent(final POIFSReaderEvent event)
-            {
-                try
-                {
+            public void processPOIFSReaderEvent(final POIFSReaderEvent event) {
+                try {
                     final POIFile f = new POIFile();
                     f.setName(event.getName());
                     f.setPath(event.getPath());
                     final InputStream in = event.getStream();
-                    final ByteArrayOutputStream out =
-                        new ByteArrayOutputStream();
-                    IOUtils.copy(in, out);
-                    out.close();
-                    f.setBytes(out.toByteArray());
+                    f.setBytes(IOUtils.toByteArray(in));
+                    in.close();
                     files.add(f);
-                }
-                catch (IOException ex)
-                {
+                } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
             }
         };
-        if (poiFiles == null)
+        if (poiFiles.length == 0) {
             /* Register the listener for all POI files. */
             r.registerListener(pfl);
-        else
-            for (String poiFile : poiFiles)
+        } else {
+            for (String poiFile : poiFiles) {
                 r.registerListener(pfl, poiFile);
+            }
+        }
 
         /* Read the POI filesystem. */
         FileInputStream stream = new FileInputStream(poiFs);
@@ -61,9 +53,6 @@
         } finally {
             stream.close();
         }
-        POIFile[] result = new POIFile[files.size()];
-        for (int i = 0; i < result.length; i++)
-            result[i] = files.get(i);
-        return result;
+        return files;
     }
 

@@ -8,7 +8,6 @@
      * @exception UnsupportedEncodingException if the section's codepage is not
      * supported.
      */
-    @SuppressWarnings("unchecked")
     public Section(final byte[] src, final int offset) throws UnsupportedEncodingException {
         /*
          * Read the format ID.
@@ -36,7 +35,7 @@
         /*
          * Read the section length.
          */
-        size = (int)leis.readUInt();
+        int size = (int)Math.min(leis.readUInt(), src.length-_offset);
 
         /*
          * Read the number of properties.
@@ -95,6 +94,7 @@
 
             /* Read the codepage number. */
             codepage =  leis.readUShort();
+            setCodepage(codepage);
         }
 
 
@@ -104,6 +104,10 @@
             long off = me.getKey();
             long id = me.getValue();
 
+            if (id == PropertyIDMap.PID_CODEPAGE) {
+                continue;
+            }
+            
             int pLen = propLen(offset2Id, off, size);
             leis.setReadIndex((int)(this._offset + off));
 
@@ -121,11 +125,12 @@
                         LOG.log(POILogger.INFO, "Dictionary fallback failed - ignoring property");
                     }
                 };
-            } else if (id == PropertyIDMap.PID_CODEPAGE) {
-                setCodepage(codepage);
             } else {
                 setProperty(new MutableProperty(id, leis, pLen, codepage));
             }
         }
+        
+        sectionBytes.write(src, (int)_offset, size);
+        padSectionBytes();
     }
 
