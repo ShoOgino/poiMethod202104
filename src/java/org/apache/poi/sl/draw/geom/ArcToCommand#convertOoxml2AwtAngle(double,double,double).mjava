@@ -1,0 +1,69 @@
+    /**
+     * Arc2D angles are skewed, OOXML aren't ... so we need to unskew them<p>
+     *
+     * Furthermore ooxml angle starts at the X-axis and increases clock-wise,
+     * where as Arc2D api states
+     * "45 degrees always falls on the line from the center of the ellipse to
+     * the upper right corner of the framing rectangle"
+     * so we need to reverse it
+     *
+     * <pre>
+     * AWT:                      OOXML:
+     *            |90/-270                     |270/-90 (16200000)
+     *            |                            |
+     * +/-180-----------0           +/-180-----------0
+     *            |               (10800000)   |
+     *            |270/-90                     |90/-270 (5400000)
+     * </pre>
+     *
+     * @param ooAngle the angle in OOXML units
+     * @param width the half width of the bounding box
+     * @param height the half height of the bounding box
+     *
+     * @return the angle in degrees
+     *
+     * @see <a href="http://www.onlinemathe.de/forum/Problem-bei-Winkelberechnungen-einer-Ellipse">unskew angle</a>
+     **/
+    private double convertOoxml2AwtAngle(double ooAngle, double width, double height) {
+        double aspect = (height / width);
+        // reverse angle for awt
+        double awtAngle = -ooAngle;
+        // normalize angle, in case it's < -360 or > 360 degrees
+        double awtAngle2 = awtAngle%360.;
+        double awtAngle3 = awtAngle-awtAngle2;
+        // because of tangens nature, the values left [90°-270°] and right [270°-90°] of the axis are mirrored/the same
+        // and the result of atan2 need to be justified
+        switch ((int)(awtAngle2 / 90)) {
+            case -3:
+                // -270 to -360
+                awtAngle3 -= 360;
+                awtAngle2 += 360;
+                break;
+            case -2:
+            case -1:
+                // -90 to -270
+                awtAngle3 -= 180;
+                awtAngle2 += 180;
+                break;
+            default:
+            case 0:
+                // -90 to 90
+                break;
+            case 2:
+            case 1:
+                // 90 to 270
+                awtAngle3 += 180;
+                awtAngle2 -= 180;
+                break;
+            case 3:
+                // 270 to 360
+                awtAngle3 += 360;
+                awtAngle2 -= 360;
+                break;
+        }
+
+        // skew
+        awtAngle = Math.toDegrees(Math.atan2(Math.tan(Math.toRadians(awtAngle2)), aspect)) + awtAngle3;
+        return awtAngle;
+    }
+
