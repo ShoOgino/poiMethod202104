@@ -1,14 +1,15 @@
-   public void testFindsAttachments() throws Exception {
+   @Test
+   public void testFindsAttachments() throws IOException, ChunkNotFoundException {
 	  NPOIFSFileSystem with = new NPOIFSFileSystem(samples.getFile("attachment_test_msg.msg"), true);
       NPOIFSFileSystem without = new NPOIFSFileSystem(samples.getFile("quick.msg"), true);
       AttachmentChunks attachment;
-      
-      
+
+
       // Check raw details on the one with
       with.getRoot().getEntry("__attach_version1.0_#00000000");
       with.getRoot().getEntry("__attach_version1.0_#00000001");
       POIFSChunkParser.parse(with.getRoot());
-      
+
       ChunkGroup[] groups = POIFSChunkParser.parse(with.getRoot());
       assertEquals(5, groups.length);
       assertTrue(groups[0] instanceof Chunks);
@@ -16,22 +17,22 @@
       assertTrue(groups[2] instanceof AttachmentChunks);
       assertTrue(groups[3] instanceof AttachmentChunks);
       assertTrue(groups[4] instanceof NameIdChunks);
-      
+
       attachment = (AttachmentChunks)groups[2];
       assertEquals("TEST-U~1.DOC", attachment.getAttachFileName().toString());
       assertEquals("test-unicode.doc", attachment.getAttachLongFileName().toString());
       assertEquals(24064, attachment.getAttachData().getValue().length);
-      
+
       attachment = (AttachmentChunks)groups[3];
       assertEquals("pj1.txt", attachment.getAttachFileName().toString());
       assertEquals("pj1.txt", attachment.getAttachLongFileName().toString());
       assertEquals(89, attachment.getAttachData().getValue().length);
-	   
-      
+
+
       // Check raw details on one without
       assertFalse(without.getRoot().hasEntry("__attach_version1.0_#00000000"));
       assertFalse(without.getRoot().hasEntry("__attach_version1.0_#00000001"));
-      
+
 	   // One with, from the top
       MAPIMessage msgWith = new MAPIMessage(with);
       assertEquals(2, msgWith.getAttachmentFiles().length);
@@ -40,28 +41,30 @@
       assertEquals("TEST-U~1.DOC", attachment.getAttachFileName().toString());
       assertEquals("test-unicode.doc", attachment.getAttachLongFileName().toString());
       assertEquals(24064, attachment.getAttachData().getValue().length);
-      
+
       attachment = msgWith.getAttachmentFiles()[1];
       assertEquals("pj1.txt", attachment.getAttachFileName().toString());
       assertEquals("pj1.txt", attachment.getAttachLongFileName().toString());
       assertEquals(89, attachment.getAttachData().getValue().length);
-      
+
       // Plus check core details are there
       assertEquals("'nicolas1.23456@free.fr'", msgWith.getDisplayTo());
       assertEquals("Nicolas1 23456", msgWith.getDisplayFrom());
       assertEquals("test pi\u00e8ce jointe 1", msgWith.getSubject());
-      
+
 	   // One without, from the top
       MAPIMessage msgWithout = new MAPIMessage(without);
-      
+
       // No attachments
       assertEquals(0, msgWithout.getAttachmentFiles().length);
-      
+
       // But has core details
       assertEquals("Kevin Roast", msgWithout.getDisplayTo());
       assertEquals("Kevin Roast", msgWithout.getDisplayFrom());
       assertEquals("Test the content transformer", msgWithout.getSubject());
 
+      msgWithout.close();
+      msgWith.close();
       without.close();
       with.close();
    }

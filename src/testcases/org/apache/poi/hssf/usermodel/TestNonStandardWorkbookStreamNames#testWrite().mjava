@@ -1,33 +1,26 @@
 	/**
 	 * Test that when we write out, we go back to the correct case
 	 */
-	public void testWrite() throws Exception {
+    @Test
+	public void testWrite() throws IOException {
 	   for (String file : new String[] {xlsA, xlsB}) {
-   		InputStream is = HSSFTestDataSamples.openSampleFileStream(file);
-   		POIFSFileSystem fs = new POIFSFileSystem(is);
-   
-   		// Open the workbook, not preserving nodes
-   		HSSFWorkbook wb = new HSSFWorkbook(fs);
-   		ByteArrayOutputStream out = new ByteArrayOutputStream();
-   		wb.write(out);
-   
-   		// Check now
-   		ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
-   		POIFSFileSystem fs2 = new POIFSFileSystem(in);
-   
-   		// Check that we have the new entries
-   		fs2.getRoot().getEntry("Workbook");
-   		try {
-   			fs2.getRoot().getEntry("BOOK");
-   			fail();
-   		} catch(FileNotFoundException e) {}
-         try {
-            fs2.getRoot().getEntry("WORKBOOK");
-            fail();
-         } catch(FileNotFoundException e) {}
-   
-   		// And it can be opened
-   		HSSFWorkbook wb2 = new HSSFWorkbook(fs2);
-	   }
+           // Open the workbook, not preserving nodes
+	       InputStream is = HSSFTestDataSamples.openSampleFileStream(file);
+	       HSSFWorkbook wb = new HSSFWorkbook(is, false);
+           is.close();
+
+           // Check now it can be opened
+           HSSFWorkbook wb2 = HSSFTestDataSamples.writeOutAndReadBack(wb);
+           wb.close();
+           
+           DirectoryNode root = wb2.getDirectory();
+       
+           // Check that we have the new entries
+           assertTrue(root.hasEntry("Workbook"));
+           assertFalse(root.hasEntry("BOOK"));
+           assertFalse(root.hasEntry("WORKBOOK"));
+
+           wb2.close();
+       }
 	}
 

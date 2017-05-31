@@ -1,5 +1,5 @@
     @Test
-	public void testWritesOutTheSameNonRich() throws Exception {
+	public void testWritesOutTheSameNonRich() throws IOException {
     	// Ensure the text lengths are as we'd expect to start with
     	assertEquals(1, ss.getSlides().size());
     	assertEquals(2, ss.getSlides().get(0).getTextParagraphs().size());
@@ -44,18 +44,19 @@
 		POIFSFileSystem npfs = new POIFSFileSystem(bais);
 
 		// Check that the "PowerPoint Document" sections have the same size
-		DocumentEntry oProps = (DocumentEntry)pfs.getRoot().getEntry("PowerPoint Document");
-		DocumentEntry nProps = (DocumentEntry)npfs.getRoot().getEntry("PowerPoint Document");
+		DirectoryNode oDir = ss.getSlideShowImpl().getDirectory();
+
+		DocumentEntry oProps = (DocumentEntry)oDir.getEntry(HSLFSlideShow.POWERPOINT_DOCUMENT);
+		DocumentEntry nProps = (DocumentEntry)npfs.getRoot().getEntry(HSLFSlideShow.POWERPOINT_DOCUMENT);
 		assertEquals(oProps.getSize(),nProps.getSize());
 
 		// Check that they contain the same data
 		byte[] _oData = new byte[oProps.getSize()];
 		byte[] _nData = new byte[nProps.getSize()];
-		pfs.createDocumentInputStream("PowerPoint Document").read(_oData);
-		npfs.createDocumentInputStream("PowerPoint Document").read(_nData);
-		for(int i=0; i<_oData.length; i++) {
-//			System.out.println(i + "\t" + Integer.toHexString(i));
-			assertEquals(_oData[i], _nData[i]);
-		}
+		oDir.createDocumentInputStream(HSLFSlideShow.POWERPOINT_DOCUMENT).read(_oData);
+		npfs.createDocumentInputStream(HSLFSlideShow.POWERPOINT_DOCUMENT).read(_nData);
+		assertArrayEquals(_oData, _nData);
+		
+		npfs.close();
 	}
 

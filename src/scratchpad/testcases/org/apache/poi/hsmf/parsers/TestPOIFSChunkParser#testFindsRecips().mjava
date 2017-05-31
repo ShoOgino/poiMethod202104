@@ -1,6 +1,7 @@
+   @Test
    public void testFindsRecips() throws IOException, ChunkNotFoundException {
       NPOIFSFileSystem simple = new NPOIFSFileSystem(samples.getFile("quick.msg"), true);
-      
+
       simple.getRoot().getEntry("__recip_version1.0_#00000000");
 
       ChunkGroup[] groups = POIFSChunkParser.parse(simple.getRoot());
@@ -8,46 +9,48 @@
       assertTrue(groups[0] instanceof Chunks);
       assertTrue(groups[1] instanceof RecipientChunks);
       assertTrue(groups[2] instanceof NameIdChunks);
-      
+
       RecipientChunks recips = (RecipientChunks)groups[1];
       assertEquals("kevin.roast@alfresco.org", recips.recipientSMTPChunk.getValue());
-      assertEquals("/O=HOSTEDSERVICE2/OU=FIRST ADMINISTRATIVE GROUP/CN=RECIPIENTS/CN=Kevin.roast@ben", 
+      assertEquals("/O=HOSTEDSERVICE2/OU=FIRST ADMINISTRATIVE GROUP/CN=RECIPIENTS/CN=Kevin.roast@ben",
             recips.recipientEmailChunk.getValue());
-      
+
       String search = new String(recips.recipientSearchChunk.getValue(), "ASCII");
       assertEquals("CN=KEVIN.ROAST@BEN\0", search.substring(search.length()-19));
-      
+
       // Now via MAPIMessage
       MAPIMessage msg = new MAPIMessage(simple);
       assertNotNull(msg.getRecipientDetailsChunks());
       assertEquals(1, msg.getRecipientDetailsChunks().length);
-      
+
       assertEquals("kevin.roast@alfresco.org", msg.getRecipientDetailsChunks()[0].recipientSMTPChunk.getValue());
       assertEquals("kevin.roast@alfresco.org", msg.getRecipientDetailsChunks()[0].getRecipientEmailAddress());
       assertEquals("Kevin Roast", msg.getRecipientDetailsChunks()[0].getRecipientName());
       assertEquals("kevin.roast@alfresco.org", msg.getRecipientEmailAddress());
-      
-      
+
+
       // Try both SMTP and EX files for recipient
       assertEquals("EX", msg.getRecipientDetailsChunks()[0].deliveryTypeChunk.getValue());
       assertEquals("kevin.roast@alfresco.org", msg.getRecipientDetailsChunks()[0].recipientSMTPChunk.getValue());
-      assertEquals("/O=HOSTEDSERVICE2/OU=FIRST ADMINISTRATIVE GROUP/CN=RECIPIENTS/CN=Kevin.roast@ben", 
+      assertEquals("/O=HOSTEDSERVICE2/OU=FIRST ADMINISTRATIVE GROUP/CN=RECIPIENTS/CN=Kevin.roast@ben",
             msg.getRecipientDetailsChunks()[0].recipientEmailChunk.getValue());
+      msg.close();
       simple.close();
-      
-      
+
+
       // Now look at another message
       simple = new NPOIFSFileSystem(samples.getFile("simple_test_msg.msg"), true);
       msg = new MAPIMessage(simple);
       assertNotNull(msg.getRecipientDetailsChunks());
       assertEquals(1, msg.getRecipientDetailsChunks().length);
-      
+
       assertEquals("SMTP", msg.getRecipientDetailsChunks()[0].deliveryTypeChunk.getValue());
       assertEquals(null, msg.getRecipientDetailsChunks()[0].recipientSMTPChunk);
       assertEquals(null, msg.getRecipientDetailsChunks()[0].recipientNameChunk);
       assertEquals("travis@overwrittenstack.com", msg.getRecipientDetailsChunks()[0].recipientEmailChunk.getValue());
       assertEquals("travis@overwrittenstack.com", msg.getRecipientEmailAddress());
-      
+
+      msg.close();
       simple.close();
    }
 
