@@ -1,7 +1,8 @@
     @Override
     public void handleFile(InputStream stream, String path) throws Exception {
-        // ignore password protected files
-        if (POIXMLDocumentHandler.isEncrypted(stream)) return;
+        // ignore password protected files if password is unknown
+        String pass = Biff8EncryptionKey.getCurrentUserPassword();
+        assumeFalse(pass == null && POIXMLDocumentHandler.isEncrypted(stream));
 
         final XSSFWorkbook wb;
 
@@ -9,11 +10,24 @@
         {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             IOUtils.copy(stream, out);
-            final byte[] bytes = out.toByteArray();
+            ByteArrayInputStream bytes = new ByteArrayInputStream(out.toByteArray());
 
-            checkXSSFReader(OPCPackage.open(new ByteArrayInputStream(bytes)));
-
-            wb = new XSSFWorkbook(new ByteArrayInputStream(bytes));
+            if (pass != null) {
+                POIFSFileSystem poifs = new POIFSFileSystem(bytes);
+                EncryptionInfo ei = new EncryptionInfo(poifs);
+                Decryptor dec = ei.getDecryptor();
+                boolean b = dec.verifyPassword(pass);
+                assertTrue("password mismatch", b);
+                InputStream is = dec.getDataStream(poifs);
+                out.reset();
+                IOUtils.copy(is, out);
+                is.close();
+                poifs.close();
+                bytes = new ByteArrayInputStream(out.toByteArray());
+            }
+            checkXSSFReader(OPCPackage.open(bytes));
+            bytes.reset();
+            wb = new XSSFWorkbook(bytes);
         }
 
         // use the combined handler for HSSF/XSSF
