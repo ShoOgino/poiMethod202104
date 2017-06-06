@@ -1,0 +1,48 @@
+    /**
+     * Reads OLE Stream into byte array - if an {@link EncryptionInfo} is available,
+     * decrypt the bytes starting at encryptionOffset. If encryptionOffset = -1, then do not try
+     * to decrypt the bytes
+     *
+     * @param name the name of the stream
+     * @param encryptionOffset the offset from which to start decrypting, use {@code -1} for no decryption
+     * @param len length of the bytes to be read, use {@link Integer#MAX_VALUE} for all bytes
+     * @return the read bytes
+     * @throws IOException if the stream can't be found
+     */
+    protected byte[] getDocumentEntryBytes(String name, int encryptionOffset, int len) throws IOException {
+        DirectoryNode dir = getDirectory();
+        DocumentEntry documentProps = (DocumentEntry)dir.getEntry(name);
+        DocumentInputStream dis = dir.createDocumentInputStream(documentProps);
+        EncryptionInfo ei = (encryptionOffset > -1) ? getEncryptionInfo() : null;
+        int streamSize = documentProps.getSize();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(Math.min(streamSize,len));
+
+        InputStream is = dis;
+        try {
+            if (ei != null) {
+                try {
+                    Decryptor dec = ei.getDecryptor();
+                    is = dec.getDataStream(dis, streamSize, 0);
+                    if (encryptionOffset > 0) {
+                        ChunkedCipherInputStream cis = (ChunkedCipherInputStream)is;
+                        byte plain[] = new byte[encryptionOffset];
+                        cis.readPlain(plain, 0, encryptionOffset);
+                        bos.write(plain);
+                    }
+                } catch (GeneralSecurityException e) {
+                    throw new IOException(e.getMessage(), e);
+                }
+            }
+            // This simplifies a few combinations, so we actually always try to copy len bytes
+            // regardless if encryptionOffset is greater than 0
+            if (len < Integer.MAX_VALUE) {
+                is = new BoundedInputStream(is, len);
+            }
+            IOUtils.copy(is, bos);
+            return bos.toByteArray();
+        } finally {
+            IOUtils.closeQuietly(is);
+            IOUtils.closeQuietly(dis);
+        }
+    }
+

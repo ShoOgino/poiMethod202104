@@ -1,0 +1,34 @@
+    protected EncryptionInfo getEncryptionInfo() throws IOException {
+        if (_encryptionInfo != null) {
+            return _encryptionInfo;
+        }
+
+        // Create our FIB, and check for the doc being encrypted
+        byte[] fibBaseBytes = (_mainStream != null) ? _mainStream : getDocumentEntryBytes(STREAM_WORD_DOCUMENT, -1, FIB_BASE_LEN);
+        FibBase fibBase = new FibBase( fibBaseBytes, 0 );
+        if (!fibBase.isFEncrypted()) {
+            return null;
+        }
+
+        String tableStrmName = fibBase.isFWhichTblStm() ? STREAM_TABLE_1 : STREAM_TABLE_0;
+        byte[] tableStream = getDocumentEntryBytes(tableStrmName, -1, fibBase.getLKey());
+        LittleEndianByteArrayInputStream leis = new LittleEndianByteArrayInputStream(tableStream);
+        EncryptionMode em = fibBase.isFObfuscated() ? EncryptionMode.xor : null;
+        EncryptionInfo ei = new EncryptionInfo(leis, em);
+        Decryptor dec = ei.getDecryptor();
+        dec.setChunkSize(512);
+        try {
+            String pass = Biff8EncryptionKey.getCurrentUserPassword();
+            if (pass == null) {
+                pass = Decryptor.DEFAULT_PASSWORD;
+            }
+            if (!dec.verifyPassword(pass)) {
+                throw new EncryptedDocumentException("document is encrypted, password is invalid - use Biff8EncryptionKey.setCurrentUserPasswort() to set password before opening");
+            }
+        } catch (GeneralSecurityException e) {
+            throw new IOException(e.getMessage(), e);
+        }
+        _encryptionInfo = ei;
+        return ei;
+    }
+

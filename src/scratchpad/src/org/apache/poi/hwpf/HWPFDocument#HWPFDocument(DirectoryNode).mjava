@@ -19,11 +19,7 @@
         }
 
         // use the fib to determine the name of the table stream.
-        String name = STREAM_TABLE_0;
-        if (_fib.getFibBase().isFWhichTblStm())
-        {
-            name = STREAM_TABLE_1;
-        }
+        String name = (_fib.getFibBase().isFWhichTblStm()) ? STREAM_TABLE_1 : STREAM_TABLE_0;
 
         // Grab the table stream.
         if (!directory.hasEntry(name)) {
@@ -31,25 +27,12 @@
         }
 
         // read in the table stream.
-        InputStream is = directory.createDocumentInputStream(name);
-        _tableStream = IOUtils.toByteArray(is);
-        is.close();
+        _tableStream = getDocumentEntryBytes(name, _fib.getFibBase().getLKey(), Integer.MAX_VALUE);
 
         _fib.fillVariableFields(_mainStream, _tableStream);
 
         // read in the data stream.
-        InputStream dis = null;
-        try {
-            DocumentEntry dataProps = (DocumentEntry)directory.getEntry(STREAM_DATA);
-            dis = directory.createDocumentInputStream(STREAM_DATA);
-            _dataStream = IOUtils.toByteArray(dis, dataProps.getSize());
-        } catch(IOException e) {
-            _dataStream = new byte[0];
-        } finally {
-            if (dis != null) {
-                dis.close();
-            }
-        }
+        _dataStream = directory.hasEntry(STREAM_DATA) ? getDocumentEntryBytes(STREAM_DATA, 0, Integer.MAX_VALUE) : new byte[0];
 
         // Get the cp of the start of text in the main stream
         // The latest spec doc says this is always zero!
@@ -74,8 +57,7 @@
          */
         boolean preserveBinTables = false;
         try {
-            preserveBinTables = Boolean.parseBoolean( System
-                    .getProperty( PROPERTY_PRESERVE_BIN_TABLES ) );
+            preserveBinTables = Boolean.parseBoolean( System.getProperty( PROPERTY_PRESERVE_BIN_TABLES ) );
         } catch ( Exception exc ) {
             // ignore;
         }
@@ -91,8 +73,7 @@
          */
         boolean preserveTextTable = false;
         try {
-            preserveTextTable = Boolean.parseBoolean( System
-                    .getProperty( PROPERTY_PRESERVE_TEXT_TABLE ) );
+            preserveTextTable = Boolean.parseBoolean( System.getProperty( PROPERTY_PRESERVE_TEXT_TABLE ) );
         } catch ( Exception exc ) {
             // ignore;
         }
