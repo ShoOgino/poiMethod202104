@@ -2,8 +2,9 @@
         long length = file.length();
         long modified = file.lastModified();
         
-        POITextExtractor extractor = ExtractorFactory.createExtractor(file);
+        POITextExtractor extractor = null;
         try  {
+            extractor = ExtractorFactory.createExtractor(file);
             assertNotNull("Should get a POITextExtractor but had none for file " + file, extractor);
 
             assertNotNull("Should get some text but had none for file " + file, extractor.getText());
@@ -37,8 +38,12 @@
             if(!EXPECTED_EXTRACTOR_FAILURES.contains(file.getParentFile().getName() + "/" + file.getName())) {
                 throw e;
             }
+        } catch (EncryptedDocumentException e) {
+            String msg = "org.apache.poi.EncryptedDocumentException: Export Restrictions in place - please install JCE Unlimited Strength Jurisdiction Policy files";
+            assumeFalse(msg.equals(e.getMessage()));
+            throw e;
         } finally {
-            extractor.close();
+            IOUtils.closeQuietly(extractor);
         }
     }
 
