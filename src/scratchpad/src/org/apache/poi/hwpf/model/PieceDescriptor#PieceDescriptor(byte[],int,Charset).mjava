@@ -1,39 +1,40 @@
     /**
-     *
      * This initializer should only be used for HWPFOldDocuments.
      *
-     * @param buf
-     * @param offset
+     * @param buf The buffer to read data from
+     * @param offset The offset into the buffer to start reading from
      * @param charset which charset to use if this is not unicode
      */
-  public PieceDescriptor(byte[] buf, int offset, Charset charset) {
-      descriptor = LittleEndian.getShort(buf, offset);
-      offset += LittleEndian.SHORT_SIZE;
-      fc = LittleEndian.getInt(buf, offset);
-      offset += LittleEndian.INT_SIZE;
-      prm = new PropertyModifier(LittleEndian.getShort(buf, offset));
-      if (charset == null) {
-        // see if this piece uses unicode.
-        //From the documentation: If the second most significant bit
-          //is clear, then this indicates the actual file offset of the Unicode character (two bytes). If the
-          //second most significant bit is set, then the actual address of the codepage-1252
-          //compressed version of the Unicode character (one byte), is actually at the offset indicated
-          //by clearing this bit and dividing by two.
-        if ((fc & 0x40000000) == 0) {
-          unicode = true;
-          this.charset = null;
+    public PieceDescriptor(byte[] buf, int offset, Charset charset) {
+        descriptor = LittleEndian.getShort(buf, offset);
+        offset += LittleEndian.SHORT_SIZE;
+        fc = LittleEndian.getInt(buf, offset);
+        offset += LittleEndian.INT_SIZE;
+        prm = new PropertyModifier(LittleEndian.getShort(buf, offset));
+        if (charset == null) {
+            // see if this piece uses unicode.
+            //From the documentation: If the second most significant bit
+            //is clear, then this indicates the actual file offset of the Unicode character (two bytes). If the
+            //second most significant bit is set, then the actual address of the codepage-1252
+            //compressed version of the Unicode character (one byte), is actually at the offset indicated
+            //by clearing this bit and dividing by two.
+            if ((fc & 0x40000000) == 0) {
+                unicode = true;
+                this.charset = null;
+            } else {
+                unicode = false;
+                fc &= ~(0x40000000);//gives me FC in doc stream
+                fc /= 2;
+                this.charset = StringUtil.WIN_1252;
+            }
         } else {
-          unicode = false;
-          fc &= ~(0x40000000);//gives me FC in doc stream
-          fc /= 2;
-          this.charset = StringUtil.WIN_1252;
+            if (charset == StringUtil.UTF16LE) {
+                unicode = true;
+            } else {
+                unicode = false;
+            }
+            this.charset = charset;
         }
-      } else {
-          if (charset == StringUtil.UTF16LE) {
-              unicode = true;
-          }
-          this.charset = charset;
-      }
 
-  }
+    }
 
