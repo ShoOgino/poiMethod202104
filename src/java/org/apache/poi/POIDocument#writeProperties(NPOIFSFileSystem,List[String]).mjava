@@ -7,19 +7,47 @@
      *      {@link NPOIFSFileSystem} occurs
      */
     protected void writeProperties(NPOIFSFileSystem outFS, List<String> writtenEntries) throws IOException {
+        EncryptionInfo ei = getEncryptionInfo();
+        final boolean encryptProps = (ei != null && ei.isDocPropsEncrypted());
+        NPOIFSFileSystem fs = (encryptProps) ? new NPOIFSFileSystem() : outFS;
+        
         SummaryInformation si = getSummaryInformation();
         if (si != null) {
-            writePropertySet(SummaryInformation.DEFAULT_STREAM_NAME, si, outFS);
+            writePropertySet(SummaryInformation.DEFAULT_STREAM_NAME, si, fs);
             if(writtenEntries != null) {
                 writtenEntries.add(SummaryInformation.DEFAULT_STREAM_NAME);
             }
         }
         DocumentSummaryInformation dsi = getDocumentSummaryInformation();
         if (dsi != null) {
-            writePropertySet(DocumentSummaryInformation.DEFAULT_STREAM_NAME, dsi, outFS);
+            writePropertySet(DocumentSummaryInformation.DEFAULT_STREAM_NAME, dsi, fs);
             if(writtenEntries != null) {
                 writtenEntries.add(DocumentSummaryInformation.DEFAULT_STREAM_NAME);
             }
+        }
+
+        if (!encryptProps) {
+            return;
+        }
+
+        // create empty document summary
+        dsi = PropertySetFactory.newDocumentSummaryInformation();
+        writePropertySet(DocumentSummaryInformation.DEFAULT_STREAM_NAME, dsi, outFS);
+        // remove summary, if previously available
+        if (outFS.getRoot().hasEntry(SummaryInformation.DEFAULT_STREAM_NAME)) {
+            outFS.getRoot().getEntry(SummaryInformation.DEFAULT_STREAM_NAME).delete();
+        }
+        Encryptor encGen = ei.getEncryptor();
+        if (!(encGen instanceof CryptoAPIEncryptor)) {
+            throw new EncryptedDocumentException("Using "+ei.getEncryptionMode()+" encryption. Only CryptoAPI encryption supports encrypted property sets!");
+        }
+        CryptoAPIEncryptor enc = (CryptoAPIEncryptor)encGen;
+        try {
+            enc.setSummaryEntries(outFS.getRoot(), getEncryptedPropertyStreamName(), fs);
+        } catch (GeneralSecurityException e) {
+            throw new IOException(e);
+        } finally {
+            fs.close();
         }
     }
 

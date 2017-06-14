@@ -6,7 +6,7 @@
      *  @param encryptionInfo the encryption descriptor in case of cryptoAPI encryption
      *  @return The value of the given property or null if it wasn't found.
      */
-    protected PropertySet getPropertySet(String setName, EncryptionInfo encryptionInfo) {
+    protected PropertySet getPropertySet(String setName, EncryptionInfo encryptionInfo) throws IOException {
         DirectoryNode dirNode = directory;
         
         NPOIFSFileSystem encPoifs = null;
@@ -14,14 +14,9 @@
         try {
             if (encryptionInfo != null && encryptionInfo.isDocPropsEncrypted()) {
                 step = "getting encrypted";
-                String encryptedStream = null;
-                for (String s : encryptedStreamNames) {
-                    if (dirNode.hasEntry(s)) {
-                        encryptedStream = s;
-                    }
-                }
-                if (encryptedStream == null) {
-                    throw new EncryptedDocumentException("can't find matching encrypted property stream");
+                String encryptedStream = getEncryptedPropertyStreamName();
+                if (!dirNode.hasEntry(encryptedStream)) {
+                    throw new EncryptedDocumentException("can't find encrypted property stream '"+encryptedStream+"'");
                 }
                 CryptoAPIDecryptor dec = (CryptoAPIDecryptor)encryptionInfo.getDecryptor();
                 encPoifs = dec.getSummaryEntries(dirNode, encryptedStream);
@@ -43,17 +38,12 @@
             } finally {
                 dis.close();
             }
+        } catch (IOException e) {
+            throw e;
         } catch (Exception e) {
-            logger.log(POILogger.WARN, "Error "+step+" property set with name " + setName, e);
-            return null;
+            throw new IOException("Error "+step+" property set with name " + setName, e);
         } finally {
-            if (encPoifs != null) {
-                try {
-                    encPoifs.close();
-                } catch(IOException e) {
-                    logger.log(POILogger.WARN, "Error closing encrypted property poifs", e);
-                }
-            }
+            IOUtils.closeQuietly(encPoifs);
         }
     }
 

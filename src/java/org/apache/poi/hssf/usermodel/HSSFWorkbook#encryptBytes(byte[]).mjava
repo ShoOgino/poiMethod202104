@@ -1,21 +1,13 @@
     @SuppressWarnings("resource")
     protected void encryptBytes(byte buf[]) {
-        int initialOffset = 0;
-        FilePassRecord fpr = null;
-        for (Record r : workbook.getRecords()) {
-            initialOffset += r.getRecordSize();
-            if (r instanceof FilePassRecord) {
-                fpr = (FilePassRecord)r;
-                break;
-            }
-        }
-        if (fpr == null) {
+        EncryptionInfo ei = getEncryptionInfo();
+        if (ei == null) {
             return;
         }
-        
+        Encryptor enc = ei.getEncryptor();
+        int initialOffset = 0;
         LittleEndianByteArrayInputStream plain = new LittleEndianByteArrayInputStream(buf, 0); // NOSONAR
         LittleEndianByteArrayOutputStream leos = new LittleEndianByteArrayOutputStream(buf, 0); // NOSONAR
-        Encryptor enc = fpr.getEncryptionInfo().getEncryptor();
         enc.setChunkSize(Biff8DecryptingStream.RC4_REKEYING_INTERVAL);
         byte tmp[] = new byte[1024];
         try {

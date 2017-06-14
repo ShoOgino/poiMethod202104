@@ -1,11 +1,17 @@
-    protected EncryptionInfo getEncryptionInfo() throws IOException {
+    @Override
+    public EncryptionInfo getEncryptionInfo() throws IOException {
         if (_encryptionInfo != null) {
             return _encryptionInfo;
         }
 
         // Create our FIB, and check for the doc being encrypted
-        byte[] fibBaseBytes = (_mainStream != null) ? _mainStream : getDocumentEntryBytes(STREAM_WORD_DOCUMENT, -1, FIB_BASE_LEN);
-        FibBase fibBase = new FibBase( fibBaseBytes, 0 );
+        FibBase fibBase;
+        if (_fib != null && _fib.getFibBase() != null) {
+            fibBase = _fib.getFibBase();
+        } else {
+            byte[] fibBaseBytes = (_mainStream != null) ? _mainStream : getDocumentEntryBytes(STREAM_WORD_DOCUMENT, -1, FIB_BASE_LEN);
+            fibBase = new FibBase( fibBaseBytes, 0 );
+        }
         if (!fibBase.isFEncrypted()) {
             return null;
         }
@@ -16,7 +22,7 @@
         EncryptionMode em = fibBase.isFObfuscated() ? EncryptionMode.xor : null;
         EncryptionInfo ei = new EncryptionInfo(leis, em);
         Decryptor dec = ei.getDecryptor();
-        dec.setChunkSize(512);
+        dec.setChunkSize(RC4_REKEYING_INTERVAL);
         try {
             String pass = Biff8EncryptionKey.getCurrentUserPassword();
             if (pass == null) {
