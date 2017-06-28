@@ -1,3 +1,10 @@
+    /**
+     * The relationships transform takes the XML document from the Relationships part
+     * and converts it to another XML document.
+     * 
+     * @see <a href="https://www.ecma-international.org/activities/Office%20Open%20XML%20Formats/Draft%20ECMA-376%203rd%20edition,%20March%202011/Office%20Open%20XML%20Part%202%20-%20Open%20Packaging%20Conventions.pdf">13.2.4.24 Relationships Transform Algorithm</a>
+     * @see <a href="https://stackoverflow.com/questions/36063375">XML Relationship Transform Algorithm</a>
+     */
     public Data transform(Data data, XMLCryptoContext context) throws TransformException {
         LOG.log(POILogger.DEBUG, "transform(data,context)");
         LOG.log(POILogger.DEBUG, "data java type: " + data.getClass().getName());
@@ -5,52 +12,39 @@
         LOG.log(POILogger.DEBUG, "URI: " + octetStreamData.getURI());
         InputStream octetStream = octetStreamData.getOctetStream();
         
-        RelationshipsDocument relDoc;
+        Document doc;
         try {
-            relDoc = RelationshipsDocument.Factory.parse(octetStream, DEFAULT_XML_OPTIONS);
+            doc = DocumentHelper.readDocument(octetStream);
         } catch (Exception e) {
             throw new TransformException(e.getMessage(), e);
         }
-        LOG.log(POILogger.DEBUG, "relationships document", relDoc);
         
-        CTRelationships rels = relDoc.getRelationships();
-        List<CTRelationship> relList = rels.getRelationshipList();
-        Iterator<CTRelationship> relIter = rels.getRelationshipList().iterator();
-        while (relIter.hasNext()) {
-            CTRelationship rel = relIter.next();
-            /*
-             * See: ISO/IEC 29500-2:2008(E) - 13.2.4.24 Relationships Transform
-             * Algorithm.
-             */
-            if (!this.sourceIds.contains(rel.getId())) {
-                LOG.log(POILogger.DEBUG, "removing element: " + rel.getId());
-                relIter.remove();
-            } else {
-                if (!rel.isSetTargetMode()) {
-                    rel.setTargetMode(STTargetMode.INTERNAL);
+        // keep only those relationships which id is registered in the sourceIds
+        Element root = doc.getDocumentElement();
+        NodeList nl = root.getChildNodes();
+        TreeMap<String,Element> rsList = new TreeMap<String,Element>();
+        for (int i=nl.getLength()-1; i>=0; i--) {
+            Node n = nl.item(i);
+            if ("Relationship".equals(n.getLocalName())) {
+                Element el = (Element)n;
+                String id = el.getAttribute("Id");
+                if (sourceIds.contains(id)) {
+                    String targetMode = el.getAttribute("TargetMode");
+                    if ("".equals(targetMode)) {
+                        el.setAttribute("TargetMode", "Internal");
+                    }
+                    rsList.put(id, el);
                 }
             }
+            root.removeChild(n);
         }
-        
-        // TODO: remove non element nodes ???
-        LOG.log(POILogger.DEBUG, "# Relationship elements", relList.size());
-        
-        XmlSort.sort(rels, new Comparator<XmlCursor>(){
-            public int compare(XmlCursor c1, XmlCursor c2) {
-                String id1 = ((CTRelationship)c1.getObject()).getId();
-                String id2 = ((CTRelationship)c2.getObject()).getId();
-                return id1.compareTo(id2);
-            }
-        });
 
-        try {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            XmlOptions xo = new XmlOptions();
-            xo.setSaveNoXmlDecl();
-            relDoc.save(bos, xo);
-            return new OctetStreamData(new ByteArrayInputStream(bos.toByteArray()));
-        } catch (IOException e) {
-            throw new TransformException(e.getMessage(), e);
+        for (Element el : rsList.values()) {
+            root.appendChild(el);
         }
+        
+        LOG.log(POILogger.DEBUG, "# Relationship elements: ", rsList.size());
+        
+        return new ApacheNodeSetData(new XMLSignatureInput(root));
     }
 
