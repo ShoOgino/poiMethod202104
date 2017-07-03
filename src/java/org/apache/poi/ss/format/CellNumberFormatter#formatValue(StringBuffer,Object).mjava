@@ -28,7 +28,7 @@
         }
 
         Set<CellNumberStringMod> mods = new TreeSet<CellNumberStringMod>();
-        StringBuffer output = new StringBuffer(desc);
+        StringBuffer output = new StringBuffer(localiseFormat(desc));
 
         if (exponent != null) {
             writeScientific(value, output, mods);
@@ -36,20 +36,23 @@
             writeFraction(value, null, fractional, output, mods);
         } else {
             StringBuffer result = new StringBuffer();
-            Formatter f = new Formatter(result, LocaleUtil.getUserLocale());
+            Formatter f = new Formatter(result, locale);
             try {
-                f.format(LocaleUtil.getUserLocale(), printfFmt, value);
+                f.format(locale, printfFmt, value);
             } finally {
                 f.close();
             }
 
             if (numerator == null) {
                 writeFractional(result, output);
-                writeInteger(result, output, integerSpecials, mods, integerCommas);
+                writeInteger(result, output, integerSpecials, mods, showGroupingSeparator);
             } else {
                 writeFraction(value, result, fractional, output, mods);
             }
         }
+
+        DecimalFormatSymbols dfs = getDecimalFormatSymbols();
+        String groupingSeparator = Character.toString(dfs.getGroupingSeparator());
 
         // Now strip out any remaining '#'s and add any pending text ...
         Iterator<CellNumberStringMod> changes = mods.iterator();
@@ -70,7 +73,7 @@
                 switch (nextChange.getOp()) {
                 case CellNumberStringMod.AFTER:
                     // ignore adding a comma after a deleted char (which was a '#')
-                    if (nextChange.getToAdd().equals(",") && deletedChars.get(s.pos)) {
+                    if (nextChange.getToAdd().equals(groupingSeparator) && deletedChars.get(s.pos)) {
                         break;
                     }
                     output.insert(modPos + 1, nextChange.getToAdd());
