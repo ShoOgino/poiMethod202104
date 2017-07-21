@@ -7,23 +7,26 @@
         // need to cache data (i.e. read all data) before changing the key size
         List<HSLFPictureData> picsExpected = hss.getPictureData();
         hss.getDocumentSummaryInformation();
-        EncryptionInfo ei = hss.getDocumentEncryptionAtom().getEncryptionInfo();
-        ((CryptoAPIEncryptionHeader)ei.getHeader()).setKeySize(0x78);
-        
+        DocumentEncryptionAtom documentEncryptionAtom = hss.getDocumentEncryptionAtom();
+        assertNotNull(documentEncryptionAtom);
+        EncryptionInfo ei = documentEncryptionAtom.getEncryptionInfo();
+        ((CryptoAPIEncryptionHeader) ei.getHeader()).setKeySize(0x78);
+
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         hss.write(bos);
         hss.close();
         fs.close();
-        
+
         fs = new NPOIFSFileSystem(new ByteArrayInputStream(bos.toByteArray()));
         hss = new HSLFSlideShowImpl(fs);
         List<HSLFPictureData> picsActual = hss.getPictureData();
-        
+
         assertEquals(picsExpected.size(), picsActual.size());
-        for (int i=0; i<picsExpected.size(); i++) {
+        for (int i = 0; i < picsExpected.size(); i++) {
             assertArrayEquals(picsExpected.get(i).getRawData(), picsActual.get(i).getRawData());
         }
         hss.close();
         fs.close();
+        // password is reset in @After
     }
 
