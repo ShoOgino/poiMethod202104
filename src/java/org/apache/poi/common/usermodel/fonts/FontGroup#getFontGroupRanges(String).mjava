@@ -1,0 +1,32 @@
+    /**
+     * Try to guess the font group based on the codepoint
+     *
+     * @param runText the text which font groups are to be analyzed
+     * @return the FontGroup
+     */
+    public static List<FontGroupRange> getFontGroupRanges(String runText) {
+        List<FontGroupRange> ttrList = new ArrayList<FontGroupRange>();
+        FontGroupRange ttrLast = null;
+        final int rlen = (runText != null) ? runText.length() : 0;
+        for(int cp, i = 0, charCount; i < rlen; i += charCount) {
+            cp = runText.codePointAt(i);
+            charCount = Character.charCount(cp);
+
+            // don't switch the font group for a few default characters supposedly available in all fonts
+            FontGroup tt;
+            if (ttrLast != null && " \n\r".indexOf(cp) > -1) {
+                tt = ttrLast.fontGroup;
+            } else {
+                tt = lookup(cp);
+            }
+
+            if (ttrLast == null || ttrLast.fontGroup != tt) {
+                ttrLast = new FontGroupRange();
+                ttrLast.fontGroup = tt;
+                ttrList.add(ttrLast);
+            }
+            ttrLast.len += charCount;
+        }
+        return ttrList;
+    }
+

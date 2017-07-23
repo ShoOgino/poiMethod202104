@@ -15,12 +15,6 @@
             return null;
         }
 
-        String buFont = bulletStyle.getBulletFont();
-        if (buFont == null) {
-            buFont = paragraph.getDefaultFontFamily();
-        }
-        assert(buFont != null);
-
         PlaceableShape<?,?> ps = getParagraphShape();
         PaintStyle fgPaintStyle = bulletStyle.getBulletFontColor();
         Paint fgPaint;
@@ -41,10 +35,21 @@
             fontSize = (float)-buSz;
         }
 
+        String buFontStr = bulletStyle.getBulletFont();
+        if (buFontStr == null) {
+            buFontStr = paragraph.getDefaultFontFamily();
+        }
+        assert(buFontStr != null);
+        FontInfo buFont = new DrawFontInfo(buFontStr);
 
-        AttributedString str = new AttributedString(mapFontCharset(buCharacter,buFont));
+
+        DrawFontManager dfm = DrawFactory.getInstance(graphics).getFontManager(graphics);
+        // TODO: check font group defaulting to Symbol
+        buFont = dfm.getMappedFont(graphics, buFont);
+
+        AttributedString str = new AttributedString(dfm.mapFontCharset(graphics,buFont,buCharacter));
         str.addAttribute(TextAttribute.FOREGROUND, fgPaint);
-        str.addAttribute(TextAttribute.FAMILY, buFont);
+        str.addAttribute(TextAttribute.FAMILY, buFont.getTypeface());
         str.addAttribute(TextAttribute.SIZE, fontSize);
 
         TextLayout layout = new TextLayout(str.getIterator(), graphics.getFontRenderContext());

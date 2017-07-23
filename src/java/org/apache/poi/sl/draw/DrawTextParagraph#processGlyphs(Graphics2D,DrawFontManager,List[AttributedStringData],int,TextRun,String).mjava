@@ -1,0 +1,75 @@
+    /**
+     * Processing the glyphs is done in two steps.
+     * <li>determine the font group - a text run can have different font groups. Depending on the chars,
+     * the correct font group needs to be used
+     *
+     * @param graphics
+     * @param dfm
+     * @param attList
+     * @param beginIndex
+     * @param run
+     * @param runText
+     *
+     * @see <a href="https://blogs.msdn.microsoft.com/officeinteroperability/2013/04/22/office-open-xml-themes-schemes-and-fonts/">Office Open XML Themes, Schemes, and Fonts</a>
+     */
+    private void processGlyphs(Graphics2D graphics, DrawFontManager dfm, List<AttributedStringData> attList, final int beginIndex, TextRun run, String runText) {
+        // determine font group ranges of the textrun to focus the fallback handling only on that font group
+        List<FontGroupRange> ttrList = FontGroup.getFontGroupRanges(runText);
+        int rangeBegin = 0;
+        for (FontGroupRange ttr : ttrList) {
+            FontInfo fiRun = run.getFontInfo(ttr.getFontGroup());
+            if (fiRun == null) {
+                // if the font group specific font wasn't defined, fallback to LATIN
+                fiRun = run.getFontInfo(FontGroup.LATIN);
+            }
+            FontInfo fiMapped = dfm.getMappedFont(graphics, fiRun);
+            FontInfo fiFallback = dfm.getFallbackFont(graphics, fiRun);
+            assert(fiFallback != null);
+            if (fiMapped == null) {
+                fiMapped = dfm.getMappedFont(graphics, new DrawFontInfo(paragraph.getDefaultFontFamily()));
+            }
+            if (fiMapped == null) {
+                fiMapped = fiFallback;
+            }
+
+            Font fontMapped = dfm.createAWTFont(graphics, fiMapped, 10, run.isBold(), run.isItalic());
+            Font fontFallback = dfm.createAWTFont(graphics, fiFallback, 10, run.isBold(), run.isItalic());
+
+            // check for unsupported characters and add a fallback font for these
+            final int rangeLen = ttr.getLength();
+            int partEnd = rangeBegin;
+            while (partEnd<rangeBegin+rangeLen) {
+                // start with the assumption that the font is able to display the chars
+                int partBegin = partEnd;
+                partEnd = nextPart(fontMapped, runText, partBegin, rangeBegin+rangeLen, true);
+
+                // Now we have 3 cases:
+                // (a) the first part couldn't be displayed,
+                // (b) only part of the text run could be displayed
+                // (c) or all chars can be displayed (default)
+
+                if (partBegin < partEnd) {
+                    // handle (b) and (c)
+                    attList.add(new AttributedStringData(TextAttribute.FAMILY, fontMapped.getFontName(Locale.ROOT), beginIndex+partBegin, beginIndex+partEnd));
+                    if (LOG.check(POILogger.DEBUG)) {
+                        LOG.log(POILogger.DEBUG, "mapped: ",fontMapped.getFontName(Locale.ROOT)," ",(beginIndex+partBegin)," ",(beginIndex+partEnd)," - ",runText.substring(beginIndex+partBegin, beginIndex+partEnd));
+                    }
+                }
+
+                // fallback for unsupported glyphs
+                partBegin = partEnd;
+                partEnd = nextPart(fontMapped, runText, partBegin, rangeBegin+rangeLen, false);
+                
+                if (partBegin < partEnd) {
+                    // handle (a) and (b)
+                    attList.add(new AttributedStringData(TextAttribute.FAMILY, fontFallback.getFontName(Locale.ROOT), beginIndex+partBegin, beginIndex+partEnd));
+                    if (LOG.check(POILogger.DEBUG)) {
+                        LOG.log(POILogger.DEBUG, "fallback: ",fontFallback.getFontName(Locale.ROOT)," ",(beginIndex+partBegin)," ",(beginIndex+partEnd)," - ",runText.substring(beginIndex+partBegin, beginIndex+partEnd));
+                    }
+                }
+            }
+            
+            rangeBegin += rangeLen;
+        }
+    }
+

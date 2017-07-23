@@ -5,11 +5,8 @@
         }
 
         PlaceableShape<?,?> ps = getParagraphShape();
-        DrawFontManager fontHandler = (DrawFontManager)graphics.getRenderingHint(Drawable.FONT_HANDLER);
-        @SuppressWarnings("unchecked")
-        Map<String,String> fontMap = (Map<String,String>)graphics.getRenderingHint(Drawable.FONT_MAP);
-        @SuppressWarnings("unchecked")
-        Map<String,String> fallbackMap = (Map<String,String>)graphics.getRenderingHint(Drawable.FONT_FALLBACK);
+        DrawFontManager dfm = DrawFactory.getInstance(graphics).getFontManager(graphics);
+        assert(dfm != null);
 
         for (TextRun run : paragraph){
             String runText = getRenderableText(graphics, run);
@@ -19,35 +16,11 @@
             }
 
             // user can pass an custom object to convert fonts
-            String mappedFont = run.getFontFamily();
-            String fallbackFont = Font.SANS_SERIF;
 
-            if (mappedFont == null) {
-                mappedFont = paragraph.getDefaultFontFamily();
-            }
-            if (mappedFont == null) {
-                mappedFont = Font.SANS_SERIF;
-            }            
-            if (fontHandler != null) {
-                String font = fontHandler.getRendererableFont(mappedFont, run.getPitchAndFamily());
-                if (font != null) {
-                    mappedFont = font;
-                }
-                font = fontHandler.getFallbackFont(mappedFont, run.getPitchAndFamily());
-                if (font != null) {
-                    fallbackFont = font;
-                }
-            } else {
-                mappedFont = getFontWithFallback(fontMap, mappedFont);
-                fallbackFont = getFontWithFallback(fallbackMap, mappedFont);
-            }
-            
-            runText = mapFontCharset(runText,mappedFont);
+            runText = dfm.mapFontCharset(graphics, run.getFontInfo(null), runText);
             int beginIndex = text.length();
             text.append(runText);
             int endIndex = text.length();
-
-            attList.add(new AttributedStringData(TextAttribute.FAMILY, mappedFont, beginIndex, endIndex));
 
             PaintStyle fgPaintStyle = run.getFontColor();
             Paint fgPaint = new DrawPaint(ps).getPaint(graphics, fgPaintStyle);
@@ -78,39 +51,14 @@
             if(run.isSuperscript()) {
                 attList.add(new AttributedStringData(TextAttribute.SUPERSCRIPT, TextAttribute.SUPERSCRIPT_SUPER, beginIndex, endIndex));
             }
-            
+
             Hyperlink<?,?> hl = run.getHyperlink();
             if (hl != null) {
                 attList.add(new AttributedStringData(HYPERLINK_HREF, hl.getAddress(), beginIndex, endIndex));
                 attList.add(new AttributedStringData(HYPERLINK_LABEL, hl.getLabel(), beginIndex, endIndex));
             }
-            
-            int style = (run.isBold() ? Font.BOLD : 0) | (run.isItalic() ? Font.ITALIC : 0);
-            Font f = new Font(mappedFont, style, (int)Math.rint(fontSz));
-            
-            // check for unsupported characters and add a fallback font for these
-            char textChr[] = runText.toCharArray();
-            int nextEnd = canDisplayUpTo(f, textChr, 0, textChr.length);
-            int last = nextEnd;
-            boolean isNextValid = (nextEnd == 0);
-            while ( nextEnd != -1 && nextEnd <= textChr.length ) {
-                if (isNextValid) {
-                    nextEnd = canDisplayUpTo(f, textChr, nextEnd, textChr.length);
-                    isNextValid = false;
-                } else {
-                    if (nextEnd >= textChr.length || f.canDisplay(Character.codePointAt(textChr, nextEnd, textChr.length)) ) {
-                        attList.add(new AttributedStringData(TextAttribute.FAMILY, fallbackFont, beginIndex+last, beginIndex+Math.min(nextEnd,textChr.length)));
-                        if (nextEnd >= textChr.length) {
-                            break;
-                        }
-                        last = nextEnd;
-                        isNextValid = true;
-                    } else {
-                        boolean isHS = Character.isHighSurrogate(textChr[nextEnd]);
-                        nextEnd+=(isHS?2:1);
-                    }
-                }
-            } 
+
+            processGlyphs(graphics, dfm, attList, beginIndex, run, runText);
         }
 
         // ensure that the paragraph contains at least one character

@@ -1,0 +1,43 @@
+    @Override
+	public void setFontInfo(FontInfo fontInfo, FontGroup fontGroup) {
+        FontGroup fg = safeFontGroup(fontGroup);
+        
+        HSLFSheet sheet = parentParagraph.getSheet();
+        @SuppressWarnings("resource")
+        HSLFSlideShow slideShow = (sheet == null) ? null : sheet.getSlideShow();
+        if (sheet == null || slideShow == null) {
+            // we can't set font since slideshow is not assigned yet
+            if (cachedFontInfo == null) {
+                cachedFontInfo = new HSLFFontInfo[FontGroup.values().length];
+            }
+            cachedFontInfo[fg.ordinal()] = (fontInfo != null) ? new HSLFFontInfo(fontInfo) : null;
+            return;
+        }
+
+        String propName;
+        switch (fg) {
+        default:
+        case LATIN:
+            propName = "font.index";
+            break;
+        case COMPLEX_SCRIPT:
+            // TODO: implement TextCFException10 structure
+        case EAST_ASIAN:
+            propName = "asian.font.index";
+            break;
+        case SYMBOL:
+            propName = "symbol.font.index";
+            break;
+        }
+
+
+        // Get the index for this font, if it is not to be removed (typeface == null)
+        Integer fontIdx = null;
+        if (fontInfo != null) {
+            fontIdx = slideShow.addFont(fontInfo).getIndex();
+        }
+
+
+        setCharTextPropVal(propName, fontIdx);
+    }
+
