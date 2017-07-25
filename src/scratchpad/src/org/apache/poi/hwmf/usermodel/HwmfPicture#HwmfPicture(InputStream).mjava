@@ -10,7 +10,13 @@
                 break;
             }
             // recordSize in DWORDs
-            long recordSize = leis.readUInt()*2;
+            long recordSizeLong = leis.readUInt()*2;
+            if (recordSizeLong > Integer.MAX_VALUE) {
+                throw new RecordFormatException("record size can't be > "+Integer.MAX_VALUE);
+            } else if (recordSizeLong < 0L) {
+                throw new RecordFormatException("record size can't be < 0");
+            }
+            int recordSize = (int)recordSizeLong;
             int recordFunction = leis.readShort();
             // 4 bytes (recordSize) + 2 bytes (recordFunction)
             int consumedSize = 6;
@@ -33,10 +39,13 @@
             
             consumedSize += wr.init(leis, recordSize, recordFunction);
             int remainingSize = (int)(recordSize - consumedSize);
-            assert(remainingSize >= 0);
-            if (remainingSize > 0) {
-            	// skip size in loops, because not always all bytes are skipped in one call 
-                for (int i=remainingSize; i>0; i-=leis.skip(i));
+            if (remainingSize < 0) {
+                throw new RecordFormatException("read too many bytes. record size: "+recordSize + "; comsumed size: "+consumedSize);
+            } else if(remainingSize > 0) {
+                long skipped = IOUtils.skipFully(leis, remainingSize);
+                if (skipped != (long)remainingSize) {
+                    throw new RecordFormatException("Tried to skip "+remainingSize + " but skipped: "+skipped);
+                }
             }
         }
     }
