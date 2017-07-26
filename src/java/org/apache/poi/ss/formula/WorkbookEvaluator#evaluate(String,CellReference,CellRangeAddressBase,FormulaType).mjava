@@ -1,0 +1,13 @@
+    private ValueEval evaluate(String formula, CellReference target, CellRangeAddressBase region, FormulaType formulaType) {
+        final String sheetName = target == null ? null : target.getSheetName();
+        if (sheetName == null) throw new IllegalArgumentException("Sheet name is required");
+        
+        final int sheetIndex = getWorkbook().getSheetIndex(sheetName);
+        Ptg[] ptgs = FormulaParser.parse(formula, (FormulaParsingWorkbook) getWorkbook(), formulaType, sheetIndex, target.getRow());
+
+        adjustRegionRelativeReference(ptgs, target, region);
+        
+        final OperationEvaluationContext ec = new OperationEvaluationContext(this, getWorkbook(), sheetIndex, target.getRow(), target.getCol(), new EvaluationTracker(_cache), formulaType.isSingleValue());
+        return evaluateNameFormula(ptgs, ec);
+    }
+
