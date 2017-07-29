@@ -1,20 +1,43 @@
     protected static List<XSLFShape> buildShapes(CTGroupShape spTree, XSLFSheet sheet){
         List<XSLFShape> shapes = new ArrayList<XSLFShape>();
-        for(XmlObject ch : spTree.selectPath("*")){
-            if(ch instanceof CTShape){ // simple shape
-                XSLFAutoShape shape = XSLFAutoShape.create((CTShape)ch, sheet);
-                shapes.add(shape);
-            } else if (ch instanceof CTGroupShape){
-                shapes.add(new XSLFGroupShape((CTGroupShape)ch, sheet));
-            } else if (ch instanceof CTConnector){
-                shapes.add(new XSLFConnectorShape((CTConnector)ch, sheet));
-            } else if (ch instanceof CTPicture){
-                shapes.add(new XSLFPictureShape((CTPicture)ch, sheet));
-            } else if (ch instanceof CTGraphicalObjectFrame){
-                XSLFGraphicFrame shape = XSLFGraphicFrame.create((CTGraphicalObjectFrame)ch, sheet);
-                shapes.add(shape);
+        XmlCursor cur = spTree.newCursor();
+        try {
+            for (boolean b=cur.toFirstChild();b;b=cur.toNextSibling()) {
+                XmlObject ch = cur.getObject();
+                if(ch instanceof CTShape){
+                    // simple shape
+                    XSLFAutoShape shape = XSLFAutoShape.create((CTShape)ch, sheet);
+                    shapes.add(shape);
+                } else if (ch instanceof CTGroupShape){
+                    shapes.add(new XSLFGroupShape((CTGroupShape)ch, sheet));
+                } else if (ch instanceof CTConnector){
+                    shapes.add(new XSLFConnectorShape((CTConnector)ch, sheet));
+                } else if (ch instanceof CTPicture){
+                    shapes.add(new XSLFPictureShape((CTPicture)ch, sheet));
+                } else if (ch instanceof CTGraphicalObjectFrame){
+                    XSLFGraphicFrame shape = XSLFGraphicFrame.create((CTGraphicalObjectFrame)ch, sheet);
+                    shapes.add(shape);
+                } else if (ch instanceof XmlAnyTypeImpl) {
+                    // TODO: the link of the XLSF classes to the xml beans objects will
+                    // be broken, when the elements are parsed a second time.
+                    // Unfortunately, the xml schema type can't be set of the alternate
+                    // content element
+                    cur.push();
+                    if (cur.toChild(PackageNamespaces.MARKUP_COMPATIBILITY, "Choice") && cur.toFirstChild()) {
+                        try {
+                            CTGroupShape grp = CTGroupShape.Factory.parse(cur.newXMLStreamReader());
+                            shapes.addAll(buildShapes(grp, sheet));
+                        } catch (XmlException e) {
+                            LOG.log(POILogger.DEBUG, "unparsable alternate content", e);
+                        }
+                    }
+                    cur.pop();
+                }
             }
+        } finally {
+            cur.dispose();
         }
+
         return shapes;
     }
 
