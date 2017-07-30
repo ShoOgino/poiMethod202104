@@ -1,0 +1,43 @@
+    /**
+     * Allocates new shape id for the drawing group
+     *
+     * @param drawingGroupId the drawing group id
+     * @param dg the EscherDgRecord which receives the new shape
+     * @param sort if true then sort clusters by drawing group id.(
+     *  In Excel the clusters are sorted but in PPT they are not)
+     *
+     * @return a new shape id.
+     */
+    public int allocateShapeId(EscherDgRecord dg, boolean sort) {
+        final short drawingGroupId = dg.getDrawingGroupId();
+        field_3_numShapesSaved++;
+        
+        // check for an existing cluster, which has space available
+        // see 2.2.46 OfficeArtIDCL (cspidCur) for the 1024 limitation
+        // multiple clusters can belong to the same drawing group
+        FileIdCluster ficAdd = null;
+        int index = 1;
+        for (FileIdCluster fic : field_5_fileIdClusters) {
+            if (fic.getDrawingGroupId() == drawingGroupId
+                && fic.getNumShapeIdsUsed() < 1024) {
+                ficAdd = fic;
+                break;
+            }
+            index++;
+        }
+
+        if (ficAdd == null) {
+            ficAdd = addCluster( drawingGroupId, 0, sort );
+            maxDgId = Math.max(maxDgId, drawingGroupId);
+        }
+        
+        int shapeId = index*1024 + ficAdd.getNumShapeIdsUsed();
+        ficAdd.incrementUsedShapeId();
+        
+        dg.setNumShapes( dg.getNumShapes() + 1 );
+        dg.setLastMSOSPID( shapeId );
+        field_1_shapeIdMax = Math.max(field_1_shapeIdMax, shapeId + 1);
+        
+        return shapeId;
+    }    
+
