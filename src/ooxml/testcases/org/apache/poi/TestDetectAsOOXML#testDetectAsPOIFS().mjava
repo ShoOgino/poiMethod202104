@@ -1,25 +1,22 @@
-	public void testDetectAsPOIFS() throws Exception {
-		InputStream in;
-		
-		// ooxml file is
-		in = new PushbackInputStream(
-				HSSFTestDataSamples.openSampleFileStream("SampleSS.xlsx"), 10
-		);
-		assertTrue(DocumentFactoryHelper.hasOOXMLHeader(in));
-		in.close();
-		
-		// xls file isn't
-		in = new PushbackInputStream(
-				HSSFTestDataSamples.openSampleFileStream("SampleSS.xls"), 10
-		);
-		assertFalse(DocumentFactoryHelper.hasOOXMLHeader(in));
-		in.close();
-		
-		// text file isn't
-		in = new PushbackInputStream(
-				HSSFTestDataSamples.openSampleFileStream("SampleSS.txt"), 10
-		);
-		assertFalse(DocumentFactoryHelper.hasOOXMLHeader(in));
-		in.close();
+    @Test
+	public void testDetectAsPOIFS() throws IOException {
+	    Object fileAndMagic[][] = {
+            { "SampleSS.xlsx", FileMagic.OOXML },
+            { "SampleSS.xls", FileMagic.OLE2 },
+            { "SampleSS.txt", FileMagic.UNKNOWN }
+	    };
+
+	    for (Object fm[] : fileAndMagic) {
+	        InputStream is = HSSFTestDataSamples.openSampleFileStream((String)fm[0]);
+	        is = FileMagic.prepareToCheckMagic(is);
+	        FileMagic act = FileMagic.valueOf(is);
+	        
+	        if (act == FileMagic.OOXML) {
+	            assertTrue(DocumentFactoryHelper.hasOOXMLHeader(is));
+	        }
+	        
+	        assertEquals("file magic failed for "+fm[0], fm[1], act);
+	        is.close();
+	    }
 	}
 

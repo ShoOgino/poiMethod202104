@@ -1,0 +1,24 @@
+    // bug 61381
+    @Test
+    public void testTooShortFilterStreams() throws IOException, InvalidFormatException {
+        File xssf = OpenXML4JTestDataSamples.getSampleFile("sample.xlsx");
+        File hssf = POIDataSamples.getSpreadSheetInstance().getFile("SampleSS.xls");
+        
+        InputStream isList[] = {
+            new PushbackInputStream(new FileInputStream(xssf), 2),
+            new BufferedInputStream(new FileInputStream(xssf), 2),
+            new PushbackInputStream(new FileInputStream(hssf), 2),
+            new BufferedInputStream(new FileInputStream(hssf), 2),
+        };
+        
+        try {
+            for (InputStream is : isList) {
+                WorkbookFactory.create(is).close();
+            }
+        } finally {
+            for (InputStream is : isList) {
+                IOUtils.closeQuietly(is);
+            }
+        }
+    }
+
