@@ -16,20 +16,38 @@
      *         or null if none apply
      */
     public List<EvaluationConditionalFormatRule> getConditionalFormattingForCell(final CellReference cellRef) {
-        String sheetName = cellRef.getSheetName();
-        Sheet sheet = null;
-        if (sheetName == null) {
-            sheet = workbook.getSheetAt(workbook.getActiveSheetIndex());
-        } else {
-            sheet = workbook.getSheet(sheetName);
+        List<EvaluationConditionalFormatRule> rules = values.get(cellRef);
+        
+        if (rules == null) {
+            // compute and cache them
+            rules = new ArrayList<EvaluationConditionalFormatRule>();
+            
+            Sheet sheet = null;
+            if (cellRef.getSheetName() != null) sheet = workbook.getSheet(cellRef.getSheetName());
+            else sheet = workbook.getSheetAt(workbook.getActiveSheetIndex());
+            
+            /*
+             * Per Excel help:
+             * https://support.office.com/en-us/article/Manage-conditional-formatting-rule-precedence-e09711a3-48df-4bcb-b82c-9d8b8b22463d#__toc269129417
+             * stopIfTrue is true for all rules from HSSF files, and an explicit value for XSSF files.
+             * thus the explicit ordering of the rule lists in #getFormattingRulesForSheet(Sheet)
+             */
+            boolean stopIfTrue = false;
+            for (EvaluationConditionalFormatRule rule : getRules(sheet)) {
+                
+                if (stopIfTrue) {
+                    continue; // a previous rule matched and wants no more evaluations
+                }
+
+                if (rule.matches(cellRef)) {
+                    rules.add(rule);
+                    stopIfTrue = rule.getRule().getStopIfTrue();
+                }
+            }
+            Collections.sort(rules);
+            values.put(cellRef, rules);
         }
         
-        final Cell cell = SheetUtil.getCell(sheet, cellRef.getRow(), cellRef.getCol());
-        
-        if (cell == null) {
-            return Collections.emptyList();
-        }
-        
-        return getConditionalFormattingForCell(cell, cellRef);
+        return Collections.unmodifiableList(rules);
     }
 

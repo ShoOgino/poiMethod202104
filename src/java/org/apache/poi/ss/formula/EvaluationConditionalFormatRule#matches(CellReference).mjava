@@ -1,12 +1,12 @@
     /**
-     * @param cell
+     * @param ref
      * @return true if this rule evaluates to true for the given cell
      */
-    /* package */ boolean matches(Cell cell) {
+    /* package */ boolean matches(CellReference ref) {
         // first check that it is in one of the regions defined for this format
         CellRangeAddress region = null;
         for (CellRangeAddress r : regions) {
-            if (r.isInRange(cell)) {
+            if (r.isInRange(ref)) {
                 region = r;
                 break;
             }
@@ -27,14 +27,22 @@
            return true; 
         }
         
+        Cell cell = null;
+        final Row row = sheet.getRow(ref.getRow());
+        if (row != null) {
+            cell = row.getCell(ref.getCol());
+        }
+        
         if (ruleType.equals(ConditionType.CELL_VALUE_IS)) {
+            // undefined cells never match a VALUE_IS condition
+            if (cell == null) return false;
             return checkValue(cell, region);
         }
         if (ruleType.equals(ConditionType.FORMULA)) {
-            return checkFormula(cell, region);
+            return checkFormula(ref, region);
         }
         if (ruleType.equals(ConditionType.FILTER)) {
-            return checkFilter(cell, region);
+            return checkFilter(cell, ref, region);
         }
         
         // TODO: anything else, we don't handle yet, such as top 10

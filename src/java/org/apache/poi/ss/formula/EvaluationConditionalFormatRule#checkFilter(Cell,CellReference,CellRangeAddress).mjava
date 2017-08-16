@@ -1,8 +1,10 @@
-    private boolean checkFilter(Cell cell, CellRangeAddress region) {
+    private boolean checkFilter(Cell cell, CellReference ref, CellRangeAddress region) {
         final ConditionFilterType filterType = rule.getConditionFilterType();
         if (filterType == null) {
             return false;
         }
+
+        final ValueAndFormat cv = getCellValue(cell);
         
         // TODO: this could/should be delegated to the Enum type, but that's in the usermodel package,
         // we may not want evaluation code there.  Of course, maybe the enum should go here in formula,
@@ -15,8 +17,7 @@
             // from testing, Excel only operates on numbers and dates (which are stored as numbers) in the range.
             // numbers stored as text are ignored, but numbers formatted as text are treated as numbers.
             
-            final ValueAndFormat cv10 = getCellValue(cell);
-            if (! cv10.isNumber()) {
+            if (! cv.isNumber()) {
                 return false;
             }
             
@@ -42,7 +43,7 @@
 
                     return new HashSet<ValueAndFormat>(allValues.subList(0, limit));
                 }
-            }).contains(cv10);
+            }).contains(cv);
         case UNIQUE_VALUES:
             // Per Excel help, "duplicate" means matching value AND format
             // https://support.office.com/en-us/article/Filter-for-unique-values-or-remove-duplicate-values-ccf664b0-81d6-449b-bbe1-8daaec1e83c2
@@ -67,7 +68,7 @@
                     
                     return unique;
                 }
-            }).contains(getCellValue(cell));
+            }).contains(cv);
         case DUPLICATE_VALUES:
             // Per Excel help, "duplicate" means matching value AND format
             // https://support.office.com/en-us/article/Filter-for-unique-values-or-remove-duplicate-values-ccf664b0-81d6-449b-bbe1-8daaec1e83c2
@@ -90,7 +91,7 @@
                     }
                     return dup;
                 }
-            }).contains(getCellValue(cell));
+            }).contains(cv);
         case ABOVE_AVERAGE:
             // from testing, Excel only operates on numbers and dates (which are stored as numbers) in the range.
             // numbers stored as text are ignored, but numbers formatted as text are treated as numbers.
@@ -119,7 +120,6 @@
                 }
             }));
             
-            final ValueAndFormat cv = getCellValue(cell);
             Double val = cv.isNumber() ? cv.getValue() : null;
             if (val == null) {
                 return false;
@@ -153,19 +153,19 @@
             return op != null && op.isValid(val, comp, null);
         case CONTAINS_TEXT:
             // implemented both by a cfRule "text" attribute and a formula.  Use the formula.
-            return checkFormula(cell, region);
+            return checkFormula(ref, region);
         case NOT_CONTAINS_TEXT:
             // implemented both by a cfRule "text" attribute and a formula.  Use the formula.
-            return checkFormula(cell, region);
+            return checkFormula(ref, region);
         case BEGINS_WITH:
             // implemented both by a cfRule "text" attribute and a formula.  Use the formula.
-            return checkFormula(cell, region);
+            return checkFormula(ref, region);
         case ENDS_WITH:
             // implemented both by a cfRule "text" attribute and a formula.  Use the formula.
-            return checkFormula(cell, region);
+            return checkFormula(ref, region);
         case CONTAINS_BLANKS:
             try {
-                String v = cell.getStringCellValue();
+                String v = cv.getString();
                 // see TextFunction.TRIM for implementation
                 return v == null || v.trim().length() == 0;
             } catch (Exception e) {
@@ -174,7 +174,7 @@
             }
         case NOT_CONTAINS_BLANKS:
             try {
-                String v = cell.getStringCellValue();
+                String v = cv.getString();
                 // see TextFunction.TRIM for implementation
                 return v != null && v.trim().length() > 0;
             } catch (Exception e) {
@@ -187,7 +187,7 @@
             return cell == null || ! DataValidationEvaluator.isType(cell, CellType.ERROR);
         case TIME_PERIOD:
             // implemented both by a cfRule "text" attribute and a formula.  Use the formula.
-            return checkFormula(cell, region);
+            return checkFormula(ref, region);
         default:
             return false;
         }
