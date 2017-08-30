@@ -1,0 +1,37 @@
+    /**
+     *
+     * @param rubyObj rubyobject
+     * @param text buffer to which to append the content
+     * @param extractPhonetic extract the phonetic (rt) component or the base component
+     */
+    private void handleRuby(XmlObject rubyObj, StringBuffer text, boolean extractPhonetic) {
+        XmlCursor c = rubyObj.newCursor();
+
+        //according to the spec, a ruby object
+        //has the phonetic (rt) first, then the actual text (base)
+        //second.
+
+        c.selectPath(".//*");
+        boolean inRT = false;
+        boolean inBase = false;
+        while (c.toNextSelection()) {
+            XmlObject o = c.getObject();
+            if (o instanceof CTRubyContent) {
+                String tagName = o.getDomNode().getNodeName();
+                if ("w:rt".equals(tagName)) {
+                    inRT = true;
+                } else if ("w:rubyBase".equals(tagName)) {
+                    inRT = false;
+                    inBase = true;
+                }
+            } else {
+                if (extractPhonetic && inRT) {
+                    _getText(o, text);
+                } else if (! extractPhonetic && inBase) {
+                    _getText(o, text);
+                }
+            }
+        }
+        c.dispose();
+    }
+
