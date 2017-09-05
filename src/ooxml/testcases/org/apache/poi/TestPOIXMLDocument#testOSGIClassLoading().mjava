@@ -1,0 +1,45 @@
+    @Test
+    public void testOSGIClassLoading() {
+        // the schema type loader is cached per thread in POIXMLTypeLoader.
+        // So create a new Thread and change the context class loader (which would normally be used)
+        // to not contain the OOXML classes
+        Runnable run = new Runnable() {
+            public void run() {
+                InputStream is = POIDataSamples.getSlideShowInstance().openResourceAsStream("table_test.pptx");
+                XMLSlideShow ppt = null;
+                try {
+                    ppt = new XMLSlideShow(is);
+                    ppt.getSlides().get(0).getShapes();
+                } catch (IOException e) {
+                    fail("failed to load XMLSlideShow");
+                } finally {
+                    IOUtils.closeQuietly(ppt);
+                    IOUtils.closeQuietly(is);
+                }
+            }
+        };
+
+        Thread thread = Thread.currentThread();
+        ClassLoader cl = thread.getContextClassLoader();
+        UncaughtHandler uh = new UncaughtHandler();
+        
+        // check schema type loading and check if we could run in an OOM
+        Thread ta[] = new Thread[30];
+        for (int j=0; j<10; j++) {
+            for (int i=0; i<ta.length; i++) {
+                ta[i] = new Thread(run);
+                ta[i].setContextClassLoader(cl.getParent());
+                ta[i].setUncaughtExceptionHandler(uh);
+                ta[i].start();
+            }
+            for (int i=0; i<ta.length; i++) {
+                try {
+                    ta[i].join();
+                } catch (InterruptedException e) {
+                    fail("failed to join thread");
+                }
+            }
+        }
+        assertFalse(uh.hasException());
+    }
+
