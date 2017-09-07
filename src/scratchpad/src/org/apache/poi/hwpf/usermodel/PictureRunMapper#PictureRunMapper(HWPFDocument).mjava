@@ -1,0 +1,28 @@
+    public PictureRunMapper(HWPFDocument doc) {
+        picturesTable = doc.getPicturesTable();
+        all = picturesTable.getAllPictures();
+
+        // Build the Offset-Picture lookup map
+        lookup = new HashMap<Integer, Picture>();
+        for (Picture p : all) {
+            lookup.put(p.getStartOffset(), p);
+        }
+
+        // Work out which Pictures aren't referenced by
+        //  a \u0001 in the main text
+        // These are \u0008 escher floating ones, ones
+        //  found outside the normal text, and who
+        //  knows what else...
+        nonU1based = new ArrayList<Picture>();
+        nonU1based.addAll(all);
+        Range r = doc.getRange();
+        for (int i = 0; i < r.numCharacterRuns(); i++) {
+            CharacterRun cr = r.getCharacterRun(i);
+            if (picturesTable.hasPicture(cr)) {
+                Picture p = getFor(cr);
+                int at = nonU1based.indexOf(p);
+                nonU1based.set(at, null);
+            }
+        }
+    }
+
