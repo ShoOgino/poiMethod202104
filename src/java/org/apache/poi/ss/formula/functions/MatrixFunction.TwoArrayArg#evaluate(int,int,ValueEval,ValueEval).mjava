@@ -1,0 +1,76 @@
+        @Override
+        public ValueEval evaluate(int srcRowIndex, int srcColumnIndex, ValueEval arg0, ValueEval arg1) {
+            double result[];
+            int width = 1, height = 1;
+
+            try {
+                double array0[][], array1[][], resultArray[][];
+                
+                if (arg0 instanceof AreaEval) {
+                    try {
+                        double values[] = collectValues(arg0);
+                        array0 = fillDoubleArray(values, ((AreaEval) arg0).getHeight(), ((AreaEval) arg0).getWidth());
+                    }
+                    catch(EvaluationException e) {
+                        return e.getErrorEval();
+                    }
+                }
+                else {
+                    try {
+                        double value = NumericFunction.singleOperandEvaluate(arg0, srcRowIndex, srcColumnIndex);
+                        array0 = new double[][] {{value}};
+                    }
+                    catch (EvaluationException e) {
+                        return e.getErrorEval();
+                    }
+                }
+                    
+                if (arg1 instanceof AreaEval) {
+                   try {
+                      double values[] = collectValues(arg1);
+                      array1 = fillDoubleArray(values, ((AreaEval) arg1).getHeight(),((AreaEval) arg1).getWidth());
+                   }
+                   catch (EvaluationException e) {
+                      return e.getErrorEval();
+                   }
+                }
+                else {
+                    try {
+                        double value = NumericFunction.singleOperandEvaluate(arg1, srcRowIndex, srcColumnIndex);
+                        array1 = new double[][] {{value}};
+                    }
+                    catch (EvaluationException e) {
+                        return e.getErrorEval();
+                    }
+                }
+             
+                resultArray = evaluate(array0, array1);
+                width = resultArray[0].length;
+                height = resultArray.length;
+                result = extractDoubleArray(resultArray);
+                checkValues(result);
+            }
+            catch (EvaluationException e) {
+                return e.getErrorEval();
+            }
+            catch (IllegalArgumentException e) {
+                return ErrorEval.VALUE_INVALID;
+            }
+                
+                
+            ValueEval vals[] = new ValueEval[result.length];
+            
+            for (int idx = 0; idx < result.length; idx++) {
+                vals[idx] = new NumberEval(result[idx]);
+            }
+            
+            if (result.length == 1)
+                return vals[0];
+            else {
+                return new CacheAreaEval(((AreaEval) arg0).getFirstRow(), ((AreaEval) arg0).getFirstColumn(), 
+                        ((AreaEval) arg0).getFirstRow() + height - 1, 
+                        ((AreaEval) arg0).getFirstColumn() + width - 1, vals);
+            }
+      
+        }
+

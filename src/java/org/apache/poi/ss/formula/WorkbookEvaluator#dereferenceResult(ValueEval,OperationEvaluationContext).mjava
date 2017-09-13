@@ -1,0 +1,32 @@
+    /**
+     * Dereferences a single value from any AreaEval or RefEval evaluation
+     * result. If the supplied evaluationResult is just a plain value, it is
+     * returned as-is.
+     *
+     * @return a {@link NumberEval}, {@link StringEval}, {@link BoolEval}, or
+     *         {@link ErrorEval}. Never <code>null</code>. {@link BlankEval} is
+     *         converted to {@link NumberEval#ZERO}
+     */
+    private static ValueEval dereferenceResult(ValueEval evaluationResult, OperationEvaluationContext ec) {
+        ValueEval value;
+
+        if (ec == null) {
+            throw new IllegalArgumentException("OperationEvaluationContext ec is null");
+        }
+        if (ec.getWorkbook() == null) {
+            throw new IllegalArgumentException("OperationEvaluationContext ec.getWorkbook() is null");
+        }
+
+        EvaluationSheet evalSheet = ec.getWorkbook().getSheet(ec.getSheetIndex());
+        EvaluationCell evalCell = evalSheet.getCell(ec.getRowIndex(), ec.getColumnIndex());
+ 
+        if (evalCell.isPartOfArrayFormulaGroup() && evaluationResult instanceof AreaEval) {
+            value = OperandResolver.getElementFromArray((AreaEval) evaluationResult, evalCell);
+        }
+        else {
+            value = dereferenceResult(evaluationResult, ec.getRowIndex(), ec.getColumnIndex());
+        }
+        
+        return value;
+    }
+

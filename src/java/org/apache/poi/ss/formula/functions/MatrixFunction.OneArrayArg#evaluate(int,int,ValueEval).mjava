@@ -1,0 +1,52 @@
+        @Override
+        public ValueEval evaluate(int srcRowIndex, int srcColumnIndex, ValueEval arg0) {
+            if (arg0 instanceof AreaEval) {
+                double result[] = null, resultArray[][];
+                int width = 1, height = 1;
+                
+                try {
+                    double values[] = collectValues(arg0);
+                    double array[][] = fillDoubleArray(values,((AreaEval) arg0).getHeight(),((AreaEval) arg0).getWidth());
+                    resultArray = evaluate(array);
+                    width = resultArray[0].length;
+                    height = resultArray.length;
+                    result = extractDoubleArray(resultArray);
+                    
+                    checkValues(result);
+                }
+                catch(EvaluationException e){
+                    return e.getErrorEval();
+                }
+                
+                ValueEval vals[] = new ValueEval[result.length];
+                
+                for (int idx = 0; idx < result.length; idx++) {
+                    vals[idx] = new NumberEval(result[idx]);
+                }
+                                
+                if (result.length == 1) {
+                    return vals[0];
+                }
+                else {
+                    /* find a better solution */
+                    return new CacheAreaEval(((AreaEval) arg0).getFirstRow(), ((AreaEval) arg0).getFirstColumn(), 
+                                            ((AreaEval) arg0).getFirstRow() + height - 1, 
+                                            ((AreaEval) arg0).getFirstColumn() + width - 1, vals);
+                }
+            }
+            else {
+                double result[][] = null;
+                try {
+                    double value = NumericFunction.singleOperandEvaluate(arg0, srcRowIndex, srcColumnIndex);
+                    double temp[][] = {{value}};
+                    result = evaluate(temp);
+                    NumericFunction.checkValue(result[0][0]);
+                }
+                catch (EvaluationException e) {
+                    return e.getErrorEval();
+                }
+                
+                return new NumberEval(result[0][0]);
+            }
+        }
+
