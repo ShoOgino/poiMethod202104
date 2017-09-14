@@ -1,0 +1,111 @@
+    private void processDirStream(Entry dir, ModuleMap modules) throws IOException {
+        DocumentNode dirDocumentNode = (DocumentNode)dir;
+        DocumentInputStream dis = new DocumentInputStream(dirDocumentNode);
+        DIR_STATE dirState = DIR_STATE.INFORMATION_RECORD;
+        try {
+            RLEDecompressingInputStream in = new RLEDecompressingInputStream(dis);
+            String streamName = null;
+            int recordId = 0;
+            boolean inReferenceTwiddled = false;
+            try {
+                while (true) {
+                    recordId = in.readShort();
+                    if (recordId == -1) {
+                        break;
+                    }
+                    RecordType type = RecordType.lookup(recordId);
+
+                    if (type.equals(RecordType.EOF) || type.equals(RecordType.DIR_STREAM_TERMINATOR)) {
+                        break;
+                    }
+                    switch (type) {
+                        case PROJECT_VERSION:
+                            trySkip(in, RecordType.PROJECT_VERSION.getConstantLength());
+                            break;
+                        case PROJECT_CODEPAGE:
+                            in.readInt();//record size must == 4
+                            int codepage = in.readShort();
+                            modules.charset = Charset.forName(CodePageUtil.codepageToEncoding(codepage, true));
+                            break;
+                        case MODULE_STREAM_NAME:
+                            ASCIIUnicodeStringPair pair = readStringPair(in, modules.charset, STREAMNAME_RESERVED);
+                            streamName = pair.getAscii();
+                            break;
+                        case PROJECT_DOC_STRING:
+                            readStringPair(in, modules.charset, DOC_STRING_RESERVED);
+                            break;
+                        case PROJECT_HELP_FILE_PATH:
+                            readStringPair(in, modules.charset, HELP_FILE_PATH_RESERVED);
+                            break;
+                        case PROJECT_CONSTANTS:
+                            readStringPair(in, modules.charset, PROJECT_CONSTANTS_RESERVED);
+                            break;
+                        case REFERENCE_NAME:
+                            if (dirState.equals(DIR_STATE.INFORMATION_RECORD)) {
+                                dirState = DIR_STATE.REFERENCES_RECORD;
+                            }
+                            readStringPair(in, modules.charset, REFERENCE_NAME_RESERVED);
+                            break;
+                        case MODULE_DOC_STRING :
+                            int modDocStringLength = in.readInt();
+                            readString(in, modDocStringLength, modules.charset);
+                            int modDocStringReserved = in.readShort();
+                            if (modDocStringReserved != MODULE_DOCSTRING_RESERVED) {
+                                throw new IOException("Expected x003C after stream name before Unicode stream name, but found: " +
+                                        Integer.toHexString(modDocStringReserved));
+                            }
+                            int unicodeModDocStringLength = in.readInt();
+                            readUnicodeString(in, unicodeModDocStringLength);
+                            // do something with this at some point
+                            break;
+                        case MODULE_OFFSET:
+                            int modOffsetSz = in.readInt();
+                            //should be 4
+                            readModuleMetadataFromDirStream(in, streamName, modules);
+                            break;
+                        case PROJECT_MODULES:
+                            dirState = DIR_STATE.MODULES_RECORD;
+                            in.readInt();//size must == 2
+                            in.readShort();//number of modules
+                            break;
+                        case REFERENCE_CONTROL_A:
+                            int szTwiddled = in.readInt();
+                            trySkip(in, szTwiddled);
+                            int nextRecord = in.readShort();
+                            //reference name is optional!
+                            if (nextRecord == RecordType.REFERENCE_NAME.id) {
+                                readStringPair(in, modules.charset, REFERENCE_NAME_RESERVED);
+                                nextRecord = in.readShort();
+                            }
+                            if (nextRecord != 0x30) {
+                                throw new IOException("Expected 0x30 as Reserved3 in a ReferenceControl record");
+                            }
+                            int szExtended = in.readInt();
+                            trySkip(in, szExtended);
+                            break;
+                        case MODULE_TERMINATOR:
+                            int endOfModulesReserved = in.readInt();
+                            //must be 0;
+                            break;
+                        default:
+                            if (type.getConstantLength() > -1) {
+                                trySkip(in, type.getConstantLength());
+                            } else {
+                                int recordLength = in.readInt();
+                                trySkip(in, recordLength);
+                            }
+                            break;
+                    }
+                }
+            } catch (final IOException e) {
+                throw new IOException(
+                        "Error occurred while reading macros at section id "
+                                + recordId + " (" + HexDump.shortToHex(recordId) + ")", e);
+            } finally {
+                in.close();
+            }
+        } finally {
+            dis.close();
+        }
+    }
+

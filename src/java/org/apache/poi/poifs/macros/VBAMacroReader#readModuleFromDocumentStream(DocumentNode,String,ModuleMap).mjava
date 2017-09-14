@@ -1,0 +1,55 @@
+    private static void readModuleFromDocumentStream(DocumentNode documentNode, String name, ModuleMap modules) throws IOException {
+        Module module = modules.get(name);
+        // TODO Refactor this to fetch dir then do the rest
+        if (module == null) {
+            // no DIR stream with offsets yet, so store the compressed bytes for later
+            module = new Module();
+            modules.put(name, module);
+            InputStream dis = new DocumentInputStream(documentNode);
+            try {
+                module.read(dis);
+            } finally {
+                dis.close();
+            }
+        } else if (module.buf == null) { //if we haven't already read the bytes for the module keyed off this name...
+
+            if (module.offset == null) {
+                //This should not happen. bug 59858
+                throw new IOException("Module offset for '" + name + "' was never read.");
+            }
+
+            //try the general case, where module.offset is accurate
+            InputStream decompressed = null;
+            InputStream compressed = new DocumentInputStream(documentNode);
+            try {
+                // we know the offset already, so decompress immediately on-the-fly
+                long skippedBytes = compressed.skip(module.offset);
+                if (skippedBytes != module.offset) {
+                    throw new IOException("tried to skip " + module.offset + " bytes, but actually skipped " + skippedBytes + " bytes");
+                }
+                decompressed = new RLEDecompressingInputStream(compressed);
+                module.read(decompressed);
+                return;
+            } catch (IllegalArgumentException e) {
+            } catch (IllegalStateException e) {
+            } finally {
+                IOUtils.closeQuietly(compressed);
+                IOUtils.closeQuietly(decompressed);
+            }
+
+            //bad module.offset, try brute force
+            compressed = new DocumentInputStream(documentNode);
+            byte[] decompressedBytes = null;
+            try {
+                decompressedBytes = findCompressedStreamWBruteForce(compressed);
+            } finally {
+                IOUtils.closeQuietly(compressed);
+            }
+
+            if (decompressedBytes != null) {
+                module.read(new ByteArrayInputStream(decompressedBytes));
+            }
+        }
+        
+    }
+
