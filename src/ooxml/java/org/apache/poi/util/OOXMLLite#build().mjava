@@ -62,7 +62,7 @@
             String className = cls.getName();
             String classRef = className.replace('.', '/') + ".class";
             File destFile = new File(_destDest, classRef);
-            copyFile(cls.getResourceAsStream('/' + classRef), destFile);
+            IOUtils.copy(cls.getResourceAsStream('/' + classRef), destFile);
 
             if(cls.isInterface()){
                 /// Copy classes and interfaces declared as members of this class
@@ -70,25 +70,21 @@
                     className = fc.getName();
                     classRef = className.replace('.', '/') + ".class";
                     destFile = new File(_destDest, classRef);
-                    copyFile(fc.getResourceAsStream('/' + classRef), destFile);
+                    IOUtils.copy(fc.getResourceAsStream('/' + classRef), destFile);
                 }
             }
         }
 
         //finally copy the compiled .xsb files
         System.out.println("Copying .xsb resources");
-        JarFile jar = new  JarFile(_ooxmlJar);
-        Pattern p = Pattern.compile("schemaorg_apache_xmlbeans/(system|element)/.*\\.xsb");
-        try {
-            for(Enumeration<JarEntry> e = jar.entries(); e.hasMoreElements(); ){
+        try (JarFile jar = new JarFile(_ooxmlJar)) {
+            for (Enumeration<JarEntry> e = jar.entries(); e.hasMoreElements(); ) {
                 JarEntry je = e.nextElement();
-                if(p.matcher(je.getName()).matches()) {
-                     File destFile = new File(_destDest, je.getName());
-                     copyFile(jar.getInputStream(je), destFile);
+                if (SCHEMA_PATTERN.matcher(je.getName()).matches()) {
+                    File destFile = new File(_destDest, je.getName());
+                    IOUtils.copy(jar.getInputStream(je), destFile);
                 }
             }
-        } finally {
-            jar.close();
         }
     }
 
