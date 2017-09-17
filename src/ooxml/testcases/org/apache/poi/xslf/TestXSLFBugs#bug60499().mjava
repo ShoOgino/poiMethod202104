@@ -1,0 +1,44 @@
+    @Test
+    public void bug60499() throws IOException, InvalidFormatException {
+        InputStream is = slTests.openResourceAsStream("bug60499.pptx");
+        byte buf[] = IOUtils.toByteArray(is);
+        is.close();
+
+        PackagePartName ppn = PackagingURIHelper.createPartName("/ppt/media/image1.png");
+        
+        XMLSlideShow ppt1 = new XMLSlideShow(new ByteArrayInputStream(buf));
+        XSLFSlide slide1 = ppt1.getSlides().get(0);
+        
+        Optional<XSLFShape> shapeToDelete1 =
+            slide1.getShapes().stream().filter(s -> s instanceof XSLFPictureShape).findFirst();
+        
+        assertTrue(shapeToDelete1.isPresent());
+        slide1.removeShape(shapeToDelete1.get());
+        slide1.getRelationParts().stream()
+            .allMatch(rp -> "rId1,rId3".contains(rp.getRelationship().getId()) ); 
+        
+        assertNotNull(ppt1.getPackage().getPart(ppn));
+        ppt1.close();
+
+        XMLSlideShow ppt2 = new XMLSlideShow(new ByteArrayInputStream(buf));
+        XSLFSlide slide2 = ppt2.getSlides().get(0);
+
+        Optional<XSLFShape> shapeToDelete2 =
+            slide2.getShapes().stream().filter(s -> s instanceof XSLFPictureShape).skip(1).findFirst();
+        assertTrue(shapeToDelete2.isPresent());
+        slide2.removeShape(shapeToDelete2.get());
+        slide2.getRelationParts().stream()
+            .allMatch(rp -> "rId1,rId2".contains(rp.getRelationship().getId()) ); 
+        assertNotNull(ppt2.getPackage().getPart(ppn));
+        ppt2.close();
+
+        XMLSlideShow ppt3 = new XMLSlideShow(new ByteArrayInputStream(buf));
+        XSLFSlide slide3 = ppt3.getSlides().get(0);
+        slide3.getShapes().stream()
+            .filter(s -> s instanceof XSLFPictureShape)
+            .collect(Collectors.toList())
+            .forEach(s -> slide3.removeShape(s));
+        assertNull(ppt3.getPackage().getPart(ppn));
+        ppt3.close();
+    }
+

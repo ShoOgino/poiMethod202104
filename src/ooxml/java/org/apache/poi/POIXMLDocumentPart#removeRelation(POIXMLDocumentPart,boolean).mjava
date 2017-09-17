@@ -1,6 +1,10 @@
     /**
      * Remove the relation to the specified part in this package and remove the
-     * part, if it is no longer needed and flag is set to true.
+     * part, if it is no longer needed and flag is set to true.<p>
+     *
+     * If there are multiple relationships to the same part, this will only
+     * remove the first relationship in the order of creation. The removal
+     * via the part id ({@link #removeRelation(String,boolean)} is preferred.
      *
      * @param part
      *            The related part, to which the relation shall be removed.
@@ -9,30 +13,8 @@
      *            needed any longer.
      * @return true, if the relation was removed
      */
-    protected final boolean removeRelation(POIXMLDocumentPart part, boolean removeUnusedParts){
+    protected final boolean removeRelation(POIXMLDocumentPart part, boolean removeUnusedParts) {
         String id = getRelationId(part);
-        if (id == null) {
-            // part is not related with this POIXMLDocumentPart
-            return false;
-        }
-        /* decrement usage counter */
-        part.decrementRelationCounter();
-        /* remove packagepart relationship */
-        getPackagePart().removeRelationship(id);
-        /* remove POIXMLDocument from relations */
-        relations.remove(id);
-
-        if (removeUnusedParts) {
-            /* if last relation to target part was removed, delete according target part */
-            if (part.getRelationCounter() == 0) {
-                try {
-                    part.onDocumentRemove();
-                } catch (IOException e) {
-                    throw new POIXMLException(e);
-                }
-                getPackagePart().getPackage().removePart(part.getPackagePart());
-            }
-        }
-        return true;
+        return removeRelation(id, removeUnusedParts);
     }
 
