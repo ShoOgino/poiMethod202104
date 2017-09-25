@@ -1,29 +1,23 @@
     protected void injectData(ZipEntrySource zipEntrySource, OutputStream out) throws IOException {
         try {
-            ZipOutputStream zos = new ZipOutputStream(out);
-            try {
+            try (ZipOutputStream zos = new ZipOutputStream(out)) {
                 Enumeration<? extends ZipEntry> en = zipEntrySource.getEntries();
                 while (en.hasMoreElements()) {
                     ZipEntry ze = en.nextElement();
                     zos.putNextEntry(new ZipEntry(ze.getName()));
                     InputStream is = zipEntrySource.getInputStream(ze);
-                    XSSFSheet xSheet=getSheetFromZipEntryName(ze.getName());
+                    XSSFSheet xSheet = getSheetFromZipEntryName(ze.getName());
                     // See bug 56557, we should not inject data into the special ChartSheets
-                    if(xSheet!=null && !(xSheet instanceof XSSFChartSheet)) {
-                        SXSSFSheet sxSheet=getSXSSFSheet(xSheet);
-                        InputStream xis = sxSheet.getWorksheetXMLInputStream();
-                        try {
-                            copyStreamAndInjectWorksheet(is,zos,xis);
-                        } finally {
-                            xis.close();
+                    if (xSheet != null && !(xSheet instanceof XSSFChartSheet)) {
+                        SXSSFSheet sxSheet = getSXSSFSheet(xSheet);
+                        try (InputStream xis = sxSheet.getWorksheetXMLInputStream()) {
+                            copyStreamAndInjectWorksheet(is, zos, xis);
                         }
                     } else {
                         IOUtils.copy(is, zos);
                     }
                     is.close();
                 }
-            } finally {
-                zos.close();
             }
         } finally {
             zipEntrySource.close();
