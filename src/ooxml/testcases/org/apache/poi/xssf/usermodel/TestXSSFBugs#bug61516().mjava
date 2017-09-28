@@ -1,0 +1,53 @@
+    @Test
+    public void bug61516(){
+        final String initialFormula = "A1";
+        final String expectedFormula = "#REF!"; // from ms excel
+
+        Workbook wb = new XSSFWorkbook();
+        Sheet sheet = wb.createSheet("sheet1");
+        sheet.createRow(0).createCell(0).setCellValue(1); // A1 = 1
+
+        {
+            Cell c3 = sheet.createRow(2).createCell(2);
+            c3.setCellFormula(initialFormula); // C3 = =A1
+            FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
+            CellValue cellValue = evaluator.evaluate(c3);
+            assertEquals(1, cellValue.getNumberValue(), 0.0001);
+        }
+
+        {
+            FormulaShifter formulaShifter = FormulaShifter.createForRowCopy(0, "sheet1", 2/*firstRowToShift*/, 2/*lastRowToShift*/
+                    , -1/*step*/, SpreadsheetVersion.EXCEL2007);    // parameters 2, 2, -1 should mean : move row range [2-2] one level up
+            XSSFEvaluationWorkbook fpb = XSSFEvaluationWorkbook.create((XSSFWorkbook) wb);
+            Ptg[] ptgs = FormulaParser.parse(initialFormula, fpb, FormulaType.CELL, 0); // [A1]
+            formulaShifter.adjustFormula(ptgs, 0);    // adjusted to [A]
+            String shiftedFmla = FormulaRenderer.toFormulaString(fpb, ptgs);    //A
+            //System.out.println(String.format("initial formula : A1; expected formula value after shifting up : #REF!; actual formula value : %s", shiftedFmla));
+            assertEquals("On copy we expect the formula to be adjusted, in this case it would point to row -1, which is an invalid REF",
+                    expectedFormula, shiftedFmla);
+        }
+
+        {
+            FormulaShifter formulaShifter = FormulaShifter.createForRowShift(0, "sheet1", 2/*firstRowToShift*/, 2/*lastRowToShift*/
+                    , -1/*step*/, SpreadsheetVersion.EXCEL2007);    // parameters 2, 2, -1 should mean : move row range [2-2] one level up
+            XSSFEvaluationWorkbook fpb = XSSFEvaluationWorkbook.create((XSSFWorkbook) wb);
+            Ptg[] ptgs = FormulaParser.parse(initialFormula, fpb, FormulaType.CELL, 0); // [A1]
+            formulaShifter.adjustFormula(ptgs, 0);    // adjusted to [A]
+            String shiftedFmla = FormulaRenderer.toFormulaString(fpb, ptgs);    //A
+            //System.out.println(String.format("initial formula : A1; expected formula value after shifting up : #REF!; actual formula value : %s", shiftedFmla));
+            assertEquals("On move we expect the formula to stay the same, thus expecting the initial formula A1 here",
+                    initialFormula, shiftedFmla);
+        }
+
+        sheet.shiftRows(2, 2, -1);
+        {
+            Cell c2 = sheet.getRow(1).getCell(2);
+            assertNotNull("cell C2 needs to exist now", c2);
+            assertEquals(CellType.FORMULA, c2.getCellType());
+            assertEquals(initialFormula, c2.getCellFormula());
+            FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
+            CellValue cellValue = evaluator.evaluate(c2);
+            assertEquals(1, cellValue.getNumberValue(), 0.0001);
+        }
+    }
+
