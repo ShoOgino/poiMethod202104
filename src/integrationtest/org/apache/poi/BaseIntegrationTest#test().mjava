@@ -1,0 +1,65 @@
+	public void test() throws Exception {
+        assertNotNull("Unknown file extension for file: " + file + ": " + TestAllFiles.getExtension(file), handler);
+
+        File inputFile = new File(rootDir, file);
+        try {
+            handleFile(inputFile);
+        } catch (OfficeXmlFileException e) {
+        	// check if the file-extension is wrong
+        	if(!e.getMessage().contains("data appears to be in the Office 2007")) {
+        		throw e;
+        	}
+
+        	// use XWPF instead of HWPF and XSSF instead of HSSF as the file seems to have the wrong extension
+			handleWrongExtension(inputFile, e);
+		} catch (OldWordFileFormatException | OldExcelFormatException | OldPowerPointFormatException e) {
+        	// at least perform extracting tests on these old files
+        } catch (OldFileFormatException e) {
+            // Not even text extraction is supported for these: handler.handleExtracting(inputFile);
+			//noinspection ConstantConditions
+			Assume.assumeFalse("File " + file + " excluded because it is unsupported old Excel format", true);
+        } catch (EncryptedDocumentException e) {
+        	// Do not try to read encrypted files
+			//noinspection ConstantConditions
+			Assume.assumeFalse("File " + file + " excluded because it is password-encrypted", true);
+        } catch (ZipException e) {
+			// some files are corrupted
+			if (e.getMessage().equals("unexpected EOF")) {
+				//noinspection ConstantConditions
+				Assume.assumeFalse("File " + file + " excluded because the Zip file is incomplete", true);
+			}
+
+			throw e;
+		} catch (IOException e) {
+			// sometimes binary format has XML-format-extension...
+			if(e.getMessage().contains("rong file format or file extension for OO XML file")) {
+				handleWrongExtension(inputFile, e);
+			} else {
+				throw e;
+			}
+        } catch (IllegalArgumentException e) {
+        	// ignore errors for documents with incorrect extension
+        	String message = e.getMessage();
+			if(message != null && (message.equals("The document is really a RTF file") ||
+        			message.equals("The document is really a PDF file") ||
+					message.equals("The document is really a HTML file"))) {
+				//noinspection ConstantConditions
+				Assume.assumeFalse("File " + file + " excluded because it is actually a PDF/RTF file", true);
+			}
+
+			if(e.getMessage().equals("The document is really a OOXML file")) {
+				handleWrongExtension(inputFile, e);
+			} else {
+				throw e;
+			}
+        }
+
+        try {
+        	handler.handleExtracting(inputFile);
+		} catch (EncryptedDocumentException e) {
+			// Do not try to read encrypted files
+			//noinspection ConstantConditions
+			Assume.assumeFalse("File " + file + " excluded because it is password-encrypted", true);
+		}
+	}
+
