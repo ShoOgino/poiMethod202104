@@ -1,15 +1,12 @@
     private static void readModuleFromDocumentStream(DocumentNode documentNode, String name, ModuleMap modules) throws IOException {
-        Module module = modules.get(name);
+        ModuleImpl module = modules.get(name);
         // TODO Refactor this to fetch dir then do the rest
         if (module == null) {
             // no DIR stream with offsets yet, so store the compressed bytes for later
-            module = new Module();
+            module = new ModuleImpl();
             modules.put(name, module);
-            InputStream dis = new DocumentInputStream(documentNode);
-            try {
+            try (InputStream dis = new DocumentInputStream(documentNode)) {
                 module.read(dis);
-            } finally {
-                dis.close();
             }
         } else if (module.buf == null) { //if we haven't already read the bytes for the module keyed off this name...
 
@@ -30,8 +27,7 @@
                 decompressed = new RLEDecompressingInputStream(compressed);
                 module.read(decompressed);
                 return;
-            } catch (IllegalArgumentException e) {
-            } catch (IllegalStateException e) {
+            } catch (IllegalArgumentException | IllegalStateException e) {
             } finally {
                 IOUtils.closeQuietly(compressed);
                 IOUtils.closeQuietly(decompressed);
@@ -39,7 +35,7 @@
 
             //bad module.offset, try brute force
             compressed = new DocumentInputStream(documentNode);
-            byte[] decompressedBytes = null;
+            byte[] decompressedBytes;
             try {
                 decompressedBytes = findCompressedStreamWBruteForce(compressed);
             } finally {

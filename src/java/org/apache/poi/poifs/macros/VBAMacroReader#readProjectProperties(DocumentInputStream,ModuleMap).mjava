@@ -1,0 +1,31 @@
+    protected void readProjectProperties(DocumentInputStream dis, ModuleMap modules) throws IOException {
+        InputStreamReader reader = new InputStreamReader(dis, modules.charset);
+        StringBuilder builder = new StringBuilder();
+        char[] buffer = new char[512];
+        int read;
+        while ((read = reader.read(buffer)) >= 0) {
+            builder.append(buffer, 0, read);
+        }
+        String properties = builder.toString();
+        for (String line : properties.split("\r\n|\n\r")) {
+            if (!line.startsWith("[")) {
+                String[] tokens = line.split("=");
+                if (tokens.length > 1 && tokens[1].length() > 1 && tokens[1].startsWith("\"")) {
+                    // Remove any double qouates
+                    tokens[1] = tokens[1].substring(1, tokens[1].length() - 2);
+                }
+                if ("Document".equals(tokens[0])) {
+                    String mn = tokens[1].substring(0, tokens[1].indexOf("/&H"));
+                    ModuleImpl module = modules.get(mn);
+                    module.moduleType = ModuleType.Document;
+                } else if ("Module".equals(tokens[0])) {
+                    ModuleImpl module = modules.get(tokens[1]);
+                    module.moduleType = ModuleType.Module;
+                } else if ("Class".equals(tokens[0])) {
+                    ModuleImpl module = modules.get(tokens[1]);
+                    module.moduleType = ModuleType.Class;
+                }
+            }
+        }
+    }
+

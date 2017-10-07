@@ -1,13 +1,11 @@
     private void processDirStream(Entry dir, ModuleMap modules) throws IOException {
         DocumentNode dirDocumentNode = (DocumentNode)dir;
-        DocumentInputStream dis = new DocumentInputStream(dirDocumentNode);
         DIR_STATE dirState = DIR_STATE.INFORMATION_RECORD;
-        try {
-            RLEDecompressingInputStream in = new RLEDecompressingInputStream(dis);
+        try (DocumentInputStream dis = new DocumentInputStream(dirDocumentNode)) {
             String streamName = null;
             int recordId = 0;
             boolean inReferenceTwiddled = false;
-            try {
+            try (RLEDecompressingInputStream in = new RLEDecompressingInputStream(dis)) {
                 while (true) {
                     recordId = in.readShort();
                     if (recordId == -1) {
@@ -46,7 +44,7 @@
                             }
                             readStringPair(in, modules.charset, REFERENCE_NAME_RESERVED);
                             break;
-                        case MODULE_DOC_STRING :
+                        case MODULE_DOC_STRING:
                             int modDocStringLength = in.readInt();
                             readString(in, modDocStringLength, modules.charset);
                             int modDocStringReserved = in.readShort();
@@ -101,11 +99,7 @@
                 throw new IOException(
                         "Error occurred while reading macros at section id "
                                 + recordId + " (" + HexDump.shortToHex(recordId) + ")", e);
-            } finally {
-                in.close();
             }
-        } finally {
-            dis.close();
         }
     }
 
