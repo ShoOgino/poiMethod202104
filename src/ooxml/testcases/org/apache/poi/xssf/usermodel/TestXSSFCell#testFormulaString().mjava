@@ -1,16 +1,15 @@
     @Test
     public void testFormulaString() throws IOException {
-        XSSFWorkbook wb = (XSSFWorkbook)_testDataProvider.createWorkbook();
-        try {
+        try (XSSFWorkbook wb = (XSSFWorkbook) _testDataProvider.createWorkbook()) {
             XSSFCell cell = wb.createSheet().createRow(0).createCell(0);
             CTCell ctCell = cell.getCTCell(); //low-level bean holding cell's xml
-    
+
             cell.setCellFormula("A2");
             assertEquals(CellType.FORMULA, cell.getCellType());
             assertEquals("A2", cell.getCellFormula());
             //the value is not set and cell's type='N' which means blank
             assertEquals(STCellType.N, ctCell.getT());
-    
+
             //set cached formula value
             cell.setCellValue("t='str'");
             //we are still of 'formula' type
@@ -19,57 +18,44 @@
             //cached formula value is set and cell's type='STR'
             assertEquals(STCellType.STR, ctCell.getT());
             assertEquals("t='str'", cell.getStringCellValue());
-    
+
             //now remove the formula, the cached formula result remains
             cell.setCellFormula(null);
             assertEquals(CellType.STRING, cell.getCellType());
             assertEquals(STCellType.STR, ctCell.getT());
             //the line below failed prior to fix of Bug #47889
             assertEquals("t='str'", cell.getStringCellValue());
-    
+
             //revert to a blank cell
-            cell.setCellValue((String)null);
+            cell.setCellValue((String) null);
             assertEquals(CellType.BLANK, cell.getCellType());
             assertEquals(STCellType.N, ctCell.getT());
             assertEquals("", cell.getStringCellValue());
 
             // check behavior with setCellFormulaValidation
             final String invalidFormula = "A", validFormula = "A2";
-            FormulaParseException fpe = null;
+
             // check that default is true
             assertTrue(wb.getCellFormulaValidation());
 
             // check that valid formula does not throw exception
-            try {
-                cell.setCellFormula(validFormula);
-            } catch(FormulaParseException e) {
-                fpe = e;
-            }
-            assertNull(fpe);
+            cell.setCellFormula(validFormula);
 
             // check that invalid formula does throw exception
             try {
                 cell.setCellFormula(invalidFormula);
-            } catch(FormulaParseException e) {
-                fpe = e;
+                fail("Should catch exception here");
+            } catch (FormulaParseException e) {
+                // expected here
             }
-            assertNotNull(fpe);
-            fpe = null;
 
             // set cell formula validation to false
             wb.setCellFormulaValidation(false);
             assertFalse(wb.getCellFormulaValidation());
 
             // check that neither valid nor invalid formula throw an exception
-            try {
-                cell.setCellFormula(validFormula);
-                cell.setCellFormula(invalidFormula);
-            } catch(FormulaParseException e) {
-                fpe = e;
-            }
-            assertNull(fpe);
-        } finally {
-            wb.close();
+            cell.setCellFormula(validFormula);
+            cell.setCellFormula(invalidFormula);
         }
     }
 

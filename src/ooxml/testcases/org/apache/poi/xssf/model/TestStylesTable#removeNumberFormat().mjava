@@ -1,58 +1,59 @@
     @Test
     public void removeNumberFormat() throws IOException {
-        XSSFWorkbook wb1 = new XSSFWorkbook();
-        try {
+        try (XSSFWorkbook wb1 = new XSSFWorkbook()) {
             final String fmt = customDataFormat;
             final short fmtIdx = (short) wb1.getStylesSource().putNumberFormat(fmt);
-            
+
             Cell cell = wb1.createSheet("test").createRow(0).createCell(0);
             cell.setCellValue(5.25);
             CellStyle style = wb1.createCellStyle();
             style.setDataFormat(fmtIdx);
             cell.setCellStyle(style);
-            
+
             assertEquals(fmt, cell.getCellStyle().getDataFormatString());
             assertEquals(fmt, wb1.getStylesSource().getNumberFormatAt(fmtIdx));
-            
+
             // remove the number format from the workbook
-            wb1.getStylesSource().removeNumberFormat(fmt);
-            
+            assertTrue("The format is removed on first call",
+                    wb1.getStylesSource().removeNumberFormat(fmt));
+            try {
+                wb1.getStylesSource().removeNumberFormat(fmt);
+                fail("Should fail here");
+            } catch (IllegalStateException e) {
+                // expected here
+            }
+
             // number format in CellStyles should be restored to default number format
             final short defaultFmtIdx = 0;
             final String defaultFmt = BuiltinFormats.getBuiltinFormat(0);
             assertEquals(defaultFmtIdx, style.getDataFormat());
             assertEquals(defaultFmt, style.getDataFormatString());
-            
+
             // The custom number format should be entirely removed from the workbook
-            Map<Short,String> numberFormats = wb1.getStylesSource().getNumberFormats();
+            Map<Short, String> numberFormats = wb1.getStylesSource().getNumberFormats();
             assertNotContainsKey(numberFormats, fmtIdx);
             assertNotContainsValue(numberFormats, fmt);
-            
+
             // The default style shouldn't be added back to the styles source because it's built-in
             assertEquals(0, wb1.getStylesSource().getNumDataFormats());
-            
-            cell = null; style = null; numberFormats = null;
-            XSSFWorkbook wb2 = XSSFTestDataSamples.writeOutCloseAndReadBack(wb1);
-            
-            cell = wb2.getSheet("test").getRow(0).getCell(0);
-            style = cell.getCellStyle();
-            
-            // number format in CellStyles should be restored to default number format
-            assertEquals(defaultFmtIdx, style.getDataFormat());
-            assertEquals(defaultFmt, style.getDataFormatString());
-            
-            // The custom number format should be entirely removed from the workbook
-            numberFormats = wb2.getStylesSource().getNumberFormats();
-            assertNotContainsKey(numberFormats, fmtIdx);
-            assertNotContainsValue(numberFormats, fmt);
-            
-            // The default style shouldn't be added back to the styles source because it's built-in
-            assertEquals(0, wb2.getStylesSource().getNumDataFormats());
-            
-            wb2.close();
-            
-        } finally {
-            wb1.close();
+
+            try (XSSFWorkbook wb2 = XSSFTestDataSamples.writeOutCloseAndReadBack(wb1)) {
+
+                cell = wb2.getSheet("test").getRow(0).getCell(0);
+                style = cell.getCellStyle();
+
+                // number format in CellStyles should be restored to default number format
+                assertEquals(defaultFmtIdx, style.getDataFormat());
+                assertEquals(defaultFmt, style.getDataFormatString());
+
+                // The custom number format should be entirely removed from the workbook
+                numberFormats = wb2.getStylesSource().getNumberFormats();
+                assertNotContainsKey(numberFormats, fmtIdx);
+                assertNotContainsValue(numberFormats, fmt);
+
+                // The default style shouldn't be added back to the styles source because it's built-in
+                assertEquals(0, wb2.getStylesSource().getNumDataFormats());
+            }
         }
     }
 
