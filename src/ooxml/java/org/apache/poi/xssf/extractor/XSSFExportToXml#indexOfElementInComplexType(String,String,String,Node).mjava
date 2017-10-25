@@ -1,0 +1,33 @@
+    private int indexOfElementInComplexType(String samePath,String leftElementName,String rightElementName,Node complexType) {
+        if(complexType == null) {
+            return 0;
+        }
+
+        int i = 0;
+        Node node = complexType.getFirstChild();
+        final String leftWithoutNamespace = removeNamespace(leftElementName);
+        int leftIndexOf = getAndStoreIndex(samePath, leftWithoutNamespace);
+        final String rightWithoutNamespace = removeNamespace(rightElementName);
+        int rightIndexOf = getAndStoreIndex(samePath, rightWithoutNamespace);
+
+        while (node != null && (rightIndexOf==-1||leftIndexOf==-1)) {
+            if (node instanceof Element && "element".equals(node.getLocalName())) {
+                String elementValue = getNameOrRefElement(node).getNodeValue();
+                if (elementValue.equals(leftWithoutNamespace)) {
+                    leftIndexOf = i;
+                    indexMap.put(samePath+"/"+leftWithoutNamespace, leftIndexOf);
+                }
+                if (elementValue.equals(rightWithoutNamespace)) {
+                    rightIndexOf = i;
+                    indexMap.put(samePath+"/"+rightWithoutNamespace, leftIndexOf);
+                }
+            }
+            i++;
+            node = node.getNextSibling();
+        }
+        if(leftIndexOf == -1 || rightIndexOf == -1) {
+            return 0;
+        }
+        return Integer.compare(leftIndexOf, rightIndexOf);
+    }
+
