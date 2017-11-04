@@ -1,0 +1,29 @@
+    /**
+     * Modifies rptg in-place and return a reference to rptg if the cell reference
+     * would move due to a column copy operation
+     * Returns <code>null</code> or {@link RefErrorPtg} if no change was made
+     *
+     * @param rptg The REF that is copied
+     * @return The Ptg reference if the cell would move due to copy, otherwise null
+     */
+    private Ptg columnCopyRefPtg(RefPtgBase rptg) {
+        final int refColumn = rptg.getColumn();
+        if (rptg.isColRelative()) {
+            // check new location where the ref is located
+            final int destColumnIndex = _firstMovedIndex + _amountToMove;
+            if (destColumnIndex < 0 || _version.getLastColumnIndex() < destColumnIndex) {
+                return createDeletedRef(rptg);
+            }
+
+            // check new location where the ref points to
+            final int newColumnIndex = refColumn + _amountToMove;
+            if(newColumnIndex < 0 || _version.getLastColumnIndex() < newColumnIndex) {
+                return createDeletedRef(rptg);
+            }
+
+            rptg.setColumn(newColumnIndex);
+            return rptg;
+        }
+        return null;
+    }
+

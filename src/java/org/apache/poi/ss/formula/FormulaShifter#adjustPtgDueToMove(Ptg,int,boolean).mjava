@@ -1,0 +1,61 @@
+    /**
+     * @return in-place modified ptg (if column move would cause Ptg to change),
+     * deleted ref ptg (if column move causes an error),
+     * or null (if no Ptg change is needed)
+     */
+    private Ptg adjustPtgDueToMove(Ptg ptg, int currentExternSheetIx, boolean isRowMove) {
+        if(ptg instanceof RefPtg) {
+            if (currentExternSheetIx != _externSheetIndex) {
+                // local refs on other sheets are unaffected
+                return null;
+            }
+            RefPtg rptg = (RefPtg)ptg;
+            return isRowMove ? rowMoveRefPtg(rptg) : columnMoveRefPtg(rptg);
+        }
+        if(ptg instanceof Ref3DPtg) {
+            Ref3DPtg rptg = (Ref3DPtg)ptg;
+            if (_externSheetIndex != rptg.getExternSheetIndex()) {
+                // only move 3D refs that refer to the sheet with cells being moved
+                // (currentExternSheetIx is irrelevant)
+                return null;
+            }
+            return isRowMove ? rowMoveRefPtg(rptg) : columnMoveRefPtg(rptg);
+        }
+        if(ptg instanceof Ref3DPxg) {
+            Ref3DPxg rpxg = (Ref3DPxg)ptg;
+            if (rpxg.getExternalWorkbookNumber() > 0 ||
+                    ! _sheetName.equals(rpxg.getSheetName())) {
+                // only move 3D refs that refer to the sheet with cells being moved
+                return null;
+            }
+            return isRowMove ? rowMoveRefPtg(rpxg) : columnMoveRefPtg(rpxg);
+        }
+        if(ptg instanceof Area2DPtgBase) {
+            if (currentExternSheetIx != _externSheetIndex) {
+                // local refs on other sheets are unaffected
+                return ptg;
+            }
+            Area2DPtgBase aptg = (Area2DPtgBase) ptg;
+            return isRowMove ? rowMoveAreaPtg(aptg) : columnMoveAreaPtg(aptg);
+        }
+        if(ptg instanceof Area3DPtg) {
+            Area3DPtg aptg = (Area3DPtg)ptg;
+            if (_externSheetIndex != aptg.getExternSheetIndex()) {
+                // only move 3D refs that refer to the sheet with cells being moved
+                // (currentExternSheetIx is irrelevant)
+                return null;
+            }
+            return isRowMove ? rowMoveAreaPtg(aptg) : columnMoveAreaPtg(aptg);
+        }
+        if(ptg instanceof Area3DPxg) {
+            Area3DPxg apxg = (Area3DPxg)ptg;
+            if (apxg.getExternalWorkbookNumber() > 0 ||
+                    ! _sheetName.equals(apxg.getSheetName())) {
+                // only move 3D refs that refer to the sheet with cells being moved
+                return null;
+            }
+            return isRowMove ? rowMoveAreaPtg(apxg) : columnMoveAreaPtg(apxg);
+        }
+        return null;
+    }
+

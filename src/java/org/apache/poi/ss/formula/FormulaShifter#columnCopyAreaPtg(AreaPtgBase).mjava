@@ -1,0 +1,35 @@
+    /**
+     * Modifies aptg in-place and return a reference to aptg if the first or last column of
+     * of the Area reference would move due to a column copy operation
+     * Returns <code>null</code> or {@link AreaErrPtg} if no change was made
+     *
+     * @param aptg The Area that is copied
+     * @return null, AreaErrPtg, or modified aptg
+     */
+    private Ptg columnCopyAreaPtg(AreaPtgBase aptg) {
+        boolean changed = false;
+
+        final int aFirstColumn = aptg.getFirstColumn();
+        final int aLastColumn = aptg.getLastColumn();
+
+        if (aptg.isFirstColRelative()) {
+            final int destFirstColumnIndex = aFirstColumn + _amountToMove;
+            if (destFirstColumnIndex < 0 || _version.getLastColumnIndex() < destFirstColumnIndex)
+                return createDeletedRef(aptg);
+            aptg.setFirstColumn(destFirstColumnIndex);
+            changed = true;
+        }
+        if (aptg.isLastColRelative()) {
+            final int destLastColumnIndex = aLastColumn + _amountToMove;
+            if (destLastColumnIndex < 0 || _version.getLastColumnIndex() < destLastColumnIndex)
+                return createDeletedRef(aptg);
+            aptg.setLastColumn(destLastColumnIndex);
+            changed = true;
+        }
+        if (changed) {
+            aptg.sortTopLeftToBottomRight();
+        }
+
+        return changed ? aptg : null;
+    }
+
