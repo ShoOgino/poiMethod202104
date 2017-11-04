@@ -42,17 +42,7 @@
         // comments to the first or last row, rather than moving them out of
         // bounds or deleting them
         if (moveComments) {
-            final HSSFPatriarch patriarch = createDrawingPatriarch();
-            for (final HSSFShape shape : patriarch.getChildren()) {
-                if (!(shape instanceof HSSFComment)) {
-                    continue;
-                }
-                final HSSFComment comment = (HSSFComment) shape;
-                final int r = comment.getRow();
-                if (startRow <= r && r <= endRow) {
-                    comment.setRow(clip(r + n));
-                }
-            }
+            moveCommentsForRowShift(startRow, endRow, n);
         }
 
         // Shift Merged Regions
@@ -62,17 +52,7 @@
         _sheet.getPageSettings().shiftRowBreaks(startRow, endRow, n);
         
         // Delete overwritten hyperlinks
-        final int firstOverwrittenRow = startRow + n;
-        final int lastOverwrittenRow = endRow + n;
-        for (HSSFHyperlink link : getHyperlinkList()) {
-            // If hyperlink is fully contained in the rows that will be overwritten, delete the hyperlink
-            final int firstRow = link.getFirstRow();
-            final int lastRow = link.getLastRow();
-            if (firstOverwrittenRow <= firstRow && firstRow <= lastOverwrittenRow &&
-                    lastOverwrittenRow <= lastRow && lastRow <= lastOverwrittenRow) {
-                removeHyperlink(link);
-            }
-        }
+        deleteOverwrittenHyperlinksForRowShift(startRow, endRow, n);
 
         for (int rowNum = s; rowNum >= startRow && rowNum <= endRow && rowNum >= 0 && rowNum < 65536; rowNum += inc) {
             HSSFRow row = getRow(rowNum);
@@ -126,57 +106,9 @@
         }
 
         // Re-compute the first and last rows of the sheet as needed
-        if (n > 0) {
-            // Rows are moving down
-            if (startRow == _firstrow) {
-                // Need to walk forward to find the first non-blank row
-                _firstrow = Math.max(startRow + n, 0);
-                for (int i = startRow + 1; i < startRow + n; i++) {
-                    if (getRow(i) != null) {
-                        _firstrow = i;
-                        break;
-                    }
-                }
-            }
-            if (endRow + n > _lastrow) {
-                _lastrow = Math.min(endRow + n, SpreadsheetVersion.EXCEL97.getLastRowIndex());
-            }
-        } else {
-            // Rows are moving up
-            if (startRow + n < _firstrow) {
-                _firstrow = Math.max(startRow + n, 0);
-            }
-            if (endRow == _lastrow) {
-                // Need to walk backward to find the last non-blank row
-                // NOTE: n is always negative here
-                _lastrow = Math.min(endRow + n, SpreadsheetVersion.EXCEL97.getLastRowIndex());
-                for (int i = endRow - 1; i > endRow + n; i--) {
-                    if (getRow(i) != null) {
-                        _lastrow = i;
-                        break;
-                    }
-                }
-            }
-        }
+        recomputeFirstAndLastRowsForRowShift(startRow, endRow, n);
 
-        // Update any formulas on this sheet that point to
-        //  rows which have been moved
-        int sheetIndex = _workbook.getSheetIndex(this);
-        String sheetName = _workbook.getSheetName(sheetIndex);
-        short externSheetIndex = _book.checkExternSheet(sheetIndex);
-        FormulaShifter shifter = FormulaShifter.createForRowShift(
-                         externSheetIndex, sheetName, startRow, endRow, n, SpreadsheetVersion.EXCEL97);
-        _sheet.updateFormulasAfterCellShift(shifter, externSheetIndex);
-
-        int nSheets = _workbook.getNumberOfSheets();
-        for (int i = 0; i < nSheets; i++) {
-            InternalSheet otherSheet = _workbook.getSheetAt(i).getSheet();
-            if (otherSheet == this._sheet) {
-                continue;
-            }
-            short otherExtSheetIx = _book.checkExternSheet(i);
-            otherSheet.updateFormulasAfterCellShift(shifter, otherExtSheetIx);
-        }
-        _workbook.getWorkbook().updateNamesAfterCellShift(shifter);
+        // Update formulas that refer to rows that have been moved
+        updateFormulasForRowShift(startRow, endRow, n);
     }
 
