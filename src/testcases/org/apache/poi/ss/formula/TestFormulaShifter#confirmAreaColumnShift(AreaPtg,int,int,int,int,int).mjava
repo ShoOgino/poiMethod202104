@@ -1,0 +1,22 @@
+    private static void confirmAreaColumnShift(
+            AreaPtg aptg,
+            int firstColumnMoved, int lastColumnMoved, int numberColumnsMoved,
+            int expectedAreaFirstColumn, int expectedAreaLastColumn) {
+
+        FormulaShifter fs = FormulaShifter.createForColumnShift(0, "", firstColumnMoved, lastColumnMoved, numberColumnsMoved, SpreadsheetVersion.EXCEL2007);
+        boolean expectedChanged = aptg.getFirstColumn() != expectedAreaFirstColumn || aptg.getLastColumn() != expectedAreaLastColumn;
+
+        AreaPtg copyPtg = (AreaPtg) aptg.copy(); // clone so we can re-use aptg in calling method
+        Ptg[] ptgs = { copyPtg, };
+        boolean actualChanged = fs.adjustFormula(ptgs, 0);
+        if (expectedAreaFirstColumn < 0) {
+            assertEquals(AreaErrPtg.class, ptgs[0].getClass());
+            return;
+        }
+        assertEquals(expectedChanged, actualChanged);
+        assertEquals(copyPtg, ptgs[0]);  // expected to change in place (although this is not a strict requirement)
+        assertEquals(expectedAreaFirstColumn, copyPtg.getFirstColumn());
+        assertEquals(expectedAreaLastColumn, copyPtg.getLastColumn());
+
+    }
+
