@@ -1,0 +1,53 @@
+    /**
+     * Shifts, grows, or shrinks the merged regions due to a column shift.
+     * Merged regions that are completely overlaid by shifting will be deleted.
+     *
+     * @param startColumn the column to start shifting
+     * @param endColumn   the column to end shifting
+     * @param n        the number of columns to shift
+     * @return an array of affected merged regions, doesn't contain deleted ones
+     */
+    public List<CellRangeAddress> shiftMergedRegions(int startColumn, int endColumn, int n) {
+        List<CellRangeAddress> shiftedRegions = new ArrayList<>();
+        Set<Integer> removedIndices = new HashSet<>();
+        //move merged regions completely if they fall within the new region boundaries when they are shifted
+        int size = sheet.getNumMergedRegions();
+        for (int i = 0; i < size; i++) {
+            CellRangeAddress merged = sheet.getMergedRegion(i);
+
+            // remove merged region that are replaced by the shifting,
+            // i.e. where the area includes something in the overwritten area
+            if(removalNeeded(merged, startColumn, endColumn, n)) {
+                removedIndices.add(i);
+                continue;
+            }
+
+            boolean inStart = (merged.getFirstColumn() >= startColumn || merged.getLastColumn() >= startColumn);
+            boolean inEnd = (merged.getFirstColumn() <= endColumn || merged.getLastColumn() <= endColumn);
+
+            //don't check if it's not within the shifted area
+            if (!inStart || !inEnd) {
+                continue;
+            }
+
+            //only shift if the region outside the shifted columns is not merged too
+            if (!merged.containsColumn(startColumn - 1) && !merged.containsColumn(endColumn + 1)) {
+                merged.setFirstColumn(merged.getFirstColumn() + n);
+                merged.setLastColumn(merged.getLastColumn() + n);
+                //have to remove/add it back
+                shiftedRegions.add(merged);
+                removedIndices.add(i);
+            }
+        }
+        
+        if(!removedIndices.isEmpty()) {
+            sheet.removeMergedRegions(removedIndices);
+        }
+
+        //read so it doesn't get shifted again
+        for (CellRangeAddress region : shiftedRegions) {
+            sheet.addMergedRegion(region);
+        }
+        return shiftedRegions;
+    }
+
