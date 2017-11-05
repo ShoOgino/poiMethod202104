@@ -1,0 +1,38 @@
+	@Test
+	public void testUnusedStyleOneUsed() {
+		HSSFWorkbook wb = new HSSFWorkbook();
+		assertEquals("Usually we have 21 pre-defined styles in a newly created Workbook, see InternalWorkbook.createWorkbook()",
+				21, wb.getNumCellStyles());
+
+		HSSFSheet sheet = wb.createSheet();
+
+		Row row = sheet.createRow(0);
+		row.createCell(0);
+		row.createCell(1).setCellStyle(
+				createColorStyle(wb, IndexedColors.GREEN));
+
+		// Create style. But don't use it.
+		for (int i = 0; i < 3; i++) {
+			// Set Cell Color : AQUA
+			createColorStyle(wb, IndexedColors.AQUA);
+		}
+
+		row = sheet.createRow(1);
+		row.createCell(0).setCellStyle(createColorStyle(wb, IndexedColors.AQUA));
+		row.createCell(1).setCellStyle(
+				createColorStyle(wb, IndexedColors.RED));
+
+		assertEquals(21 + 3 + 3, wb.getNumCellStyles());
+		assertEquals(IndexedColors.GREEN.getIndex(), sheet.getRow(0).getCell(1).getCellStyle().getFillForegroundColor());
+		assertEquals(IndexedColors.AQUA.getIndex(), sheet.getRow(1).getCell(0).getCellStyle().getFillForegroundColor());
+		assertEquals(IndexedColors.RED.getIndex(), sheet.getRow(1).getCell(1).getCellStyle().getFillForegroundColor());
+
+		// Optimise styles
+		HSSFOptimiser.optimiseCellStyles(wb);
+
+		assertEquals(21 + 3, wb.getNumCellStyles());
+		assertEquals(IndexedColors.GREEN.getIndex(), sheet.getRow(0).getCell(1).getCellStyle().getFillForegroundColor());
+		assertEquals(IndexedColors.AQUA.getIndex(), sheet.getRow(1).getCell(0).getCellStyle().getFillForegroundColor());
+		assertEquals(IndexedColors.RED.getIndex(), sheet.getRow(1).getCell(1).getCellStyle().getFillForegroundColor());
+	}
+
