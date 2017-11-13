@@ -1,0 +1,48 @@
+    @Test
+    public void testFontFormattingColor() {
+        Workbook wb = XSSFITestDataProvider.instance.createWorkbook();
+        final Sheet sheet = wb.createSheet();
+
+        final SheetConditionalFormatting formatting = sheet.getSheetConditionalFormatting();
+
+        // the conditional formatting is not automatically added when it is created...
+        assertEquals(0, formatting.getNumConditionalFormattings());
+        ConditionalFormattingRule formattingRule = formatting.createConditionalFormattingRule("A1");
+        assertEquals(0, formatting.getNumConditionalFormattings());
+
+        // adding the formatting makes it available
+        int idx = formatting.addConditionalFormatting(new CellRangeAddress[] {}, formattingRule);
+
+        // verify that it can be accessed now
+        assertEquals(0, idx);
+        assertEquals(1, formatting.getNumConditionalFormattings());
+        assertEquals(1, formatting.getConditionalFormattingAt(idx).getNumberOfRules());
+
+        // this is confusing: the rule is not connected to the sheet, changes are not applied
+        // so we need to use setRule() explicitly!
+        FontFormatting fontFmt = formattingRule.createFontFormatting();
+        assertNotNull(formattingRule.getFontFormatting());
+        assertEquals(1, formatting.getConditionalFormattingAt(idx).getNumberOfRules());
+        formatting.getConditionalFormattingAt(idx).setRule(0, formattingRule);
+        assertNotNull(formatting.getConditionalFormattingAt(idx).getRule(0).getFontFormatting());
+
+        fontFmt.setFontStyle(true, false);
+
+        assertEquals(-1, fontFmt.getFontColorIndex());
+
+        //fontFmt.setFontColorIndex((short)11);
+        final ExtendedColor extendedColor = new XSSFColor(PEAK_ORANGE);
+        fontFmt.setFontColor(extendedColor);
+
+        PatternFormatting patternFmt = formattingRule.createPatternFormatting();
+        assertNotNull(patternFmt);
+        patternFmt.setFillBackgroundColor(extendedColor);
+
+        assertEquals(1, formatting.getConditionalFormattingAt(0).getNumberOfRules());
+        assertNotNull(formatting.getConditionalFormattingAt(0).getRule(0).getFontFormatting());
+        assertNotNull(formatting.getConditionalFormattingAt(0).getRule(0).getFontFormatting().getFontColor());
+        assertNotNull(formatting.getConditionalFormattingAt(0).getRule(0).getPatternFormatting().getFillBackgroundColorColor());
+
+        checkFontFormattingColorWriteOutAndReadBack(wb, extendedColor);
+    }
+
