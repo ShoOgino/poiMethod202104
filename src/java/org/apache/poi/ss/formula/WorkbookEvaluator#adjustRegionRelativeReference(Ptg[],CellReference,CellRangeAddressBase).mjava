@@ -1,5 +1,10 @@
     /**
      * Adjust formula relative references by the offset between the start of the given region and the given target cell.
+     * That is, treat the region top-left cell as "A1" for the purposes of evaluating relative reference components (row and/or column),
+     * and further move references by the position of the target within the region.
+     * <p><pre>formula ref + range top-left + current cell range offset </pre></p>
+     * which simplifies to
+     * <p><pre>formula ref + current cell ref</pre></p>
      * @param ptgs
      * @param target cell within the region to use.
      * @param region containing the cell
@@ -12,6 +17,36 @@
             throw new IllegalArgumentException(target + " is not within " + region);
         }
         
-        return adjustRegionRelativeReference(ptgs, target.getRow() - region.getFirstRow(), target.getCol() - region.getFirstColumn());
+        //return adjustRegionRelativeReference(ptgs, target.getRow() - region.getFirstRow(), target.getCol() - region.getFirstColumn());
+        
+        int deltaRow = target.getRow();
+        int deltaColumn = target.getCol();
+        
+        boolean shifted = false;
+        for (Ptg ptg : ptgs) {
+            // base class for cell reference "things"
+            if (ptg instanceof RefPtgBase) {
+                RefPtgBase ref = (RefPtgBase) ptg;
+                // re-calculate cell references
+                final SpreadsheetVersion version = _workbook.getSpreadsheetVersion();
+                if (ref.isRowRelative()) {
+                    final int rowIndex = ref.getRow() + deltaRow;
+                    if (rowIndex > version.getMaxRows()) {
+                        throw new IndexOutOfBoundsException(version.name() + " files can only have " + version.getMaxRows() + " rows, but row " + rowIndex + " was requested.");
+                    }
+                    ref.setRow(rowIndex);
+                    shifted = true;
+                }
+                if (ref.isColRelative()) {
+                    final int colIndex = ref.getColumn() + deltaColumn;
+                    if (colIndex > version.getMaxColumns()) {
+                        throw new IndexOutOfBoundsException(version.name() + " files can only have " + version.getMaxColumns() + " columns, but column " + colIndex + " was requested.");
+                    }
+                    ref.setColumn(colIndex);
+                    shifted = true;
+                }
+            }
+        }
+        return shifted;
     }
 
