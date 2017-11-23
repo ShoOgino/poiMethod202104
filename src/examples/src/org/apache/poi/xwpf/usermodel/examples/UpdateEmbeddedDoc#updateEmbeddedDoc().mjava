@@ -24,30 +24,23 @@
                 // to the create method of the WorkbookFactory class. Update
                 // the resulting Workbook and then stream that out again
                 // using an OutputStream obtained from the same PackagePart.
-                InputStream is = pPart.getInputStream();
-                Workbook workbook = null;
-                OutputStream os = null;
-                try {
-                    workbook = WorkbookFactory.create(is);
+                try (InputStream is = pPart.getInputStream();
+                     Workbook workbook = WorkbookFactory.create(is);
+                     OutputStream os = pPart.getOutputStream()) {
                     Sheet sheet = workbook.getSheetAt(SHEET_NUM);
                     Row row = sheet.getRow(ROW_NUM);
                     Cell cell = row.getCell(CELL_NUM);
                     cell.setCellValue(NEW_VALUE);
-                    os = pPart.getOutputStream();
                     workbook.write(os);
-                } finally {
-                    IOUtils.closeQuietly(os);
-                    IOUtils.closeQuietly(workbook);
-                    IOUtils.closeQuietly(is);
                 }
             }
         }
 
         if (!embeddedDocs.isEmpty()) {
             // Finally, write the newly modified Word document out to file.
-            FileOutputStream fos = new FileOutputStream(this.docFile);
-            this.doc.write(fos);
-            fos.close();
+            try (FileOutputStream fos = new FileOutputStream(this.docFile)) {
+                this.doc.write(fos);
+            }
         }
     }
 

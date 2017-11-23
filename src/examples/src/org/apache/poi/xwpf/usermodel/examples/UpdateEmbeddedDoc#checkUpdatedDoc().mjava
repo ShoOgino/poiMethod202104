@@ -27,19 +27,14 @@
         for (PackagePart pPart : this.doc.getAllEmbedds()) {
             String ext = pPart.getPartName().getExtension();
             if (BINARY_EXTENSION.equals(ext) || OPENXML_EXTENSION.equals(ext)) {
-                InputStream is = pPart.getInputStream();
-                Workbook workbook = null;
-                try {
-                    workbook = WorkbookFactory.create(is);
+                try (InputStream is = pPart.getInputStream();
+                     Workbook workbook = WorkbookFactory.create(is)) {
                     Sheet sheet = workbook.getSheetAt(SHEET_NUM);
                     Row row = sheet.getRow(ROW_NUM);
                     Cell cell = row.getCell(CELL_NUM);
                     if(cell.getNumericCellValue() != NEW_VALUE) {
                         throw new IllegalStateException("Failed to validate document content.");
                     }
-                } finally {
-                    IOUtils.closeQuietly(workbook);
-                    IOUtils.closeQuietly(is);
                 }
             }
         }
