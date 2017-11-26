@@ -7,6 +7,7 @@
     public XSLFSlide createSlide(XSLFSlideLayout layout) {
         int slideNumber = 256, cnt = 1;
         CTSlideIdList slideList;
+        XSLFRelation relationType = XSLFRelation.SLIDE;
         if (!_presentation.isSetSldIdLst()) {
             slideList = _presentation.addNewSldIdLst();
         } else {
@@ -16,35 +17,11 @@
                 cnt++;
             }
 
-            // Bug 55791: We also need to check that the resulting file name is not already taken
-            // this can happen when removing/adding slides
-            while(true) {
-                String slideName = XSLFRelation.SLIDE.getFileName(cnt);
-                boolean found = false;
-                for (POIXMLDocumentPart relation : getRelations()) {
-                    if (relation.getPackagePart() != null &&
-                            slideName.equals(relation.getPackagePart().getPartName().getName())) {
-                        // name is taken => try next one
-                        found = true;
-                        break;
-                    }
-                }
-
-                if(!found &&
-                        getPackage().getPartsByName(Pattern.compile(Pattern.quote(slideName))).size() > 0) {
-                    // name is taken => try next one
-                    found = true;
-                }
-
-                if (!found) {
-                    break;
-                }
-                cnt++;
-            }
+            cnt = findNextAvailableFileNameIndex(relationType, cnt);
         }
 
-        RelationPart rp = createRelationship(
-                XSLFRelation.SLIDE, XSLFFactory.getInstance(), cnt, false);
+        RelationPart rp = createRelationship
+                (relationType, XSLFFactory.getInstance(), cnt, false);
         XSLFSlide slide = rp.getDocumentPart();
 
         CTSlideIdListEntry slideId = slideList.addNewSldId();

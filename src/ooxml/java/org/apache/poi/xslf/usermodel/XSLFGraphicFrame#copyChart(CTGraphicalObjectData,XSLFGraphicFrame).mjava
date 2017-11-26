@@ -1,0 +1,25 @@
+    private void copyChart(CTGraphicalObjectData objData, XSLFGraphicFrame srcShape) {
+        XSLFSlide slide = (XSLFSlide) getSheet();
+        XSLFSheet src = srcShape.getSheet();
+        String xpath = "declare namespace c='http://schemas.openxmlformats.org/drawingml/2006/chart' c:chart";
+        XmlObject[] obj = objData.selectPath(xpath);
+        if (obj != null && obj.length == 1) {
+            XmlCursor c = obj[0].newCursor();
+            try {
+                // duplicate chart with embedded workbook
+                QName idQualifiedName = new QName("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+                String id = c.getAttributeText(idQualifiedName);
+                XSLFChart srcChart = (XSLFChart) src.getRelationById(id);
+                XSLFChart chartCopy = slide.getSlideShow().createChart(slide);
+                chartCopy.importContent(srcChart);
+                chartCopy.saveWorkbook(srcChart.getWorkbook());
+                c.setAttributeText(idQualifiedName, slide.getRelationId(chartCopy));
+            } catch (InvalidFormatException e) {
+                throw new POIXMLException(e);
+            } catch (IOException e) {
+                throw new POIXMLException(e);
+            }
+            c.dispose();
+        }
+    }
+

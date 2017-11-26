@@ -7,10 +7,16 @@
 
             Map<String, XSLFSlideMaster> masterMap = new HashMap<>();
             Map<String, XSLFSlide> shIdMap = new HashMap<>();
+            Map<String, XSLFChart> chartMap = new HashMap<>();
             for (RelationPart rp : getRelationParts()) {
                 POIXMLDocumentPart p = rp.getDocumentPart();
                 if (p instanceof XSLFSlide) {
                     shIdMap.put(rp.getRelationship().getId(), (XSLFSlide) p);
+                    for (POIXMLDocumentPart c : p.getRelations()) {
+                        if (c instanceof XSLFChart) {
+                            chartMap.put(c.getPackagePart().getPartName().getName(), (XSLFChart) c);
+                        }
+                    }
                 } else if (p instanceof XSLFSlideMaster) {
                     masterMap.put(getRelationId(p), (XSLFSlideMaster) p);
                 } else if (p instanceof XSLFTableStyles){
@@ -20,6 +26,11 @@
                 } else if (p instanceof XSLFCommentAuthors) {
                     _commentAuthors = (XSLFCommentAuthors)p;
                 }
+            }
+
+            _charts = new ArrayList<>(chartMap.size());
+            for(XSLFChart chart : chartMap.values()) {
+                _charts.add(chart);
             }
 
             _masters = new ArrayList<>(masterMap.size());
