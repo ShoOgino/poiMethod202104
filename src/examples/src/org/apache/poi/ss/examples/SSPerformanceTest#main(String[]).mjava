@@ -1,24 +1,32 @@
     public static void main(String[] args) throws IOException {
-        if (args.length != 4) usage("need four command arguments");
+        if (args.length < 4) {
+            usage("need at least four command arguments");
+        }
 
         String type = args[0];
-        long timeStarted = System.currentTimeMillis();
-        Workbook workBook = createWorkbook(type);
-        boolean isHType = workBook instanceof HSSFWorkbook;
-
         int rows = parseInt(args[1], "Failed to parse rows value as integer");
         int cols = parseInt(args[2], "Failed to parse cols value as integer");
         boolean saveFile = parseInt(args[3], "Failed to parse saveFile value as integer") != 0;
 
-        addContent(workBook, isHType, rows, cols);
-
-        if (saveFile) {
-            String fileName = type + "_" + rows + "_" + cols + "." + getFileSuffix(args[0]);
-            saveFile(workBook, fileName);
+        boolean warmup = false;
+        for(int arg = 4; arg < args.length;arg++) {
+            if(args[arg].equals("--unsynchronized-xmlbeans")) {
+                POIXMLTypeLoader.DEFAULT_XML_OPTIONS.setUnsynchronized();
+            }
+            if(args[arg].equals("--with-warmup-run")) {
+                warmup = true;
+            }
         }
+
+        if(warmup) {
+            System.out.println("Performing a warmup run first");
+            runWithArgs(type, rows, cols, saveFile);
+        }
+
+        long timeStarted = System.currentTimeMillis();
+        runWithArgs(type, rows, cols, saveFile);
         long timeFinished = System.currentTimeMillis();
-        System.out.println("Elapsed " + (timeFinished-timeStarted)/1000 + " seconds");
-        
-        workBook.close();
+
+        System.out.printf("Elapsed %.2f seconds for arguments %s\n", ((double)timeFinished - timeStarted) / 1000, Arrays.toString(args));
     }
 
