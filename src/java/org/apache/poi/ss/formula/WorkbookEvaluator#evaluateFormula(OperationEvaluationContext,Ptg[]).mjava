@@ -125,12 +125,38 @@
                 ValueEval[] ops = new ValueEval[numops];
 
                 // storing the ops in reverse order since they are popping
+                boolean areaArg = false; // whether one of the operands is an area
                 for (int j = numops - 1; j >= 0; j--) {
                     ValueEval p = stack.pop();
                     ops[j] = p;
+                    if(p instanceof AreaEval){
+                        areaArg = true;
+                    }
                 }
+
+                boolean arrayMode = false;
+                if(areaArg) for (int ii = i; ii < iSize; ii++) {
+                    if(ptgs[ii] instanceof FuncVarPtg){
+                        FuncVarPtg f = (FuncVarPtg)ptgs[ii];
+                        try {
+                            Function func = FunctionEval.getBasicFunction(f.getFunctionIndex());
+                            if (func != null && func instanceof ArrayMode) {
+                                arrayMode = true;
+                            }
+                        } catch (NotImplementedException ne){
+                            //FunctionEval.getBasicFunction can throw NotImplementedException
+                            // if the fucntion is not yet supported.
+                        }
+                        break;
+                    }
+                }
+                ec.setArrayMode(arrayMode);
+
 //                logDebug("invoke " + operation + " (nAgs=" + numops + ")");
                 opResult = OperationEvaluatorFactory.evaluate(optg, ops, ec);
+
+                ec.setArrayMode(false);
+
             } else {
                 opResult = getEvalForPtg(ptg, ec);
             }
