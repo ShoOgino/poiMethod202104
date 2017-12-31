@@ -1,0 +1,28 @@
+    /**
+     * Get an unused part index based on the namePattern, which doesn't exist yet
+     * and has the lowest positive index
+     *
+     * @param nameTemplate
+     *      The template for new part names containing a {@code '#'} for the index,
+     *      e.g. "/ppt/slides/slide#.xml"
+     * @return the next available part name index
+     * @throws InvalidFormatException if the nameTemplate is null or doesn't contain
+     *      the index char (#) or results in an invalid part name 
+     */
+    public int getUnusedPartIndex(final String nameTemplate) throws InvalidFormatException {
+        if (nameTemplate == null || !nameTemplate.contains("#")) {
+            throw new InvalidFormatException("name template must not be null and contain an index char (#)");
+        }
+
+        final Pattern pattern = Pattern.compile(nameTemplate.replace("#", "([0-9]+)"));
+        
+        final ToIntFunction<String> indexFromName = name -> {
+            Matcher m = pattern.matcher(name);
+            return m.matches() ? Integer.parseInt(m.group(1)) : 0;
+        };
+        
+        return packagePartLookup.keySet().stream()
+            .mapToInt(indexFromName)
+            .collect(BitSet::new, BitSet::set, BitSet::or).nextClearBit(1);
+    }
+
