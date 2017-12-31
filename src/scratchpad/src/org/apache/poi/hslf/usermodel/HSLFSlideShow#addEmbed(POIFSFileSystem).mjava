@@ -5,7 +5,7 @@
 	 */
 	public int addEmbed(POIFSFileSystem poiData) {
         DirectoryNode root = poiData.getRoot();
-        
+
         // prepare embedded data
         if (new ClassID().equals(root.getStorageClsid())) {
         	// need to set class id
@@ -18,12 +18,12 @@
 	    		}
 	    	}
 	    	if (classID == null) {
-	    		throw new IllegalArgumentException("Unsupported embedded document");    		
+	    		throw new IllegalArgumentException("Unsupported embedded document");
 	    	}
-	    	
+
 	    	root.setStorageClsid(classID);
         }
-        
+
 		ExEmbed exEmbed = new ExEmbed();
         // remove unneccessary infos, so we don't need to specify the type
         // of the ole object multiple times
@@ -44,26 +44,18 @@
 
         ExOleObjStg exOleObjStg = new ExOleObjStg();
         try {
-	        final String OLESTREAM_NAME = "\u0001Ole";
-	        if (!root.hasEntry(OLESTREAM_NAME)) {
-	            // the following data was taken from an example libre office document
-	            // beside this "\u0001Ole" record there were several other records, e.g. CompObj,
-	            // OlePresXXX, but it seems, that they aren't neccessary
-	            byte oleBytes[] = { 1, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-	            poiData.createDocument(new ByteArrayInputStream(oleBytes), OLESTREAM_NAME);
-	        }        
-
+            Ole10Native.createOleMarkerEntry(poiData);
 	        ByteArrayOutputStream bos = new ByteArrayOutputStream();
 	        poiData.writeFilesystem(bos);
 	        exOleObjStg.setData(bos.toByteArray());
         } catch (IOException e) {
         	throw new HSLFException(e);
         }
-        
+
         int psrId = addPersistentObject(exOleObjStg);
         exOleObjStg.setPersistId(psrId);
         eeAtom.setObjStgDataRef(psrId);
-        
+
 		int objectId = addToObjListAtom(exEmbed);
 		eeAtom.setObjID(objectId);
 		return objectId;
