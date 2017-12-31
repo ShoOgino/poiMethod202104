@@ -1,0 +1,30 @@
+        public void close() throws IOException {
+            objectPart.clear();
+            try (final OutputStream os = objectPart.getOutputStream()) {
+                final ByteArrayInputStream bis = new ByteArrayInputStream(this.buf, 0, size());
+                final FileMagic fm = FileMagic.valueOf(this.buf);
+
+                if (fm == FileMagic.OLE2) {
+                    try (final POIFSFileSystem poifs = new POIFSFileSystem(bis)) {
+                        poifs.getRoot().setStorageClsid(metaData.getClassID());
+                        poifs.writeFilesystem(os);
+                    }
+                } else if (metaData.getOleEntry() == null) {
+                    // OLE Name hasn't been specified, pass the input through
+                    os.write(this.buf, 0, size());
+                } else {
+                    try (final POIFSFileSystem poifs = new POIFSFileSystem()) {
+                        final ClassID clsId = metaData.getClassID();
+                        if (clsId != null) {
+                            poifs.getRoot().setStorageClsid(clsId);
+                        }
+                        poifs.createDocument(bis, metaData.getOleEntry());
+
+                        Ole10Native.createOleMarkerEntry(poifs);
+
+                        poifs.writeFilesystem(os);
+                    }
+                }
+            }
+        }
+

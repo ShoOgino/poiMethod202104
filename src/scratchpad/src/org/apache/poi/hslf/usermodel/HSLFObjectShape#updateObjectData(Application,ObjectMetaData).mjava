@@ -1,0 +1,40 @@
+    public OutputStream updateObjectData(final Application application, final ObjectMetaData metaData) throws IOException {
+        final ObjectMetaData md = (application != null) ? application.getMetaData() : metaData;
+        if (md == null) {
+            throw new RuntimeException("either application or metaData needs to be set");
+        }
+
+        return new ByteArrayOutputStream(100000) {
+            public void close() throws IOException {
+                final FileMagic fm = FileMagic.valueOf(this.buf);
+                final ByteArrayInputStream bis = new ByteArrayInputStream(this.buf, 0, this.count);
+                final HSLFSlideShow ppt = getSheet().getSlideShow();
+
+                try (POIFSFileSystem poifs = (fm == FileMagic.OLE2) ? new POIFSFileSystem(bis) : new POIFSFileSystem()) {
+                    if (fm != FileMagic.OLE2) {
+                        poifs.createDocument(bis, md.getOleEntry());
+                    }
+
+                    Ole10Native.createOleMarkerEntry(poifs);
+
+                    poifs.getRoot().setStorageClsid(md.getClassID());
+
+
+                    int oid = getObjectID();
+                    if (oid == 0) {
+                        // assign new embedding
+                        oid = ppt.addEmbed(poifs);
+                        setObjectID(oid);
+                    } else {
+                        ByteArrayOutputStream bos = new ByteArrayOutputStream(this.size()+1000);
+                        poifs.writeFilesystem(bos);
+                        getObjectData().setData(bos.toByteArray());
+                    }
+
+                    setProgId(md.getProgId());
+                    setFullName(md.getObjectName());
+                }
+            }
+        };
+    }
+

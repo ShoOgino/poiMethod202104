@@ -1,0 +1,36 @@
+    @Override
+    public OutputStream updateObjectData(final Application application, final ObjectMetaData metaData) throws IOException {
+        final ObjectMetaData md = (application != null) ? application.getMetaData() : metaData;
+        if (md == null || md.getClassID() == null) {
+            throw new IllegalArgumentException("either application and/or metaData needs to be set.");
+        }
+
+
+        final XSLFSheet sheet = getSheet();
+
+        final RelationPart rp;
+        if (_oleObject.isSetId()) {
+            // object data was already set
+            rp = sheet.getRelationPartById(_oleObject.getId());
+        } else {
+            // object data needs to be initialized
+            try {
+                final XSLFRelation descriptor = XSLFRelation.OLE_OBJECT;
+                final OPCPackage pack = sheet.getPackagePart().getPackage();
+                int nextIdx = pack.getUnusedPartIndex(descriptor.getDefaultFileName());
+                rp = sheet.createRelationship(descriptor, XSLFFactory.getInstance(), nextIdx, false);
+                _oleObject.setId(rp.getRelationship().getId());
+            } catch (InvalidFormatException e) {
+                throw new IOException("Unable to add new ole embedding", e);
+            }
+
+            // setting spid only works with a vml drawing object
+            // oleObj.setSpid("_x0000_s"+(1025+objectIdx));
+        }
+
+        _oleObject.setProgId(md.getProgId());
+        _oleObject.setName(md.getObjectName());
+
+        return new XSLFObjectOutputStream(rp.getDocumentPart().getPackagePart(),md);
+    }
+

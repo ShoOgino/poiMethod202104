@@ -1,0 +1,31 @@
+    private void validateOleData(final InputStream in) throws IOException, InvalidFormatException {
+        switch (app) {
+        case EXCEL_V8:
+        case EXCEL_V12:
+            try (Workbook wb = WorkbookFactory.create(in)) {
+                assertEquals("test me", wb.getSheetAt(0).getRow(0).getCell(0).getStringCellValue());
+            }
+            break;
+        case WORD_V8:
+            try (HWPFDocument doc = new HWPFDocument(in)) {
+                assertEquals("This is a simple file created with Word 97-SR2.\r", doc.getDocumentText());
+            }
+            break;
+        case WORD_V12:
+            try (XWPFDocument doc = new XWPFDocument(in)) {
+                assertEquals("Test me", doc.getParagraphs().get(0).getText());
+            }
+            break;
+        case PDF:
+            final byte[] expected = RawDataUtil.decompress(PDF_SAMPLE);
+            final byte[] actual = IOUtils.toByteArray(in);
+            assertArrayEquals(expected, actual);
+            break;
+        default:
+        case CUSTOM:
+            fail("not implemented");
+            break;
+        }
+        
+    }
+

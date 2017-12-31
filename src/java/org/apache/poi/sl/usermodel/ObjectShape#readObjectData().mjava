@@ -1,0 +1,56 @@
+    /**
+     * Reads the ole data as stream - the application specific stream is served
+     * The {@link #readObjectDataRaw() raw data} serves the outer/wrapped object, which is usually a
+     * {@link POIFSFileSystem} stream, whereas this method return the unwrapped entry 
+     *
+     * @return an {@link InputStream} which serves the object data
+     * 
+     * @throws IOException if the linked object data couldn't be found
+     */
+    default InputStream readObjectData() throws IOException {
+        final String progId = getProgId();
+        if (progId == null) {
+            throw new IllegalStateException(
+                "Ole object hasn't been initialized or provided in the source xml. " +
+                "use updateObjectData() first or check the corresponding slideXXX.xml");
+        }
+
+        final Application app = Application.lookup(progId);
+
+        final ByteArrayOutputStream bos = new ByteArrayOutputStream(50000);
+        try (final InputStream is = FileMagic.prepareToCheckMagic(readObjectDataRaw())) {
+            final FileMagic fm = FileMagic.valueOf(is);
+            if (fm == FileMagic.OLE2) {
+                try (final POIFSFileSystem poifs = new POIFSFileSystem(is)) {
+                    String[] names = {
+                        (app == null) ? null : app.getMetaData().getOleEntry(),
+                        // fallback to the usual suspects
+                        "Package",
+                        "Contents",
+                        "CONTENTS",
+                        "CONTENTSV30",
+                    };
+                    final DirectoryNode root = poifs.getRoot();
+                    String entryName = null;
+                    for (String n : names) {
+                        if (root.hasEntry(n)) {
+                            entryName = n;
+                            break;
+                        }
+                    }
+                    if (entryName == null) {
+                        poifs.writeFilesystem(bos);
+                    } else {
+                        try (final InputStream is2 = poifs.createDocumentInputStream(entryName)) {
+                            IOUtils.copy(is2, bos);
+                        }
+                    }
+                }
+            } else {
+                IOUtils.copy(is, bos);
+            }
+        }
+
+        return new ByteArrayInputStream(bos.toByteArray());
+    }
+
