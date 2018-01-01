@@ -1,0 +1,19 @@
+    @Test
+    public void test61652() throws IOException {
+        try (Workbook wb = XSSFTestDataSamples.openSampleWorkbook("61652.xlsx")) {
+            Sheet sheet = wb.getSheet("IRPPCalc");
+            Row row = sheet.getRow(11);
+            Cell cell = row.getCell(18);
+            WorkbookEvaluatorProvider fe = (WorkbookEvaluatorProvider) wb.getCreationHelper().createFormulaEvaluator();
+            ConditionalFormattingEvaluator condfmt = new ConditionalFormattingEvaluator(wb, fe);
+
+            assertEquals("Conditional formatting is not triggered for this cell",
+                    "[]", condfmt.getConditionalFormattingForCell(cell).toString());
+
+            // but we can read the conditional formatting itself
+            List<EvaluationConditionalFormatRule> rules = condfmt.getFormatRulesForSheet(sheet);
+            assertEquals(1, rules.size());
+            assertEquals("AND($A1>=EDATE($D$6,3),$B1>0)", rules.get(0).getFormula1());
+        }
+    }
+
