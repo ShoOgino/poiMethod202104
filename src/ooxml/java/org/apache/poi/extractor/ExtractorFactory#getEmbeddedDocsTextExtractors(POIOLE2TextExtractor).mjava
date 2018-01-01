@@ -1,0 +1,82 @@
+    /**
+     * Returns an array of text extractors, one for each of
+     *  the embedded documents in the file (if there are any).
+     * If there are no embedded documents, you'll get back an
+     *  empty array. Otherwise, you'll get one open
+     *  {@link POITextExtractor} for each embedded file.
+     */
+    public static POITextExtractor[] getEmbeddedDocsTextExtractors(POIOLE2TextExtractor ext) throws IOException, OpenXML4JException, XmlException {
+        // All the embedded directories we spotted
+        ArrayList<Entry> dirs = new ArrayList<>();
+        // For anything else not directly held in as a POIFS directory
+        ArrayList<InputStream> nonPOIFS = new ArrayList<>();
+
+        // Find all the embedded directories
+        DirectoryEntry root = ext.getRoot();
+        if (root == null) {
+            throw new IllegalStateException("The extractor didn't know which POIFS it came from!");
+        }
+
+        if (ext instanceof ExcelExtractor) {
+            // These are in MBD... under the root
+            Iterator<Entry> it = root.getEntries();
+            while (it.hasNext()) {
+                Entry entry = it.next();
+                if (entry.getName().startsWith("MBD")) {
+                    dirs.add(entry);
+                }
+            }
+        } else if (ext instanceof WordExtractor) {
+            // These are in ObjectPool -> _... under the root
+            try {
+                DirectoryEntry op = (DirectoryEntry) root.getEntry("ObjectPool");
+                Iterator<Entry> it = op.getEntries();
+                while (it.hasNext()) {
+                    Entry entry = it.next();
+                    if (entry.getName().startsWith("_")) {
+                        dirs.add(entry);
+                    }
+                }
+            } catch (FileNotFoundException e) {
+                logger.log(POILogger.INFO, "Ignoring FileNotFoundException while extracting Word document", e.getLocalizedMessage());
+                // ignored here
+            }
+        //} else if(ext instanceof PowerPointExtractor) {
+            // Tricky, not stored directly in poifs
+            // TODO
+        } else if (ext instanceof OutlookTextExtactor) {
+            // Stored in the Attachment blocks
+            MAPIMessage msg = ((OutlookTextExtactor)ext).getMAPIMessage();
+            for (AttachmentChunks attachment : msg.getAttachmentFiles()) {
+                if (attachment.getAttachData() != null) {
+                    byte[] data = attachment.getAttachData().getValue();
+                    nonPOIFS.add( new ByteArrayInputStream(data) );
+                } else if (attachment.getAttachmentDirectory() != null) {
+                    dirs.add(attachment.getAttachmentDirectory().getDirectory());
+                }
+            }
+        }
+
+        // Create the extractors
+        if (dirs.size() == 0 && nonPOIFS.size() == 0){
+            return new POITextExtractor[0];
+        }
+
+        ArrayList<POITextExtractor> textExtractors = new ArrayList<>();
+        for (Entry dir : dirs) {
+            textExtractors.add(createExtractor((DirectoryNode) dir));
+        }
+        for (InputStream nonPOIF : nonPOIFS) {
+            try {
+                 textExtractors.add(createExtractor(nonPOIF));
+            } catch (IllegalArgumentException e) {
+                // Ignore, just means it didn't contain
+                //  a format we support as yet
+                logger.log(POILogger.INFO, "Format not supported yet", e.getLocalizedMessage());
+            } catch (XmlException | OpenXML4JException e) {
+                throw new IOException(e.getMessage(), e);
+            }
+        }
+        return textExtractors.toArray(new POITextExtractor[textExtractors.size()]);
+    }
+
