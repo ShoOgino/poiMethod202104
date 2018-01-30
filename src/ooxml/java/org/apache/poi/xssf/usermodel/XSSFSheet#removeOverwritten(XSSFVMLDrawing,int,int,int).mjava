@@ -1,0 +1,47 @@
+    // remove all rows which will be overwritten
+     private void removeOverwritten(XSSFVMLDrawing vml, int startRow, int endRow, final int n){
+        for (Iterator<Row> it = rowIterator() ; it.hasNext() ; ) {
+            XSSFRow row = (XSSFRow)it.next();
+            int rownum = row.getRowNum();
+
+            // check if we should remove this row as it will be overwritten by the data later
+            if (shouldRemoveRow(startRow, endRow, n, rownum)) {
+                // remove row from worksheet.getSheetData row array
+                // Performance optimization: explicit boxing is slightly faster than auto-unboxing, though may use more memory
+                final Integer rownumI = Integer.valueOf(row.getRowNum()); // NOSONAR
+                int idx = _rows.headMap(rownumI).size();
+                worksheet.getSheetData().removeRow(idx);
+
+                // remove row from _rows
+                it.remove();
+
+                // FIXME: (performance optimization) this should be moved outside the for-loop so that comments only needs to be iterated over once.
+                // also remove any comments associated with this row
+                if(sheetComments != null){
+                    CTCommentList lst = sheetComments.getCTComments().getCommentList();
+                    for (CTComment comment : lst.getCommentArray()) {
+                        String strRef = comment.getRef();
+                        CellAddress ref = new CellAddress(strRef);
+
+                        // is this comment part of the current row?
+                        if(ref.getRow() == rownum) {
+                            sheetComments.removeComment(ref);
+                            vml.removeCommentShape(ref.getRow(), ref.getColumn());
+                        }
+                    }
+                }
+                // FIXME: (performance optimization) this should be moved outside the for-loop so that hyperlinks only needs to be iterated over once.
+                // also remove any hyperlinks associated with this row
+                if (hyperlinks != null) {
+                    for (XSSFHyperlink link : new ArrayList<>(hyperlinks)) {
+                        CellReference ref = new CellReference(link.getCellRef());
+                        if (ref.getRow() == rownum) {
+                            hyperlinks.remove(link);
+                        }
+                    }
+                }
+            }
+        }
+
+    }
+

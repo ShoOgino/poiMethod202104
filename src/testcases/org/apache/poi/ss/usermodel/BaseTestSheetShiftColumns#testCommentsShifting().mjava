@@ -1,0 +1,40 @@
+    @Test
+    public void testCommentsShifting() throws IOException {
+        Workbook inputWb = openWorkbook("56017.xlsx");
+
+        Sheet sheet = inputWb.getSheetAt(0);
+        Comment comment = sheet.getCellComment(new CellAddress(0, 0));
+        assertNotNull(comment);
+        assertEquals(AMDOCS, comment.getAuthor());
+        assertEquals(AMDOCS_TEST, comment.getString().getString());
+        
+        sheet.shiftColumns(0, 1, 1);
+
+        // comment in column 0 is gone
+        comment = sheet.getCellComment(new CellAddress(0, 0));
+        assertNull(comment);
+
+        // comment is column in column 1
+        comment = sheet.getCellComment(new CellAddress(0, 1));
+        assertNotNull(comment);
+        assertEquals(AMDOCS, comment.getAuthor());
+        assertEquals(AMDOCS_TEST, comment.getString().getString());
+
+        Workbook wbBack = getReadBackWorkbook(inputWb);
+        inputWb.close();
+        assertNotNull(wbBack);
+
+        Sheet sheetBack = wbBack.getSheetAt(0);
+
+        // comment in column 0 is gone
+        comment = sheetBack.getCellComment(new CellAddress(0, 0));
+        assertNull(comment);
+
+        // comment is now in column 1
+        comment = sheetBack.getCellComment(new CellAddress(0, 1));
+        assertNotNull(comment);
+        assertEquals(AMDOCS, comment.getAuthor());
+        assertEquals(AMDOCS_TEST, comment.getString().getString());
+        wbBack.close();
+    }
+
