@@ -23,11 +23,13 @@
 				// Bingo, data contains this property
 				TextProp prop = tp.clone();
 				int val = 0;
-				if (prop.getSize() == 2) {
+				if (prop instanceof HSLFTabStopPropCollection) {
+                    ((HSLFTabStopPropCollection)prop).parseProperty(data, dataOffset+bytesPassed);
+                } else if (prop.getSize() == 2) {
 					val = LittleEndian.getShort(data,dataOffset+bytesPassed);
 				} else if(prop.getSize() == 4) {
 					val = LittleEndian.getInt(data,dataOffset+bytesPassed);
-				} else if (prop.getSize() == 0 && !(prop instanceof TabStopPropCollection)) {
+				} else if (prop.getSize() == 0) {
                     //remember "special" bits.
                     maskSpecial |= tp.getMask();
                     continue;
@@ -35,9 +37,7 @@
 				
 				if (prop instanceof BitMaskTextProp) {
 				    ((BitMaskTextProp)prop).setValueWithMask(val, containsField);
-				} else if (prop instanceof TabStopPropCollection) {
-				    ((TabStopPropCollection)prop).parseProperty(data, dataOffset+bytesPassed);
-				} else {
+				} else if (!(prop instanceof HSLFTabStopPropCollection)) {
 				    prop.setValue(val);
 				}
 				bytesPassed += prop.getSize();

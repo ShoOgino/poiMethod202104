@@ -1,0 +1,45 @@
+    /**
+     * Find the master collection for the given txtype/level/name.
+     * This is the "workhorse" which returns the default style attributes.
+     * If {@code name = "*"} return the current collection, otherwise if the name is not found
+     * in the current selection of txtype/level/name, first try lower levels then try parent types,
+     * if it wasn't found there return {@code null}.
+     * 
+     * @param txtype the {@link TextHeaderAtom} type
+     * @param level the indent level of the paragraph, if the level is not defined for the found
+     *      collection, the highest existing level will be used
+     * @param name the property name, 
+     * @param isCharacter if {@code true} use character styles, otherwise use paragraph styles
+     */
+    @Override
+    public TextPropCollection getPropCollection(final int txtype, final int level, final String name, final boolean isCharacter) {
+        if (txtype < _txmaster.length) {
+            final TxMasterStyleAtom t = _txmaster[txtype];
+            final List<TextPropCollection> styles = isCharacter ? t.getCharacterStyles() : t.getParagraphStyles();
+            // TODO: what is the reaction for readOnly=false and styles.isEmpty()?
+            final int minLevel = Math.min(level, styles.size()-1);
+            if ("*".equals(name)) {
+                return styles.get(minLevel);
+            }
+            
+            for (int i=minLevel; i >= 0; i--) {
+                final TextPropCollection col = styles.get(i);
+                final TextProp tp = col.findByName(name);
+                if (tp != null) {
+                    return col;
+                }
+            }
+        }
+
+        switch (txtype) {
+            case TextHeaderAtom.CENTRE_BODY_TYPE:
+            case TextHeaderAtom.HALF_BODY_TYPE:
+            case TextHeaderAtom.QUARTER_BODY_TYPE:
+                return getPropCollection(TextHeaderAtom.BODY_TYPE, level, name, isCharacter);
+            case TextHeaderAtom.CENTER_TITLE_TYPE:
+                return getPropCollection(TextHeaderAtom.TITLE_TYPE, level, name, isCharacter);
+            default:
+                return null;
+        }
+    }
+

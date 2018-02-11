@@ -1,0 +1,39 @@
+    private <T extends TextProp> T getMasterPropVal(final TextPropCollection props, final String propName) {
+        boolean isChar = props.getTextPropType() == TextPropType.character;
+
+        // check if we can delegate to master for the property
+        if (!isChar) {
+            BitMaskTextProp maskProp = props.findByName(ParagraphFlagsTextProp.NAME);
+            boolean hardAttribute = (maskProp != null && maskProp.getValue() == 0);
+            if (hardAttribute) {
+                return null;
+            }
+        }
+
+        final String propNames[] = propName.split(",");
+        final HSLFSheet sheet = getSheet();
+        final int txtype = getRunType();
+        final HSLFMasterSheet master;
+        if (sheet instanceof HSLFMasterSheet) {
+            master = (HSLFMasterSheet)sheet;
+        } else {
+            master = sheet.getMasterSheet();
+            if (master == null) {
+                logger.log(POILogger.WARN, "MasterSheet is not available");
+                return null;
+            }
+        }
+
+        for (String pn : propNames) {
+            TextPropCollection masterProps = master.getPropCollection(txtype, getIndentLevel(), pn, isChar);
+            if (masterProps != null) {
+                T prop = masterProps.findByName(pn);
+                if (isValidProp(prop)) {
+                    return prop;
+                }
+            }
+        }
+
+        return null;
+    }
+
