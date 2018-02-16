@@ -1,0 +1,31 @@
+   /**
+     * Log a message. Lazily appends Object parameters together.
+     * If the last parameter is a {@link Throwable} it is logged specially.
+     *
+     * @param level One of DEBUG, INFO, WARN, ERROR, FATAL
+     * @param objs the objects to place in the message
+     */
+    public void log(int level, Object... objs) {
+        if (!check(level)) return;
+        StringBuilder sb = new StringBuilder(32);
+        Throwable lastEx = null;
+        for (int i=0; i<objs.length; i++) {
+            if (i == objs.length-1 && objs[i] instanceof Throwable) {
+                lastEx = (Throwable)objs[i];
+            } else {
+                sb.append(objs[i]);
+            }
+        }
+        
+        String msg = sb.toString();
+        msg = msg.replaceAll("[\r\n]+", " ");  // log forging escape
+        
+        // somehow this ambiguity works and doesn't lead to a loop,
+        // but it's confusing ...
+        if (lastEx == null) {
+            _log(level, msg);
+        } else {
+            _log(level, msg, lastEx);
+        }
+    }
+
