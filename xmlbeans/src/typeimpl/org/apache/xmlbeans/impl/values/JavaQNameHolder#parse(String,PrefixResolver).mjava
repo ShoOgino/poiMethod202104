@@ -1,0 +1,47 @@
+    private static QName parse(String v, PrefixResolver resolver)
+    {
+        String prefix, localname;
+        int start;
+        int end;
+        for (end = v.length(); end > 0; end -= 1)
+            if (!XMLChar.isSpace(v.charAt(end-1)))
+                break;
+        for (start = 0; start < end; start += 1)
+            if (!XMLChar.isSpace(v.charAt(start)))
+                break;
+
+        int firstcolon = v.indexOf(':', start);
+        if (firstcolon >= 0)
+        {
+            prefix = v.substring(start, firstcolon);
+            localname = v.substring(firstcolon + 1, end);
+        }
+        else
+        {
+            prefix = "";
+            localname = v.substring(start, end);
+        }
+
+        if ( prefix.length()>0 && !XMLChar.isValidNCName(prefix) )
+            throw new XmlValueOutOfRangeException(XmlErrorCodes.QNAME, new Object[] { "Prefix not a valid NCName in '" + v + "'" });
+
+        if ( !XMLChar.isValidNCName(localname) )
+            throw new XmlValueOutOfRangeException(XmlErrorCodes.QNAME, new Object[] { "Localname not a valid NCName in '" + v + "'" });
+
+        String uri =
+            resolver == null ? null : resolver.getNamespaceForPrefix(prefix);
+        
+        if (uri == null)
+        {
+            if (prefix.length() > 0)
+                throw new XmlValueOutOfRangeException(XmlErrorCodes.QNAME, new Object[] { "Can't resolve prefix '" + prefix + "'"});
+                        
+            uri = "";
+        }
+
+        if ( prefix!=null && prefix.length()>0 )
+            return new QName(uri, localname, prefix );
+        else
+            return new QName( uri, localname );
+    }
+

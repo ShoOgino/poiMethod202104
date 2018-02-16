@@ -1,0 +1,75 @@
+    /* package */ static String formatDuration(GDurationSpecification duration)
+    {
+        // Sign+P:      (-)?P
+        // Year:        (?:(\d+)Y)?
+        // Month:       (?:(\d+)M)?
+        // Day:         (?:(\d+)D)?
+        // Time:        (?:(T)
+        // Hours:          (?:(\d+)H)?
+        // Minutes:        (?:(\d+)M)?
+        // Seconds:        (?:(\d+(?:\.\d*)?|(?:.\d+)S)?
+
+        StringBuffer message = new StringBuffer(30);
+
+        if (duration.getSign() < 0)
+            message.append('-');
+
+        message.append('P');
+
+        if (duration.getYear() != 0)
+        {
+            message.append(duration.getYear());
+            message.append('Y');
+        }
+
+        if (duration.getMonth() != 0)
+        {
+            message.append(duration.getMonth());
+            message.append('M');
+        }
+
+        if (duration.getDay() != 0)
+        {
+            message.append(duration.getDay());
+            message.append('D');
+        }
+
+        if (duration.getHour() != 0 || duration.getMinute() != 0 || duration.getSecond() != 0 ||
+             (duration.getFraction().signum() != 0))
+        {
+            message.append('T');
+        }
+
+        if (duration.getHour() != 0)
+        {
+            message.append(duration.getHour());
+            message.append('H');
+        }
+
+        if (duration.getMinute() != 0)
+        {
+            message.append(duration.getMinute());
+            message.append('M');
+        }
+
+        if (duration.getFraction().signum() != 0)
+        {
+            BigDecimal s = duration.getFraction();
+            if (duration.getSecond() != 0)
+                s = s.add(BigDecimal.valueOf(duration.getSecond()));
+            // todo when upgrade to 1.5  message.append(s.stripTrailingZeros().toPlainString());
+            message.append(stripTrailingZeros(toPlainString(s)));
+            message.append('S');
+        }
+        else if (duration.getSecond() != 0)
+        {
+            message.append(duration.getSecond());
+            message.append('S');
+        }
+        else if (message.length() <= 2)
+            // Specify zero seconds if everything was 0
+            message.append("T0S");
+
+        return message.toString();
+    }
+

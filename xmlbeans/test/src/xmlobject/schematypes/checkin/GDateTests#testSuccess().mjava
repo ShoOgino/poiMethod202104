@@ -1,0 +1,75 @@
+    public void testSuccess() throws Exception
+    {
+        for (int i = 0; i < validDates.length; i++)
+        {
+            String str = validDates[i];
+            GDate gdate = null;
+            try
+            {
+                gdate = new GDate(str);
+            }
+            catch (IllegalArgumentException e)
+            {
+                Assert.fail("Problem with " + str + ": " + e.getMessage());
+            }
+
+            if ( str.indexOf("24:00:00") >= 0 && gdate.hasDay() )   // for 24h if hasDay must be normalized, else has the same representation
+            {
+                Assert.assertTrue(str + " " + gdate.toString(), gdate.hasDay() && gdate.toString().indexOf("00:00:00") >= 0);
+            }
+            else
+                // must round-trip to string
+                Assert.assertEquals(str, gdate.toString());
+
+            // must round-trip to GregorianCalendar if fractions-of-seconds <=3 digits
+            if (gdate.getFraction() == null || gdate.getFraction().scale() <= 3)
+                if (!gdate.toString().equals("--02-29")) // bug in gcal -> 03-01
+            {
+                GregorianCalendar gcal = gdate.getCalendar();
+                GDate gdate2 = new GDate(gcal);
+                Assert.assertEquals(gdate, gdate2);
+
+                // and if fractions-of-seconds is 3 digits, stringrep must round-trip
+                if (gdate.getFraction() == null || gdate.getFraction().scale() == 3 || gdate.getFraction().scale() == 0)
+                    Assert.assertEquals(gdate.toString(), gdate2.toString());
+            }
+
+            // must round-trip to Date if absolute time+timezone + fractions-of-seconds <= 3
+            if (gdate.hasTimeZone() && gdate.getYear() > -4000 && gdate.getYear() < 99999 && gdate.getBuiltinTypeCode() == SchemaType.BTC_DATE_TIME && gdate.getFraction().scale() <= 3)
+            {
+                Date date = gdate.getDate();
+                GDate gdate2 = new GDate(date);
+                Assert.assertEquals(gdate, gdate2);
+
+                // normalize to UTC fractions-of-seconds is 0 or 3 digits [not 000], stringrep must round-trip
+                if (gdate.getTimeZoneSign() == 0 && ((gdate.getFraction().scale() == 3 && gdate.getFraction().signum() != 0) || gdate.getFraction().scale() == 0))
+                {
+                    GDateBuilder gdb = new GDateBuilder(gdate2);
+                    gdb.normalizeToTimeZone(0, 0, 0);
+                    Assert.assertEquals(gdate.toString(), gdb.toString());
+                }
+
+                // verify that going through gcal gives us the same thing
+                GregorianCalendar gcal = gdate.getCalendar();
+                Assert.assertEquals(date, gcal.getTime());
+
+                // double-check XmlCalendar constructor
+                gcal = new XmlCalendar(date);
+                Assert.assertEquals("Doing " + gdate, date, gcal.getTime());
+            }
+            else if (gdate.hasDate() && (gdate.getFraction() == null || gdate.getFraction().scale() <= 3))
+            {
+                // must be able to get a date if time+timezone is unset (midnight, ltz are assumed)
+                Date date = gdate.getDate();
+                GDateBuilder gdate1 = new GDateBuilder(gdate);
+                if (!gdate1.hasTime())
+                    gdate1.setTime(0, 0, 0, null);
+                Assert.assertEquals(gdate1.getDate(), date);
+
+                // verify that going through gcal gives us the same thing
+                GregorianCalendar gcal = gdate.getCalendar();
+                Assert.assertEquals("Comparing " + gdate + " and " + gcal, date, gcal.getTime());
+            }
+        }
+    }
+

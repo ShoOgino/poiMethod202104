@@ -1,0 +1,120 @@
+    public static Dom document_importNode ( Dom d, Node n, boolean deep )
+    {
+        if (n == null)
+            return null;
+        
+        Dom i;
+
+        boolean copyChildren = false;
+        
+        switch ( n.getNodeType() )
+        {
+        case DOCUMENT :
+            throw new NotSupportedError( "Document nodes may not be imported" );
+
+        case DOCTYPE :
+            throw new NotSupportedError( "Document type nodes may not be imported" );
+
+        case ELEMENT :
+        {
+            String local = n.getLocalName();
+
+            if (local == null || local.length() == 0)
+                i = document_createElement( d, n.getNodeName() );
+            else
+            {
+                String prefix = n.getPrefix();
+                String name = prefix == null || prefix.length() == 0 ? local : prefix + ":" + local;
+                String uri = n.getNamespaceURI();
+
+                if (uri == null || uri.length() == 0)
+                    i = document_createElement( d, name );
+                else
+                    i = document_createElementNS( d, uri, name );
+            }
+
+            NamedNodeMap attrs = n.getAttributes();
+
+            for ( int a = 0 ; a < attrs.getLength() ; a++ )
+                attributes_setNamedItem( i, document_importNode( d, attrs.item( a ), true ) );
+
+            copyChildren = deep;
+            
+            break;
+        }
+
+        case ATTR :
+        {
+            String local = n.getLocalName();
+
+            if (local == null || local.length() == 0)
+                i = document_createAttribute( d, n.getNodeName() );
+            else
+            {
+                String prefix = n.getPrefix();
+                String name = prefix == null || prefix.length() == 0 ? local : prefix + ":" + local;
+                String uri = n.getNamespaceURI();
+
+                if (uri == null || uri.length() == 0)
+                    i = document_createAttribute( d, name );
+                else
+                    i = document_createAttributeNS( d, uri, name );
+            }
+
+            copyChildren = true;
+            
+            break;
+        }
+        
+        case DOCFRAG :
+        {
+            i = document_createDocumentFragment( d );
+            
+            copyChildren = deep;
+
+            break;
+        }
+        
+        case PROCINST :
+        {
+            i = document_createProcessingInstruction( d, n.getNodeName(), n.getNodeValue() );
+            break;
+        }
+        
+        case COMMENT :
+        {
+            i = document_createComment( d, n.getNodeValue() );
+            break;
+        }
+        
+        case TEXT :
+        {
+            i = document_createTextNode( d, n.getNodeValue() );
+            break;
+        }
+        
+        case CDATA :
+        {
+            i = document_createCDATASection( d, n.getNodeValue() );
+            break;
+        }
+            
+        case ENTITYREF :
+        case ENTITY :
+        case NOTATION :
+            throw new RuntimeException( "Not impl" );
+
+        default : throw new RuntimeException( "Unknown kind" );
+        }
+
+        if (copyChildren)
+        {
+            NodeList children = n.getChildNodes();
+            
+            for ( int c = 0 ; c < children.getLength() ; c++ )
+                node_insertBefore( i, document_importNode( d, children.item( c ), true ), null);
+        }
+
+        return i;
+    }
+

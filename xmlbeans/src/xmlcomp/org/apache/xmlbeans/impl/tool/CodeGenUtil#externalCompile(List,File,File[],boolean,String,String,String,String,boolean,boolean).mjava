@@ -1,0 +1,146 @@
+    /**
+     * Invokes javac on the generated source files in order to turn them
+     * into binary files in the output directory.  This will return a list of
+     * <code>GenFile</code>s for all of the classes produced or null if an
+     * error occurred.
+     */
+    static public boolean externalCompile(List srcFiles, File outdir, File[] cp, boolean debug, String javacPath, String genver, String memStart, String memMax,  boolean quiet, boolean verbose)
+    {
+        List args = new ArrayList();
+
+        File javac = findJavaTool(javacPath == null ? DEFAULT_COMPILER : javacPath);
+        assert (javac.exists()) : "compiler not found " + javac;
+        args.add(javac.getAbsolutePath());
+
+        if (outdir == null)
+        {
+            outdir = new File(".");
+        }
+        else
+        {
+            args.add("-d");
+            args.add(quoteAndEscapeFilename(outdir.getAbsolutePath()));
+        }
+
+        if (cp == null)
+        {
+            cp = systemClasspath();
+        }
+
+        if (cp.length > 0)
+        {
+            StringBuffer classPath = new StringBuffer();
+            // Add the output directory to the classpath.  We do this so that
+            // javac will be able to find classes that were compiled
+            // previously but are not in the list of sources this time.
+            classPath.append(outdir.getAbsolutePath());
+
+            // Add everything on our classpath.
+            for (int i = 0; i < cp.length; i++)
+            {
+                classPath.append(File.pathSeparator);
+                classPath.append(cp[i].getAbsolutePath());
+            }
+
+            args.add("-classpath");
+
+            // bizarre.  javac expects backslash escaping if we quote the classpath
+            args.add(quoteAndEscapeFilename(classPath.toString()));
+        }
+
+        if (genver == null)
+            genver = "1.4";
+
+        args.add("-source");
+        args.add(genver);
+
+        args.add("-target");
+        args.add(genver);
+
+        args.add(debug ? "-g" : "-g:none");
+
+        if (verbose)
+            args.add("-verbose");
+
+        addAllJavaFiles(srcFiles, args);
+
+        File clFile = null;
+        try
+        {
+            clFile = File.createTempFile("javac", "");
+            FileWriter fw = new FileWriter(clFile);
+            Iterator i = args.iterator();
+            for (i.next(); i.hasNext();)
+            {
+                String arg = (String)i.next();
+                fw.write(arg);
+                fw.write('\n');
+            }
+            fw.close();
+            List newargs = new ArrayList();
+            newargs.add(args.get(0));
+            
+            if (memStart != null && memStart.length() != 0)
+                newargs.add("-J-Xms" + memStart);
+            if (memMax != null && memMax.length() != 0)
+                newargs.add("-J-Xmx" + memMax);
+            
+            newargs.add("@" + clFile.getAbsolutePath());
+            args = newargs;
+        }
+        catch (Exception e)
+        {
+            System.err.println("Could not create command-line file for javac");
+        }
+
+        try
+        {
+            String[] strArgs = (String[]) args.toArray(new String[args.size()]);
+
+            if (verbose)
+            {
+                System.out.print("compile command:");
+                for (int i = 0; i < strArgs.length; i++)
+                    System.out.print(" " + strArgs[i]);
+                System.out.println();
+            }
+
+            final Process proc = Runtime.getRuntime().exec(strArgs);
+
+            StringBuffer errorBuffer = new StringBuffer();
+            StringBuffer outputBuffer = new StringBuffer();
+
+            ThreadedReader out = new ThreadedReader(proc.getInputStream(), outputBuffer);
+            ThreadedReader err = new ThreadedReader(proc.getErrorStream(), errorBuffer);
+
+            proc.waitFor();
+
+            if (verbose || proc.exitValue() != 0)
+            {
+                if (outputBuffer.length() > 0) {
+                    System.out.println(outputBuffer.toString());
+                    System.out.flush();
+                }
+                if (errorBuffer.length() > 0) {
+                    System.err.println(errorBuffer.toString());
+                    System.err.flush();
+                }
+                
+                if (proc.exitValue() != 0)
+                    return false;
+            }
+        }
+        catch (Throwable e)
+        {
+            System.err.println(e.toString());
+            System.err.println(e.getCause());
+            e.printStackTrace(System.err);
+            return false;
+        }
+
+        if (clFile != null)
+            clFile.delete();
+
+        return true;
+    }
+

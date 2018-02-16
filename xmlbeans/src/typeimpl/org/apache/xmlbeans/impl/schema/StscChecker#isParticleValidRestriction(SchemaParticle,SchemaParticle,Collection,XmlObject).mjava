@@ -1,0 +1,127 @@
+    /**
+     * This function takes in two schema particle types, a baseModel, and a derived model and returns true if the
+     * derivedModel can be egitimately be used for restriction.  Errors are put into the errors collections.
+     * @param baseModel - The base schema particle
+     * @param derivedModel - The derived (restricted) schema particle
+     * @param errors - Invalid restriction errors are put into this collection
+     * @param context
+     * @return boolean, true if valid restruction, false if invalid restriction
+     * @
+     */
+    public static boolean isParticleValidRestriction(SchemaParticle baseModel, SchemaParticle derivedModel, Collection errors, XmlObject context)  {
+        boolean restrictionValid = false;
+        // 1 They are the same particle.
+        if (baseModel.equals(derivedModel)) {
+            restrictionValid = true;
+        } else {
+            // Implement table defined in schema spec on restrictions at:
+            //   http://www.w3.org/TR/xmlschema-1/#cos-particle-restrict
+            switch (baseModel.getParticleType()) {
+                case SchemaParticle.ELEMENT:
+                    switch (derivedModel.getParticleType()) {
+                        case SchemaParticle.ELEMENT:
+                            restrictionValid = nameAndTypeOK((SchemaLocalElement) baseModel, (SchemaLocalElement) derivedModel, errors, context);
+                            break;
+                        case SchemaParticle.WILDCARD:
+                        case SchemaParticle.ALL:
+                        case SchemaParticle.CHOICE:
+                        case SchemaParticle.SEQUENCE:
+                            errors.add(XmlError.forObject(XmlErrorCodes.PARTICLE_RESTRICTION$INVALID_RESTRICTION,
+                                new Object[] { printParticle(derivedModel), printParticle(baseModel) }, context));
+                            restrictionValid = false;
+                            break;
+                        default:
+                            assert false : XBeanDebug.logStackTrace("Unknown schema type for Derived Type");
+                    }
+                    break;
+                case SchemaParticle.WILDCARD:
+                    switch (derivedModel.getParticleType()) {
+                        case SchemaParticle.ELEMENT:
+                            restrictionValid = nsCompat(baseModel, (SchemaLocalElement) derivedModel, errors, context);
+                            break;
+                        case SchemaParticle.WILDCARD:
+                            restrictionValid = nsSubset(baseModel, derivedModel, errors, context);
+                            break;
+                        case SchemaParticle.ALL:
+                            restrictionValid = nsRecurseCheckCardinality(baseModel, derivedModel, errors, context);
+                            break;
+                        case SchemaParticle.CHOICE:
+                            restrictionValid = nsRecurseCheckCardinality(baseModel, derivedModel, errors, context);
+                            break;
+                        case SchemaParticle.SEQUENCE:
+                            restrictionValid = nsRecurseCheckCardinality(baseModel, derivedModel, errors, context);
+                            break;
+                        default:
+                            assert false : XBeanDebug.logStackTrace("Unknown schema type for Derived Type");
+                    }
+                    break;
+                case SchemaParticle.ALL:
+                    switch (derivedModel.getParticleType()) {
+                        case SchemaParticle.ELEMENT:
+                            restrictionValid = recurseAsIfGroup(baseModel, derivedModel, errors, context);
+                            break;
+                        case SchemaParticle.WILDCARD:
+                        case SchemaParticle.CHOICE:
+                            errors.add(XmlError.forObject(XmlErrorCodes.PARTICLE_RESTRICTION$INVALID_RESTRICTION,
+                                new Object[] { printParticle(derivedModel), printParticle(baseModel) }, context));
+                            restrictionValid = false;
+                            break;
+                        case SchemaParticle.ALL:
+                            restrictionValid = recurse(baseModel, derivedModel, errors, context);
+                            break;
+                        case SchemaParticle.SEQUENCE:
+                            restrictionValid = recurseUnordered(baseModel, derivedModel, errors, context);
+                            break;
+                        default:
+                            assert false : XBeanDebug.logStackTrace("Unknown schema type for Derived Type");
+                    }
+                    break;
+                case SchemaParticle.CHOICE:
+                    switch (derivedModel.getParticleType()) {
+                        case SchemaParticle.ELEMENT:
+                            restrictionValid = recurseAsIfGroup(baseModel, derivedModel, errors, context);
+                            break;
+                        case SchemaParticle.WILDCARD:
+                        case SchemaParticle.ALL:
+                            errors.add(XmlError.forObject(XmlErrorCodes.PARTICLE_RESTRICTION$INVALID_RESTRICTION,
+                                new Object[] { printParticle(derivedModel), printParticle(baseModel) }, context));
+                            restrictionValid = false;
+                            break;
+                        case SchemaParticle.CHOICE:
+                            restrictionValid = recurseLax(baseModel, derivedModel, errors, context);
+                            break;
+                        case SchemaParticle.SEQUENCE:
+                            restrictionValid = mapAndSum(baseModel, derivedModel, errors, context);
+                            break;
+                        default:
+                            assert false : XBeanDebug.logStackTrace("Unknown schema type for Derived Type");
+                    }
+                    break;
+                case SchemaParticle.SEQUENCE:
+                    switch (derivedModel.getParticleType()) {
+                        case SchemaParticle.ELEMENT:
+                            restrictionValid = recurseAsIfGroup(baseModel, derivedModel, errors, context);
+                            break;
+                        case SchemaParticle.WILDCARD:
+                        case SchemaParticle.ALL:
+                        case SchemaParticle.CHOICE:
+                            errors.add(XmlError.forObject(XmlErrorCodes.PARTICLE_RESTRICTION$INVALID_RESTRICTION,
+                                new Object[] { printParticle(derivedModel), printParticle(baseModel) }, context));
+                            restrictionValid = false;
+                            break;
+                        case SchemaParticle.SEQUENCE:
+                            restrictionValid = recurse(baseModel, derivedModel, errors, context);
+                            break;
+                        default:
+                            assert false : XBeanDebug.logStackTrace("Unknown schema type for Derived Type");
+                    }
+                    break;
+                default:
+                    assert false : XBeanDebug.logStackTrace("Unknown schema type for Base Type");
+
+            }
+        }
+
+        return restrictionValid;
+    }
+

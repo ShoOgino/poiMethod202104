@@ -1,0 +1,61 @@
+    public static String getPackageFromNamespace(String uri, boolean useJaxRpcRules)
+    {
+        // special case: no namespace -> package "noNamespace"
+        if (uri == null || uri.length() == 0)
+            return "noNamespace";
+
+        // apply draft JAXB rules
+        int len = uri.length();
+        int i = findSchemeColon(uri);
+        List result = null;
+
+        if (i == len-1)
+        {
+            // XMLBEANS-57: colon is at end so just use scheme as the package name
+            result = new ArrayList();
+            result.add(uri.substring(0, i));
+        }
+        else if (i >= 0 && uri.substring(0, i).equals("java"))
+        {
+            result =  Arrays.asList(uri.substring(i + 1).split("\\."));
+        }
+        else {
+            result = new ArrayList();
+            outer: for (i = i + 1; i < len; )
+            {
+                while (uri.charAt(i) == '/')
+                    if (++i >= len) break outer;
+                int start = i;
+                while (uri.charAt(i) != '/')
+                    if (++i >= len) break;
+                int end = i;
+                result.add(uri.substring(start, end));
+            }
+            if (result.size() > 1)
+                result.set(result.size() - 1, processFilename((String)result.get(result.size() - 1)));
+
+            if (result.size() > 0)
+            {
+                List splitdns = splitDNS((String)result.get(0));
+                result.remove(0);
+                result.addAll(0, splitdns);
+            }
+        }
+
+        StringBuffer buf = new StringBuffer();
+        for (Iterator it = result.iterator(); it.hasNext(); )
+        {
+            String part = nonJavaKeyword(lowerCamelCase((String)it.next(), useJaxRpcRules, true));
+            if (part.length() > 0)
+            {
+                buf.append(part);
+                buf.append('.');
+            }
+        }
+        if (buf.length() == 0)
+            return "noNamespace";
+        if (useJaxRpcRules)
+            return buf.substring(0, buf.length() - 1).toLowerCase();
+        return buf.substring(0, buf.length() - 1); // chop off extra dot
+    }
+

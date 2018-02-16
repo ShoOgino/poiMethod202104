@@ -1,0 +1,82 @@
+    public void compileSchemas() throws Exception {
+        List schemas = new ArrayList();
+        File base = new File(sourceDir);
+        Resource resource = new Resource();
+        resource.setDirectory(sourceDir);
+        resource.setTargetPath(baseSchemaLocation);
+        for (StringTokenizer st = new StringTokenizer(sourceSchemas, ","); st.hasMoreTokens();) {
+            String schemaName = st.nextToken();
+            schemas.add(new File(base, schemaName));
+            resource.addInclude(schemaName);
+        }
+        resources.add(resource);
+        if (buildSchemas) {
+            List configs = new ArrayList();
+
+            if (xmlConfigs != null) {
+                for (StringTokenizer st = new StringTokenizer(xmlConfigs, ","); st.hasMoreTokens();) {
+                    String configName = st.nextToken();
+                    configs.add(new File(configName));
+                }
+            }
+            List classPathList = new ArrayList();
+            List urls = new ArrayList();
+            if (classPath != null) {
+                for (StringTokenizer st = new StringTokenizer(classPath, ","); st.hasMoreTokens();) {
+                    String classpathElement = st.nextToken();
+                    File file = new File(classpathElement);
+                    classPathList.add(file);
+                    urls.add(file.toURL());
+                    System.out.println("Adding to classpath: " + file);
+                }
+            }
+            ClassLoader cl = new URLClassLoader((URL[]) urls.toArray(new URL[] {}));
+            EntityResolver entityResolver = null;
+            if (catalogLocation != null) {
+                CatalogManager catalogManager = CatalogManager.getStaticManager();
+                catalogManager.setCatalogFiles(catalogLocation);
+                entityResolver = new CatalogResolver();
+            }
+            URI sourceDirURI = new File(sourceDir).toURI();
+            entityResolver = new PassThroughResolver(cl, entityResolver, sourceDirURI, baseSchemaLocation);
+
+            SchemaCompiler.Parameters params = new SchemaCompiler.Parameters();
+            params.setBaseDir(null);
+            params.setXsdFiles((File[])schemas.toArray(new File[] {}));
+            params.setWsdlFiles(new File[] {});
+            params.setJavaFiles(new File[] {});
+            params.setConfigFiles((File[])configs.toArray(new File[] {}));
+            params.setClasspath((File[])classPathList.toArray(new File[] {}));
+            params.setOutputJar(null);
+            params.setName(null);
+            params.setSrcDir(new File(javaTargetDir));
+            params.setClassesDir(new File(classTargetDir));
+            params.setCompiler(null);
+            params.setMemoryInitialSize(null);
+            params.setMemoryMaximumSize(null);
+            params.setNojavac(true);
+            params.setQuiet(false);
+            params.setVerbose(true);
+            params.setDownload(false);
+            params.setNoUpa(false);
+            params.setNoPvr(false);
+            params.setDebug(true);
+            params.setErrorListener(new ArrayList());
+            params.setRepackage(null);
+            params.setExtensions(null);
+            params.setMdefNamespaces(null);
+            params.setEntityResolver(entityResolver);
+
+            boolean result = SchemaCompiler.compile(params);
+            if (!result) {
+                Collection errors = params.getErrorListener();
+                for (Iterator iterator = errors.iterator(); iterator.hasNext();) {
+                    Object o = (Object) iterator.next();
+                    System.out.println("xmlbeans error: " + o);
+                }
+                throw new Exception("Schema compilation failed");
+            }
+        }
+
+    }
+

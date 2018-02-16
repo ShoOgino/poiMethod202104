@@ -1,0 +1,48 @@
+    public List execQuery(Object node, Map variableBindings)
+    {
+        try
+        {
+            Node contextNode = (Node)node;
+            NodeInfo contextItem = 
+                config.buildDocument(new DOMSource(contextNode));
+                //config.unravel(new DOMSource(contextNode));
+            DynamicQueryContext dc = new DynamicQueryContext(config);
+            dc.setContextItem(contextItem);
+            dc.setParameter(contextVar, contextItem);
+            // Set the other variables
+            if (variableBindings != null)
+            {
+                for (Iterator it = variableBindings.entrySet().iterator();
+                    it.hasNext(); )
+                {
+                    Map.Entry entry = (Map.Entry)it.next();
+                    String key = (String)entry.getKey();
+                    Object value = entry.getValue();
+                    if (value instanceof XmlTokenSource)
+                    {
+                        Node paramObject = ((XmlTokenSource)value).getDomNode();
+                        dc.setParameter(key, paramObject);
+                    }
+                    else if (value instanceof String)
+                        dc.setParameter(key, value);
+                }
+            }
+
+            List saxonNodes = xquery.evaluate(dc);
+            for (ListIterator it = saxonNodes.listIterator(); it.hasNext(); )
+            {
+                Object o = it.next();
+                if(o instanceof NodeInfo)
+                {
+                    Node n = NodeOverNodeInfo.wrap((NodeInfo)o);
+                    it.set(n);
+                }
+            }
+            return saxonNodes;
+        }
+        catch (TransformerException e)
+        {
+            throw new RuntimeException("Error binding " + contextVar, e);
+        }
+    }
+

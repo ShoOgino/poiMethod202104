@@ -1,0 +1,36 @@
+    private static SchemaTypeImpl translateGlobalSimpleType(TopLevelSimpleType xsdType, String targetNamespace, boolean chameleon, boolean redefinition)
+    {
+        StscState state = StscState.get();
+
+        String localname = xsdType.getName();
+        if (localname == null)
+        {
+            state.error(XmlErrorCodes.MISSING_NAME, new Object[] { "global type" }, xsdType);
+            // recovery: ignore unnamed types.
+            return null;
+        }
+        if (!XMLChar.isValidNCName(localname))
+        {
+            state.error(XmlErrorCodes.INVALID_VALUE, new Object[] { localname, "name" }, xsdType.xgetName());
+            // recovery: let the name go through anyway.
+        }
+
+        QName name = QNameHelper.forLNS(localname, targetNamespace);
+
+        if (isReservedTypeName(name))
+        {
+            state.warning(XmlErrorCodes.RESERVED_TYPE_NAME, new Object[] { QNameHelper.pretty(name) }, xsdType);
+            return null;
+        }
+        // System.err.println("Recording type " + QNameHelper.pretty(name));
+
+        SchemaTypeImpl sType = new SchemaTypeImpl(state.getContainer(targetNamespace));
+        sType.setSimpleType(true);
+        sType.setParseContext(xsdType, targetNamespace, chameleon, null, null, redefinition);
+        sType.setFilename(findFilename(xsdType));
+        sType.setName(name);
+        sType.setAnnotation(SchemaAnnotationImpl.getAnnotation(state.getContainer(targetNamespace), xsdType));
+        sType.setUserData(getUserData(xsdType));
+        return sType;
+    }
+

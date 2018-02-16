@@ -1,0 +1,103 @@
+    public final XmlObject generatedSetterHelperImpl(XmlObject src, QName propName, int index,
+        short kindSetterHelper)
+    {
+
+        XmlObjectBase srcObj = underlying(src);
+
+        if (srcObj == null)
+        {
+            synchronized (monitor())
+            {
+                XmlObjectBase target = getTargetForSetter(propName, index, kindSetterHelper);
+                target.setNil();
+                return target;
+            }
+        }
+
+        if (srcObj.isImmutable())
+        {
+            synchronized (monitor())
+            {
+                XmlObjectBase target = getTargetForSetter(propName, index, kindSetterHelper);
+                target.setStringValue(srcObj.getStringValue());
+                return (XmlObject) target;
+            }
+        }
+
+
+        boolean noSyncThis = preCheck();
+        boolean noSyncObj  = srcObj.preCheck();
+
+        if (monitor() == srcObj.monitor())             // both are in the same locale
+        {
+            if (noSyncThis)                         // the locale is not sync
+            {
+                return (XmlObject)objSetterHelper(srcObj, propName, index, kindSetterHelper);
+            }
+            else                                    // the locale is sync
+            {
+                synchronized (monitor())
+                {
+                    return (XmlObject)objSetterHelper(srcObj, propName, index, kindSetterHelper);
+                }
+            }
+        }
+
+                                               // on different locale's
+        if (noSyncThis)
+        {
+            if (noSyncObj)                      // both unsync
+            {
+                return (XmlObject)objSetterHelper(srcObj, propName, index, kindSetterHelper);
+            }
+            else                                // only obj is sync
+            {
+                synchronized (srcObj.monitor())
+                {
+                    return (XmlObject)objSetterHelper(srcObj, propName, index, kindSetterHelper);
+                }
+            }
+        }
+        else
+        {
+            if (noSyncObj)                      // only this is sync
+            {
+                synchronized (monitor())
+                {
+                    return (XmlObject)objSetterHelper(srcObj, propName, index, kindSetterHelper);
+                }
+            }
+            else                                // both are sync can't avoid the global lock
+            {
+                boolean acquired = false;
+
+                try
+                {
+                    // about to grab two locks: don't deadlock ourselves
+                    GlobalLock.acquire();
+                    acquired = true;
+
+                    synchronized (monitor())
+                    {
+                        synchronized (srcObj.monitor())
+                        {
+                            GlobalLock.release();
+                            acquired = false;
+
+                            return (XmlObject)objSetterHelper(srcObj, propName, index, kindSetterHelper);
+                        }
+                    }
+                }
+                catch (InterruptedException e)
+                {
+                    throw new XmlRuntimeException(e);
+                }
+                finally
+                {
+                    if (acquired)
+                        GlobalLock.release();
+                }
+            }
+        }
+    }
+

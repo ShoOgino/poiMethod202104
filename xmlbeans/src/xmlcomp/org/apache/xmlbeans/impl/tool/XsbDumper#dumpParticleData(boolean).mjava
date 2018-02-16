@@ -1,0 +1,65 @@
+    void dumpParticleData(boolean global)
+    {
+        int particleType = readShort();
+        emit(particleTypeString(particleType) + ":");
+        indent();
+        int particleFlags = readShort();
+        emit("Flags: " + particleflagsString(particleFlags));
+
+        emit("MinOccurs: " + bigIntegerString(readBigInteger()));
+        emit("MaxOccurs: " + bigIntegerString(readBigInteger()));
+
+        emit("Transition: " + qnameSetString(readQNameSet()));
+
+        switch (particleType)
+        {
+            case SchemaParticle.WILDCARD:
+                emit("Wildcard set: " + qnameSetString(readQNameSet()));
+                emit("Wildcard process: " + wcprocessString(readShort()));
+                break;
+
+            case SchemaParticle.ELEMENT:
+                emit("Name: " + qnameString(readQName()));
+                emit("Type: " + readType());
+                emit("Default: " + readString());
+                if (atLeast(2, 16, 0))
+                    emit("Default value: " + readXmlValueObject());
+                emit("WsdlArrayType: " + SOAPArrayTypeString(readSOAPArrayType()));
+                dumpAnnotation();
+                if (global)
+                {
+                    if (atLeast(2, 17, 0))
+                        emit("Substitution group ref: " + readHandle());
+                    int substGroupCount = readShort();
+                    emit("Substitution group members (" + substGroupCount + ")");
+                    indent();
+                    for (int i = 0; i < substGroupCount; i++)
+                    {
+                        emit(qnameString(readQName()));
+                    }
+                    outdent();
+                }
+                int count = readShort();
+                emit("Identity constraints (" + count + "):");
+                indent();
+                for (int i = 0; i < count; i++)
+                {
+                    emit(readHandle());
+                }
+                outdent();
+                if (global)
+                    emit("Filename: " + readString());
+                break;
+
+            case SchemaParticle.ALL:
+            case SchemaParticle.SEQUENCE:
+            case SchemaParticle.CHOICE:
+                dumpParticleArray("Particle children");
+                break;
+
+            default:
+                error("Unrecognized schema particle type");
+        }
+        outdent();
+    }
+

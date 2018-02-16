@@ -1,0 +1,61 @@
+    private static SchemaIdentityConstraintImpl translateIdentityConstraint(Keybase parseIC,
+        String targetNamespace, boolean chameleon)
+    {
+        StscState state = StscState.get();
+
+        // first do some checking
+        String selector = parseIC.getSelector() == null ? null : parseIC.getSelector().getXpath();
+        if (!checkXPathSyntax(selector))
+        {
+            state.error(XmlErrorCodes.SELECTOR_XPATH, new Object[] { selector }, parseIC.getSelector().xgetXpath());
+            return null;
+        }
+
+        FieldDocument.Field[] fieldElts = parseIC.getFieldArray();
+        for (int j = 0; j < fieldElts.length; j++)
+        {
+            if (!checkXPathSyntax(fieldElts[j].getXpath()))
+            {
+                state.error(XmlErrorCodes.FIELDS_XPATH, new Object[] { fieldElts[j].getXpath() }, fieldElts[j].xgetXpath());
+                return null;
+            }
+        }
+
+        // then translate.
+        SchemaIdentityConstraintImpl ic = new SchemaIdentityConstraintImpl(state.getContainer(targetNamespace));
+        ic.setName(QNameHelper.forLNS(parseIC.getName(), targetNamespace));
+        ic.setSelector(parseIC.getSelector().getXpath());
+        ic.setParseContext(parseIC, targetNamespace, chameleon);
+        SchemaAnnotationImpl ann = SchemaAnnotationImpl.getAnnotation(state.getContainer(targetNamespace), parseIC);
+        ic.setAnnotation(ann);
+        ic.setUserData(getUserData(parseIC));
+
+        // Set the ns map
+        XmlCursor c = parseIC.newCursor();
+        Map nsMap = new HashMap();
+
+        c.getAllNamespaces(nsMap);
+        nsMap.remove(""); // Remove the default mapping. This cannot be used by the xpath expressions.
+        ic.setNSMap(nsMap);
+        c.dispose();
+
+        String[] fields = new String[fieldElts.length];
+        for (int j = 0 ; j < fields.length ; j++)
+            fields[j] = fieldElts[j].getXpath();
+        ic.setFields(fields);
+
+        try {
+            ic.buildPaths();
+        }
+        catch (XPath.XPathCompileException e) {
+            state.error(XmlErrorCodes.INVALID_XPATH, new Object[] { e.getMessage() }, parseIC);
+            return null;
+        }
+
+        state.addIdConstraint(ic);
+        ic.setFilename(findFilename(parseIC));
+
+        return state.findIdConstraint(ic.getName(), targetNamespace, null);
+
+    }
+

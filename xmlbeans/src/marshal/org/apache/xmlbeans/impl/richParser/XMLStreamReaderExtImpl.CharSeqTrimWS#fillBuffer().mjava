@@ -1,0 +1,71 @@
+        private void fillBuffer()
+            throws XMLStreamException
+        {
+            _length = 0;
+
+            if (_xmlSteam.getEventType() == XMLStreamReader.START_DOCUMENT)
+                _xmlSteam.next();
+            if (_xmlSteam.isStartElement())
+                _xmlSteam.next();
+
+            int depth = 0;
+            String error = null;
+            int eventType = _xmlSteam.getEventType();
+
+            loop:
+            while(true)
+            {
+                switch(eventType)
+                {
+                case XMLStreamReader.CDATA:
+                case XMLStreamReader.CHARACTERS:
+                case XMLStreamReader.SPACE:
+                    _location.set(_xmlSteam.getLocation());
+
+                    if (depth==0)
+                        addTextToBuffer();
+
+                    break;
+
+                case XMLStreamReader.ATTRIBUTE:
+                case XMLStreamReader.COMMENT:
+                case XMLStreamReader.DTD:
+                case XMLStreamReader.ENTITY_DECLARATION:
+                case XMLStreamReader.NAMESPACE:
+                case XMLStreamReader.NOTATION_DECLARATION:
+                case XMLStreamReader.PROCESSING_INSTRUCTION:
+                case XMLStreamReader.START_DOCUMENT:
+                    // ignore
+                    break;
+
+                case XMLStreamReader.END_DOCUMENT:
+                    _location.set(_xmlSteam.getLocation());
+
+                    break loop;
+
+                case XMLStreamReader.END_ELEMENT:
+                    _location.set(_xmlSteam.getLocation());
+                    depth--;
+                    if (depth<0)
+                        break loop;
+                    break;
+
+                case XMLStreamReader.ENTITY_REFERENCE:
+                    _location.set(_xmlSteam.getLocation());
+
+                    addEntityToBuffer();
+                    break;
+
+                case XMLStreamReader.START_ELEMENT:
+                    depth++;
+                    error = "Unexpected element '" + _xmlSteam.getName() + "' in text content.";
+                    _location.set(_xmlSteam.getLocation());
+
+                    break;
+                }
+                eventType = _xmlSteam.next();
+            }
+            if (error!=null)
+                throw new XMLStreamException(error);
+        }
+

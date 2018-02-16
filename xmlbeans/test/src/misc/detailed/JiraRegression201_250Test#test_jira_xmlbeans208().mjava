@@ -1,0 +1,37 @@
+    /*
+    * [XMLBEANS-208]: validation of decimal with fractionDigits -- special case, additional zero digits
+    *
+    */
+    public void test_jira_xmlbeans208() throws Exception {
+
+        XmlOptions options = new XmlOptions();
+        List err = new ArrayList();
+        options.setErrorListener(err);
+
+        // decimal value invalid
+        FrogBreathDocument invalidDoc = FrogBreathDocument.Factory.parse("<dec:frog_breath xmlns:dec=\"http://misc/detailed/jira208\">1000.000001</dec:frog_breath>");
+        boolean valid = invalidDoc.validate(options);
+        if(!valid)
+        {
+            for (Iterator iterator = err.iterator(); iterator.hasNext();) {
+                System.out.println("Validation Error (invalid doc):" + iterator.next());
+            }
+        }
+        // expected to fail
+        assertFalse(valid);
+
+        // decimal value with trailing zeros tagged as invalid
+        FrogBreathDocument validDoc = FrogBreathDocument.Factory.parse("<dec:frog_breath xmlns:dec=\"http://misc/detailed/jira208\">1000.000000</dec:frog_breath>");
+
+        err.clear();
+        boolean valid2 = validDoc.validate(options);
+        if(!valid2)
+        {
+            for (Iterator iterator = err.iterator(); iterator.hasNext();) {
+                System.out.println("Validation Error (valid doc):" + iterator.next());
+            }
+        }
+
+        assertTrue(valid2);
+    }
+

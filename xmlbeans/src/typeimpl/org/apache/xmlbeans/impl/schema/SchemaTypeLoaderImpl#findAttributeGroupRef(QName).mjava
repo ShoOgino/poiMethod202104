@@ -1,0 +1,25 @@
+    public SchemaAttributeGroup.Ref findAttributeGroupRef(QName name)
+    {
+        Object cached = _attributeGroupCache.get(name);
+        if (cached == CACHED_NOT_FOUND)
+            return null;
+        SchemaAttributeGroup.Ref result = (SchemaAttributeGroup.Ref) cached;
+        if (result == null)
+        {
+            for (int i = 0; i < _searchPath.length; i++)
+                if (null != (result = _searchPath[i].findAttributeGroupRef(name)))
+                    break;
+            if (result == null)
+            {
+                SchemaTypeSystem ts = typeSystemForComponent("schema" + METADATA_PACKAGE_LOAD + "/attributegroup/", name);
+                if (ts != null)
+                {
+                    result = ts.findAttributeGroupRef(name);
+                    assert(result != null) : "Type system registered attribute group " + QNameHelper.pretty(name) + " but does not return it";
+                }
+            }
+            _attributeGroupCache.put(name, result == null ? CACHED_NOT_FOUND : result);
+        }
+        return result;
+    }
+

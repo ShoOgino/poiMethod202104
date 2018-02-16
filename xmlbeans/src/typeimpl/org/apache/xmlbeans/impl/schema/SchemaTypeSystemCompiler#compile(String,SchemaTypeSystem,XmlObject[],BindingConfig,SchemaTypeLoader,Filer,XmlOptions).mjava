@@ -1,0 +1,51 @@
+    /**
+     * Please do not invoke this method directly as the signature could change unexpectedly.
+     * Use one of
+     * {@link XmlBeans#loadXsd(XmlObject[])},
+     * {@link XmlBeans#compileXsd(XmlObject[], SchemaTypeLoader, XmlOptions)},
+     * or
+     * {@link XmlBeans#compileXmlBeans(String, SchemaTypeSystem, XmlObject[], BindingConfig, SchemaTypeLoader, Filer, XmlOptions)}
+     */
+    public static SchemaTypeSystemImpl compile(String name, SchemaTypeSystem existingSTS,
+        XmlObject[] input, BindingConfig config, SchemaTypeLoader linkTo, Filer filer, XmlOptions options)
+        throws XmlException
+    {
+        options = XmlOptions.maskNull(options);
+        ArrayList schemas = new ArrayList();
+
+        if (input != null)
+        {
+            for (int i = 0; i < input.length; i++)
+            {
+                if (input[i] instanceof Schema)
+                    schemas.add(input[i]);
+                else if (input[i] instanceof SchemaDocument && ((SchemaDocument)input[i]).getSchema() != null)
+                    schemas.add(((SchemaDocument)input[i]).getSchema());
+                else
+                    throw new XmlException("Thread " + Thread.currentThread().getName() +  ": The " + i + "th supplied input is not a schema document: its type is " + input[i].schemaType());
+            }
+        }
+
+        Collection userErrors = (Collection)options.get(XmlOptions.ERROR_LISTENER);
+        XmlErrorWatcher errorWatcher = new XmlErrorWatcher(userErrors);
+
+        SchemaTypeSystemImpl stsi = compileImpl(existingSTS, name,
+            (Schema[])schemas.toArray(new Schema[schemas.size()]),
+            config, linkTo, options, errorWatcher, filer!=null, (URI) options.get(XmlOptions.BASE_URI),
+            null, null);
+
+        // if there is an error and compile didn't recover (stsi==null), throw exception
+        if (errorWatcher.hasError() && stsi == null)
+        {
+            throw new XmlException(errorWatcher.firstError());
+        }
+
+        if (stsi != null && !stsi.isIncomplete() && filer != null)
+        {
+            stsi.save(filer);
+            generateTypes(stsi, filer, options);
+        }
+
+        return stsi;
+    }
+

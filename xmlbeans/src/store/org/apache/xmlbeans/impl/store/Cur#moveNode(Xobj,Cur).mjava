@@ -1,0 +1,130 @@
+    static void moveNode ( Xobj x, Cur to )
+    {
+        assert x != null && !x.isRoot();
+        assert to == null || to.isPositioned();
+        assert to == null || !x.contains( to );
+        assert to == null || !to.isRoot();
+
+        if (to != null)
+        {
+            // Before I go much further, I want to make sure that if "to" is in the container of
+            // a vacant node, I get it occupied.  I do not need to worry about the source being
+            // vacant.
+
+            if (to._pos == END_POS)
+                to._xobj.ensureOccupancy();
+
+            // See if the destination is on the edge of the node to be moved (a no-op).  It is
+            // illegal to call this fcn when to is contained within the node to be moved.  Note
+            // that I make sure that to gets oved to the beginning of the node.  The position of
+            // to in all operations should leave to just before the content moved/inserted.
+
+            if ((to._pos == 0 && to._xobj == x) || to.isJustAfterEnd( x ))
+            {
+                // TODO - should shuffle contained curs to the right???
+
+                to.moveTo( x );
+                return;
+            }
+        }
+
+        // Notify the locale(s) about the change I am about to make.
+
+        x._locale.notifyChange();
+
+        x._locale._versionAll++;
+        x._locale._versionSansText++;
+
+        if (to != null && to._locale != x._locale)
+        {
+            to._locale.notifyChange();
+
+            to._locale._versionAll++;
+            to._locale._versionSansText++;
+        }
+
+        // Node is going away.  Invalidate the parent (the text around the node is merging).
+        // Also, this node may be an attribute -- invalidate special attrs ...
+
+        if (x.isAttr())
+            x.invalidateSpecialAttr( to == null ? null : to.getParentRaw() );
+        else
+        {
+            if (x._parent != null)
+                x._parent.invalidateUser();
+
+            if (to != null && to.hasParent())
+                to.getParent().invalidateUser();
+        }
+
+        // If there is any text after x, I move it to be before x.  This frees me to extract x
+        // and it's contents with out this text coming along for the ride.  Note that if this
+        // node is the last attr and there is text after it, transferText will move the text
+        // to a potential previous attr.  This is an invalid state for a short period of time.
+        // I need to move this text away here so that when I walk the tree next, *all* curs
+        // embedded in this node or deeper will be moved off this node.
+
+        if (x._cchAfter > 0)
+            transferChars( x, x.posAfter(), x.getDenormal( 0 ), x.posTemp(), x._cchAfter );
+
+        assert x._cchAfter == 0;
+
+        // Walk the node tree, moving curs out, disconnecting users and relocating to a, possibly,
+        // new locale.  I embed the cursors in this locale before itersting to just cause the
+        // embed to happen once.
+
+        x._locale.embedCurs();
+
+        for ( Xobj y = x ; y != null ; y = y.walk( x, true ) )
+        {
+            while ( y._embedded != null )
+                y._embedded.moveTo( x.getNormal( x.posAfter() ) );
+
+            y.disconnectUser();
+
+            if (to != null)
+                y._locale = to._locale;
+        }
+
+        // Now, actually remove the node
+
+        x.removeXobj();
+
+        // Now, if there is a destination, insert the node there and shuffle the text in the
+        // vicinity of the destination appropriately.
+
+        if (to != null)
+        {
+            // To know where I should insert/append the node to move, I need to see where "to"
+            // would be if there were no text after it.  However, I need to keep "to" where it
+            // is when I move the text after it later.
+
+            Xobj here = to._xobj;
+            boolean append = to._pos != 0;
+
+            int cchRight = to.cchRight();
+
+            if (cchRight > 0)
+            {
+                to.push();
+                to.next();
+                here = to._xobj;
+                append = to._pos != 0;
+                to.pop();
+            }
+
+            if (append)
+                here.appendXobj( x );
+            else
+                here.insertXobj( x );
+
+            // The only text I need to move is that to the right of "to".  Even considering all
+            // the cases where an attribute is involed!
+
+            if (cchRight > 0)
+                transferChars( to._xobj, to._pos, x, x.posAfter(), cchRight );
+
+            to.moveTo( x );
+        }
+    }
+

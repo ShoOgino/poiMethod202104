@@ -1,0 +1,34 @@
+    public static XmlSimpleList lex(String s, SchemaType itemType, ValidationContext ctx, PrefixResolver resolver)
+    {
+        String[] parts = split_list(s);
+
+        XmlAnySimpleType[] newArray = new XmlAnySimpleType[parts.length];
+        boolean pushed = false;
+        if (resolver != null)
+        {
+            NamespaceContext.push(new NamespaceContext(resolver));
+            pushed = true;
+        }
+        int i = 0;
+        try
+        {
+            for (i = 0; i < parts.length; i++)
+            {
+                try
+                {
+                    newArray[i] = itemType.newValue(parts[i]);
+                }
+                catch (XmlValueOutOfRangeException e)
+                {
+                    ctx.invalid(XmlErrorCodes.LIST, new Object[] { "item '" + parts[i] + "' is not a valid value of " + QNameHelper.readable(itemType) });
+                }
+            }
+        }
+        finally
+        {
+            if (pushed)
+                NamespaceContext.pop();
+        }
+        return new XmlSimpleList(Arrays.asList(newArray));
+    }
+

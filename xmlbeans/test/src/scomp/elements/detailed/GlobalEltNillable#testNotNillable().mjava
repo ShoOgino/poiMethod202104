@@ -1,0 +1,49 @@
+    /**
+     * Try to set a non-nillable elt. to nill
+     * CR CR192914:
+     * Regardless of Schema definition,
+     * setXXX(null) will clear the value of the
+     * XXX attribute/element and if the container is an
+     * element, will also add the "xsi:nil" attribute.
+
+     *
+     * @throws Exception
+     */
+    public void testNotNillable() throws Exception {
+
+        // XmlValueNotNillableException should be thrown only when validateOnSet property is set
+        XmlOptions options = new XmlOptions();
+        options.setValidateOnSet();
+
+        GlobalEltNotNillableDocument testElt = GlobalEltNotNillableDocument
+                .Factory.newInstance(options);
+        try {
+            testElt.setNil();
+            fail("Expected XmlValueNotNillableException");
+        }
+        catch (XmlValueNotNillableException e) {
+        }
+
+         try {
+            testElt.set(null);
+            fail("Expected XmlValueNotNillableException");
+        }
+        catch (XmlValueNotNillableException e) {
+        }
+
+        testElt.setGlobalEltNotNillable(null);
+        //assert that value is cleared
+        assertEquals("<glob:GlobalEltNotNillable " +
+                "xsi:nil=\"true\" " +
+                "xmlns:glob=\"http://xbean/scomp/element/GlobalEltNillable\" " +
+                "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"/>"
+                ,testElt.xmlText());
+        assertTrue(!testElt.validate(validateOptions));
+        assertEquals(1, errorList.size());
+        showErrors();
+        String[] errExpected =
+                new String[]{
+                    XmlErrorCodes.ELEM_LOCALLY_VALID$NOT_NILLABLE};
+             assertTrue(compareErrorCodes(errExpected));
+}
+

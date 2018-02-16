@@ -1,0 +1,116 @@
+        protected Cur finish ( )
+        {
+            flushText();
+
+            if (_after)
+                _frontier = _frontier._parent;
+
+            assert _frontier != null && _frontier._parent == null && _frontier.isRoot();
+
+            Cur c = _frontier.tempCur();
+
+            if (!Locale.toFirstChildElement( c ))
+                return c;
+
+            // See if the document element is a fragment
+
+            boolean isFrag = Locale.isFragmentQName( c.getName() );
+
+            if (_discardDocElem || isFrag)
+            {
+                if (_replaceDocElem != null)
+                    c.setName( _replaceDocElem );
+                else
+                {
+                    // Remove the content around the element to remove so that that content
+                    // does not appear to have been the contents of the removed element.
+
+                    while ( c.toParent() )
+                        ;
+
+                    c.next();
+
+                    while ( !c.isElem() )
+                        if (c.isText()) c.moveChars( null, -1 ); else c.moveNode( null );
+
+                    assert c.isElem();
+                    c.skip();
+
+                    while ( !c.isFinish() )
+                        if (c.isText()) c.moveChars( null, -1 ); else c.moveNode( null );
+
+                    c.toParent();
+
+                    c.next();
+
+                    assert c.isElem();
+
+                    Cur c2 = c.tempCur();
+
+                    c.moveNodeContents( c, true );
+
+                    c.moveToCur( c2 );
+
+                    c2.release();
+
+                    c.moveNode( null );
+                }
+
+                // Remove the fragment namespace decl
+
+                if (isFrag)
+                {
+                    c.moveTo( _frontier );
+
+                    if (c.toFirstAttr())
+                    {
+                        for ( ; ; )
+                        {
+                            if (c.isXmlns() && c.getXmlnsUri().equals( Locale._openFragUri ))
+                            {
+                                c.moveNode( null );
+
+                                if (!c.isAttr())
+                                    break;
+                            }
+                            else if (!c.toNextAttr())
+                                break;
+                        }
+                    }
+
+                    c.moveTo(_frontier);
+                    _frontier = createDomDocumentRootXobj( _locale, true );
+
+                    Cur c2 = _frontier.tempCur();
+                    c2.next();
+                    c.moveNodeContents(c2, true);
+                    c.moveTo(_frontier);
+                    c2.release();
+                }
+            }
+
+
+            if (_additionalNamespaces != null)
+            {
+                c.moveTo( _frontier );
+                Locale.toFirstChildElement( c );
+                Locale.applyNamespaces( c, _additionalNamespaces );
+            }
+
+            if (_doctypeName != null && (_doctypePublicId != null || _doctypeSystemId != null))
+            {
+                XmlDocumentProperties props = Locale.getDocProps(c, true);
+                props.setDoctypeName(_doctypeName);
+                if (_doctypePublicId != null)
+                    props.setDoctypePublicId(_doctypePublicId);
+                if (_doctypeSystemId != null)
+                    props.setDoctypeSystemId(_doctypeSystemId);
+            }
+            
+            c.moveTo( _frontier );
+
+            assert c.isRoot();
+
+            return c;
+        }
+

@@ -1,0 +1,33 @@
+    public void testAddDataTypesList() throws Exception
+    {
+        System.out.println("Inside test case testAddDataTypesList()");
+
+        // Step 1 : create a PSOM from an incomplete/invalid xsd (datatypes.xsd) with unresolved references to various types
+        String sBaseSourceName = "testsourcename";
+        SchemaTypeSystem baseSTS = createNewSTS("datatypes.xsd_",
+                null,
+                "BaseSchemaTS",
+                sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", baseSTS);
+
+        // recovearble errors should exist
+        Assert.assertTrue("No Recovered Errors for Invalid Schema",
+                printRecoveredErrors());
+
+        // Walk thro the SOM (pass #Elems, #Attr, #Types, #AttrGroups)
+        inspectSOM(baseSTS, 12, 1, 4, 1);
+
+        // Test for saving of the PSOM - should not be able to save
+        Assert.assertFalse("Partial SOM " + baseSTS.getName() + "Save successful - should fail!",
+                checkPSOMSave(baseSTS));
+
+        // instance validation - should fail
+        Assert.assertFalse("Validation against instance Success - should fail ",
+                validateInstance(getTestCaseFile("instance_datatypes_valid.xml"), baseSTS));
+
+        // validate unresolved types - the ListType should resolve to 'anySimpleType'
+        Assert.assertEquals("Unresolved List Type should be 'anySimpleType'",
+                anySimpleType,
+                getElementType(baseSTS, "testListTypeElem"));
+    }
+

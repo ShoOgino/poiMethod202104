@@ -1,0 +1,24 @@
+    private static int scanAttribute(char[] buf, int startAt, int limit, ScannedAttribute attr)
+    {
+        int nameStart = nextNonmatchingByte(WHITESPACE, buf, startAt, limit);
+        if (nameStart < 0)
+            return -1;
+        int nameEnd = nextMatchingByte(NOTNAME, buf, nameStart, limit);
+        if (nameEnd < 0)
+            return -1;
+        int equals = nextNonmatchingByte(WHITESPACE, buf, nameEnd, limit);
+        if (equals < 0)
+            return -1;
+        if (buf[equals] != '=')
+            return -1;
+        int valQuote = nextNonmatchingByte(WHITESPACE, buf, equals + 1, limit);
+        if (buf[valQuote] != '\'' && buf[valQuote] != '\"')
+            return -1;
+        int valEndquote = nextMatchingByte(buf[valQuote], buf, valQuote + 1, limit);
+        if (valEndquote < 0)
+            return -1;
+        attr.name = new String(buf, nameStart, nameEnd - nameStart);
+        attr.value = new String(buf, valQuote + 1, valEndquote - valQuote - 1);
+        return valEndquote + 1;
+    }
+

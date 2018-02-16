@@ -1,0 +1,67 @@
+    /**
+     * Called prior to every get operation, to ensure
+     * that the value being read is valid. If the value
+     * has been invalidated, it is re-read from the underlying
+     * text store, and this may cause an out of range exception.
+     *
+     * This method deals with nils, nillability, defaults, etc.
+     */
+    public final void check_dated()
+    {
+        if ((_flags & FLAGS_DATED) != 0)
+        {
+            if ((_flags & FLAG_ORPHANED) != 0)
+                throw new XmlValueDisconnectedException();
+
+            assert((_flags & FLAG_STORE) != 0);
+
+            check_element_dated();
+
+            if ((_flags & FLAG_ELEMENT_DATED) != 0)
+            {
+                int eltflags = get_store().compute_flags();
+                _flags &= ~(FLAGS_ELEMENT | FLAG_ELEMENT_DATED);
+                _flags |= eltflags;
+            }
+
+            boolean nilled = false;
+
+            if ((_flags & FLAG_NIL_DATED) != 0)
+            {
+                if (get_store().find_nil())
+                {
+                    if ((_flags & FLAG_NILLABLE) == 0 &&
+                        (_flags & FLAG_VALIDATE_ON_SET) != 0)
+                        throw new XmlValueOutOfRangeException(); // nil not allowed
+
+                    // let the implementation know that we're nil now
+                    set_nil();
+
+                    _flags |= FLAG_NIL;
+                    nilled = true;
+                }
+                else
+                {
+                    _flags &= ~FLAG_NIL;
+                }
+                _flags &= ~FLAG_NIL_DATED;
+            }
+
+            if (!nilled)
+            {
+                String text;
+
+                if ((_flags & FLAG_COMPLEXCONTENT) != 0 || (text = get_wscanon_text()) == null)
+                    update_from_complex_content();
+                else
+                {
+                    NamespaceContext.push(new NamespaceContext(get_store()));
+                    try { update_from_wscanon_text(text); }
+                    finally { NamespaceContext.pop(); }
+                }
+            }
+
+            _flags &= ~FLAG_VALUE_DATED;
+        }
+    }
+

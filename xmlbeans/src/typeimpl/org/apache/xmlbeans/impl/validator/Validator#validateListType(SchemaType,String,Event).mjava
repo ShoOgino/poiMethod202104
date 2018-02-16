@@ -1,0 +1,92 @@
+    private void validateListType (
+        SchemaType type, String value, Event event )
+    {
+        int errorState = _errorState;
+
+        if (!type.matchPatternFacet( value ))
+        {
+            emitError(event, XmlErrorCodes.DATATYPE_VALID$PATTERN_VALID,
+                new Object[] { "list", value, QNameHelper.readable(type) },
+                null, type, null, XmlValidationError.LIST_INVALID, null);
+        }
+
+        String[] items = XmlListImpl.split_list(value);
+
+        int i;
+        XmlObject o;
+
+        if ((o = type.getFacet( SchemaType.FACET_LENGTH )) != null)
+        {
+            if ((i = ((SimpleValue)o).getIntValue()) != items.length)
+            {
+                //offending Qname not valid
+                emitError(event, XmlErrorCodes.DATATYPE_LENGTH_VALID$LIST_LENGTH,
+                    new Object[] { value, new Integer(items.length), new Integer(i), QNameHelper.readable(type) },
+                    null, type, null, XmlValidationError.LIST_INVALID, null);
+            }
+        }
+
+        if ((o = type.getFacet( SchemaType.FACET_MIN_LENGTH )) != null)
+        {
+            if ((i = ((SimpleValue)o).getIntValue()) > items.length)
+            {
+                //offending Qname not valid
+                emitError(event, XmlErrorCodes.DATATYPE_LENGTH_VALID$LIST_LENGTH,
+                    new Object[] { value, new Integer(items.length), new Integer(i), QNameHelper.readable(type) },
+                    null, type, null, XmlValidationError.LIST_INVALID, null);
+            }
+        }
+
+        if ((o = type.getFacet( SchemaType.FACET_MAX_LENGTH )) != null)
+        {
+            if ((i = ((SimpleValue)o).getIntValue()) < items.length)
+            {
+                //offending Qname not valid
+                emitError(event, XmlErrorCodes.DATATYPE_LENGTH_VALID$LIST_LENGTH,
+                    new Object[] { value, new Integer(items.length), new Integer(i), QNameHelper.readable(type) },
+                    null, type, null, XmlValidationError.LIST_INVALID, null);
+            }
+        }
+
+        SchemaType itemType = type.getListItemType();
+        _listValue = new ArrayList();
+        _listTypes = new ArrayList();
+
+        for ( i = 0 ; i < items.length ; i++ )
+        {
+            validateSimpleType(
+                itemType, items[i], event );
+            addToList(itemType);
+        }
+
+        // If no errors up to this point, then I can create an
+        // XmlList from this value and campare it again enums.
+
+        if (errorState == _errorState)
+        {
+            if (type.getEnumerationValues() != null)
+            {
+                // Lists which contain QNames will need a resolver
+
+                NamespaceContext.push(
+                    new NamespaceContext( event ) );
+
+                try
+                {
+                    XmlObject listValue = ( (SchemaTypeImpl) type).newValidatingValue( value );
+                }
+                catch (XmlValueOutOfRangeException e)
+                {
+                    //offending Qname not valid ??
+                    emitError(event, XmlErrorCodes.DATATYPE_ENUM_VALID,
+                        new Object[] { "list", value, QNameHelper.readable(type) },
+                        null, type, null, XmlValidationError.LIST_INVALID, null);
+                }
+                finally
+                {
+                    NamespaceContext.pop();
+                }
+            }
+        }
+    }
+

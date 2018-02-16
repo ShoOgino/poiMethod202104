@@ -1,0 +1,35 @@
+    private boolean lookAfterPreAndPost(JamClassLoader jamLoader, XmlObject loc)
+    {
+        assert _delegateToClass!=null : "Delegate to class handler expected.";
+        boolean valid = true;
+
+        initParamPrePost(jamLoader);
+
+        _preSet = InterfaceExtensionImpl.getMethod(_delegateToClass, "preSet", PARAMTYPES_PREPOST);
+        if (_preSet==null)
+        {} // not available is ok, _preSet will be null
+
+        if (_preSet!=null && !_preSet.getReturnType().equals(jamLoader.loadClass("boolean")))
+        {
+            // just emit an warning and don't remember as a preSet
+            BindingConfigImpl.warning("Method '" + _delegateToClass.getSimpleName() +
+                ".preSet" + SIGNATURE + "' " +
+                "should return boolean to be considered for a preSet handler.", loc);
+            _preSet = null;
+        }
+
+        _postSet = InterfaceExtensionImpl.getMethod(_delegateToClass, "postSet", PARAMTYPES_PREPOST);
+        if (_postSet==null)
+        {} // not available is ok, _postSet will be null
+
+        if (_preSet==null && _postSet==null)
+        {
+            BindingConfigImpl.error("prePostSet handler specified '" + _delegateToClass.getSimpleName() +
+                "' but no preSet" + SIGNATURE + " or " +
+                "postSet" + SIGNATURE + " methods found.", loc);
+            valid = false;
+        }
+
+        return valid;
+    }
+

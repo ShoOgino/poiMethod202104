@@ -1,0 +1,44 @@
+    public void set_list(List list)
+    {
+        SchemaType itemType = _schemaType.getListItemType();
+        XmlSimpleList xList;
+
+        boolean pushed = false;
+        if (has_store())
+        {
+            NamespaceContext.push(new NamespaceContext(get_store()));
+            pushed = true;
+        }
+
+        try
+        {
+            XmlAnySimpleType[] newval = new XmlAnySimpleType[list.size()];
+            for (int i = 0; i < list.size(); i++)
+            {
+                Object entry = list.get(i);
+                if ((entry instanceof XmlObject) && permits_inner_space((XmlObject)list.get(i)))
+                {
+                    String stringrep = list.get(i).toString();
+                    if (contains_white_space(stringrep))
+                        throw new XmlValueOutOfRangeException();
+                }
+                newval[i] = itemType.newValue(entry);
+            }
+            xList = new XmlSimpleList(Arrays.asList(newval));
+        }
+        finally
+        {
+            if (pushed)
+                NamespaceContext.pop();
+        }
+
+        if (_validateOnSet())
+        {
+            // check enumeration + min/max/etc
+            validateValue(xList, _schemaType, _voorVc);
+        }
+
+        _value = xList;
+        _jvalue = null;
+    }
+

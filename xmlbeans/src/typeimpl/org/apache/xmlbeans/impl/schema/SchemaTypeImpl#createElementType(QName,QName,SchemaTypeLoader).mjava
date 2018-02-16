@@ -1,0 +1,78 @@
+    /* These two methods, createElementType and getElementType have to stay
+     * synchronized, because they create an XmlObject and return the type
+     * for that object, respectively. But since they do slightly different
+     * things, they can't be refactored to share code, so exercise caution
+     */
+    public XmlObject createElementType(QName eltName, QName xsiType, SchemaTypeLoader wildcardTypeLoader)
+    {
+        SchemaType type = null;
+        SchemaProperty prop = null;
+        if (isSimpleType() || !containsElements() || isNoType())
+        {
+            type = BuiltinSchemaTypeSystem.ST_NO_TYPE;
+        }
+        else
+        {
+            prop = (SchemaProperty)_propertyModelByElementName.get(eltName);
+            if (prop != null)
+            {
+                type = prop.getType();
+            }
+            else if (_typedWildcardElements.contains(eltName) ||
+                     _validSubstitutions.contains(eltName))
+            {
+                SchemaGlobalElement elt = wildcardTypeLoader.findElement(eltName);
+                if (elt != null)
+                {
+                    type = elt.getType();
+                    SchemaType docType = wildcardTypeLoader.findDocumentType(eltName);
+                    if (docType != null)
+                        prop = docType.getElementProperty(eltName);
+                }
+                else
+                    type = BuiltinSchemaTypeSystem.ST_NO_TYPE;
+            }
+            else
+            {
+                // Check if the requested element isn't by any chance part of a
+                // substitution group headed by one of the declared elements
+                // Better not enable this yet
+                /*
+                SchemaGlobalElement elt = wildcardTypeLoader.findElement(eltName);
+                SchemaGlobalElement sghead = elt == null ? null : elt.substitutionGroup();
+                while (sghead != null)
+                {
+                    if (_propertyModelByElementName.containsKey(sghead.getName()))
+                    {
+                        type = elt.getType();
+                        SchemaType docType = wildcardTypeLoader.findDocumentType(elt.getName());
+                        if (docType != null)
+                            prop = docType.getElementProperty(elt.getName());
+                        break;
+                    }
+                    sghead = sghead.substitutionGroup();
+                }
+                */
+                if (type == null)
+                    type = BuiltinSchemaTypeSystem.ST_NO_TYPE;
+            }
+
+            if (xsiType != null)
+            {
+                SchemaType itype = wildcardTypeLoader.findType(xsiType);
+
+                // NOTE: a previous version of XMLBeans used ST_NO_TYPE if the
+                // xsiType was not derived from 'type', but this results in a
+                // ClassCastException.  Instead we ignore xsi:type if it's not
+                // found or a derived type.
+                if (itype != null && type.isAssignableFrom(itype)) {
+                    type = itype;
+                }
+            }
+        }
+
+        if (type != null)
+            return ((SchemaTypeImpl)type).createUnattachedNode(prop);
+        return null;
+    }
+

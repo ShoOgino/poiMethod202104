@@ -1,0 +1,94 @@
+    public void testModifyIdConstraints() throws Exception
+    {
+        System.out.println("Inside test case testModifyIdConstraints()");
+
+        // Step 1: read in a clean XSD groups_added.xsd
+        String sBaseSourceName = "testsourcename";
+        SchemaTypeSystem baseSTS = createNewSTS("constraints_added.xsd_",
+                null,
+                "BaseSchemaTS",
+                sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", baseSTS);
+
+        // there should be NO recovearble errors
+        Assert.assertFalse("Recovered Errors for Valid Schema",
+                printRecoveredErrors());
+
+        // the tests - Walk thro the valid SOM
+        inspectSOM(baseSTS, 5, 0, 2, 0);
+
+        Assert.assertTrue("Constraint 'uniqueConstraint' should be found",lookForIdentityConstraint(baseSTS,"uniqueConstraint"));
+        Assert.assertTrue("Constraint 'keyConstraint' should be found",lookForIdentityConstraint(baseSTS,"keyConstraint"));
+        Assert.assertTrue("Constraint 'KeyRefConstraint' should be found",lookForIdentityConstraint(baseSTS,"KeyRefConstraint"));
+
+        // Test for saving of the SOM - should go thro
+        Assert.assertTrue("SOM " + baseSTS.getName() + "Save failed!",
+                checkPSOMSave(baseSTS));
+
+        // instance validation against valid instance- should be ok
+        Assert.assertTrue("Validation against instance failed",
+                validateInstance(getTestCaseFile("instance_constraints_valid.xml"), baseSTS));
+
+        // validation against instance which violates the Constraints - should fail
+        Assert.assertFalse("Validation against invalid should fail",
+                validateInstance(getTestCaseFile("instance_constraints_invalid.xml"), baseSTS));
+
+        // Step 2: create an incremental PSOM with the constraint commented out
+        // Note: Partial SOMs cannot be created for Unique/Key constraints. They generate valid complete SOMs.
+        // The xsd includes these but the invalid SOM in this case is from a keyref definition referring to a
+        // non existant key
+
+        SchemaTypeSystem modifiedSTS = createNewSTS("constraints.xsd_",
+                baseSTS,
+                "ModifiedSchemaTS",
+                sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", modifiedSTS);
+
+        // recovearble errors
+        Assert.assertTrue("Recovered Errors for Valid Schema",
+                printRecoveredErrors());
+
+        // Recovered Errors, Test for saving of the SOM
+        Assert.assertFalse("valid PSOM " + modifiedSTS.getName() + "Save failed !",
+                checkPSOMSave(modifiedSTS));
+
+        // the tests - Walk thro the valid SOM
+        inspectSOM(modifiedSTS, 5, 0, 2, 0);
+
+        // instance validation - should fail
+        Assert.assertFalse("Validation against instance failed",
+                validateInstance(getTestCaseFile("instance_constraints_valid.xml"), modifiedSTS));
+
+        // Invalid instance validation - should fail bcos of Unique constraint definition missing
+        Assert.assertFalse("Validation against instance failed",
+                validateInstance(getTestCaseFile("instance_constraints_invalid.xml"), modifiedSTS));
+
+        Assert.assertFalse("KeyRef 'KeyRefConstraint' should not be resolved",
+                lookForIdentityConstraint(modifiedSTS, "KeyConstraint"));
+
+        // Step 3 : recreate SOM in first step and compare it
+        SchemaTypeSystem finalSTS = createNewSTS("constraints_added.xsd_",
+                modifiedSTS,
+                "FinalSchemaTS",
+                sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", finalSTS);
+
+        // there should be NO recovearble errors
+        Assert.assertFalse("Recovered Errors for Valid Schema",
+                printRecoveredErrors());
+
+        // the tests - Walk thro the valid SOM
+        inspectSOM(finalSTS, 5, 0, 2, 0);
+
+        // Test for saving of the SOM - should go thro
+        Assert.assertTrue("SOM " + finalSTS.getName() + "Save failed!",
+                checkPSOMSave(finalSTS));
+
+        // instance validation against valid instance- should be ok
+        Assert.assertTrue("Validation against instance failed",
+                validateInstance(getTestCaseFile("instance_constraints_valid.xml"), finalSTS));
+
+        // compare this to the original schema here
+        Assert.assertTrue(compareSavedSOMs("BaseSchemaTS","FinalSchemaTS"));
+    }
+

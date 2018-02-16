@@ -1,0 +1,54 @@
+    boolean prev ( )
+    {
+        assert isPositioned();
+
+        if (_xobj.isRoot() && _pos == 0)
+            return false;
+
+        if (_xobj.isAttr() && _pos == 0 && _xobj._prevSibling == null)
+            return false;
+
+        Xobj x = getDenormal();
+        int  p = _posTemp;
+
+        assert p > 0 && p != END_POS;
+
+        int pa = x.posAfter();
+
+        if (p > pa)
+            p = pa;
+        else if (p == pa)
+        {
+            // Text after an attr is allowed only on the last attr,
+            // and that text belongs to the parent container..
+            //
+            // If we're a thte end of the last attr, then we were just
+            // inside the container, and we need to skip the attrs.
+
+            if (x.isAttr() &&
+                (x._cchAfter > 0 || x._nextSibling == null || !x._nextSibling.isAttr()))
+            {
+                x = x.ensureParent();
+                p = 0;
+            }
+            else
+                p = END_POS;
+        }
+        else if (p == pa - 1)
+        {
+            x.ensureOccupancy();
+            p = x._cchValue > 0 ? 1 : 0;
+        }
+        else if (p > 1)
+            p = 1;
+        else
+        {
+            assert p == 1;
+            p = 0;
+        }
+
+        moveTo( getNormal( x, p ), _posTemp );
+
+        return true;
+    }
+

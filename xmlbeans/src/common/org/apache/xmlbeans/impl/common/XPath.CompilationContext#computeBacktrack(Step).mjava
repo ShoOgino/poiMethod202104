@@ -1,0 +1,118 @@
+        private void computeBacktrack ( Step steps )
+            throws XPathCompileException
+        {
+            //
+            // Compute static backtrack information
+            //
+            // Note that I use the fact that _hasBacktrack is initialized to
+            // false and _backtrack to null in the following code.
+            //
+
+            Step s, t;
+            
+            for ( s = steps ; s != null ; s = t )
+            {
+                // Compute the segment from [ s, t )
+                
+                for ( t = s._next ; t != null && !t._deep ; )
+                    t = t._next;
+
+                // If the segment is NOT rooted at //, then the backtrack is
+                // null for the entire segment, including possible attr and/or
+                // sentinal
+
+                if (!s._deep)
+                {
+                    for ( Step u = s ; u != t ; u = u._next )
+                        u._hasBacktrack = true;
+
+                    continue;
+                }
+
+                // Compute the sequence [ s, u ) of length n which contain no
+                // wild steps.
+
+                int n = 0;
+                Step u = s;
+
+                while ( u != t && u._name != null && !u.isWild() && !u._attr )
+                {
+                    n++;
+                    u = u._next;
+                }
+
+                // Now, apply KMP to [ s, u ) for fast backtracking
+
+                QName [] pattern = new QName [ n + 1 ];
+                int [] kmp = new int [ n + 1 ];
+
+                Step v = s;
+                
+                for ( int i = 0 ; i < n ; i++ )
+                {
+                    pattern[ i ] = v._name;
+                    v = v._next;
+                }
+
+                pattern[ n ] = getAnyQName();
+
+                int i = 0;
+                int j = kmp[ 0 ] = -1;
+
+                while ( i < n )
+                {
+                    while ( j > -1 && !pattern[ i ].equals( pattern[ j ] ) )
+                        j = kmp[ j ];
+
+                    if (pattern[ ++i ].equals( pattern[ ++j ] ))
+                        kmp[ i ] = kmp[ j ];
+                    else
+                        kmp[ i ] = j;
+                }
+
+                i = 0;
+                
+                for ( v = s ; v != u ; v = v._next )
+                {
+                    v._hasBacktrack = true;
+                    v._backtrack = s;
+                    
+                    for ( j = kmp[ i ] ; j > 0 ; j-- )
+                        v._backtrack = v._backtrack._next;
+                    
+                    i++;
+                }
+
+                // Compute the success backtrack and stuff it into an attr and
+                // sentinal if they exist for this segment
+                
+                v = s;
+
+                if (n > 1)
+                {
+                    for ( j = kmp[ n - 1 ] ; j > 0 ; j-- )
+                        v = v._next;
+                }
+
+                if (u != t && u._attr)
+                {
+                    u._hasBacktrack = true;
+                    u._backtrack = v;
+                    u = u._next;
+                }
+
+                if (u != t && u._name == null)
+                {
+                    u._hasBacktrack = true;
+                    u._backtrack = v;
+                }
+
+                // The first part of a deep segment always backtracks to itself
+                
+                assert s._deep;
+
+                s._hasBacktrack = true;
+                s._backtrack = s;
+            }
+        }
+

@@ -1,0 +1,66 @@
+        // this method is for reading the UTF-8 String that used to be
+        // written out for a serialized XmlObject according to the
+        // original format before this fix, i.e. it expects it
+        // to have been written using the following algorithm:
+        //
+        // writeObject(Class object)
+        // writeUTF(xmlText of object as String)
+        // writeBoolean()
+        //
+        // this method is passed the original input stream positioned as though
+        // it had just read the class object plus the next 2 bytes. Those 2
+        // bytes are interpreted as an unsigned short saying how many more
+        // bytes there are representing the bytes of the UTF-8-formatted String;
+        // this value is passed in as the argument utfBytes
+        private String readObjectV0(ObjectInputStream in, int utfBytes)
+                throws IOException
+        {
+            // allow an extra 2 bytes up front for the unsigned short
+            byte[] bArray = new byte[utfBytes+2];
+
+            // for format of these first 2 bytes see
+            // Java API docs - DataOutputStream.writeShort()
+            bArray[0] = (byte)( 0xff & (utfBytes >> 8) );
+            bArray[1] = (byte)( 0xff & utfBytes );
+
+            // read the next numBytes bytes from the input stream
+            // into the byte array starting at offset 2; this may
+            // take multiple calls to read()
+            int totalBytesRead = 0;
+            int numRead;
+            while (totalBytesRead < utfBytes)
+            {
+                numRead =
+                    in.read(bArray, 2+totalBytesRead, utfBytes-totalBytesRead);
+                if (numRead == -1) // reached end of stream
+                    break;
+
+                totalBytesRead += numRead;
+            }
+
+            if (totalBytesRead != utfBytes)
+            {
+                throw new IOException("Error reading backwards compatible " +
+                        "XmlObject: number of bytes read (" + totalBytesRead +
+                        ") != number expected (" + utfBytes + ")" );
+            }
+
+            // now set up a DataInputStream to read those
+            // bytes as a UTF-8 String i.e. as though we'd never
+            // read the first 2 bytes from the original stream
+            DataInputStream dis = null;
+            String str = null;
+            try
+            {
+                dis = new DataInputStream(new ByteArrayInputStream(bArray));
+                str = dis.readUTF();
+            }
+            finally
+            {
+                if (dis != null)
+                    dis.close();
+            }
+
+            return str;
+        }
+

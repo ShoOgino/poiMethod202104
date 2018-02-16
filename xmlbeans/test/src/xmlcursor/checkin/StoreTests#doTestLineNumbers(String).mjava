@@ -1,0 +1,45 @@
+    public void doTestLineNumbers ( String xml )
+        throws Exception
+    {
+        int line = 1;
+        int col = 1;
+
+        XmlCursor c =
+            XmlObject.Factory.parse(
+                xml, new XmlOptions().setLoadLineNumbers() ).
+                    newCursor();
+
+        for ( int i = 0 ; i < xml.length() ; i++ )
+        {
+            char ch = xml.charAt( i );
+
+            if (ch == '<' && Character.isLetter( xml.charAt( i + 1 ) ) )
+            {
+                while (!c.currentTokenType().isStart())
+                    c.toNextToken();
+
+                Assert.assertTrue( c.currentTokenType().isStart() );
+                    
+                XmlLineNumber ln =
+                    (XmlLineNumber)
+                        c.getBookmark( XmlLineNumber.class );
+
+                Assert.assertTrue( ln != null );
+
+                Assert.assertTrue( ln.getLine()   == -1 || ln.getLine() == line );
+                Assert.assertTrue( ln.getColumn() == -1 || ln.getColumn() == col );
+                Assert.assertTrue( ln.getOffset() == -1 || ln.getOffset() == i );
+                
+                c.toNextToken();
+            }
+
+            if (ch == '\n')
+            {
+                line++;
+                col= 1;
+            }
+            else
+                col++;
+        }
+    }
+

@@ -1,0 +1,40 @@
+   public void testRun() throws Exception
+    {
+        String query=null;
+        String outFile=null;
+        XmlObject obj=XmlObject.Factory.parse("<xml-fragment/>");
+
+
+            //NIST BUG: folder is called testSuite but appears
+            //as testsuite in desc. file
+            String temp = mTest.getFilePath();
+            temp=temp.replaceAll("testsuite","testSuite");
+            temp=temp.replace( (char)92,'/');
+            query = ZipUtil.getStringFromZip(
+                    pathToZip,zipName,temp + mTest.getName()+".xq") ;
+            //bad comment syntax in suite
+            query =  query.replaceAll("\\{--","(:");
+            query =  query.replaceAll("--\\}",":)");
+            noNamespace.TestCase.OutputFile[] outFiles
+                    = mTest.getOutputFileArray();
+            noNamespace.TestCase.InputFile[] inFiles
+                    = mTest.getInputFileArray();
+
+
+            for (int i=0; i < inFiles.length; i++)
+            {
+                if ( !inFiles[i].getStringValue().equals("emptyDoc"))
+                throw new RuntimeException ("Fix this code. Input file: "+
+                        inFiles[i]);
+
+//               assertEquals(inFiles.length, outFiles.length);
+
+                XmlObject[] queryRes = obj.execQuery(query);
+                String input = ZipUtil.getStringFromZip(
+                    pathToZip,zipName,temp+outFiles[i].getStringValue());
+                XmlObject expRes=XmlObject.Factory.parse( input );
+                XPathCommon.compare(queryRes,new XmlObject[]{expRes});
+            }
+
+    }
+

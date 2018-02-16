@@ -1,0 +1,74 @@
+    private BindingConfigImpl(Config[] configs, File[] javaFiles, File[] classpath)
+    {
+        _packageMap = new LinkedHashMap();
+        _prefixMap = new LinkedHashMap();
+        _suffixMap = new LinkedHashMap();
+        _packageMapByUriPrefix = new LinkedHashMap();
+        _prefixMapByUriPrefix = new LinkedHashMap();
+        _suffixMapByUriPrefix = new LinkedHashMap();
+        _qnameTypeMap = new LinkedHashMap();
+        _qnameDocTypeMap = new LinkedHashMap();
+        _qnameElemMap = new LinkedHashMap();
+        _qnameAttMap = new LinkedHashMap();
+        _interfaceExtensions = new ArrayList();
+        _prePostExtensions = new ArrayList();
+        _userTypes = new LinkedHashMap();
+
+        for (int i = 0; i < configs.length; i++)
+        {
+            Config config = configs[i];
+            Nsconfig[] nsa = config.getNamespaceArray();
+            for (int j = 0; j < nsa.length; j++)
+            {
+                recordNamespaceSetting(nsa[j].getUri(), nsa[j].getPackage(), _packageMap);
+                recordNamespaceSetting(nsa[j].getUri(), nsa[j].getPrefix(), _prefixMap);
+                recordNamespaceSetting(nsa[j].getUri(), nsa[j].getSuffix(), _suffixMap);
+                recordNamespacePrefixSetting(nsa[j].getUriprefix(), nsa[j].getPackage(), _packageMapByUriPrefix);
+                recordNamespacePrefixSetting(nsa[j].getUriprefix(), nsa[j].getPrefix(), _prefixMapByUriPrefix);
+                recordNamespacePrefixSetting(nsa[j].getUriprefix(), nsa[j].getSuffix(), _suffixMapByUriPrefix);
+            }
+
+            Qnameconfig[] qnc = config.getQnameArray();
+            for (int j = 0; j < qnc.length; j++)
+            {
+                List applyto = qnc[j].xgetTarget().xgetListValue();
+                QName name = qnc[j].getName();
+                String javaname = qnc[j].getJavaname();
+                for (int k = 0; k < applyto.size(); k++)
+                {
+                    Qnametargetenum a = (Qnametargetenum) applyto.get(k);
+                    switch (a.enumValue().intValue())
+                    {
+                    case Qnametargetenum.INT_TYPE:
+                        _qnameTypeMap.put(name, javaname);
+                        break;
+                    case Qnametargetenum.INT_DOCUMENT_TYPE:
+                        _qnameDocTypeMap.put(name, javaname);
+                        break;
+                    case Qnametargetenum.INT_ACCESSOR_ELEMENT:
+                        _qnameElemMap.put(name, javaname);
+                        break;
+                    case Qnametargetenum.INT_ACCESSOR_ATTRIBUTE:
+                        _qnameAttMap.put(name, javaname);
+                        break;
+                    }
+                }
+            }
+
+            Extensionconfig[] ext = config.getExtensionArray();
+            for (int j = 0; j < ext.length; j++)
+            {
+                recordExtensionSetting(javaFiles, classpath, ext[j]);
+            }
+            
+            Usertypeconfig[] utypes = config.getUsertypeArray();
+            for (int j = 0; j < utypes.length; j++)
+            {
+                recordUserTypeSetting(javaFiles, classpath, utypes[j]);
+            }
+        }
+
+        secondPhaseValidation();
+        //todo normalize();
+    }
+

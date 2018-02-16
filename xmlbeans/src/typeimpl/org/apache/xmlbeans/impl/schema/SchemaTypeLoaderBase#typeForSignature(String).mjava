@@ -1,0 +1,190 @@
+    /**
+     * Utility function to load a type from a signature.
+     *
+     * A signature is the string you get from type.toString().
+     */
+    public SchemaType typeForSignature(String signature)
+    {
+        int end = signature.indexOf('@');
+        String uri;
+
+        if (end < 0)
+        {
+            uri = "";
+            end = signature.length();
+        }
+        else
+        {
+            uri = signature.substring(end + 1);
+        }
+
+        List parts = new ArrayList();
+
+        for (int index = 0; index < end; )
+        {
+            int nextc = signature.indexOf(':', index);
+            int nextd = signature.indexOf('|', index);
+            int next = (nextc < 0 ? nextd : nextd < 0 ? nextc : nextc < nextd ? nextc : nextd);
+            if (next < 0 || next > end)
+                next = end;
+            String part = signature.substring(index, next);
+            parts.add(part);
+            index = next + 1;
+        }
+
+        SchemaType curType = null;
+
+        outer: for (int i = parts.size() - 1; i >= 0; i -= 1)
+        {
+            String part = (String)parts.get(i);
+            if (part.length() < 1)
+                throw new IllegalArgumentException();
+            int offset = (part.length() >= 2 && part.charAt(1) == '=') ? 2 : 1;
+            cases: switch (part.charAt(0))
+            {
+                case 'T':
+                    if (curType != null)
+                        throw new IllegalArgumentException();
+                    curType = findType(QNameHelper.forLNS(part.substring(offset), uri));
+                    if (curType == null)
+                        return null;
+                    break;
+
+                case 'D':
+                    if (curType != null)
+                        throw new IllegalArgumentException();
+                    curType = findDocumentType(QNameHelper.forLNS(part.substring(offset), uri));
+                    if (curType == null)
+                        return null;
+                    break;
+
+                case 'C': // deprecated
+                case 'R': // current
+                    if (curType != null)
+                        throw new IllegalArgumentException();
+                    curType = findAttributeType(QNameHelper.forLNS(part.substring(offset), uri));
+                    if (curType == null)
+                        return null;
+                    break;
+
+                case 'E':
+                case 'U': // distinguish qualified/unqualified TBD
+                    if (curType != null)
+                    {
+                        if (curType.getContentType() < SchemaType.ELEMENT_CONTENT)
+                            return null;
+                        SchemaType[] subTypes = curType.getAnonymousTypes();
+                        String localName = part.substring(offset);
+                        for (int j = 0; j < subTypes.length; j++)
+                        {
+                            SchemaField field = subTypes[j].getContainerField();
+                            if (field != null && !field.isAttribute() && field.getName().getLocalPart().equals(localName))
+                            {
+                                curType = subTypes[j];
+                                break cases;
+                            }
+                        }
+                        return null;
+                    }
+                    else
+                    {
+                        SchemaGlobalElement elt = findElement(QNameHelper.forLNS(part.substring(offset), uri));
+                        if (elt == null)
+                            return null;
+                        curType = elt.getType();
+                    }
+                    break;
+
+                case 'A':
+                case 'Q': // distinguish qualified/unqualified TBD
+                    if (curType != null)
+                    {
+                        if (curType.isSimpleType())
+                            return null;
+                        SchemaType[] subTypes = curType.getAnonymousTypes();
+                        String localName = part.substring(offset);
+                        for (int j = 0; j < subTypes.length; j++)
+                        {
+                            SchemaField field = subTypes[j].getContainerField();
+                            if (field != null && field.isAttribute() && field.getName().getLocalPart().equals(localName))
+                            {
+                                curType = subTypes[j];
+                                break cases;
+                            }
+                        }
+                        return null;
+                    }
+                    else
+                    {
+                        SchemaGlobalAttribute attr = findAttribute(QNameHelper.forLNS(part.substring(offset), uri));
+                        if (attr == null)
+                            return null;
+                        curType = attr.getType();
+                    }
+                    break;
+
+                case 'B':
+                    if (curType == null)
+                    {
+                        throw new IllegalArgumentException();
+                    }
+                    else
+                    {
+                        if (curType.getSimpleVariety() != SchemaType.ATOMIC)
+                            return null;
+                        SchemaType[] subTypes = curType.getAnonymousTypes();
+                        if (subTypes.length != 1)
+                            return null;
+                        curType = subTypes[0];
+                    }
+                    break;
+
+                case 'I':
+                    if (curType == null)
+                    {
+                        throw new IllegalArgumentException();
+                    }
+                    else
+                    {
+                        if (curType.getSimpleVariety() != SchemaType.LIST)
+                            return null;
+                        SchemaType[] subTypes = curType.getAnonymousTypes();
+                        if (subTypes.length != 1)
+                            return null;
+                        curType = subTypes[0];
+                    }
+                    break;
+
+                case 'M':
+                    if (curType == null)
+                    {
+                        throw new IllegalArgumentException();
+                    }
+                    else
+                    {
+                        int index;
+                        try
+                        {
+                            index = Integer.parseInt(part.substring(offset));
+                        }
+                        catch (Exception e)
+                        {
+                            throw new IllegalArgumentException();
+                        }
+
+                        if (curType.getSimpleVariety() != SchemaType.UNION)
+                            return null;
+                        SchemaType[] subTypes = curType.getAnonymousTypes();
+                        if (subTypes.length <= index)
+                            return null;
+                        curType = subTypes[index];
+                    }
+                    break;
+
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
+        return curType;
+    }
+

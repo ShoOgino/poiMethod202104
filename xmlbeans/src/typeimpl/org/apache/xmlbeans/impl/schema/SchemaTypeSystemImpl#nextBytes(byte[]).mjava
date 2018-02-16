@@ -1,0 +1,74 @@
+    /**
+     * Fun, fun.  Produce 128 bits of uniqueness randomly.
+     * We used to use SecureRandom, but now we don't because SecureRandom
+     * hits the filesystem and hangs us on a filesystem lock.  It also eats
+     * a thread and other expensive resources.. :-).
+     *
+     * We don't really care that non-secure Random() can only do 48 bits of
+     * randomness, since we're certainly not going to be called more than 2^48
+     * times within our process lifetime.
+     *
+     * Our real concern is that by seeding Random() with the current
+     * time, two users will end up with the same bits if they start a
+     * schema compilation within the same millisecond.  That makes the
+     * probability of collision in the real world slightly too high.
+     * We're going to have millions of users, remember?  With a million
+     * users, and one-compilation-per-day each, we'd see a collision every
+     * few months.
+     *
+     * So we'll just xor the results of random with our few extra
+     * bits of information computed below to help reduce the probability
+     * of collision by a few decimal places.  To collide, you will have had
+     * to have the same amount of free memory, the same user name, timezone,
+     * and country, the same current directory, the same java classpath,
+     * the same operating system and jvm version, and the same choices of
+     * identity hashcodes for a few objects. And be started within the same
+     * millisecond. Or you can collide if you have a cosmic 128-bit mathematical
+     * coincidence. No worries.
+     */
+    private static synchronized void nextBytes(byte[] result)
+    {
+        if (_random == null)
+        {
+            try
+            {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                DataOutputStream daos = new DataOutputStream(baos);
+
+                // at least 10 bits of unqieueness, right?  Maybe even 50 or 60.
+                daos.writeInt(System.identityHashCode(SchemaTypeSystemImpl.class));
+                String[] props = new String[] { "user.name", "user.dir", "user.timezone", "user.country", "java.class.path", "java.home", "java.vendor", "java.version", "os.version" };
+                for (int i = 0; i < props.length; i++)
+                {
+                    String prop = SystemProperties.getProperty(props[i]);
+                    if (prop != null)
+                    {
+                        daos.writeUTF(prop);
+                        daos.writeInt(System.identityHashCode(prop));
+                    }
+                }
+                daos.writeLong(Runtime.getRuntime().freeMemory());
+                daos.close();
+                byte[] bytes = baos.toByteArray();
+                for (int i = 0; i < bytes.length; i++)
+                {
+                    int j = i % _mask.length;
+                    _mask[j] *= 21;
+                    _mask[j] += i;
+                }
+            }
+            catch (IOException e)
+            {
+                XBeanDebug.logException(e);
+            }
+
+            _random = new Random(System.currentTimeMillis());
+        }
+        _random.nextBytes(result);
+        for (int i = 0; i < result.length; i++)
+        {
+            int j = i & _mask.length;
+            result[i] ^= _mask[j];
+        }
+    }
+

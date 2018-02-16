@@ -1,0 +1,41 @@
+    public void testPerfByNameBeanUnmarshall()
+        throws Exception
+    {
+        BindingContext bindingContext = getBindingContext(getBindingConfigDocument());
+
+        //File doc = TestEnv.xbeanCase("marshal/doc2.xml");
+        File doc = TestEnv.xbeanCase("marshal/bigdoc.xml");
+        final FileReader fileReader = new FileReader(doc);
+        CharArrayWriter cw = new CharArrayWriter();
+
+        bufferedStreamCopy(fileReader, cw);
+        final char[] chars = cw.toCharArray();
+        final CharArrayReader cr = new CharArrayReader(chars);
+
+        final int trials = 5;
+
+        final XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
+
+        final XmlOptions xmlOptions = new XmlOptions();
+
+        final long before_millis = System.currentTimeMillis();
+        for (int i = 0; i < trials; i++) {
+            cr.reset();
+            XMLStreamReader xrdr =
+                xmlInputFactory.createXMLStreamReader(cr);
+            Unmarshaller umctx =
+                bindingContext.createUnmarshaller();
+
+            Object obj = umctx.unmarshal(xrdr, xmlOptions);
+
+            if ((i % 1000) == 0) {
+                String s = obj.toString().substring(0, 70);
+                inform("i=" + i + "\tobj = " + s + "...");
+            }
+        }
+        final long after_millis = System.currentTimeMillis();
+        final long diff = (after_millis - before_millis);
+        inform("milliseconds: " + diff + " trials: " + trials);
+        inform("milliseconds PER trial: " + (diff / (double)trials));
+    }
+

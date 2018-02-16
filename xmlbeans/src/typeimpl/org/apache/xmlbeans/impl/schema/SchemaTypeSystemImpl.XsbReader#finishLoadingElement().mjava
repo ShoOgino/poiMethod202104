@@ -1,0 +1,70 @@
+        /**
+         * Finishes loading an element after the header has already been loaded.
+         */
+        public SchemaGlobalElement finishLoadingElement()
+        {
+            String handle = null;
+            try
+            {
+                int particleType = readShort();
+                if (particleType != SchemaParticle.ELEMENT)
+                    throw new SchemaTypeLoaderException("Wrong particle type ", _name, _handle, SchemaTypeLoaderException.BAD_PARTICLE_TYPE);
+                int particleFlags = readShort();
+                BigInteger minOccurs = readBigInteger();
+                BigInteger maxOccurs = readBigInteger();
+                QNameSet transitionRules = readQNameSet();
+                QName name = readQName();
+                SchemaContainer container = getContainer(name.getNamespaceURI());
+                checkContainerNotNull(container, name);
+                SchemaGlobalElementImpl impl = new SchemaGlobalElementImpl(container);
+                impl.setParticleType(particleType);
+                impl.setMinOccurs(minOccurs);
+                impl.setMaxOccurs(maxOccurs);
+                impl.setTransitionRules(transitionRules,
+                    (particleFlags & FLAG_PART_SKIPPABLE) != 0);
+                impl.setNameAndTypeRef(name, readTypeRef());
+                impl.setDefault(readString(), (particleFlags & FLAG_PART_FIXED) != 0, null);
+                if (atLeast(2, 16, 0))
+                    impl.setDefaultValue(readXmlValueObject());
+                impl.setNillable((particleFlags & FLAG_PART_NILLABLE) != 0);
+                impl.setBlock((particleFlags & FLAG_PART_BLOCKEXT) != 0,
+                    (particleFlags & FLAG_PART_BLOCKREST) != 0,
+                    (particleFlags & FLAG_PART_BLOCKSUBST) != 0);
+                impl.setWsdlArrayType(readSOAPArrayType());
+                impl.setAbstract((particleFlags & FLAG_PART_ABSTRACT) != 0);
+                impl.setAnnotation(readAnnotation(container));
+                impl.setFinal(
+                              (particleFlags & FLAG_PART_FINALEXT) != 0,
+                              (particleFlags & FLAG_PART_FINALREST) != 0);
+
+                if (atLeast(2, 17, 0))
+                    impl.setSubstitutionGroup((SchemaGlobalElement.Ref)readHandle());
+
+                int substGroupCount = readShort();
+                for (int i = 0; i < substGroupCount; i++)
+                {
+                    impl.addSubstitutionGroupMember(readQName());
+                }
+                SchemaIdentityConstraint.Ref[] idcs = new SchemaIdentityConstraint.Ref[readShort()];
+
+                for (int i = 0 ; i < idcs.length ; i++)
+                    idcs[i] = (SchemaIdentityConstraint.Ref)readHandle();
+
+                impl.setIdentityConstraints(idcs);
+                impl.setFilename(readString());
+                return impl;
+            }
+            catch (SchemaTypeLoaderException e)
+            {
+                throw e;
+            }
+            catch (Exception e)
+            {
+                throw new SchemaTypeLoaderException("Cannot load type from typesystem", _name, handle, SchemaTypeLoaderException.NESTED_EXCEPTION, e);
+            }
+            finally
+            {
+                readEnd();
+            }
+        }
+

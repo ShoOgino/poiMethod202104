@@ -1,0 +1,72 @@
+    void setType ( SchemaType type, boolean complain )
+    {
+        assert type != null;
+        assert isUserNode();
+
+        TypeStoreUser user = peekUser();
+
+        if (user != null && user.get_schema_type() == type)
+            return;
+
+        if (isRoot())
+        {
+            _xobj.setStableType( type );
+            return;
+        }
+
+        // Gotta get the parent user to make sure this type is ok here
+
+        TypeStoreUser parentUser = _xobj.ensureParent().getUser();
+
+        // One may only set the type of an attribute to its 'natural' type because
+        // attributes cannot take advantage of the xsiType attribute.
+
+        if (isAttr())
+        {
+            if (complain && parentUser.get_attribute_type( getName() ) != type)
+            {
+                throw
+                    new IllegalArgumentException(
+                        "Can't set type of attribute to " + type.toString() );
+            }
+
+            return;
+        }
+
+        assert isElem();
+
+        // First check to see if this type can be here sans xsi:type.
+        // If so, make sure there is no xsi:type
+
+        if (parentUser.get_element_type( getName(), null ) == type)
+        {
+            removeAttr( Locale._xsiType );
+            return;
+        }
+
+        // If the desired type has no name, then it cannot be
+        // referenced via xsi:type
+
+        QName typeName = type.getName();
+
+        if (typeName == null)
+        {
+            if (complain)
+                throw new IllegalArgumentException( "Can't set type of element, type is un-named" );
+            else
+                return;
+        }
+
+        // See if setting xsiType would result in the target type
+
+        if (parentUser.get_element_type( getName(), typeName ) != type)
+        {
+            if (complain)
+                throw new IllegalArgumentException( "Can't set type of element, invalid type" );
+            else
+                return;
+        }
+
+        setAttrValueAsQName( Locale._xsiType, typeName );
+    }
+

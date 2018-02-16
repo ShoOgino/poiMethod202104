@@ -1,0 +1,48 @@
+        void reload(int style)
+            throws XMLStreamException
+        {
+            _toStringValue = null;
+            _location.reset();
+            _hasText = false;
+
+            fillBuffer();
+
+            if (style==XMLWHITESPACE_PRESERVE)
+            {
+                _nonWSStart = 0;
+                _nonWSEnd = _length;
+
+                // takes defaultValue only if there wasn't any text
+                if (!_hasText && _xmlSteam._defaultValue!=null)
+                {
+                    _length = 0;
+                    fillBufferFromString(_xmlSteam._defaultValue);
+                }
+            }
+            else if (style==XMLWHITESPACE_TRIM)
+            {
+                for (_nonWSStart=0; _nonWSStart<_length; _nonWSStart++)
+                    if (!XMLChar.isSpace(_buf[_nonWSStart]))
+                        break;
+                for (_nonWSEnd=_length; _nonWSEnd>_nonWSStart; _nonWSEnd--)
+                    if (!XMLChar.isSpace(_buf[_nonWSEnd-1]))
+                        break;
+
+                // takes defaultValue if length after triming is 0
+                if (length()==0 && _xmlSteam._defaultValue!=null)
+                {
+                    _length = 0;
+                    fillBufferFromString(_xmlSteam._defaultValue);
+
+                    //apply whispace rule on the default value
+                    for (_nonWSStart=0; _nonWSStart<_length; _nonWSStart++)
+                        if (!XMLChar.isSpace(_buf[_nonWSStart]))
+                            break;
+                    for (_nonWSEnd=_length; _nonWSEnd>_nonWSStart; _nonWSEnd--)
+                        if (!XMLChar.isSpace(_buf[_nonWSEnd-1]))
+                            break;
+                }
+            }
+            _xmlSteam._defaultValue = null;
+        }
+

@@ -1,0 +1,71 @@
+    /**
+     * Generate java source files for a SchemaTypeSystem.
+     * Please do not invoke this method directly as the signature could change unexpectedly.
+     * Use {@link org.apache.xmlbeans.XmlBeans#compileXmlBeans}
+     *
+     * @param system the SchemaTypeSystem to generated java source for
+     * @param filer to create the java source files
+     * @param options See {@link XmlOptions#setSchemaCodePrinter(org.apache.xmlbeans.SchemaCodePrinter)}
+     * @return true if saving the generated source succeeded.
+     */
+    public static boolean generateTypes(SchemaTypeSystem system, Filer filer, XmlOptions options)
+    {
+        // partial type systems not allowed to be saved
+        if (system instanceof SchemaTypeSystemImpl && ((SchemaTypeSystemImpl)system).isIncomplete())
+            return false;
+        
+        boolean success = true;
+
+        List types = new ArrayList();
+        types.addAll(Arrays.asList(system.globalTypes()));
+        types.addAll(Arrays.asList(system.documentTypes()));
+        types.addAll(Arrays.asList(system.attributeTypes()));
+
+        for (Iterator i = types.iterator(); i.hasNext(); )
+        {
+            SchemaType type = (SchemaType)i.next();
+            if (type.isBuiltinType())
+                continue;
+            if (type.getFullJavaName() == null)
+                continue;
+
+            String fjn = type.getFullJavaName();
+
+            Writer writer = null;
+
+            try
+            {
+                // Generate interface class
+                writer = filer.createSourceFile(fjn);
+                SchemaTypeCodePrinter.printType(writer, type, options);
+            }
+            catch (IOException e)
+            {
+                System.err.println("IO Error " + e);
+                success = false;
+            }
+            finally {
+                try { if (writer != null) writer.close(); } catch (IOException e) {}
+            }
+
+            try
+            {
+                // Generate Implementation class
+                fjn = type.getFullJavaImplName();
+                writer = filer.createSourceFile(fjn);
+
+                SchemaTypeCodePrinter.printTypeImpl(writer, type, options);
+            }
+            catch (IOException e)
+            {
+                System.err.println("IO Error " + e);
+                success = false;
+            }
+            finally {
+                try { if (writer != null) writer.close(); } catch (IOException e) {}
+            }
+        }
+
+        return success;
+    }
+

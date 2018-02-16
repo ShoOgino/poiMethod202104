@@ -1,0 +1,40 @@
+    /**
+     * [XMLBEANS-62]   Avoid class cast exception when compiling older schema namespace
+     */
+    public void test_jira_XmlBeans62() throws Exception
+    {
+        String P = File.separator;
+        String outputDir = System.getProperty("xbean.rootdir") + P + "build" +
+                P + "test" + P + "output" + P + "x1999";
+
+        File srcDir = new File(outputDir + P + "src");
+        srcDir.mkdirs();
+        File classDir = new File(outputDir + P + "classes");
+        classDir.mkdirs();
+
+        SchemaCompiler.Parameters params = new SchemaCompiler.Parameters();
+        params.setWsdlFiles(new File[]{new File(JIRA_CASES + "xmlbeans_62.xml")});
+        params.setErrorListener(errorList);
+        params.setSrcDir(srcDir);
+        params.setClassesDir(classDir);
+        SchemaCompiler.compile(params);
+        Collection errs = params.getErrorListener();
+        boolean warningPresent = false;
+        for (Iterator iterator = errs.iterator(); iterator.hasNext();) {
+            Object o = iterator.next();
+            String out = o.toString();
+            if (out.endsWith("did not have any schema documents in namespace 'http://www.w3.org/2001/XMLSchema'")) ;
+            warningPresent = true;
+        }
+
+        //cleanup gen'd dirs
+        srcDir.deleteOnExit();
+        classDir.deleteOnExit();
+
+        //validate error present
+        if (!warningPresent)
+            throw new Exception("Warning for 1999 schema was not found when compiling srcs");
+        else
+            System.out.println("Warning Present, test Passed");
+    }
+

@@ -1,0 +1,71 @@
+    /**
+     * Get the list of Schemas to be recompiled, based on the list of Schemas that
+     * were modified.
+     * We make use of the depencency information that we stored in the typesystem
+     * and of the entity resolvers that have been set up
+     */
+    private static Schema[] getSchemasToRecompile(SchemaTypeSystemImpl system,
+        Schema[] modified, Set namespaces)
+    {
+        Set modifiedFiles = new HashSet();
+        Map haveFile = new HashMap();
+        List result = new ArrayList();
+        for (int i = 0; i < modified.length; i++)
+        {
+            String fileURL = modified[i].documentProperties().getSourceName();
+            if (fileURL == null)
+                throw new IllegalArgumentException("One of the Schema files passed in" +
+                    " doesn't have the source set, which prevents it to be incrementally" +
+                    " compiled");
+            modifiedFiles.add(fileURL);
+            haveFile.put(fileURL, modified[i]);
+            result.add(modified[i]);
+        }
+        SchemaDependencies dep = system.getDependencies();
+        List nss = dep.getNamespacesTouched(modifiedFiles);
+        namespaces.addAll(dep.computeTransitiveClosure(nss));
+        List needRecompilation = dep.getFilesTouched(namespaces);
+        StscState.get().setDependencies(new SchemaDependencies(dep, namespaces));
+        for (int i = 0; i < needRecompilation.size(); i++)
+        {
+            String url = (String) needRecompilation.get(i);
+            Schema have = (Schema) haveFile.get(url);
+            if (have == null)
+            {
+                // We have to load the file from the entity resolver
+                try
+                {
+                    XmlObject xdoc = StscImporter.DownloadTable.
+                        downloadDocument(StscState.get().getS4SLoader(), null, url);
+                    XmlOptions voptions = new XmlOptions();
+                    voptions.setErrorListener(StscState.get().getErrorListener());
+                    if (!(xdoc instanceof SchemaDocument) || !xdoc.validate(voptions))
+                    {
+                        StscState.get().error("Referenced document is not a valid schema, URL = " + url, XmlErrorCodes.CANNOT_FIND_RESOURCE, null);
+                        continue;
+                    }
+
+                    SchemaDocument sDoc = (SchemaDocument)xdoc;
+
+                    result.add(sDoc.getSchema());
+                }
+                catch (java.net.MalformedURLException mfe)
+                {
+                    StscState.get().error(XmlErrorCodes.EXCEPTION_LOADING_URL, new Object[] { "MalformedURLException", url, mfe.getMessage() }, null);
+                    continue;
+                }
+                catch (java.io.IOException ioe)
+                {
+                    StscState.get().error(XmlErrorCodes.EXCEPTION_LOADING_URL, new Object[] { "IOException", url, ioe.getMessage() }, null);
+                    continue;
+                }
+                catch (XmlException xmle)
+                {
+                    StscState.get().error(XmlErrorCodes.EXCEPTION_LOADING_URL, new Object[] { "XmlException", url, xmle.getMessage() }, null);
+                    continue;
+                }
+            }
+        }
+        return (Schema[]) result.toArray(new Schema[result.size()]);
+    }
+

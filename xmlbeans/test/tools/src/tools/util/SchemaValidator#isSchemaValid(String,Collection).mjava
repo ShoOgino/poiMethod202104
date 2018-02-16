@@ -1,0 +1,56 @@
+    /**
+     * Validates a schema file. Errors if any are returned in the collection
+     * object that is passed in
+     * @param schemaFile
+     * @param errors
+     * @return true if schema is valid, false otherwise.
+     * @throws IllegalArgumentException
+     */
+    public static boolean isSchemaValid(String schemaFile, Collection errors)
+        throws IllegalArgumentException
+    {
+        if (errors == null)
+        {
+            String msg = "Collection parameter cannot be null";
+            throw new IllegalArgumentException(msg);
+        }
+        XmlOptions options = new XmlOptions();
+        options.setErrorListener(errors);
+        options.setLoadLineNumbers();
+
+        Exception ex = null;
+        Exception ioex = null;
+        XmlObject[] schema = new XmlObject[1];
+        SchemaTypeSystem system = null;
+        try
+        {
+            schema[0] = XmlObject.Factory.parse(new File(schemaFile));
+            system = XmlBeans.compileXsd(schema,
+                                         XmlBeans.getBuiltinTypeSystem(),
+                                         options);
+        } catch (XmlException e)
+        {
+            // Parse Exception
+            ex = e;
+        } catch (IOException ioe)
+        {
+            // Error while trying to read file
+            ioex = ioe;
+        }
+
+        if (ioex != null)
+        {
+            errors.add(XmlError.forMessage("EXCEPTION: " + ioex.toString(),
+                                           XmlError.SEVERITY_ERROR));
+            return false;
+        }
+        if (ex != null)
+        {
+            errors.add(XmlError.forMessage("EXCEPTION: " + ex.toString(),
+                                           XmlError.SEVERITY_ERROR));
+            return false;
+        }
+
+        return (system == null)? false : true;
+    }
+

@@ -1,0 +1,34 @@
+    private static void addWsdlSchemas(String name,
+        org.apache.xmlbeans.impl.xb.substwsdl.DefinitionsDocument wsdldoc,
+        XmlErrorWatcher errorListener, boolean noVDoc, List scontentlist)
+    {
+        if (wsdlContainsEncoded(wsdldoc))
+            StscState.addWarning(errorListener, "The WSDL " + name + " uses SOAP encoding. SOAP encoding is not compatible with literal XML Schema.", XmlErrorCodes.GENERIC_ERROR, wsdldoc);
+        StscState.addInfo(errorListener, "Loading wsdl file " + name);
+        XmlOptions opts = new XmlOptions().setErrorListener(errorListener);
+        if (noVDoc)
+        opts.setValidateTreatLaxAsSkip();
+        XmlObject[] types = wsdldoc.getDefinitions().getTypesArray();
+        int count = 0;
+        for (int j = 0; j < types.length; j++)
+        {
+            XmlObject[] schemas = types[j].selectPath("declare namespace xs=\"http://www.w3.org/2001/XMLSchema\" xs:schema");
+            if (schemas.length == 0)
+            {
+                StscState.addWarning(errorListener, "The WSDL " + name + " did not have any schema documents in namespace 'http://www.w3.org/2001/XMLSchema'", XmlErrorCodes.GENERIC_ERROR, wsdldoc);
+                continue;
+            }
+
+            for (int k = 0; k < schemas.length; k++)
+            {
+                if (schemas[k] instanceof SchemaDocument.Schema &&
+                    schemas[k].validate(opts))
+                {
+                    count++;
+                    scontentlist.add(schemas[k]);
+                }
+            }
+        }
+        StscState.addInfo(errorListener, "Processing " + count + " schema(s) in " + name);
+    }
+

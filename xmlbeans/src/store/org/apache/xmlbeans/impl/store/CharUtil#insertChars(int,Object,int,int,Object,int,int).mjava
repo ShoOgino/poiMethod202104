@@ -1,0 +1,74 @@
+    public Object insertChars (
+        int posInsert,
+        Object src, int off, int cch,
+        Object srcInsert, int offInsert, int cchInsert )
+    {
+        assert isValid( src, off, cch );
+        assert isValid( srcInsert, offInsert, cchInsert );
+        assert posInsert >= 0 && posInsert <= cch;
+
+        // TODO - at some point, instead of creating joins, I should
+        // normalize all the text into a single buffer to stop large
+        // tree's from being built when many modifications happen...
+
+        // TODO - actually, I should see if the size of the new char
+        // sequence is small enough to simply allocate a new contigous
+        // sequence, either in a common char[] managed by the master,
+        // or just create a new string ... this goes for remove chars
+        // as well.
+
+        if (cchInsert == 0)
+        {
+            _cchSrc = cch;
+            _offSrc = off;
+            return src;
+        }
+
+        if (cch == 0)
+        {
+            _cchSrc = cchInsert;
+            _offSrc = offInsert;
+            return srcInsert;
+        }
+
+        _cchSrc = cch + cchInsert;
+
+        Object newSrc;
+
+        if (_cchSrc <= MAX_COPY && canAllocate( _cchSrc ))
+        {
+            char[] c = allocate( _cchSrc );
+
+            getChars( c, _offSrc, src, off, posInsert );
+            getChars( c, _offSrc + posInsert, srcInsert, offInsert, cchInsert );
+            getChars( c, _offSrc + posInsert + cchInsert, src, off + posInsert, cch - posInsert );
+
+            newSrc = c;
+        }
+        else
+        {
+            _offSrc = 0;
+
+            CharJoin newJoin;
+
+            if (posInsert == 0)
+                newJoin = new CharJoin( srcInsert, offInsert, cchInsert, src, off );
+            else if (posInsert == cch)
+                newJoin = new CharJoin( src, off, cch, srcInsert, offInsert );
+            else
+            {
+                CharJoin j = new CharJoin( src, off, posInsert, srcInsert, offInsert );
+                newJoin = new CharJoin( j, 0, posInsert + cchInsert, src, off + posInsert );
+            }
+            
+            if (newJoin._depth > CharJoin.MAX_DEPTH)
+                newSrc = saveChars( newJoin, _offSrc, _cchSrc );
+            else
+                newSrc = newJoin;
+        }
+
+        assert isValid( newSrc, _offSrc, _cchSrc );
+
+        return newSrc;
+    }
+

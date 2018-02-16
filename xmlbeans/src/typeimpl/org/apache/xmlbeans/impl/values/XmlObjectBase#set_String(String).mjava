@@ -1,0 +1,30 @@
+    /**
+     * Setting a string preserves any noncanonical literal
+     * representation. This is done by storing the actual
+     * string in the underlying store after checking it
+     * against the primitive type for validity.
+     */
+    protected void set_String(String v)
+    {
+        if ((_flags & FLAG_IMMUTABLE) != 0)
+            throw new IllegalStateException();
+
+        boolean wasNilled = ((_flags & FLAG_NIL) != 0);
+
+        // update the underlying value from the string
+        String wscanon = apply_wscanon(v);
+        update_from_wscanon_text(wscanon);
+
+        // Now store the literal text immediately in the underlying
+        if ((_flags & FLAG_STORE) != 0)
+        {
+            _flags &= ~FLAG_VALUE_DATED;
+            if ((_flags & FLAG_SETTINGDEFAULT) == 0)
+                get_store().store_text(v);
+            if (wasNilled)
+                get_store().invalidate_nil();
+        }
+        else
+            _textsource = v;
+    }
+

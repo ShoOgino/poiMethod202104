@@ -1,0 +1,42 @@
+    static Locale getLocale(SchemaTypeLoader stl, XmlOptions options)
+    {
+        if (stl == null)
+            stl = XmlBeans.getContextTypeLoader();
+
+        options = XmlOptions.maskNull(options);
+
+        Locale l = null;
+
+        if (options.hasOption(USE_SAME_LOCALE))
+        {
+            Object source = options.get(USE_SAME_LOCALE);
+
+            if (source instanceof Locale)
+                l = (Locale) source;
+            else if (source instanceof XmlTokenSource)
+                l = (Locale) ((XmlTokenSource) source).monitor();
+            else
+                throw new IllegalArgumentException(
+                    "Source locale not understood: " + source);
+
+            if (l._schemaTypeLoader != stl)
+                throw new IllegalArgumentException(
+                    "Source locale does not support same schema type loader");
+
+            if (l._saaj != null && l._saaj != options.get(Saaj.SAAJ_IMPL))
+                throw new IllegalArgumentException(
+                    "Source locale does not support same saaj");
+
+            if (l._validateOnSet &&
+                !options.hasOption(XmlOptions.VALIDATE_ON_SET))
+                throw new IllegalArgumentException(
+                    "Source locale does not support same validate on set");
+
+            // TODO - other things to check?
+        }
+        else
+            l = new Locale(stl, options);
+
+        return l;
+    }
+

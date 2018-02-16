@@ -1,0 +1,53 @@
+    private String relativize(String uri, boolean forSavedFilename)
+    {
+        if (uri == null)
+            return null;
+
+        // deal with things that do not look like absolute uris
+        if (uri.startsWith("/"))
+        {
+            uri = PROJECT_URL_PREFIX + uri.replace('\\', '/');
+        }
+        else
+        {
+            // looks like a URL?
+            int colon = uri.indexOf(':');
+            if (colon <= 1 || !uri.substring(0, colon).matches("^\\w+$"))
+                uri = PROJECT_URL_PREFIX + "/" + uri.replace('\\', '/');
+        }
+
+        // now relativize against that...
+        if (_baseURI != null)
+        {
+            try
+            {
+                URI relative = _baseURI.relativize(new URI(uri));
+                if (!relative.isAbsolute())
+                    return relative.toString();
+                else
+                    uri = relative.toString();
+            }
+            catch (URISyntaxException e)
+            {
+            }
+        }
+
+        if (!forSavedFilename)
+            return uri;
+
+        int lastslash = uri.lastIndexOf('/');
+        String dir = QNameHelper.hexsafe(lastslash == -1 ? "" : uri.substring(0, lastslash));
+
+        int question = uri.indexOf('?', lastslash + 1);
+        if (question == -1)
+            return dir + "/" + uri.substring(lastslash + 1);
+
+        String query = QNameHelper.hexsafe(question == -1 ? "" : uri.substring(question));
+
+        // if encoded query part is longer than 64 characters, just drop it
+        if (query.startsWith(QNameHelper.URI_SHA1_PREFIX))
+            return dir + "/" + uri.substring(lastslash + 1, question);
+        else
+            return dir + "/" + uri.substring(lastslash + 1, question) + query;
+    }
+

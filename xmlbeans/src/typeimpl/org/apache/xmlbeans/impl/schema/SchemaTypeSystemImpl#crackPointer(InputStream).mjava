@@ -1,0 +1,43 @@
+    public static String crackPointer(InputStream stream)
+    {
+        DataInputStream input = null;
+        try
+        {
+            input = new DataInputStream(stream);
+
+            int magic = input.readInt();
+            if (magic != DATA_BABE)
+                return null;
+
+            int majorver = input.readShort();
+            int minorver = input.readShort();
+
+            if (majorver != MAJOR_VERSION)
+                return null;
+
+            if (minorver > MINOR_VERSION)
+                return null;
+
+            if (majorver > 2 || majorver == 2 && minorver >= 18)
+                input.readShort(); // release number present in atLeast(2, 18, 0)
+
+            int actualfiletype = input.readShort();
+            if (actualfiletype != FILETYPE_SCHEMAPOINTER)
+                return null;
+
+            StringPool stringPool = new StringPool("pointer", "unk");
+            stringPool.readFrom(input);
+
+            return stringPool.stringForCode(input.readShort());
+        }
+        catch (IOException e)
+        {
+            return null;
+        }
+        finally
+        {
+            if (input != null)
+                try { input.close(); } catch (IOException e) {}
+        }
+    }
+

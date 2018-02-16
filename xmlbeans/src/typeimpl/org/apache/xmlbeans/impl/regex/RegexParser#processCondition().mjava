@@ -1,0 +1,46 @@
+    Token processCondition() throws ParseException {
+                                                // this.offset points the next of '('
+        if (this.offset+1 >= this.regexlen)  throw ex("parser.factor.4", this.offset);
+                                                // Parses a condition.
+        int refno = -1;
+        Token condition = null;
+        int ch = this.regex.charAt(this.offset);
+        if ('1' <= ch && ch <= '9') {
+            refno = ch-'0';
+            this.hasBackReferences = true;
+            if (this.references == null)  this.references = new Vector();
+            this.references.addElement(new ReferencePosition(refno, this.offset));
+            this.offset ++;
+            if (this.regex.charAt(this.offset) != ')')  throw ex("parser.factor.1", this.offset);
+            this.offset ++;
+        } else {
+            if (ch == '?')  this.offset --; // Points '('.
+            this.next();
+            condition = this.parseFactor();
+            switch (condition.type) {
+              case Token.LOOKAHEAD:
+              case Token.NEGATIVELOOKAHEAD:
+              case Token.LOOKBEHIND:
+              case Token.NEGATIVELOOKBEHIND:
+                break;
+              case Token.ANCHOR:
+                if (this.read() != T_RPAREN)  throw ex("parser.factor.1", this.offset-1);
+                break;
+              default:
+                throw ex("parser.factor.5", this.offset);
+            }
+        }
+                                                // Parses yes/no-patterns.
+        this.next();
+        Token yesPattern = this.parseRegex();
+        Token noPattern = null;
+        if (yesPattern.type == Token.UNION) {
+            if (yesPattern.size() != 2)  throw ex("parser.factor.6", this.offset);
+            noPattern = yesPattern.getChild(1);
+            yesPattern = yesPattern.getChild(0);
+        }
+        if (this.read() != T_RPAREN)  throw ex("parser.factor.1", this.offset-1);
+        this.next();
+        return Token.createCondition(refno, condition, yesPattern, noPattern);
+    }
+

@@ -1,0 +1,37 @@
+    public void testByNameBeanUnmarshalType()
+        throws Exception
+    {
+        BindingContext bindingContext = getBindingContext(getBindingConfigDocument());
+
+        final File doc = TestEnv.xbeanCase("marshal/doc.xml");
+        final String javaType = "com.mytest.MyClass";
+        final QName schemaType = MYCLASS_NAME;
+
+        final XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
+        XMLStreamReader xrdr =
+            xmlInputFactory.createXMLStreamReader(new FileReader(doc));
+
+        final XmlOptions xmlOptions = new XmlOptions();
+        Collection errors = new LinkedList();
+        xmlOptions.setErrorListener(errors);
+
+        Unmarshaller ctx = bindingContext.createUnmarshaller();
+
+        //this is not very safe but it should work...
+        while (!xrdr.isStartElement()) {
+            xrdr.next();
+        }
+
+        Object obj = ctx.unmarshalType(xrdr, schemaType, javaType, xmlOptions);
+        for (Iterator itr = errors.iterator(); itr.hasNext();) {
+            inform("ERROR: " + itr.next());
+        }
+        inform("+++++TYPE obj = " + obj);
+
+        MyClass mc = (MyClass)obj;
+        MySubClass first = (MySubClass)mc.getMyelt().getMyClassArray()[0];
+        Assert.assertEquals(DEFAULT_BIG_INT, first.getBigInt());
+        reportErrors(errors, "dco-err");
+        Assert.assertTrue(errors.isEmpty());
+    }
+

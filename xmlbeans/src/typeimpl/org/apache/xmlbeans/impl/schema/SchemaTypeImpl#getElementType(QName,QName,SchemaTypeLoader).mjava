@@ -1,0 +1,64 @@
+    public SchemaType getElementType(QName eltName, QName xsiType, SchemaTypeLoader wildcardTypeLoader)
+    {
+        if (isSimpleType() || !containsElements() || isNoType())
+            return BuiltinSchemaTypeSystem.ST_NO_TYPE;
+
+        SchemaType type = null;
+        SchemaProperty prop = (SchemaProperty)_propertyModelByElementName.get(eltName);
+        if (prop != null)
+        {
+            type = prop.getType();
+        }
+        else
+        {
+            if (wildcardTypeLoader == null)
+                return BuiltinSchemaTypeSystem.ST_NO_TYPE;
+
+            if (_typedWildcardElements.contains(eltName) ||
+                _validSubstitutions.contains(eltName))
+            {
+                SchemaGlobalElement elt = wildcardTypeLoader.findElement(eltName);
+                if (elt == null)
+                    return BuiltinSchemaTypeSystem.ST_NO_TYPE;
+                // According to http://www.w3.org/TR/xmlschema-1/#key-lva,
+                // the line above should return ST_ANY_TYPE.
+                type = elt.getType();
+            }
+            else
+            {
+                // Substitution groups
+                // Actually, better not enable this yet
+                /*SchemaGlobalElement elt = wildcardTypeLoader.findElement(eltName);
+                SchemaGlobalElement sghead = elt == null ? null : elt.substitutionGroup();
+                while (sghead != null)
+                {
+                    prop = (SchemaProperty)_propertyModelByElementName.get(sghead.getName());
+                    if (prop != null)
+                    {
+                        type = elt.getType();
+                        break;
+                    }
+                    sghead = sghead.substitutionGroup();
+                }
+                */
+                if (type == null)
+                    return BuiltinSchemaTypeSystem.ST_NO_TYPE;
+            }
+        }
+
+        if (xsiType != null && wildcardTypeLoader != null)
+        {
+            SchemaType itype = wildcardTypeLoader.findType(xsiType);
+
+            // NOTE: a previous version of XMLBeans used ST_NO_TYPE if the
+            // xsiType was not derived from 'type', but this results in a
+            // ClassCastException.  Instead we ignore xsi:type if it's not
+            // found or a derived type.
+            if (itype != null && type.isAssignableFrom(itype)) {
+                return itype;
+            }
+        }
+
+        return type;
+    }
+

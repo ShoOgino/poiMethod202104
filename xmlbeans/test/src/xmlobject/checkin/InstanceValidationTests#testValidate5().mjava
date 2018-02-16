@@ -1,0 +1,86 @@
+        public void testValidate5 ( )
+            throws Exception
+        {
+            String schema =
+                "<xs:schema xmlns:xs='http://www.w3.org/2001/XMLSchema'>\n" +
+                "\n" +
+                "  <xs:element name='hee'>\n" +
+                "    <xs:complexType>\n" +
+                "      <xs:sequence>\n" +
+                "        <xs:element name='haw' type='xs:int'/>\n" +
+                "      </xs:sequence>\n" +
+                "      <xs:attribute name='yee' type='xs:int'/>\n" +
+                "    </xs:complexType>\n" +
+                "  </xs:element>\n" +
+                "\n" +
+                "  <xs:simpleType name='kindaPrime'>\n" +
+                "    <xs:restriction base='xs:decimal'>\n" +
+                "      <xs:pattern value='[0-9]*[13579]'/>\n" +
+                "      <xs:enumeration value='3'/>\n" +
+                "      <xs:enumeration value='5'/>\n" +
+                "      <xs:enumeration value='7'/>\n" +
+                "      <xs:enumeration value='11'/>\n" +
+                "      <xs:enumeration value='13'/>\n" +
+                "      <xs:enumeration value='17'/>\n" +
+                "      <xs:enumeration value='19'/>\n" +
+                "    </xs:restriction>\n" +
+                "  </xs:simpleType>\n" +
+                "\n" +
+                "</xs:schema>\n" +
+                "";
+
+            String[] schemas = { schema };
+
+            SchemaTypeLoader stl = makeSchemaTypeLoader( schemas );
+
+            XmlObject x =
+                stl.parse(
+                    "<hee yee='3'><haw>66</haw></hee>",
+                        null, null );
+
+            XmlCursor c = x.newCursor();
+
+            for ( ; ; )
+            {
+                XmlObject obj = c.getObject();
+
+                if (obj != null)
+                    obj.validate();
+
+                if (c.toNextToken().isNone())
+                    break;
+            }
+
+            // invalid
+
+            x =
+                stl.parse(
+                    "<hee yee='five'><haw>66</haw></hee>",
+                    null, null );
+
+            Assert.assertTrue( ! x.validate() );
+
+            c = x.newCursor();
+            c.toNextToken();
+            c.toNextToken();
+
+            Assert.assertTrue( ! c.getObject().validate() );
+
+            // No schema
+
+            x = XmlObject.Factory.parse( "<foo x='y'>asas<bar>asas</bar></foo>" );
+
+            c = x.newCursor();
+
+            for ( ; ; )
+            {
+                XmlObject obj = c.getObject();
+
+                if (obj != null)
+                    obj.validate();
+
+                if (c.toNextToken().isNone())
+                    break;
+            }
+        }
+

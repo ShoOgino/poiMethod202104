@@ -1,0 +1,42 @@
+    public static void resolveAttributeType ( SchemaTypeImpl sImpl )
+    {
+        assert sImpl.isResolving();
+
+        assert sImpl.isAttributeType();
+        
+        List anonTypes = new ArrayList();
+
+        SchemaGlobalAttributeImpl attribute =
+            (SchemaGlobalAttributeImpl) StscTranslator.translateAttribute(
+                (Attribute) sImpl.getParseObject(), sImpl.getTargetNamespace(), null,
+                sImpl.isChameleon(), anonTypes, sImpl, null, false );
+
+        SchemaAttributeModelImpl attributeModel = new SchemaAttributeModelImpl();
+
+        if (attribute != null)
+        {
+            StscState.get().addGlobalAttribute( attribute );
+            
+            SchemaLocalAttributeImpl attributeCopy = new SchemaLocalAttributeImpl();
+            StscTranslator.copyGlobalAttributeToLocalAttribute( attribute, attributeCopy );
+            attributeModel.addAttribute( attributeCopy );
+        }
+
+        sImpl.setBaseTypeRef( BuiltinSchemaTypeSystem.ST_ANY_TYPE.getRef() );
+        sImpl.setBaseDepth( sImpl.getBaseDepth() + 1 );
+        sImpl.setDerivationType( SchemaType.DT_RESTRICTION );
+        sImpl.setComplexTypeVariety( SchemaType.EMPTY_CONTENT );
+        
+        Map attributePropertyModel =
+            StscComplexTypeResolver.buildAttributePropertyModelByQName(
+                attributeModel, sImpl );
+
+        sImpl.setContentModel(
+            null, attributeModel, Collections.EMPTY_MAP, attributePropertyModel, false );
+
+        sImpl.setWildcardSummary(
+            QNameSet.EMPTY, false, QNameSet.EMPTY, false );
+        
+        sImpl.setAnonymousTypeRefs( makeRefArray( anonTypes ) );
+    }
+

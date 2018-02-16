@@ -1,0 +1,59 @@
+    /**
+     * Performs lexical validation only.
+     */
+
+    public static void validateLexical(String v, ValidationContext context)
+    {
+        // TODO - will want to validate Chars with built in white space handling
+        //        However, this fcn sometimes takes a value with wsr applied
+        //        already
+        int l = v.length();
+        int i = 0;
+
+        if (i < l)
+        {
+            int ch = v.charAt(i);
+
+            if (ch == '+' || ch == '-')
+                i++;
+        }
+
+        boolean sawDot = false;
+        boolean sawDigit = false;
+
+        for ( ; i < l ; i++ )
+        {
+            int ch = v.charAt(i);
+
+            if (ch == '.')
+            {
+                if (sawDot)
+                {
+                    context.invalid(XmlErrorCodes.DECIMAL,
+                        new Object[] { "saw '.' more than once: " + v });
+                    return;
+                }
+
+                sawDot = true;
+            }
+            else if (ch >= '0' && ch <= '9')
+            {
+                sawDigit = true;
+            }
+            else
+            {
+                // TODO - may need to escape error char
+                context.invalid(XmlErrorCodes.DECIMAL,
+                    new Object[] { "unexpected char '" + ch + "'" });
+                return;
+            }
+        }
+
+        if (!sawDigit)
+        {
+            context.invalid(XmlErrorCodes.DECIMAL,
+                new Object[] { "expected at least one digit" });
+            return;
+        }
+    }
+

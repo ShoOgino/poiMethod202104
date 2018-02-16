@@ -1,0 +1,33 @@
+    public boolean validate(XmlOptions options)
+    {
+        if ((_flags & FLAG_STORE) == 0)
+        {
+            if ((_flags & FLAG_IMMUTABLE) != 0)
+            {
+                return validate_immutable(options);
+            }
+
+            throw new IllegalStateException(
+                    "XML objects with no underlying store cannot be validated");
+        }
+
+        synchronized (monitor())
+        {
+            if ((_flags & FLAG_ORPHANED) != 0)
+                throw new XmlValueDisconnectedException();
+
+            SchemaField field = schemaField();
+            SchemaType type = schemaType();
+
+            TypeStore typeStore = get_store();
+
+            Validator validator =
+                new Validator(
+                    type, field, typeStore.get_schematypeloader(), options, null);
+
+            typeStore.validate( validator );
+
+            return validator.isValid();
+        }
+    }
+

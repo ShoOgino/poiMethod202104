@@ -1,0 +1,50 @@
+    /**
+     * Iterate over all filesets and return the filename of all files
+     * that end with <tt>.java</tt> or <tt>.class</tt>. This is to avoid
+     * wrapping a <tt>JUnitTest</tt> over an xml file for example. A Testcase
+     * is obviously a java file (compiled or not).
+     *
+     * @return an array of filenames without their extension. As they should
+     *         normally be taken from their root, filenames should match their fully
+     *         qualified class name (If it is not the case it will fail when running the test).
+     *         For the class <tt>org/apache/Whatever.class</tt> it will return <tt>org/apache/Whatever</tt>.
+     */
+    private String[] getFilenames() {
+        Vector v = new Vector();
+        final int size = this.filesets.size();
+        for (int j = 0; j < size; j++) {
+            FileSet fs = (FileSet) filesets.elementAt(j);
+            //    DirectoryScanner ds = fs.getDirectoryScanner(project);
+            DirectoryScanner ds = fs.getDirectoryScanner(fs.getProject());
+            ds.scan();
+            String[] f = ds.getIncludedFiles();
+            //check for an actual class here
+            if (f.length == 0 && size == 1)
+                f = classFiles;
+            for (int k = 0; k < f.length; k++) {
+                String pathname = f[k];
+                if (pathname.endsWith(".java")) {
+                    v.addElement(
+                            pathname.substring(0,
+                                    pathname.length() - ".java".length()));
+                } else if (pathname.endsWith(".class")) {
+                    // DOn't try to run inner classes
+                    if (pathname.indexOf("$") == -1)
+                        v.addElement(
+                                pathname.substring(0,
+                                        pathname.length() - ".class".length()));
+                } else
+                    try {
+                        Class.forName(pathname);
+                        v.addElement(pathname);
+                    }
+                    catch (ClassNotFoundException e) {
+                        ;//filename is not a class
+                    }
+            }
+        }
+        String[] files = new String[v.size()];
+        v.copyInto(files);
+        return files;
+    }
+

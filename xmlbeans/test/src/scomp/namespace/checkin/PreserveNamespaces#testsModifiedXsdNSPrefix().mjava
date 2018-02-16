@@ -1,0 +1,32 @@
+    public void testsModifiedXsdNSPrefix() throws Exception
+    {
+        // XSD namespace used in QName values and elements
+        EnvelopeDocument env1 = EnvelopeDocument.Factory.parse("<soap:Envelope \n" +
+                "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" \n" +
+                "xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" \n" +
+                "xmlns:tns=\"http://Walkthrough/XmlWebServices/\" \n" +
+                "xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">\n" +
+                "  <soap:Body>\n" +
+                "      <xsd:element name=\"myname\" type=\"xsd:string\"/>\n" +
+                "  </soap:Body>\n" +
+                "</soap:Envelope>");
+
+        EnvelopeDocument env2 = EnvelopeDocument.Factory.newInstance();
+        env2.addNewEnvelope().setBody(env1.getEnvelope().getBody());
+
+        // compare the 2 body elements using the Xml Comparator. This uses a cursor to walk thro the docs and compare elements and attributes
+        tools.xml.XmlComparator.Diagnostic diag = new tools.xml.XmlComparator.Diagnostic();
+        assertTrue("new envelope has missing XSD namespace declaration", XmlComparator.lenientlyCompareTwoXmlStrings(env1.getEnvelope().getBody().xmlText(), env2.getEnvelope().getBody().xmlText(), diag));
+
+        // navigate to the 'element' element and check for the XSD namespace
+        XmlCursor env2Cursor = env2.newCursor();
+        assertTrue(env2Cursor.toFirstChild());      // <Envelope>
+        assertTrue(env2Cursor.toFirstChild());      // <Body>
+        if (env2Cursor.toFirstChild())              // <element>
+        {
+            assertTrue("Element name mismatch!", env2Cursor.getName().equals(new QName("http://www.w3.org/2001/XMLSchema","element")));
+            assertEquals("XSD Namespace has been dropped", "http://www.w3.org/2001/XMLSchema", env2Cursor.namespaceForPrefix("xsd"));
+        }
+
+    }
+

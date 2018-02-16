@@ -1,0 +1,93 @@
+        private XPath tokenizeXPath ( ) throws XPathCompileException
+        {
+            for ( ; ; )
+            {
+                if (tokenize( "declare", "namespace" ))
+                {
+                    if (!parseWhitespace())
+                        throw newError( "Expected prefix after 'declare namespace'" );
+
+                    String prefix = tokenizeNCName();
+
+                    if (!tokenize( "=" ))
+                        throw newError( "Expected '='" );
+
+                    String uri = tokenizeQuotedUri();
+                    
+                    if (_namespaces.containsKey( prefix ))
+                    {
+                        throw newError(
+                            "Redefinition of namespace prefix: " + prefix );
+                    }
+
+                    _namespaces.put( prefix, uri );
+
+                    //return these to saxon:? Is it an error to pass external NS
+                    //that conflicts? or should we just override it?
+                    if (_externalNamespaces.containsKey( prefix ))
+                    {
+                        throw newError(
+                            "Redefinition of namespace prefix: " + prefix );
+                    }
+                    _externalNamespaces.put( prefix, uri );
+
+                    if (! tokenize( ";" ))
+                    {
+//			            throw newError(
+//                            "Namespace declaration must end with ;" );
+			        }
+
+                    _externalNamespaces.put(_NS_BOUNDARY,new Integer(_offset));
+
+                    continue;
+                }
+                
+                if (tokenize( "declare","default", "element", "namespace" ))
+                {
+                    String uri = tokenizeQuotedUri();
+                    
+                    if (_namespaces.containsKey( "" ))
+                    {
+                        throw newError(
+                            "Redefinition of default element namespace" );
+                    }
+
+                    _namespaces.put( "", uri );
+
+                    //return these to saxon:? Is it an error to pass external NS
+                    //that conflicts? or should we just override it?
+                    if (_externalNamespaces.containsKey( XPath._DEFAULT_ELT_NS ))
+                    {
+                         throw newError("Redefinition of default element namespace : ");
+                    }
+                    _externalNamespaces.put( XPath._DEFAULT_ELT_NS, uri );
+
+                    if (! tokenize( ";" ))
+                        throw newError("Default Namespace declaration must end with ;" );
+                    //the boundary is the last ; in the prolog...
+                    _externalNamespaces.put(_NS_BOUNDARY,new Integer(_offset));
+
+                    continue;
+                }
+                
+                break;
+            }
+
+            // Add the default prefix mapping if it has not been redefined
+            
+            if (!_namespaces.containsKey( "" ))
+                _namespaces.put( "", "" );
+
+            Selector selector = tokenizeSelector();
+
+            parseWhitespace();
+            
+            if (currChar() != -1)
+            {
+                throw newError(
+                    "Unexpected char '" + (char) currChar() + "'" );
+            }
+
+            return new XPath( selector, _sawDeepDot );
+        }
+

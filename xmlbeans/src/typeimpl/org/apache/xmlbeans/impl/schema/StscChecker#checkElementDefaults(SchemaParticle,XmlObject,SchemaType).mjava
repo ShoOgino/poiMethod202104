@@ -1,0 +1,166 @@
+    /**
+     * Checks the default values of elements.<p/>
+     * Also checks that the type of elements is not one of ID, IDREF, IDREFS, ENTITY, ENTITIES or
+     * NOTATION as per XMLSchema part 2.
+     * @param model
+     * @param location
+     * @param parentType
+     */
+    private static void checkElementDefaults(SchemaParticle model, XmlObject location, SchemaType parentType)
+    {
+        if (model == null)
+            return;
+        switch (model.getParticleType())
+        {
+            case SchemaParticle.SEQUENCE:
+            case SchemaParticle.CHOICE:
+            case SchemaParticle.ALL:
+                SchemaParticle[] children = model.getParticleChildren();
+                for (int i = 0; i < children.length; i++)
+                {
+                    checkElementDefaults(children[i], location, parentType);
+                }
+                break;
+           case SchemaParticle.ELEMENT:
+                String valueConstraint = model.getDefaultText();
+                if (valueConstraint != null)
+                {
+                    if (model.getType().isSimpleType() || model.getType().getContentType() == SchemaType.SIMPLE_CONTENT)
+                    {
+                        try
+                        {
+                            XmlAnySimpleType val = model.getDefaultValue();
+                            XmlOptions opt = new XmlOptions();
+                            opt.put(XmlOptions.VALIDATE_TEXT_ONLY);
+                            if (!val.validate(opt))
+                                throw new Exception();
+
+                            SchemaPropertyImpl sProp = (SchemaPropertyImpl)parentType.getElementProperty(model.getName());
+                            if (sProp != null && sProp.getDefaultText() != null)
+                            {
+                                sProp.setDefaultValue(new XmlValueRef(val));
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            // move to 'fixed' or 'default' attribute on the element definition
+                            String constraintName = (model.isFixed() ? "fixed" : "default");
+                            XmlObject constraintLocation = location.selectAttribute("", constraintName);
+
+                            StscState.get().error(XmlErrorCodes.ELEM_PROPERTIES$CONSTRAINT_VALID,
+                                new Object[] { QNameHelper.pretty(model.getName()),
+                                               constraintName,
+                                               valueConstraint,
+                                               QNameHelper.pretty(model.getType().getName()) },
+                                (constraintLocation==null ? location : constraintLocation));
+                        }
+                    }
+                    else if (model.getType().getContentType() == SchemaType.MIXED_CONTENT)
+                    {
+                        if (!model.getType().getContentModel().isSkippable())
+                        {
+                            String constraintName = (model.isFixed() ? "fixed" : "default");
+                            XmlObject constraintLocation = location.selectAttribute("", constraintName);
+
+                            StscState.get().error(XmlErrorCodes.ELEM_DEFAULT_VALID$MIXED_AND_EMPTIABLE,
+                                new Object[] { QNameHelper.pretty(model.getName()),
+                                               constraintName,
+                                               valueConstraint },
+                                (constraintLocation==null ? location : constraintLocation));
+                        }
+                        else
+                        {
+                            // Element Default Valid (Immediate): cos-valid-default.2.2.2
+                            // no need to validate the value; type is a xs:string
+                            SchemaPropertyImpl sProp = (SchemaPropertyImpl)parentType.getElementProperty(model.getName());
+                            if (sProp != null && sProp.getDefaultText() != null)
+                            {
+                                sProp.setDefaultValue(new XmlValueRef(XmlString.type.newValue(valueConstraint)));
+                            }
+                        }
+                    }
+                    else if (model.getType().getContentType() == SchemaType.ELEMENT_CONTENT)
+                    {
+                        XmlObject constraintLocation = location.selectAttribute("", "default");
+                        StscState.get().error(XmlErrorCodes.ELEM_DEFAULT_VALID$SIMPLE_TYPE_OR_MIXED,
+                            new Object[] { QNameHelper.pretty(model.getName()),
+                                           valueConstraint,
+                                           "element" },
+                            (constraintLocation==null ? location : constraintLocation));
+                    }
+                    else if (model.getType().getContentType() == SchemaType.EMPTY_CONTENT)
+                    {
+                        XmlObject constraintLocation = location.selectAttribute("", "default");
+                        StscState.get().error(XmlErrorCodes.ELEM_DEFAULT_VALID$SIMPLE_TYPE_OR_MIXED,
+                            new Object[] { QNameHelper.pretty(model.getName()),
+                                           valueConstraint,
+                                           "empty" },
+                            (constraintLocation==null ? location : constraintLocation));
+                    }
+                }
+                // Checks if the type is one of the "attribute-specific" types
+                String warningType = null;
+                if (BuiltinSchemaTypeSystem.ST_ID.isAssignableFrom(model.getType()))
+                    warningType = BuiltinSchemaTypeSystem.ST_ID.getName().getLocalPart();
+                else if (BuiltinSchemaTypeSystem.ST_IDREF.isAssignableFrom(model.getType()))
+                    warningType = BuiltinSchemaTypeSystem.ST_IDREF.getName().getLocalPart();
+                else if (BuiltinSchemaTypeSystem.ST_IDREFS.isAssignableFrom(model.getType()))
+                    warningType = BuiltinSchemaTypeSystem.ST_IDREFS.getName().getLocalPart();
+                else if (BuiltinSchemaTypeSystem.ST_ENTITY.isAssignableFrom(model.getType()))
+                    warningType = BuiltinSchemaTypeSystem.ST_ENTITY.getName().getLocalPart();
+                else if (BuiltinSchemaTypeSystem.ST_ENTITIES.isAssignableFrom(model.getType()))
+                    warningType = BuiltinSchemaTypeSystem.ST_ENTITIES.getName().getLocalPart();
+                else if (BuiltinSchemaTypeSystem.ST_NOTATION.isAssignableFrom(model.getType()))
+                {
+                    if (model.getType().getBuiltinTypeCode() == SchemaType.BTC_NOTATION)
+                    {
+                        StscState.get().recover(XmlErrorCodes.ELEM_NOTATION_TYPE_FORBIDDEN,
+                            new Object[]{ QNameHelper.pretty(model.getName()) },
+                            ((SchemaLocalElementImpl) model)._parseObject == null ? location :
+                            ((SchemaLocalElementImpl) model)._parseObject.selectAttribute("", "type"));
+                    }
+                    else
+                    {
+                        if (model.getType().getSimpleVariety() == SchemaType.UNION)
+                        {
+                            SchemaType[] members = model.getType().getUnionConstituentTypes();
+                            for (int i = 0; i < members.length; i++)
+                                if (members[i].getBuiltinTypeCode() == SchemaType.BTC_NOTATION)
+                                    StscState.get().recover(XmlErrorCodes.ELEM_NOTATION_TYPE_FORBIDDEN,
+                                        new Object[]{ QNameHelper.pretty(model.getName()) },
+                                        ((SchemaLocalElementImpl) model)._parseObject == null ? location :
+                                        ((SchemaLocalElementImpl) model)._parseObject.selectAttribute("", "type"));
+                        }
+                        warningType = BuiltinSchemaTypeSystem.ST_NOTATION.getName().getLocalPart();
+                    }
+
+                    // Check that the Schema in which this is present doesn't have a targetNS
+                    boolean hasNS;
+                    SchemaType t = parentType;
+                    while (t.getOuterType() != null)
+                        t = t.getOuterType();
+                    if (t.isDocumentType())
+                        hasNS = t.getDocumentElementName().getNamespaceURI().length() > 0;
+                    else
+                        hasNS = t.getName().getNamespaceURI().length() > 0;
+                    if (hasNS)
+                        StscState.get().warning(XmlErrorCodes.ELEM_COMPATIBILITY_TARGETNS,
+                            new Object[] {QNameHelper.pretty(model.getName()) },
+                            ((SchemaLocalElementImpl) model)._parseObject == null ? location :
+                            ((SchemaLocalElementImpl) model)._parseObject);
+                }
+
+                if (warningType != null)
+                    StscState.get().warning(XmlErrorCodes.ELEM_COMPATIBILITY_TYPE, new Object[]
+                        { QNameHelper.pretty(model.getName()), warningType },
+                        ((SchemaLocalElementImpl) model)._parseObject == null ? location :
+                        ((SchemaLocalElementImpl) model)._parseObject.selectAttribute("", "type"));
+
+                break;
+
+           default:
+                // nothing to do.
+                break;
+        }
+    }
+

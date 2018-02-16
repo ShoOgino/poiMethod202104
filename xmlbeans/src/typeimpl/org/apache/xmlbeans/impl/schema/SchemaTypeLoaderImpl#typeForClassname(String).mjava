@@ -1,0 +1,27 @@
+    public SchemaType typeForClassname(String classname)
+    {
+        classname = classname.replace('$', '.');
+
+        Object cached = _classnameCache.get(classname);
+        if (cached == CACHED_NOT_FOUND)
+            return null;
+        SchemaType result = (SchemaType) cached;
+        if (result == null)
+        {
+            for (int i = 0; i < _searchPath.length; i++)
+                if (null != (result = _searchPath[i].typeForClassname(classname)))
+                    break;
+            if (result == null)
+            {
+                SchemaTypeSystem ts = typeSystemForClassname("schema" + METADATA_PACKAGE_LOAD + "/javaname/", classname);
+                if (ts != null)
+                {
+                    result = ts.typeForClassname(classname);
+                    assert(result != null) : "Type system registered type " + classname + " but does not return it";
+                }
+            }
+            _classnameCache.put(classname, result == null ? CACHED_NOT_FOUND : result);
+        }
+        return result;
+    }
+

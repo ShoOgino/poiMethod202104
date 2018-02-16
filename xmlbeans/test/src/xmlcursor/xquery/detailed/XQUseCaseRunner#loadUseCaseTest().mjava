@@ -1,0 +1,43 @@
+    private UseCaseTest loadUseCaseTest()
+        throws XmlException, IOException
+    {
+        if (firstCall)
+        {
+            firstCall = false;
+            InputStream is=null;
+            try
+            {
+                is = ZipUtil.getStreamFromZip(UseCaseTest.pathToZip,
+                    UseCaseTest.zipName, pathToDescFile);
+            }
+            catch (java.util.zip.ZipException e)
+            {
+                if (is == null)
+                {
+                    //the zip with cases was not found
+                    return null;
+                }
+            }
+            XmlQueryUseCasesDocument doc = XmlQueryUseCasesDocument.Factory.parse(
+                is);
+            XmlQueryUseCasesDocument.XmlQueryUseCases suite = doc.getXmlQueryUseCases();
+            group = suite.getGroupArray();
+
+        }
+        while (groupInd < group.length)
+        {
+            XmlQueryUseCasesDocument.XmlQueryUseCases.Group.Test[]
+                tests = group[groupInd].getTestArray();
+            if (testInd++ < tests.length - 1)
+                return new UseCaseTest(tests[testInd],
+                    group[groupInd].getName());
+            else
+            {
+                testInd = -1;
+                groupInd++;
+            }
+        }
+
+        return null;
+    }
+

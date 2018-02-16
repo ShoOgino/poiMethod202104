@@ -1,0 +1,35 @@
+    public void __testSimple() throws Throwable
+    {
+        deltree(xbeanOutput("compile/scomp/simple"));
+        // First, compile schema
+
+        // First, compile schema
+        File inputfile1 = xbeanCase("simple/person.xsd");
+        File inputfile2 = xbeanCase("simple/simplec.xsd");
+
+         File srcdir = xbeanOutput("simple/simpletypes/src");
+
+
+        File classesdir = xbeanOutput("compile/scomp/simple/simpletypes/classes");
+        File outputjar = xbeanOutput("compile/scomp/simple/simpletypes.jar");
+        SchemaCompiler.Parameters params = new SchemaCompiler.Parameters();
+        params.setXsdFiles(new File[] { inputfile1, inputfile2 });
+        params.setSrcDir(srcdir);
+        params.setClassesDir(classesdir);
+        params.setOutputJar(outputjar);
+        Assert.assertTrue("Build failed", SchemaCompiler.compile(params));
+
+        // Then, compile java classes
+        File javasrc = xbeanCase("simple/javasrc");
+        File javaclasses = xbeanOutput("compile/scomp/simple/javaclasses");
+        javaclasses.mkdirs();
+        List testcp = new ArrayList();
+        testcp.addAll(Arrays.asList(CodeGenUtil.systemClasspath()));
+        testcp.add(outputjar);
+        CodeGenUtil.externalCompile(Arrays.asList(new File[] { javasrc }), javaclasses, (File[])testcp.toArray(new File[testcp.size()]), true);
+
+        // Then run the test
+        testcp.add(javaclasses);
+        TestRunUtil.run("SimplePersonTest", new File[] { outputjar, javaclasses });
+    }
+

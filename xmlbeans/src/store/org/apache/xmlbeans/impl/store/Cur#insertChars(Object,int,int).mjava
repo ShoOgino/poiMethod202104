@@ -1,0 +1,44 @@
+    void insertChars ( Object src, int off, int cch )
+    {
+        assert isPositioned() && !isRoot();
+        assert CharUtil.isValid( src, off, cch );
+
+        // Check for nothing to insert
+
+        if (cch <= 0)
+            return;
+
+        _locale.notifyChange();
+
+        // The only situation where I need to ensure occupancy is when I'm at the end of a node.
+        // All other positions will require occupancy.  For example, if I'm at the beginning of a
+        // node, then I will either insert in the after text of the previous sibling, or I will
+        // insert in the value of the parent.  In the latter case, because the parent has a child,
+        // it cannot be vacant.
+
+        if (_pos == END_POS)
+            _xobj.ensureOccupancy();
+
+        // Get the denormailized Xobj and pos.  This is the Xobj which will actually receive
+        // the new chars.  Note that a denormalized position can never be <= 0.
+
+        Xobj x = getDenormal();
+        int  p = _posTemp;
+
+        assert p > 0;
+
+        // This will move "this" cursor to be after the inserted text. No worries, I'll update its
+        // position after.  This insertChars takes care of all the appropriate invalidations
+        // (passing true as last arg).
+
+        x.insertCharsHelper( p, src, off, cch, true );
+
+        // Reposition the cursor to be just before the newly inserted text.  It's current
+        // position could have been shifted, or it may have been just before the end tag, or
+        // normalized on another Xobj.
+
+        moveTo( x, p );
+
+        _locale._versionAll++;
+    }
+

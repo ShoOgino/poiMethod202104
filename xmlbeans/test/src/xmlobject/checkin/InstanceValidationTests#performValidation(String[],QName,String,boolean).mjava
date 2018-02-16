@@ -1,0 +1,34 @@
+    public List performValidation(String[] schemas, QName docType, String instances,
+                                  boolean startOnDocument) throws XmlException
+    {
+        SchemaTypeLoader stl = makeSchemaTypeLoader(schemas);
+
+        XmlOptions options = new XmlOptions();
+
+        if (docType != null)
+        {
+            SchemaType docSchema = stl.findDocumentType(docType);
+
+            Assert.assertTrue(docSchema != null);
+
+            options.setDocumentType(docSchema);
+        }
+
+        XmlObject x = stl.parse( instances, null, options);
+
+        if (!startOnDocument)
+        {
+            XmlCursor c = x.newCursor();
+            c.toFirstChild();
+            x = c.getObject();
+            c.dispose();
+        }
+
+        List xel = new ArrayList();
+        options.setErrorListener(xel);
+
+        x.validate(options);
+
+        return xel;
+    }
+

@@ -1,0 +1,38 @@
+        void readHandlePool(HandlePool pool)
+        {
+            if (pool._handlesToRefs.size() != 0 || pool._started)
+                throw new IllegalStateException("Nonempty handle set before read");
+
+            int size = readShort();
+            for (int i = 0; i < size; i++)
+            {
+                String handle = readString();
+                int code = readShort();
+                Object result;
+                switch (code)
+                {
+                    case FILETYPE_SCHEMATYPE:
+                        result = new SchemaType.Ref(getTypeSystem(), handle);
+                        break;
+                    case FILETYPE_SCHEMAELEMENT:
+                        result = new SchemaGlobalElement.Ref(getTypeSystem(), handle);
+                        break;
+                    case FILETYPE_SCHEMAATTRIBUTE:
+                        result = new SchemaGlobalAttribute.Ref(getTypeSystem(), handle);
+                        break;
+                    case FILETYPE_SCHEMAMODELGROUP:
+                        result = new SchemaModelGroup.Ref(getTypeSystem(), handle);
+                        break;
+                    case FILETYPE_SCHEMAATTRIBUTEGROUP:
+                        result = new SchemaAttributeGroup.Ref(getTypeSystem(), handle);
+                        break;
+                    case FILETYPE_SCHEMAIDENTITYCONSTRAINT:
+                        result = new SchemaIdentityConstraint.Ref(getTypeSystem(), handle);
+                        break;
+                    default:
+                        throw new SchemaTypeLoaderException("Schema index has an unrecognized entry of type " + code, _name, handle, SchemaTypeLoaderException.UNRECOGNIZED_INDEX_ENTRY);
+                }
+                pool._handlesToRefs.put(handle, result);
+            }
+        }
+

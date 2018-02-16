@@ -1,0 +1,66 @@
+    public static void validateLexical(String v, SchemaType sType, ValidationContext context)
+    {
+        // check against pattern
+        if (!sType.matchPatternFacet(v))
+        {
+            context.invalid(XmlErrorCodes.DATATYPE_VALID$PATTERN_VALID, new Object[] { "string", v, QNameHelper.readable(sType) });
+            return;
+        }
+
+        // check against length
+        XmlObject len = sType.getFacet(SchemaType.FACET_LENGTH);
+        if (len != null)
+        {
+            int m = ((XmlObjectBase)len).bigIntegerValue().intValue();
+            if (v.length() != m)
+            {
+                context.invalid(XmlErrorCodes.DATATYPE_LENGTH_VALID$STRING,
+                    new Object[] { "string", new Integer(v.length()), new Integer(m), QNameHelper.readable(sType) });
+                return;
+            }
+        }
+
+        // check against min length
+        XmlObject min = sType.getFacet(SchemaType.FACET_MIN_LENGTH);
+        if (min != null)
+        {
+            int m = ((XmlObjectBase)min).bigIntegerValue().intValue();
+            if (v.length() < m)
+            {
+                context.invalid(XmlErrorCodes.DATATYPE_MIN_LENGTH_VALID$STRING,
+                    new Object[] { "string", new Integer(v.length()), new Integer(m), QNameHelper.readable(sType) });
+                return;
+            }
+        }
+
+        // check against min length
+        XmlObject max = sType.getFacet(SchemaType.FACET_MAX_LENGTH);
+        if (max != null)
+        {
+            int m = ((XmlObjectBase)max).bigIntegerValue().intValue();
+            if (v.length() > m)
+            {
+                context.invalid(XmlErrorCodes.DATATYPE_MAX_LENGTH_VALID$STRING,
+                    new Object[] { "string", new Integer(v.length()), new Integer(m), QNameHelper.readable(sType) });
+                return;
+            }
+        }
+        
+        // enumeration
+        // NOTE: can't use .hasStringEnumValues() or .enumForString()
+        // here since we may be validating against a string enum value
+        // during StscSimpleTypeResolver.resolveFacets() and the string
+        // enum table hasn't been constructed yet.
+        XmlAnySimpleType[] vals = sType.getEnumerationValues();
+        if (vals != null)
+        {
+            for (int i = 0; i < vals.length; i++)
+            {
+                if (v.equals(vals[i].getStringValue()))
+                    return;
+            }
+            context.invalid(XmlErrorCodes.DATATYPE_ENUM_VALID,
+                new Object[] { "string", v, QNameHelper.readable(sType) });
+        }
+    }
+

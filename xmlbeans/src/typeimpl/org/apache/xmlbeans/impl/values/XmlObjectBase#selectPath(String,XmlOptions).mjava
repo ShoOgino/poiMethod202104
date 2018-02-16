@@ -1,0 +1,42 @@
+    public XmlObject[] selectPath ( String path, XmlOptions options )
+    {
+        XmlObject [] selections;
+
+        // all user-level code; doesn't need to be synchronized
+
+        XmlCursor c = newCursor();
+
+        if (c == null)
+            throw new XmlValueDisconnectedException();
+
+        try
+        {
+            c.selectPath( path, options );
+
+            if (!c.hasNextSelection())
+                selections = EMPTY_RESULT;
+            else
+            {
+                selections = new XmlObject [ c.getSelectionCount() ];
+
+                for (int i = 0 ; c.toNextSelection() ; i++)
+                {
+                    if ((selections[ i ] = c.getObject()) == null)
+                    {
+                        if ( !c.toParent() || (selections[ i ] = c.getObject()) == null )
+                        throw
+                            new XmlRuntimeException(
+                                "Path must select only elements " +
+                                    "and attributes" );
+                    }
+                }
+            }
+        }
+        finally
+        {
+            c.dispose();
+        }
+
+         return _typedArray(selections);
+    }
+

@@ -1,0 +1,100 @@
+    public void notFoundError(QName itemName, int code, XmlObject loc, boolean recovered)
+    {
+        String expected;
+        String expectedName = QNameHelper.pretty(itemName);
+        String found = null;
+        String foundName = null;
+        String sourceName = null;
+        
+        if (recovered)
+            _recoveredErrors++;
+
+        switch (code)
+        {
+            case SchemaType.TYPE:
+                expected = "type";
+                break;
+            case SchemaType.ELEMENT:
+                expected = "element";
+                break;
+            case SchemaType.ATTRIBUTE:
+                expected = "attribute";
+                break;
+            case SchemaType.MODEL_GROUP:
+                expected = "model group";
+                break;
+            case SchemaType.ATTRIBUTE_GROUP:
+                expected = "attribute group";
+                break;
+            case SchemaType.IDENTITY_CONSTRAINT:
+                expected = "identity constraint";
+                break;
+            default:
+                assert(false);
+                expected = "definition";
+                break;
+        }
+
+        SchemaComponent foundComponent = findSpelling(itemName);
+        QName name;
+        if (foundComponent != null)
+        {
+            name = foundComponent.getName();
+            if (name != null)
+            {
+                switch (foundComponent.getComponentType())
+                {
+                    case SchemaComponent.TYPE:
+                        found = "type";
+                        sourceName = ((SchemaType)foundComponent).getSourceName();
+                        break;
+                    case SchemaComponent.ELEMENT:
+                        found = "element";
+                        sourceName = ((SchemaGlobalElement)foundComponent).getSourceName();
+                        break;
+                    case SchemaComponent.ATTRIBUTE:
+                        found = "attribute";
+                        sourceName = ((SchemaGlobalAttribute)foundComponent).getSourceName();
+                        break;
+                    case SchemaComponent.ATTRIBUTE_GROUP:
+                        found = "attribute group";
+                        break;
+                    case SchemaComponent.MODEL_GROUP:
+                        found = "model group";
+                        break;
+                }
+
+                if (sourceName != null)
+                {
+                    sourceName = sourceName.substring(sourceName.lastIndexOf('/') + 1);
+                }
+
+                if (!name.equals(itemName))
+                {
+                    foundName = QNameHelper.pretty(name);
+                }
+            }
+        }
+
+        if (found == null)
+        {
+            // error with no help
+            error(XmlErrorCodes.SCHEMA_QNAME_RESOLVE,
+                new Object[] { expected, expectedName }, loc);
+        }
+        else {
+            // error with help
+            error(XmlErrorCodes.SCHEMA_QNAME_RESOLVE$HELP,
+                new Object[] {
+                    expected,
+                    expectedName,
+                    found,
+                    (foundName == null ? new Integer(0) : new Integer(1)),
+                    foundName,
+                    (sourceName == null ? new Integer(0) : new Integer(1)),
+                    sourceName
+                },
+                loc);
+        }
+    }
+

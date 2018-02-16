@@ -1,0 +1,55 @@
+    //workaround for Sun bug # 4723726
+    public static URI resolve(URI base, String child)
+        throws URISyntaxException
+    {
+        URI childUri = new URI(child);
+        URI ruri = base.resolve(childUri);
+
+        // if the child fragment is relative (which we'll assume is the case
+        // if URI.resolve doesn't do anything useful with it) and the base
+        // URI is pointing at something nested inside a jar, we seem to have
+        // to this ourselves to make sure that the nested jar url gets
+        // resolved correctly
+        if (childUri.equals(ruri) && !childUri.isAbsolute() &&
+          (base.getScheme().equals("jar") || base.getScheme().equals("zip"))) {
+            String r = base.toString();
+            int lastslash = r.lastIndexOf('/');
+            r = r.substring(0,lastslash) + "/" + childUri;
+            // Sun's implementation of URI doesn't support references to the
+            // parent directory ("/..") in the part after "!/" so we have to
+            // remove these ourselves
+            int exclPointSlashIndex = r.lastIndexOf("!/");
+            if (exclPointSlashIndex > 0)
+            {
+                int slashDotDotIndex = r.indexOf("/..", exclPointSlashIndex);
+                while (slashDotDotIndex > 0)
+                {
+                    int prevSlashIndex = r.lastIndexOf("/", slashDotDotIndex - 1);
+                    if (prevSlashIndex >= exclPointSlashIndex)
+                    {
+                        String temp = r.substring(slashDotDotIndex + 3);
+                        r = r.substring(0, prevSlashIndex).concat(temp);
+                    }
+                    slashDotDotIndex = r.indexOf("/..", exclPointSlashIndex);
+                }
+            }
+            return URI.create(r);
+        }
+
+        //fix up normalization bug
+        if ("file".equals(ruri.getScheme()) && ! child.equals(ruri))
+        {
+            if (base.getPath().startsWith("//") && !ruri.getPath().startsWith("//"))
+            {
+                String path = "///".concat(ruri.getPath());
+                try
+                {
+                    ruri = new URI("file", null, path, ruri.getQuery(), ruri.getFragment());
+                }
+                catch(URISyntaxException uris)
+                {}
+            }
+        }
+        return ruri;
+    }
+

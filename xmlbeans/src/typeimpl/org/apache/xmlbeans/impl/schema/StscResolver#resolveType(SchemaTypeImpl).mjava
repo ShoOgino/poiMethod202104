@@ -1,0 +1,27 @@
+    public static boolean resolveType(SchemaTypeImpl sImpl)
+    {
+        if (sImpl.isResolved())
+            return true;
+        if (sImpl.isResolving())
+        {
+            StscState.get().error("Cyclic dependency error", XmlErrorCodes.CYCLIC_DEPENDENCY, sImpl.getParseObject());
+            return false; // cyclic dependency error
+        }
+        // System.out.println("Resolving " + sImpl);
+
+        sImpl.startResolving();
+
+        if (sImpl.isDocumentType())
+            resolveDocumentType(sImpl);
+        else if (sImpl.isAttributeType())
+            resolveAttributeType(sImpl);
+        else if (sImpl.isSimpleType())
+            StscSimpleTypeResolver.resolveSimpleType(sImpl);
+        else
+            StscComplexTypeResolver.resolveComplexType(sImpl);
+
+        sImpl.finishResolving();
+        // System.out.println("Finished resolving " + sImpl);
+        return true;
+    }
+

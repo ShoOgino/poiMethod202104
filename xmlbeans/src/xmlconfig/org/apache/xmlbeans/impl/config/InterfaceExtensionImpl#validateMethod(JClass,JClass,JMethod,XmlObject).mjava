@@ -1,0 +1,57 @@
+    private JMethod validateMethod(JClass interfaceJClass, JClass delegateJClass, JMethod method, XmlObject loc)
+    {
+        String methodName = method.getSimpleName();
+        JParameter[] params = method.getParameters();
+        JClass returnType = method.getReturnType();
+
+        JClass[] delegateParams = new JClass[params.length+1];
+        delegateParams[0] = returnType.forName("org.apache.xmlbeans.XmlObject");
+        for (int i = 1; i < delegateParams.length; i++)
+        {
+            delegateParams[i] = params[i-1].getType();
+        }
+
+        JMethod handlerMethod = null;
+        handlerMethod = getMethod(delegateJClass, methodName, delegateParams);
+        if (handlerMethod==null)
+        {
+            BindingConfigImpl.error("Handler class '" + delegateJClass.getQualifiedName() + "' does not contain method " + methodName + "(" + listTypes(delegateParams) + ")", loc);
+            return null;
+        }
+
+        // check for throws exceptions
+        JClass[] intfExceptions = method.getExceptionTypes();
+        JClass[] delegateExceptions = handlerMethod.getExceptionTypes();
+        if ( delegateExceptions.length!=intfExceptions.length )
+        {
+            BindingConfigImpl.error("Handler method '" + delegateJClass.getQualifiedName() + "." + methodName + "(" + listTypes(delegateParams) +
+                ")' must declare the same exceptions as the interface method '" + interfaceJClass.getQualifiedName() + "." + methodName + "(" + listTypes(params), loc);
+            return null;
+        }
+
+        for (int i = 0; i < delegateExceptions.length; i++)
+        {
+            if ( delegateExceptions[i]!=intfExceptions[i] )
+            {
+                BindingConfigImpl.error("Handler method '" + delegateJClass.getQualifiedName() + "." + methodName + "(" + listTypes(delegateParams) +
+                    ")' must declare the same exceptions as the interface method '" + interfaceJClass.getQualifiedName() + "." + methodName + "(" + listTypes(params), loc);
+                return null;
+            }
+        }
+
+        if (!handlerMethod.isPublic() || !handlerMethod.isStatic())
+        {
+            BindingConfigImpl.error("Method '" + delegateJClass.getQualifiedName() + "." + methodName + "(" + listTypes(delegateParams) + ")' must be declared public and static.", loc);
+            return null;
+        }
+
+        if (!returnType.equals(handlerMethod.getReturnType()))
+        {
+            BindingConfigImpl.error("Return type for method '" + handlerMethod.getReturnType() + " " + delegateJClass.getQualifiedName() +
+                    "." + methodName + "(" + listTypes(delegateParams) + ")' does not match the return type of the interface method :'" + returnType + "'.", loc);
+            return null;
+        }
+
+        return method;
+    }
+

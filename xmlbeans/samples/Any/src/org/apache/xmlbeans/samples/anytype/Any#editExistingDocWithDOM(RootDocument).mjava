@@ -1,0 +1,71 @@
+    /**
+     * Adds a new <bar> element between the first and second
+     * children of the <arrayofany> element.
+     * 
+     * This method illustrates how you can use DOM methods to 
+     * retrieve and edit elements whose type is defined as
+     * xs:any in schema.
+     * 
+     * @param rootDoc An instance of the <root> XML document.
+     * @return <code>true</code> if the editing XML is valid; 
+     * otherwise, <code>false</code>.
+     */
+    public boolean editExistingDocWithDOM(RootDocument rootDoc)
+    {
+        RootDocument.Root root = rootDoc.getRoot();
+        
+        // Get the DOM nodes for the <arrayofany> element's children.
+        Node arrayOfAnyNode = root.getArrayofany().getDomNode();
+
+        // You don't have get* accessors for any of the <arrayofany> 
+        // element's children, so use DOM to identify the first
+        // and second elements while looping through the child list.
+        NodeList childList = arrayOfAnyNode.getChildNodes();
+        Element firstElementChild = null;
+        Element secondElementChild = null;
+
+        // Find the first child element and make sure it's
+        // <stringelement>.
+        for (int i = 0; i < childList.getLength(); i++)
+        {
+            Node node = childList.item(i);
+            if (node.getNodeType() == Node.ELEMENT_NODE)
+            {
+                if (node.getLocalName().equals("stringelement"))
+                {
+                    firstElementChild = (Element)node;                
+                    break;
+                }
+            }
+        }
+        if (firstElementChild == null) {return false;}
+
+        // Find the second child element and make sure it's
+        // <someelement>.
+        Node node = firstElementChild.getNextSibling();
+        do {
+            if (node.getNodeType() == Node.ELEMENT_NODE)
+            {
+                if (node.getLocalName().equals("someelement"))
+                {
+                    secondElementChild = (Element)node;
+                    break;
+                }
+            }
+            node = node.getNextSibling();
+        } while (node != null);
+        if (secondElementChild == null) {return false;}
+        
+        // Create and insert a new <bar> element.
+        Element fooElement = 
+            secondElementChild.getOwnerDocument().createElementNS("http://openuri.org","bar");
+        Node valueNode = 
+            fooElement.getOwnerDocument().createTextNode("some text");
+        fooElement.appendChild(valueNode);
+        arrayOfAnyNode.insertBefore(fooElement, secondElementChild);
+        
+        System.out.println("Output: <arrayofany> has a new <bar> child element.\n");
+        System.out.println(rootDoc + "\n");
+        return validateXml(rootDoc);        
+    }
+

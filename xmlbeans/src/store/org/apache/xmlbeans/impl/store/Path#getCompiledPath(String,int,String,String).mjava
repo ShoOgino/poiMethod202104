@@ -1,0 +1,79 @@
+    static Path getCompiledPath(String pathExpr, int force,
+        String currentVar, String delIntfName)
+    {
+        Path path = null;
+        WeakReference pathWeakRef = null;
+        Map namespaces = (force & USE_DELEGATE) != 0 ? new HashMap() : null;
+        lock.readLock().lock();
+        try {
+        if ((force & USE_XBEAN) != 0)
+            pathWeakRef = (WeakReference)_xbeanPathCache.get(pathExpr);
+        if (pathWeakRef == null && (force & USE_XQRL) != 0)
+            pathWeakRef = (WeakReference)_xqrlPathCache.get(pathExpr);
+        if (pathWeakRef == null && (force & USE_XDK) != 0)
+            pathWeakRef = (WeakReference)_xdkPathCache.get(pathExpr);
+        if (pathWeakRef == null && (force & USE_XQRL2002) != 0)
+            pathWeakRef = (WeakReference)_xqrl2002PathCache.get(pathExpr);
+
+        if (pathWeakRef!=null)
+            path = (Path)pathWeakRef.get();
+        if (path != null)
+            return path;
+        } finally {
+            lock.readLock().unlock();
+        }
+        lock.writeLock().lock();
+        try {
+        if ((force & USE_XBEAN) != 0) {
+            pathWeakRef = (WeakReference)_xbeanPathCache.get(pathExpr);
+            if (pathWeakRef != null)
+                path = (Path)pathWeakRef.get();
+            if (path==null)
+            path = getCompiledPathXbean(pathExpr, currentVar, namespaces);
+        }
+        if (path == null && (force & USE_XQRL) != 0) {
+            pathWeakRef = (WeakReference)_xqrlPathCache.get(pathExpr);
+            if (pathWeakRef != null)
+                path = (Path)pathWeakRef.get();
+            if (path==null)
+            path = getCompiledPathXqrl(pathExpr, currentVar);
+        }
+        if (path == null && (force & USE_XDK) != 0) {
+            pathWeakRef = (WeakReference)_xdkPathCache.get(pathExpr);
+            if (pathWeakRef != null)
+                path = (Path)pathWeakRef.get();
+            if (path==null)
+            path = getCompiledPathXdk(pathExpr, currentVar);
+        }
+        if (path == null && (force & USE_DELEGATE) != 0) {
+            path = getCompiledPathDelegate(pathExpr, currentVar, namespaces, delIntfName);
+        }
+        if (path == null && (force & USE_XQRL2002) != 0) {
+            pathWeakRef = (WeakReference)_xqrl2002PathCache.get(pathExpr);
+            if (pathWeakRef != null)
+                path = (Path)pathWeakRef.get();
+            if (path==null)
+            path = getCompiledPathXqrl2002(pathExpr, currentVar);
+        }
+        if (path == null)
+        {
+            StringBuffer errMessage = new StringBuffer();
+            if ((force & USE_XBEAN) != 0)
+                errMessage.append(" Trying XBeans path engine...");
+            if ((force & USE_XQRL) != 0)
+                errMessage.append(" Trying XQRL...");
+            if ((force & USE_XDK) != 0)
+                errMessage.append(" Trying XDK...");
+            if ((force & USE_DELEGATE) != 0)
+                errMessage.append(" Trying delegated path engine...");
+            if ((force & USE_XQRL2002) != 0)
+                errMessage.append(" Trying XQRL2002...");
+
+            throw new RuntimeException(errMessage.toString() + " FAILED on " + pathExpr);
+        }
+        } finally {
+            lock.writeLock().unlock();
+        }
+        return path;
+    }
+

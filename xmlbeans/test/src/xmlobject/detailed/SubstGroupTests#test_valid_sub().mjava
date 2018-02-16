@@ -1,0 +1,58 @@
+    /**
+     * Tests substition upcase, from item to Document, then ensure validation
+     *
+     * @throws Exception
+     */
+    public void test_valid_sub() throws Exception
+    {
+        String expectedXML = "<sub:beanBag xmlns:sub=\"http://xmlobject/substgroup\">" +
+                "  <sku>12</sku>" +
+                "  <name>BeanBagType</name>" +
+                "  <size color=\"Blue\">Blue</size>" +
+                "</sub:beanBag>";
+        XmlObject xm = XmlObject.Factory.parse(expectedXML);
+        String itemName = "item";
+        BigInteger bInt = new BigInteger("12");
+
+        xmlobject.substgroup.OrderItem order = OrderItem.Factory.newInstance();
+        ItemType item = order.addNewItem();
+        item.setName(itemName);
+        item.setSku(bInt);
+
+        System.out.println("Order: " +
+                order.xmlText(new XmlOptions().setSavePrettyPrint()));
+        System.out.println("valid: " + order.validate());
+
+        BeanBagType b2Type = (BeanBagType) item.substitute(
+                BeanBagDocument.type.getDocumentElementName(),
+                BeanBagType.type);
+
+        Assert.assertTrue("Name Value was not as expected\nactual: " +
+                b2Type.getName() +
+                " exp: " +
+                itemName,
+                b2Type.getName().compareTo(itemName) == 0);
+        Assert.assertTrue("Integer Value was not as Excepted",
+                b2Type.getSku().compareTo(bInt) == 0);
+
+        BeanBagSizeType bbSize = b2Type.addNewSize();
+        bbSize.setColor("Blue");
+        bbSize.setStringValue("Blue");
+        b2Type.setSize(bbSize);
+        b2Type.setName("BeanBagType");
+
+        System.out.println("b2Type: " +
+                b2Type.xmlText(new XmlOptions().setSavePrettyPrint()));
+        System.out.println("b2Type: " + b2Type.validate());
+
+        System.out.println("Order: " +
+                order.xmlText(new XmlOptions().setSavePrettyPrint()));
+        System.out.println("ovalid: " + order.validate());
+
+        tools.xml.XmlComparator.Diagnostic diag = new tools.xml.XmlComparator.Diagnostic();
+
+        if (!XmlComparator.lenientlyCompareTwoXmlStrings(order.xmlText(),
+                xm.xmlText(), diag))
+            throw new Exception("Compare Values Fails\n" + diag.toString());
+    }
+

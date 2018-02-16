@@ -1,0 +1,35 @@
+    protected static File createTempDir() throws IOException
+    {
+
+// Some beta builds of JDK1.5 are having troubles creating temp directories
+// if the java.io.tmpdir doesn't exist.  This seems to help.
+try {
+  File tmpDirFile = new File(SystemProperties.getProperty("java.io.tmpdir"));
+  tmpDirFile.mkdirs();
+} catch(Exception e) { e.printStackTrace(); }
+
+        File tmpFile = File.createTempFile("xbean", null);
+        String path = tmpFile.getAbsolutePath();
+        if (!path.endsWith(".tmp"))
+            throw new IOException("Error: createTempFile did not create a file ending with .tmp");
+        path = path.substring(0, path.length() - 4);
+        File tmpSrcDir = null;
+
+        for (int count = 0; count < 100; count++)
+        {
+            String name = path + ".d" + (count == 0 ? "" : Integer.toString(count++));
+
+            tmpSrcDir = new File(name);
+
+            if (!tmpSrcDir.exists())
+            {
+                boolean created = tmpSrcDir.mkdirs();
+                assert created : "Could not create " + tmpSrcDir.getAbsolutePath();
+                break;
+            }
+        }
+        tmpFile.deleteOnExit();
+
+        return tmpSrcDir;
+    }
+

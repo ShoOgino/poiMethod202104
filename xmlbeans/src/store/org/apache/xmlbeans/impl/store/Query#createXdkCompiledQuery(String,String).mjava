@@ -1,0 +1,43 @@
+    private static Query createXdkCompiledQuery(String queryExpr, String currentVar)
+    {
+        //if the XDK engine has been determined unavailable, return null
+        if ( !_xdkAvailable ) return null;
+        if ( _xdkCompileQuery == null)
+        {
+            try
+            {
+                Class xdkImpl = Class.forName("org.apache.xmlbeans.impl.store.OXQXBXqrlImpl");
+
+                _xdkCompileQuery =
+                    xdkImpl.getDeclaredMethod("compileQuery",
+                        new Class[]{String.class, String.class, Boolean.class});
+            }
+            catch (ClassNotFoundException e)
+            {
+                _xdkAvailable = false;
+                return null;
+            }
+            catch (Exception e)
+            {
+                _xdkAvailable = false;
+                throw new RuntimeException(e.getMessage(), e);
+            }
+        }
+
+        Object[] args = new Object[]{queryExpr, currentVar, new Boolean(true)};
+
+        try
+        {
+            return (Query) _xdkCompileQuery.invoke(null, args);
+        }
+        catch (InvocationTargetException e)
+        {
+            Throwable t = e.getCause();
+            throw new RuntimeException(t.getMessage(), t);
+        }
+        catch (IllegalAccessException e)
+        {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+    }
+

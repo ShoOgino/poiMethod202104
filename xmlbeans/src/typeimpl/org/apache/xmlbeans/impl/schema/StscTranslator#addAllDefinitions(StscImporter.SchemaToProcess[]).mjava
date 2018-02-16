@@ -1,0 +1,213 @@
+    public static void addAllDefinitions(StscImporter.SchemaToProcess[] schemasAndChameleons)
+    {
+        // Build all redefine objects
+        List redefinitions = new ArrayList();
+        for (int i = 0; i < schemasAndChameleons.length; i++)
+        {
+            List redefines = schemasAndChameleons[i].getRedefines();
+            if (redefines != null)
+            {
+                List redefineObjects = schemasAndChameleons[i].getRedefineObjects();
+                Iterator it = redefines.iterator();
+                Iterator ito = redefineObjects.iterator();
+                for (; it.hasNext(); )
+                {
+                    assert ito.hasNext() :
+                    "The array of redefines and redefine objects have to have the same length";
+                    redefinitions.add(new RedefinitionHolder(
+                            (StscImporter.SchemaToProcess) it.next(),
+                            (Redefine) ito.next()));
+                }
+            }
+        }
+        RedefinitionMaster globalRedefinitions = new RedefinitionMaster((RedefinitionHolder[])
+            redefinitions.toArray(new RedefinitionHolder[redefinitions.size()]));
+
+        StscState state = StscState.get();
+        for (int j = 0; j < schemasAndChameleons.length; j++)
+        {
+            Schema schema = schemasAndChameleons[j].getSchema();
+            String givenTargetNamespace = schemasAndChameleons[j].getChameleonNamespace();
+
+        // quick check for a few unsupported features
+
+        if (schema.sizeOfNotationArray() > 0)
+        {
+            state.warning("Schema <notation> is not yet supported for this release.", XmlErrorCodes.UNSUPPORTED_FEATURE, schema.getNotationArray(0));
+        }
+
+        // figure namespace (taking into account chameleons)
+        String targetNamespace = schema.getTargetNamespace();
+        boolean chameleon = false;
+        if (givenTargetNamespace != null && targetNamespace == null)
+        {
+            targetNamespace = givenTargetNamespace;
+            chameleon = true;
+        }
+        if (targetNamespace == null)
+            targetNamespace = "";
+
+        //SchemaContainer container = null;
+        if (targetNamespace.length() > 0 || !isEmptySchema(schema))
+        {
+            state.registerContribution(targetNamespace, schema.documentProperties().getSourceName());
+            state.addNewContainer(targetNamespace);
+            //container = state.getContainer(targetNamespace);
+        }
+
+        List redefChain = new ArrayList();
+        TopLevelComplexType[] complexTypes = schema.getComplexTypeArray();
+        for (int i = 0; i < complexTypes.length; i++)
+        {
+            TopLevelComplexType type = complexTypes[i];
+            TopLevelComplexType redef;
+            // 1. Traverse the list of redefining Schemas putting all redefinitions
+            // of this type in a List
+            RedefinitionHolder[] rhArray = globalRedefinitions.getComplexTypeRedefinitions(
+                type.getName(), schemasAndChameleons[j]);
+            for (int k = 0; k < rhArray.length; k++)
+            {
+                // In error cases, some redefinitions were nulled out in the list
+                // which is why we need to perform this check
+                if (rhArray[k] != null)
+                {
+                    redef = rhArray[k].redefineComplexType(type.getName());
+                    assert redef != null; // This was already checked
+                    redefChain.add(type);
+                    type = redef;
+                }
+            }
+
+            SchemaTypeImpl t = translateGlobalComplexType(type, targetNamespace, chameleon, redefChain.size() > 0);
+            state.addGlobalType(t, null);
+            SchemaTypeImpl r;
+            // 2. Traverse the List built in step 1 in reverse and add all the
+            // types in it to the list of redefined types
+            for (int k = redefChain.size() - 1; k >= 0; k--)
+            {
+                redef = (TopLevelComplexType) redefChain.remove(k);
+                r = translateGlobalComplexType(redef, targetNamespace, chameleon, k > 0);
+                state.addGlobalType(r, t);
+                t = r;
+            }
+        }
+
+        TopLevelSimpleType[] simpleTypes = schema.getSimpleTypeArray();
+        for (int i = 0; i < simpleTypes.length; i++)
+        {
+            TopLevelSimpleType type = simpleTypes[i];
+            TopLevelSimpleType redef;
+            RedefinitionHolder[] rhArray = globalRedefinitions.getSimpleTypeRedefinitions(
+                type.getName(), schemasAndChameleons[j]);
+            for (int k = 0; k < rhArray.length; k++)
+            {
+                // In error cases, some redefinitions were nulled out in the list
+                // which is why we need to perform this check
+                if (rhArray[k] != null)
+                {
+                    redef = rhArray[k].redefineSimpleType(type.getName());
+                    assert redef != null; // This was already checked
+                    redefChain.add(type);
+                    type = redef;
+                }
+            }
+
+            SchemaTypeImpl t = translateGlobalSimpleType(type, targetNamespace, chameleon,redefChain.size() > 0);
+            state.addGlobalType(t, null);
+            SchemaTypeImpl r;
+            for (int k = redefChain.size()-1; k >= 0; k--)
+            {
+                redef = (TopLevelSimpleType) redefChain.remove(k);
+                r = translateGlobalSimpleType(redef, targetNamespace, chameleon, k > 0);
+                state.addGlobalType(r, t);
+                t = r;
+            }
+        }
+
+        TopLevelElement[] elements = schema.getElementArray();
+        for (int i = 0; i < elements.length; i++)
+        {
+            TopLevelElement element = elements[i];
+            state.addDocumentType(translateDocumentType(element, targetNamespace, chameleon), QNameHelper.forLNS(element.getName(), targetNamespace));
+        }
+
+        TopLevelAttribute[] attributes = schema.getAttributeArray();
+        for (int i = 0; i < attributes.length ; i++)
+        {
+            TopLevelAttribute attribute = attributes[i];
+            state.addAttributeType(translateAttributeType(attribute, targetNamespace, chameleon), QNameHelper.forLNS(attribute.getName(), targetNamespace));
+        }
+
+        NamedGroup[] modelgroups = schema.getGroupArray();
+        for (int i = 0; i < modelgroups.length; i++)
+        {
+            NamedGroup group = modelgroups[i];
+            NamedGroup redef;
+            RedefinitionHolder[] rhArray = globalRedefinitions.getModelGroupRedefinitions(
+                group.getName(), schemasAndChameleons[j]);
+            for (int k = 0; k < rhArray.length; k++)
+            {
+                // In error cases, some redefinitions were nulled out in the list
+                // which is why we need to perform this check
+                if (rhArray[k] != null)
+                {
+                    redef = rhArray[k].redefineModelGroup(group.getName());
+                    assert redef != null; // This was already checked
+                    redefChain.add(group);
+                    group = redef;
+                }
+            }
+
+            SchemaModelGroupImpl g = translateModelGroup(group, targetNamespace, chameleon, redefChain.size() > 0);
+            state.addModelGroup(g, null);
+            SchemaModelGroupImpl r;
+            for (int k = redefChain.size()-1; k >= 0; k--)
+            {
+                redef = (NamedGroup) redefChain.remove(k);
+                r = translateModelGroup(redef, targetNamespace, chameleon, k > 0);
+                state.addModelGroup(r, g);
+                g = r;
+            }
+        }
+
+        NamedAttributeGroup[] attrgroups = schema.getAttributeGroupArray();
+        for (int i = 0; i < attrgroups.length; i++)
+        {
+            NamedAttributeGroup group = attrgroups[i];
+            NamedAttributeGroup redef;
+            RedefinitionHolder[] rhArray = globalRedefinitions.getAttributeGroupRedefinitions(
+                group.getName(), schemasAndChameleons[j]);
+            for (int k = 0; k < rhArray.length; k++)
+            {
+                // In error cases, some redefinitions were nulled out in the list
+                // which is why we need to perform this check
+                if (rhArray[k] != null)
+                {
+                    redef = rhArray[k].redefineAttributeGroup(group.getName());
+                    assert redef != null; // This was already checked
+                    redefChain.add(group);
+                    group = redef;
+                }
+            }
+
+            SchemaAttributeGroupImpl g = translateAttributeGroup(group, targetNamespace, chameleon, redefChain.size() > 0);
+            state.addAttributeGroup(g, null);
+            SchemaAttributeGroupImpl r;
+            for (int k = redefChain.size()-1; k >= 0; k--)
+            {
+                redef = (NamedAttributeGroup) redefChain.remove(k);
+                r = translateAttributeGroup(redef, targetNamespace, chameleon, k > 0);
+                state.addAttributeGroup(r, g);
+                g = r;
+            }
+        }
+
+        AnnotationDocument.Annotation[] annotations = schema.getAnnotationArray();
+        for (int i = 0; i < annotations.length; i++)
+            state.addAnnotation(SchemaAnnotationImpl.getAnnotation(state.getContainer(targetNamespace), schema, annotations[i]), targetNamespace);
+        }
+
+        for (int i = 0; i < redefinitions.size(); i++)
+            ((RedefinitionHolder) redefinitions.get(i)).complainAboutMissingDefinitions();
+    }
+

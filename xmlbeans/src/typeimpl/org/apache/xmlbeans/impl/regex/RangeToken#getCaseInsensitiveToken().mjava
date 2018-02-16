@@ -1,0 +1,34 @@
+    synchronized RangeToken getCaseInsensitiveToken() {
+        if (this.icaseCache != null)
+            return this.icaseCache;
+            
+        RangeToken uppers = this.type == Token.RANGE ? Token.createRange() : Token.createNRange();
+        for (int i = 0;  i < this.ranges.length;  i += 2) {
+            for (int ch = this.ranges[i];  ch <= this.ranges[i+1];  ch ++) {
+                if (ch > 0xffff)
+                    uppers.addRange(ch, ch);
+                else {
+                    char uch = Character.toUpperCase((char)ch);
+                    uppers.addRange(uch, uch);
+                }
+            }
+        }
+        RangeToken lowers = this.type == Token.RANGE ? Token.createRange() : Token.createNRange();
+        for (int i = 0;  i < uppers.ranges.length;  i += 2) {
+            for (int ch = uppers.ranges[i];  ch <= uppers.ranges[i+1];  ch ++) {
+                if (ch > 0xffff)
+                    lowers.addRange(ch, ch);
+                else {
+                    char uch = Character.toUpperCase((char)ch);
+                    lowers.addRange(uch, uch);
+                }
+            }
+        }
+        lowers.mergeRanges(uppers);
+        lowers.mergeRanges(this);
+        lowers.compactRanges();
+
+        this.icaseCache = lowers;
+        return lowers;
+    }
+

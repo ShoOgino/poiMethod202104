@@ -1,0 +1,47 @@
+    protected void processElementsInComplexType(Type elemType, List children, String parentNamespace,
+        TypeSystemHolder typeSystemHolder, Inst2XsdOptions options)
+    {
+        Map elemNamesToElements = new HashMap();
+        Element currentElem = null;
+
+        for (Iterator iterator = children.iterator(); iterator.hasNext();)
+        {
+            Element child = (Element) iterator.next();
+
+            if (currentElem==null)
+            {   // first element in this type
+                checkIfElementReferenceIsNeeded(child, parentNamespace, typeSystemHolder, options);
+                elemType.addElement(child);
+                elemNamesToElements.put(child.getName(), child);
+                currentElem = child;
+                continue;
+            }
+
+            if (currentElem.getName()==child.getName())
+            {   // same contiguos element
+                combineTypes(currentElem.getType(), child.getType(), options); // unify types
+                combineElementComments(currentElem, child);
+                // minOcc=0 maxOcc=unbounded
+                currentElem.setMinOccurs(0);
+                currentElem.setMaxOccurs(Element.UNBOUNDED);
+            }
+            else
+            {
+                Element sameElem = (Element)elemNamesToElements.get(child.getName());
+                if (sameElem==null)
+                {   // new element name
+                    checkIfElementReferenceIsNeeded(child, parentNamespace, typeSystemHolder, options);
+                    elemType.addElement(child);
+                    elemNamesToElements.put(child.getName(), child);
+                }
+                else
+                {   //same non contiguos
+                    combineTypes(currentElem.getType(), child.getType(), options);
+                    combineElementComments(currentElem, child);
+                    elemType.setTopParticleForComplexOrMixedContent(Type.PARTICLE_CHOICE_UNBOUNDED);
+                }
+                currentElem = child;
+            }
+        }
+    }
+

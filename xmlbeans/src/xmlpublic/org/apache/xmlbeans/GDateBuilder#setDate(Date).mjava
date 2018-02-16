@@ -1,0 +1,51 @@
+    /**
+     * Sets the current time and date based on a java.util.Date instance.
+     * <p>
+     * The timezone offset used is based on the default TimeZone. (The
+     * default TimeZone is consulted to incorporate daylight savings offsets
+     * if applicable for the current date as well as the base timezone offset.)
+     * <p>
+     * If you wish to normalize the timezone, e.g., to UTC, follow this with
+     * a call to normalizeToTimeZone.
+     * 
+     * @param date the Date object to copy
+     */
+    public void setDate(Date date)
+    {
+        // Default timezone
+        TimeZone dtz = TimeZone.getDefault();
+        int offset = dtz.getOffset(date.getTime());
+        int offsetsign = 1;
+        if (offset < 0)
+        {
+            offsetsign = -1;
+            offset = -offset;
+        }
+        int offsetmin = offset / (1000 * 60);
+        int offsethr = offsetmin / 60;
+        offsetmin = offsetmin - offsethr * 60;
+
+        setTimeZone(offsetsign, offsethr, offsetmin);
+        
+        // paranoia: tz.getOffset can return fractions of minutes, but we must round
+        int roundedoffset = offsetsign * (offsethr * 60 + offsetmin) * 60 * 1000;
+
+        // midnight
+        setTime(0, 0, 0, GDate._zero);
+
+        // Set to January 1, 1970.
+        // setJulianDate(2440588);
+        _bits |= HAS_DAY | HAS_MONTH | HAS_YEAR;
+        _CY = 1970;
+        _M = 1;
+        _D = 1;
+
+        // Add a duration representing the number of milliseconds
+        addGDuration(new GDuration(1, 0, 0, 0, 0, 0, 0,
+                BigDecimal.valueOf(date.getTime() + roundedoffset, 3)));
+
+        // special case: ss.000 -> ss
+        if (_fs.signum() == 0)
+            _fs = GDate._zero;
+    }
+

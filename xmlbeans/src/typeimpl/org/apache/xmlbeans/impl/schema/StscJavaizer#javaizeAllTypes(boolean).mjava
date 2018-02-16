@@ -1,0 +1,38 @@
+    /**
+     * Does a topo walk of all the types to resolve them.
+     */
+    public static void javaizeAllTypes(boolean javaize)
+    {
+        StscState state = StscState.get();
+
+        List allSeenTypes = new ArrayList();
+        allSeenTypes.addAll(Arrays.asList(state.documentTypes()));
+        allSeenTypes.addAll(Arrays.asList(state.attributeTypes()));
+        allSeenTypes.addAll(Arrays.asList(state.globalTypes()));
+
+        // First distribute the global names among the top entities.
+        if (javaize)
+            assignGlobalJavaNames(allSeenTypes);
+
+        // now fully javaize everything deeply.
+        for (int i = 0; i < allSeenTypes.size(); i++)
+        {
+            SchemaType gType = (SchemaType)allSeenTypes.get(i);
+            if (javaize)
+            {
+                javaizeType((SchemaTypeImpl)gType);
+                String className = gType.getFullJavaName();
+                if (className != null)
+                    state.addClassname(className.replace('$', '.'), gType);
+            }
+            else
+                skipJavaizingType((SchemaTypeImpl)gType);
+            allSeenTypes.addAll(Arrays.asList(gType.getAnonymousTypes()));
+            // We need to javaize the anonymous types defined inside redefined types
+            // since redefined type do not get a Java class of their own.
+            // The exception is complex types derived by restriction, since in this case
+            // anonymous types are not inherited
+            addAnonymousTypesFromRedefinition(gType, allSeenTypes);
+        }
+    }
+

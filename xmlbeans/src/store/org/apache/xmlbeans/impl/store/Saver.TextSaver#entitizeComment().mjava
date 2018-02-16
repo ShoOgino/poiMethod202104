@@ -1,0 +1,47 @@
+        private void entitizeComment ( )
+        {
+            if (_lastEmitCch == 0)
+                return;
+
+            int i = _lastEmitIn;
+
+            boolean lastWasDash = false;
+
+            for ( int cch = _lastEmitCch ; cch > 0 ; cch-- )
+            {
+                char ch = _buf[ i ];
+
+                if (isBadChar( ch ))
+                    i = replace( i, "?" );
+                else if (ch == '-')
+                {
+                    if (lastWasDash)
+                    {
+                        // Replace "--" with "- " to make well formed
+                        i = replace( i, " " );
+                        lastWasDash = false;
+                    }
+                    else
+                    {
+                        lastWasDash = true;
+                        i++;
+                    }
+                }
+                else
+                {
+                    lastWasDash = false;
+                    i++;
+                }
+
+                if (i == _buf.length)
+                    i = 0;
+            }
+
+            // Because I have only replaced chars with single chars,
+            // _lastEmitIn will still be ok
+
+            int offset = (_lastEmitIn + _lastEmitCch - 1) % _buf.length;
+            if (_buf[ offset ] == '-')
+                i = replace( offset, " " );
+        }
+

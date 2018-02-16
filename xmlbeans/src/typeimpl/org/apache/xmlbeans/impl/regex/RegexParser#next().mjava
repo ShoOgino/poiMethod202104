@@ -1,0 +1,123 @@
+    final void next() {
+        if (this.offset >= this.regexlen) {
+            this.chardata = -1;
+            this.nexttoken = T_EOF;
+            return;
+        }
+
+        int ret;
+        int ch = this.regex.charAt(this.offset++);
+        this.chardata = ch;
+
+        if (this.context == S_INBRACKETS) {
+            // In a character class, this.chardata has one character, that is to say,
+            // a pair of surrogates is composed and stored to this.chardata.
+            switch (ch) {
+              case '\\':
+                ret = T_BACKSOLIDUS;
+                if (this.offset >= this.regexlen)
+                    throw ex("parser.next.1", this.offset-1);
+                this.chardata = this.regex.charAt(this.offset++);
+                break;
+
+              case '-':
+                if (this.isSet(RegularExpression.XMLSCHEMA_MODE)
+                    && this.offset < this.regexlen && this.regex.charAt(this.offset) == '[') {
+                    this.offset++;
+                    ret = T_XMLSCHEMA_CC_SUBTRACTION;
+                } else
+                    ret = T_CHAR;
+                break;
+
+              case '[':
+                if (!this.isSet(RegularExpression.XMLSCHEMA_MODE)
+                    && this.offset < this.regexlen && this.regex.charAt(this.offset) == ':') {
+                    this.offset++;
+                    ret = T_POSIX_CHARCLASS_START;
+                    break;
+                } // Through down
+              default:
+                if (REUtil.isHighSurrogate(ch) && this.offset < this.regexlen) {
+                    int low = this.regex.charAt(this.offset);
+                    if (REUtil.isLowSurrogate(low)) {
+                        this.chardata = REUtil.composeFromSurrogates(ch, low);
+                        this.offset ++;
+                    }
+                }
+                ret = T_CHAR;
+            }
+            this.nexttoken = ret;
+            return;
+        }
+
+        switch (ch) {
+          case '|': ret = T_OR;             break;
+          case '*': ret = T_STAR;           break;
+          case '+': ret = T_PLUS;           break;
+          case '?': ret = T_QUESTION;       break;
+          case ')': ret = T_RPAREN;         break;
+          case '.': ret = T_DOT;            break;
+          case '[': ret = T_LBRACKET;       break;
+          case '^': ret = T_CARET;          break;
+          case '$': ret = T_DOLLAR;         break;
+          case '(':
+            ret = T_LPAREN;
+            if (this.offset >= this.regexlen)
+                break;
+            if (this.regex.charAt(this.offset) != '?')
+                break;
+            if (++this.offset >= this.regexlen)
+                throw ex("parser.next.2", this.offset-1);
+            ch = this.regex.charAt(this.offset++);
+            switch (ch) {
+              case ':':  ret = T_LPAREN2;            break;
+              case '=':  ret = T_LOOKAHEAD;          break;
+              case '!':  ret = T_NEGATIVELOOKAHEAD;  break;
+              case '[':  ret = T_SET_OPERATIONS;     break;
+              case '>':  ret = T_INDEPENDENT;        break;
+              case '<':
+                if (this.offset >= this.regexlen)
+                    throw ex("parser.next.2", this.offset-3);
+                ch = this.regex.charAt(this.offset++);
+                if (ch == '=') {
+                    ret = T_LOOKBEHIND;
+                } else if (ch == '!') {
+                    ret = T_NEGATIVELOOKBEHIND;
+                } else
+                    throw ex("parser.next.3", this.offset-3);
+                break;
+              case '#':
+                while (this.offset < this.regexlen) {
+                    ch = this.regex.charAt(this.offset++);
+                    if (ch == ')')  break;
+                }
+                if (ch != ')')
+                    throw ex("parser.next.4", this.offset-1);
+                ret = T_COMMENT;
+                break;
+              default:
+                if (ch == '-' || 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z') {// Options
+                    this.offset --;
+                    ret = T_MODIFIERS;
+                    break;
+                } else if (ch == '(') {         // conditional
+                    ret = T_CONDITION;          // this.offsets points the next of '('.
+                    break;
+                }
+                throw ex("parser.next.2", this.offset-2);
+            }
+            break;
+            
+          case '\\':
+            ret = T_BACKSOLIDUS;
+            if (this.offset >= this.regexlen)
+                throw ex("parser.next.1", this.offset-1);
+            this.chardata = this.regex.charAt(this.offset++);
+            break;
+
+          default:
+            ret = T_CHAR;
+        }
+        this.nexttoken = ret;
+    }
+

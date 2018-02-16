@@ -1,0 +1,45 @@
+    public void repackage () throws Exception
+    {
+        if (_sourceBase==null || _targetBase==null)
+        {   // read from system.in, write on system.out
+            System.out.println( _repackager.repackage(readInputStream(System.in)).toString() );
+            return;
+        }
+
+        _fromPackages = _repackager.getFromPackages();
+        _toPackages = _repackager.getToPackages();
+        
+        _packagePattern =
+            Pattern.compile( "^\\s*package\\s+((?:\\w|\\.)*)\\s*;", Pattern.MULTILINE );
+        
+        _moveAlongFiles = new ArrayList();
+        _movedDirs = new HashMap();
+        
+//        System.out.println( "Deleting repackage dir ..." );
+//        recursiveDelete( _targetBase );
+        
+        _targetBase.mkdirs();
+        
+        ArrayList files = new ArrayList();
+
+        fillFiles( files, _sourceBase );
+        
+        System.out.println( "Repackaging " + files.size() + " files ..." );
+
+        int prefixLength = _sourceBase.getCanonicalPath().length();
+
+        for ( int i = 0 ; i < files.size() ; i++ )
+        {
+            File from = (File) files.get( i );
+
+            String name = from.getCanonicalPath().substring( prefixLength + 1 );
+
+            repackageFile( name );
+        }
+        
+        finishMovingFiles();
+        
+        if (_skippedFiles > 0)
+            System.out.println("Skipped " + _skippedFiles + " unmodified files.");
+    }
+

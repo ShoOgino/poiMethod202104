@@ -1,0 +1,47 @@
+    protected void fillUpContentForComplexType(Type type, org.apache.xmlbeans.impl.xb.xsdschema.ComplexType sComplexType, String tns)
+    {
+        if (type.getContentType()==Type.COMPLEX_TYPE_SIMPLE_CONTENT)
+        {
+            org.apache.xmlbeans.impl.xb.xsdschema.SimpleContentDocument.SimpleContent simpleContent = sComplexType.addNewSimpleContent();
+
+            assert type.getExtensionType()!=null && type.getExtensionType().getName()!=null : "Extension type must exist and be named for a COMPLEX_TYPE_SIMPLE_CONTENT";
+
+            org.apache.xmlbeans.impl.xb.xsdschema.SimpleExtensionType ext = simpleContent.addNewExtension();
+            ext.setBase(type.getExtensionType().getName());
+
+            fillUpAttributesInComplexTypesSimpleContent(type, ext, tns);
+        }
+        else
+        {
+            if (type.getContentType()==Type.COMPLEX_TYPE_MIXED_CONTENT)
+            {
+                sComplexType.setMixed(true);
+            }
+
+            org.apache.xmlbeans.impl.xb.xsdschema.ExplicitGroup explicitGroup;
+            if (type.getContentType()==Type.COMPLEX_TYPE_EMPTY_CONTENT)
+                explicitGroup = null;
+            else if (type.getTopParticleForComplexOrMixedContent()==Type.PARTICLE_SEQUENCE)
+            {
+                explicitGroup = sComplexType.addNewSequence();
+            }
+            else if (type.getTopParticleForComplexOrMixedContent()==Type.PARTICLE_CHOICE_UNBOUNDED)
+            {
+                explicitGroup = sComplexType.addNewChoice();
+                explicitGroup.setMaxOccurs("unbounded");
+                explicitGroup.setMinOccurs(new BigInteger("0"));
+            }
+            else { throw new IllegalStateException("Unknown particle type in complex and mixed content"); }
+
+            for (int i = 0; i < type.getElements().size(); i++)
+            {
+                Element child = (Element) type.getElements().get(i);
+                assert !child.isGlobal();
+                org.apache.xmlbeans.impl.xb.xsdschema.LocalElement childLocalElement = explicitGroup.addNewElement();
+                fillUpLocalElement(child, childLocalElement, tns);
+            }
+
+            fillUpAttributesInComplexTypesComplexContent(type, sComplexType, tns);
+        }
+    }
+

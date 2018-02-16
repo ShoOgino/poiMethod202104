@@ -1,0 +1,72 @@
+    /**
+     * Adds items to the cache that point to new files that aren't
+     * described in the cache, and optionally deletes old entries.
+     *
+     * If an old file is gone and a new file is
+     * found with exactly the same contents, the cache entry is moved
+     * to point to the new file.
+     */
+    public final void syncCacheWithLocalXsdFiles(String[] filenames, boolean deleteOnlyMentioned)
+    {
+        Set seenResources = new HashSet();
+        Set vanishedResources = new HashSet();
+
+        for (int i = 0; i < filenames.length; i++)
+        {
+            String filename = filenames[i];
+
+            // first, if the filename matches exactly, trust the filename
+            SchemaResource resource = (SchemaResource)_resourceForFilename.get(filename);
+            if (resource != null)
+            {
+                if (fileExists(filename))
+                    seenResources.add(resource);
+                else
+                    vanishedResources.add(resource);
+                continue;
+            }
+
+            // new file that is not in the index?
+            // not if the digest is known to the index and the original file is gone - that's a rename!
+            String digest = null;
+            try
+            {
+                digest = shaDigestForFile(filename);
+                resource = (SchemaResource)_resourceForDigest.get(digest);
+                if (resource != null)
+                {
+                    String oldFilename = resource.getFilename();
+                    if (!fileExists(oldFilename))
+                    {
+                        warning("File " + filename + " is a rename of " + oldFilename);
+                        resource.setFilename(filename);
+                        seenResources.add(resource);
+                        if (_resourceForFilename.get(oldFilename) == resource)
+                            _resourceForFilename.remove(oldFilename);
+                        if (_resourceForFilename.containsKey(filename))
+                            _resourceForFilename.put(filename, resource);
+                        continue;
+                    }
+                }
+            }
+            catch (IOException e)
+            {
+                // unable to read digest... no problem, ignore then
+            }
+
+            // ok, this really is a new XSD file then, of unknown URL origin
+            DownloadedSchemaEntry newEntry = addNewEntry();
+            newEntry.setFilename(filename);
+            warning("Caching information on new local file " + filename);
+            if (digest != null)
+                newEntry.setSha1(digest);
+
+            seenResources.add(updateResource(newEntry));
+        }
+
+        if (deleteOnlyMentioned)
+            deleteResourcesInSet(vanishedResources, true);
+        else
+            deleteResourcesInSet(seenResources, false);
+    }
+

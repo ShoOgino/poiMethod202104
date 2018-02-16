@@ -1,0 +1,103 @@
+    public void testModifyDataTypesList() throws Exception
+    {
+        System.out.println("Inside test case testModifyDataTypes()");
+
+        // 1. remove one of the constituent types for the union and test to see if union is anySimpleType
+
+        // Step 1: read in a clean XSD datatypes_added.xsd, to create a base schema with no unresolved components
+        String sBaseSourceName = "testsourcename";
+        SchemaTypeSystem baseSTS = createNewSTS("datatypes_added.xsd_",
+                null,
+                "BaseSchemaTS",
+                sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", baseSTS);
+
+        // there should be NO recovearble errors
+        Assert.assertFalse("Recovered Errors for Valid Schema",
+                printRecoveredErrors());
+
+        // the tests - Walk thro the valid SOM
+        inspectSOM(baseSTS, 13, 1, 15, 1);
+
+        // Recovered Errors, Test for saving of the SOM - should go thro
+        Assert.assertTrue("SOM " + baseSTS.getName() + "Save failed!",
+                checkPSOMSave(baseSTS));
+
+        // instance validation - should be ok
+        Assert.assertTrue("Validation against instance failed",
+                validateInstance(getTestCaseFile("instance_datatypes_valid.xml"), baseSTS));
+
+        // check types before modify
+        Assert.assertEquals("Unresolved Simple Type should be 'attachmentTypes'",
+                "attachmentTypes",
+                getElementType(baseSTS, "testAtomicTypeElem"));
+        Assert.assertEquals("Unresolved List Type should be 'attchmentExtensionListTypes'",
+                "attchmentExtensionListTypes",
+                getElementType(baseSTS, "testListTypeElem"));
+        Assert.assertEquals("Unresolved Simple Type should be 'union.attachmentUnionType",
+                "union.attachmentUnionType",
+                getElementType(baseSTS, "testUnionTypeElem"));
+
+
+        //Step 2 : modify types from the schema - should result in STS with unresolved refs
+        SchemaTypeSystem modifiedSTS = createNewSTS("datatypes_modified.xsd_",
+                baseSTS,
+                "ModifiedSchemaTS",
+                sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", modifiedSTS);
+
+        // test the PSOM created :walk thro the PSOM, look for # of elements,attributes,types & attribute groups
+        inspectSOM(modifiedSTS, 13, 1, 13, 1);
+
+        // Test for saving of the PSOM - should not be able to save
+        Assert.assertFalse("PSOM " + modifiedSTS.getName() + " Save should fail",
+                checkPSOMSave(modifiedSTS));
+
+        // validate unresolved types
+        Assert.assertEquals("Unresolved Simple Type - Atomic should be 'anyType'",
+                anyType,
+                getElementType(modifiedSTS, "testAtomicTypeElem"));
+        Assert.assertEquals("Unresolved List Type should be 'anySimpleType'",
+                anySimpleType,
+                getElementType(modifiedSTS, "testListTypeElem"));
+        Assert.assertEquals("Unresolved Simple Type - Union should be 'anySimpleType'",
+                anySimpleType,
+                getElementType(modifiedSTS, "testUnionTypeElem"));
+
+        // validate against an xml valid instance - should fail
+        Assert.assertFalse("Validation against instance should Failed ",
+                validateInstance(getTestCaseFile("instance_simple_types_valid.xml"), modifiedSTS));
+
+        // step 3: reload the original STS
+        SchemaTypeSystem finalSTS = createNewSTS("datatypes_added.xsd_",
+                modifiedSTS,
+                "FinalSchemaTS",
+                sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", finalSTS);
+
+        // walk the SOM
+        inspectSOM(finalSTS, 13, 1, 15, 1);
+
+        // validate successful save
+        Assert.assertTrue("SOM " + finalSTS.getName() + "Save failed",
+                checkPSOMSave(finalSTS)); // should be able to save as its a valid SOM
+
+        // validate instance - should validate
+        Assert.assertTrue("Validation against instance Failed ",
+                validateInstance(getTestCaseFile("instance_simple_types_valid.xml"), finalSTS));
+
+        // check types after modify
+        Assert.assertEquals("Unresolved Simple Type should be 'attachmentTypes'",
+                "attachmentTypes",
+                getElementType(finalSTS, "testAtomicTypeElem"));
+        Assert.assertEquals("Unresolved List Type should be 'attchmentExtensionListTypes'",
+                "attchmentExtensionListTypes",
+                getElementType(finalSTS, "testListTypeElem"));
+        Assert.assertEquals("Unresolved Simple Type should be 'union.attachmentUnionType",
+                "union.attachmentUnionType",
+                getElementType(finalSTS, "testUnionTypeElem"));
+
+        // compare this to the original schema here
+        Assert.assertTrue(compareSavedSOMs("BaseSchemaTS","FinalSchemaTS"));
+    }
+

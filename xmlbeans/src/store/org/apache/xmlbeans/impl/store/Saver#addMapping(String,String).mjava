@@ -1,0 +1,73 @@
+    private final void addMapping ( String prefix, String uri )
+    {
+        assert uri != null;
+        assert prefix != null;
+
+        // If the prefix being mapped here is already mapped to a uri,
+        // that uri will either go out of scope or be mapped to another
+        // prefix.
+
+        String renameUri = (String) _prefixMap.get( prefix );
+        String renamePrefix = null;
+
+        if (renameUri != null)
+        {
+            // See if this prefix is already mapped to this uri.  If
+            // so, then add to the stack, but there is nothing to rename
+
+            if (renameUri.equals( uri ))
+                renameUri = null;
+            else
+            {
+                int i = _namespaceStack.size();
+
+                while ( i > 0 )
+                {
+                    if (_namespaceStack.get( i - 1 ) == null)
+                    {
+                        i--;
+                        continue;
+                    }
+
+                    if (_namespaceStack.get( i - 7 ).equals( renameUri ))
+                    {
+                        renamePrefix = (String) _namespaceStack.get( i - 8 );
+
+                        if (renamePrefix == null || !renamePrefix.equals( prefix ))
+                            break;
+                    }
+
+                    i -= 8;
+                }
+
+                assert i > 0;
+            }
+        }
+
+        _namespaceStack.add( _uriMap.get( uri ) );
+        _namespaceStack.add( uri );
+
+        if (renameUri != null)
+        {
+            _namespaceStack.add( _uriMap.get( renameUri ) );
+            _namespaceStack.add( renameUri );
+        }
+        else
+        {
+            _namespaceStack.add( null );
+            _namespaceStack.add( null );
+        }
+
+        _namespaceStack.add( prefix );
+        _namespaceStack.add( _prefixMap.get( prefix ) );
+
+        _namespaceStack.add( prefix );
+        _namespaceStack.add( uri );
+
+        _uriMap.put( uri, prefix );
+        _prefixMap.put( prefix, uri );
+
+        if (renameUri != null)
+            _uriMap.put( renameUri, renamePrefix );
+    }
+

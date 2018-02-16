@@ -1,0 +1,40 @@
+    final void setName ( QName newName )
+    {
+        assert isAttr() || isElem() || isProcinst();
+        assert newName != null;
+
+        if (!_name.equals( newName ) || !_name.getPrefix().equals( newName.getPrefix() ))
+        {
+// TODO - this is not a structural change .... perhaps should not issue a change here?
+            _locale.notifyChange();
+
+            QName oldName = _name;
+
+            _name = newName;
+            if (this instanceof Xobj.NamedNodeXobj)
+            {
+                NamedNodeXobj me = (NamedNodeXobj)this;
+                me._canHavePrefixUri = true;
+            }
+
+            if (!isProcinst())
+            {
+                Xobj disconnectFromHere = this;
+
+                if (isAttr() && _parent != null)
+                {
+                    if (oldName.equals( Locale._xsiType ) || newName.equals( Locale._xsiType ))
+                        disconnectFromHere = _parent;
+
+                    if (oldName.equals( Locale._xsiNil ) || newName.equals( Locale._xsiNil ))
+                        _parent.invalidateNil();
+                }
+
+                disconnectFromHere.disconnectNonRootUsers();
+            }
+
+            _locale._versionAll++;
+            _locale._versionSansText++;
+        }
+    }
+

@@ -1,0 +1,48 @@
+    public static boolean compareNamesAndAttributes(XmlCursor cur1, XmlCursor cur2, Diagnostic diag)
+    {
+        if (!cur1.getName().equals(cur2.getName()))
+        {
+            Diagnostic.add(diag, "Element names " + QNameHelper.pretty(cur1.getName()) + " and " + QNameHelper.pretty(cur2.getName()) + " do not match");
+            return false;
+        }
+
+        boolean more = cur1.toFirstAttribute();
+        if (more)
+        {
+            for (; more; more = cur1.toNextAttribute())
+            {
+                String text1 = cur1.getTextValue();
+                String text2 = cur2.getAttributeText(cur1.getName());
+                if (text2 == null)
+                {
+                    Diagnostic.add(diag, "Attribute " + QNameHelper.pretty(cur1.getName()) + " not present");
+                    return false;
+                }
+
+                if (!wsCollapseEqual(text1, text2))
+                {
+                    Diagnostic.add(diag, "Attribute values for " + QNameHelper.pretty(cur1.getName()) + " do not match");
+                    return false;
+                }
+            }
+            cur1.toParent();
+        }
+
+        more = cur2.toFirstAttribute();
+        if (more)
+        {
+            for (; more; more = cur2.toNextAttribute())
+            {
+                String text1 = cur1.getAttributeText(cur2.getName());
+                if (text1 == null)
+                {
+                    Diagnostic.add(diag, "Attribute " + QNameHelper.pretty(cur2.getName()) + " not present");
+                    return false;
+                }
+            }
+            cur2.toParent();
+        }
+
+        return true;
+    }
+

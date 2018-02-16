@@ -1,0 +1,61 @@
+        public void testValidate7 ( )
+            throws Exception
+        {
+            String schema =
+                "<xs:schema xmlns:xs='http://www.w3.org/2001/XMLSchema'>" +
+                "" +
+                "  <xs:element name='base' type='base'/>" +
+                "" +
+                "  <xs:complexType name='base'>" +
+                "    <xs:sequence>" +
+                "      <xs:element name='foo'/>" +
+                "    </xs:sequence>" +
+                "  </xs:complexType>" +
+                "" +
+                "  <xs:complexType name='derived'>" +
+                "    <xs:complexContent>" +
+                "      <xs:extension base='base'>" +
+                "        <xs:sequence>" +
+                "          <xs:element name='bar'/>" +
+                "        </xs:sequence>" +
+                "      </xs:extension>" +
+                "    </xs:complexContent>" +
+                "  </xs:complexType>" +
+                "" +
+                "</xs:schema>" +
+                "";
+
+            String[] schemas = { schema };
+
+            SchemaTypeLoader stl = makeSchemaTypeLoader( schemas );
+
+            XmlObject x =
+                stl.parse(
+                    "<base><foo/></base>", null, null );
+
+            Assert.assertTrue( x.validate() );
+
+            XmlCursor c = x.newCursor();
+
+            c.toFirstChild();
+
+            XmlObject base = c.getObject();
+
+            c.toEndToken();
+            c.insertElement( "bar" );
+
+            Assert.assertTrue( !x.validate() );
+
+            c.toPrevSibling();
+
+            c.removeXml();
+
+            Assert.assertTrue( x.validate() );
+
+            base.changeType( stl.findType( new QName( "derived" ) ) );
+
+            c.insertElement( "bar" );
+
+            Assert.assertTrue( x.validate() );
+        }
+

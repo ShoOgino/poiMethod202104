@@ -1,0 +1,36 @@
+        private void emit ( String s )
+        {
+            assert _buf==null ||
+                (_out<_in && _free == _buf.length - ( _in - _out ) ) || // data in the middle, free on the edges
+                (_out>_in && _free == _out - _in ) ||                   // data on the edges, free in the middle
+                (_out==_in && _free == _buf.length) ||                  // no data, all buffer free
+                (_out==_in && _free == 0)                               // buffer full
+                : "_buf.length:" + _buf.length + " _in:" + _in + " _out:" + _out + " _free:" + _free;
+
+            int cch = s == null ? 0 : s.length();
+
+            if (preEmit( cch ))
+                return;
+
+            int chunk;
+
+            if (_in <= _out || cch < (chunk = _buf.length - _in))
+            {
+                s.getChars( 0, cch, _buf, _in );
+                _in += cch;
+            }
+            else
+            {
+                s.getChars( 0, chunk, _buf, _in );
+                s.getChars( chunk, cch, _buf, 0 );
+                _in = (_in + cch) % _buf.length;
+            }
+
+            assert _buf==null ||
+                (_out<_in && _free == _buf.length - ( _in - _out ) ) || // data in the middle, free on the edges
+                (_out>_in && _free == _out - _in ) ||                   // data on the edges, free in the middle
+                (_out==_in && _free == _buf.length) ||                  // no data, all buffer free
+                (_out==_in && _free == 0)                               // buffer full
+                : "_buf.length:" + _buf.length + " _in:" + _in + " _out:" + _out + " _free:" + _free;
+        }
+

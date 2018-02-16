@@ -1,0 +1,24 @@
+    public void addEnumerationValue(String enumerationValue, final XmlCursor xc)
+    {
+        assert _kind==SIMPLE_TYPE_SIMPLE_CONTENT || _kind==COMPLEX_TYPE_SIMPLE_CONTENT : "Enumerations possible only on simple content";
+        ensureEnumerationValues();
+        if (_acceptsEnumerationValue && !_enumerationValues.contains(enumerationValue))
+        {
+            _enumerationValues.add(enumerationValue);
+            if (_name.equals(XmlQName.type.getName()))
+            {
+                // check for QName
+                PrefixResolver prefixResolver = new PrefixResolver()
+                {
+                    public String getNamespaceForPrefix(String prefix)
+                    {  return xc.namespaceForPrefix(prefix); }
+                };
+
+                QName qname = XmlQNameImpl.validateLexical(enumerationValue, null, prefixResolver);
+
+                assert qname!=null : "The check for QName should allready have happened.";
+                _enumerationQNames.add(qname);
+            }
+        }
+    }
+

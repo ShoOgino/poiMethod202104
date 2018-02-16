@@ -1,0 +1,100 @@
+    void printPropertyGetters(QName qName, boolean isAttr,
+                       String propertyName, int javaType,
+                       String type, String xtype,
+                       boolean nillable, boolean optional,
+                       boolean several, boolean singleton)
+       throws IOException
+    {
+        String propdesc = "\"" + qName.getLocalPart() + "\"" + (isAttr ? " attribute" : " element");
+        boolean xmltype = (javaType == SchemaProperty.XML_OBJECT);
+
+        if (singleton)
+        {
+            printJavaDoc((several ? "Gets first " : "Gets the ") + propdesc);
+            emit(type + " get" + propertyName + "();");
+
+            if (!xmltype)
+            {
+                printJavaDoc((several ? "Gets (as xml) first " : "Gets (as xml) the ") + propdesc);
+                emit(xtype + " xget" + propertyName + "();");
+            }
+
+            if (nillable)
+            {
+                printJavaDoc((several ? "Tests for nil first " : "Tests for nil ") + propdesc);
+                emit("boolean isNil" + propertyName + "();");
+            }
+        }
+
+        if (optional)
+        {
+            printJavaDoc((several ? "True if has at least one " : "True if has ") + propdesc);
+            emit("boolean isSet" + propertyName + "();");
+        }
+
+        if (several)
+        {
+            String arrayName = propertyName + "Array";
+
+            if (_useJava15)
+            {
+                String wrappedType = type;
+                if (isJavaPrimitive(javaType))
+                    wrappedType = javaWrappedType(javaType);
+
+                printJavaDoc("Gets a List of " + propdesc + "s");
+                emit("java.util.List<" + wrappedType + "> get" + propertyName + "List();");
+            }
+
+            if (_useJava15)
+            {
+                emit("");
+                emit("/**");
+                emit(" * Gets array of all " + propdesc + "s");
+                emit(" * @deprecated");
+                emit(" */");
+                emit("@Deprecated");
+            }
+            else
+                printJavaDoc("Gets array of all " + propdesc + "s");
+            emit(type + "[] get" + arrayName + "();");
+
+            printJavaDoc("Gets ith " + propdesc);
+            emit(type + " get" + arrayName + "(int i);");
+
+            if (!xmltype)
+            {
+                if (_useJava15)
+                {
+                    printJavaDoc("Gets (as xml) a List of " + propdesc + "s");
+                    emit("java.util.List<" + xtype + "> xget" + propertyName + "List();");
+                }
+
+                if (_useJava15)
+                {
+                    emit("");
+                    emit("/**");
+                    emit(" * Gets (as xml) array of all " + propdesc + "s");
+                    emit(" * @deprecated");
+                    emit(" */");
+                    emit("@Deprecated");
+                }
+                else
+                    printJavaDoc("Gets (as xml) array of all " + propdesc + "s");
+                emit(xtype + "[] xget" + arrayName + "();");
+
+                printJavaDoc("Gets (as xml) ith " + propdesc);
+                emit(xtype + " xget" + arrayName + "(int i);");
+            }
+
+            if (nillable)
+            {
+                printJavaDoc("Tests for nil ith " + propdesc);
+                emit("boolean isNil" + arrayName + "(int i);");
+            }
+
+            printJavaDoc("Returns number of " + propdesc);
+            emit("int sizeOf" + arrayName + "();");
+        }
+    }
+

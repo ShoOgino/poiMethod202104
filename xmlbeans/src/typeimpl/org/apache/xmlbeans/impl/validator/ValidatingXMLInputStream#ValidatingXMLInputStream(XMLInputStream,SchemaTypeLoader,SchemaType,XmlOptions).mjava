@@ -1,0 +1,44 @@
+    public ValidatingXMLInputStream (
+        XMLInputStream xis,
+        SchemaTypeLoader typeLoader, SchemaType sType, XmlOptions options )
+            throws XMLStreamException
+    {
+        _source = xis;
+
+        // Figure out the root type
+
+        options = XmlOptions.maskNull( options );
+        
+        SchemaType type = (SchemaType) options.get( XmlOptions.DOCUMENT_TYPE );
+
+        if (type == null)
+            type = sType;
+
+        if (type == null)
+        {
+            type = BuiltinSchemaTypeSystem.ST_ANY_TYPE;
+
+            xis = xis.getSubStream();
+
+            if (xis.skip( XMLEvent.START_ELEMENT ))
+            {
+                SchemaType docType =
+                    typeLoader.findDocumentType(
+                        XMLNameHelper.getQName( xis.next().getName() ) );
+
+                if (docType != null)
+                    type = docType;
+            }
+
+            xis.close();
+        }
+
+        // Create the validator
+
+        _validator =
+            new Validator(
+                type, null, typeLoader, options, new ExceptionXmlErrorListener() );
+
+        nextEvent( ValidatorListener.BEGIN );
+    }
+

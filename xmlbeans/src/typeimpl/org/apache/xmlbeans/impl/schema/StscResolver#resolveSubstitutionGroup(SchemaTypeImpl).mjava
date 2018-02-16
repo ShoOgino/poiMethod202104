@@ -1,0 +1,60 @@
+    public static boolean resolveSubstitutionGroup(SchemaTypeImpl sImpl)
+    {
+        assert sImpl.isDocumentType();
+
+        if (sImpl.isSGResolved())
+            return true;
+        if (sImpl.isSGResolving())
+        {
+            StscState.get().error("Cyclic dependency error", XmlErrorCodes.CYCLIC_DEPENDENCY, sImpl.getParseObject());
+            return false; // cyclic dependency error
+        }
+
+        sImpl.startResolvingSGs();
+
+        // Resolve substitution group
+
+        TopLevelElement elt = (TopLevelElement)sImpl.getParseObject();
+        SchemaTypeImpl substitutionGroup = null;
+        QName eltName = new QName(sImpl.getTargetNamespace(), elt.getName());
+
+        // BUG: How do I tell if the type is in this compilation unit?
+        if (elt.isSetSubstitutionGroup())
+        {
+            substitutionGroup = StscState.get().findDocumentType(elt.getSubstitutionGroup(), 
+                sImpl.getChameleonNamespace(), sImpl.getTargetNamespace());
+
+            if (substitutionGroup == null)
+                StscState.get().notFoundError(elt.getSubstitutionGroup(), SchemaType.ELEMENT, elt.xgetSubstitutionGroup(), true);
+                // recovery - ignore substitution group
+            else if (! resolveSubstitutionGroup(substitutionGroup) )
+                substitutionGroup = null;
+            else
+                sImpl.setSubstitutionGroup(elt.getSubstitutionGroup());
+        }
+
+        // Walk up the chain of subtitution groups adding this schematype to each head's
+        // member list
+        while (substitutionGroup != null)
+        {
+
+            substitutionGroup.addSubstitutionGroupMember(eltName);
+
+            if (substitutionGroup.getSubstitutionGroup() == null)
+                break;
+
+            substitutionGroup = StscState.get().findDocumentType(
+                substitutionGroup.getSubstitutionGroup(), substitutionGroup.getChameleonNamespace(), null/*no dependency added*/);
+
+            assert substitutionGroup != null : "Could not find document type for: " + substitutionGroup.getSubstitutionGroup();
+
+            if (! resolveSubstitutionGroup(substitutionGroup) )
+                substitutionGroup = null; // cyclic dependency - no subst group
+
+        }
+
+        sImpl.finishResolvingSGs();
+        return true;
+
+    }
+

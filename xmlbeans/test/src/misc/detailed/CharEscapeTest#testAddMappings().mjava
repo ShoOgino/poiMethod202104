@@ -1,0 +1,44 @@
+    public void testAddMappings() throws Exception
+    {
+        XmlOptionCharEscapeMap charEsc = new XmlOptionCharEscapeMap();
+        // non-xml entities cannot be escaped as predefined entities
+        try
+        {
+            charEsc.addMappings('A', 'Z', XmlOptionCharEscapeMap.PREDEF_ENTITY);
+            fail("should have thrown an exception");
+        }
+        catch (Exception e)
+        {
+            assertTrue(e instanceof XmlException);
+            String msg = "the PREDEF_ENTITY mode can only be used for the following characters: <, >, &, \" and '";
+            assertTrue(e.getMessage().endsWith(msg));
+        }
+
+        // start char must be before end char
+        try
+        {
+            charEsc.addMappings('a', 'Z', XmlOptionCharEscapeMap.HEXADECIMAL);
+            fail("should have thrown an exception");
+        }
+        catch (Exception e)
+        {
+            assertTrue(e instanceof XmlException);
+            String msg = "ch1 must be <= ch2";
+            assertTrue(e.getMessage().endsWith(msg));
+        }
+
+        charEsc.addMappings('A', 'Z', XmlOptionCharEscapeMap.HEXADECIMAL);
+        assertEquals("&#x41;", charEsc.getEscapedString('A'));
+        assertEquals("&#x42;", charEsc.getEscapedString('B'));
+        assertEquals("&#x43;", charEsc.getEscapedString('C'));
+        assertEquals("&#x58;", charEsc.getEscapedString('X'));
+        assertEquals("&#x59;", charEsc.getEscapedString('Y'));
+        assertEquals("&#x5a;", charEsc.getEscapedString('Z'));
+
+        // overwrite a mapping
+        charEsc.addMapping('X', XmlOptionCharEscapeMap.DECIMAL);
+        assertEquals("&#88;", charEsc.getEscapedString('X'));
+        assertEquals("&#x59;", charEsc.getEscapedString('Y'));
+        assertEquals("&#x5a;", charEsc.getEscapedString('Z'));
+    }
+

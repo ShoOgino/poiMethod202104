@@ -1,0 +1,36 @@
+    public void testValidateContent1() throws XMLStreamException
+    {
+        XmlObject xo = XmlObject.Factory.newInstance();
+        XmlCursor xc = xo.newCursor();
+        xc.toNextToken();
+
+        xc.insertElementWithText("int", URI_NUMERALS, "5");
+        xc.insertElementWithText("float", URI_NUMERALS, "7.654321");
+
+        XMLStreamReader xsr = xo.newXMLStreamReader();
+        Collection errors = new ArrayList();
+
+        ValidatingXMLStreamReader valXsr = new ValidatingXMLStreamReader();
+        valXsr.init(xsr, true, DocDocument.Doc.type,
+            XmlBeans.typeLoaderForClassLoader(ValidatingXMLStreamReader.class.getClassLoader()),
+            null, errors);
+
+        int depth = 0;
+
+        loop:   while(valXsr.hasNext())
+        {
+            int evType = valXsr.getEventType();
+//            printState(valXsr);
+            if (evType==XMLEvent.END_ELEMENT)
+            {
+                depth++;
+                if (depth>=2)
+                {
+                    break loop;
+                }
+            }
+            valXsr.next();
+        }
+        Assert.assertTrue("Content1 validation is broken.", valXsr.isValid());
+    }
+

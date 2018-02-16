@@ -1,0 +1,77 @@
+        private int replace ( int i, String replacement )
+        {
+            assert replacement.length() > 0;
+
+            int dCch = replacement.length() - 1;
+
+            if (dCch == 0)
+            {
+                _buf[ i ] = replacement.charAt( 0 );
+                return i + 1;
+            }
+
+            assert _free >= 0;
+
+            if (dCch > _free)
+                i = resize( dCch, i );
+
+            assert _free >= 0;
+
+            assert _free >= dCch;
+            assert getAvailable() > 0;
+
+            int charsToCopy = dCch + 1;
+
+            if (_out > _in && i >= _out)
+            {
+                System.arraycopy( _buf, _out, _buf, _out - dCch, i - _out );
+                _out -= dCch;
+                i -= dCch;
+            }
+            else
+            {
+                assert i < _in;
+                int availableEndChunk = _buf.length - _in;
+                if ( dCch <= availableEndChunk )
+                {
+                    System.arraycopy( _buf, i, _buf, i + dCch, _in - i );
+                    _in = ( _in + dCch) % _buf.length;
+                }
+                else if ( dCch <= availableEndChunk + _in - i - 1 )
+                {
+                    int numToCopyToStart = dCch - availableEndChunk;
+                    System.arraycopy( _buf, _in-numToCopyToStart, _buf, 0, numToCopyToStart );
+                    System.arraycopy( _buf, i+1, _buf, i+1+dCch, _in-i-1-numToCopyToStart);
+
+                    _in = numToCopyToStart;
+                }
+                else
+                {
+                    int numToCopyToStart = _in - i - 1;
+                    charsToCopy = availableEndChunk + _in - i;
+
+                    System.arraycopy( _buf, _in-numToCopyToStart, _buf, dCch-charsToCopy+1, numToCopyToStart );
+                    replacement.getChars( charsToCopy, dCch + 1, _buf, 0);
+
+                    _in = numToCopyToStart + dCch - charsToCopy + 1;
+                }
+            }
+
+            replacement.getChars( 0, charsToCopy, _buf, i );
+
+            _free -= dCch;
+
+            assert _free >= 0;
+            assert _buf==null ||
+                (_out<_in && _free == _buf.length - ( _in - _out ) ) || // data in the middle, free on the edges
+                (_out>_in && _free == _out - _in ) ||                   // data on the edges, free in the middle
+                (_out==_in && _free == _buf.length) ||                  // no data, all buffer free
+                (_out==_in && _free == 0)                               // buffer full
+                : "_buf.length:" + _buf.length + " _in:" + _in + " _out:" + _out + " _free:" + _free;
+
+            return (i + dCch + 1) % _buf.length;
+        }
+        //
+        //
+        //
+

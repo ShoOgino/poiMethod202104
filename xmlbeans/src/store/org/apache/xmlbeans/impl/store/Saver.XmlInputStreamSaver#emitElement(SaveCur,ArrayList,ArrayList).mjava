@@ -1,0 +1,52 @@
+        protected boolean emitElement(SaveCur c, ArrayList attrNames, ArrayList attrValues)
+        {
+            assert c.isElem();
+
+            for ( iterateMappings() ; hasMapping() ; nextMapping() )
+            {
+                enqueue( new StartPrefixMappingImpl( mappingPrefix(), mappingUri() ) );
+            }
+
+            StartElementImpl.AttributeImpl lastAttr = null;
+            StartElementImpl.AttributeImpl attributes = null;
+            StartElementImpl.AttributeImpl namespaces = null;
+
+            for ( int i=0; i<attrNames.size(); i++ )
+            {
+                XMLName attXMLName = computeName((QName)attrNames.get(i), this, true);
+                StartElementImpl.AttributeImpl attr =
+                    new StartElementImpl.NormalAttributeImpl(attXMLName, (String)attrValues.get(i) );
+
+                if (attributes == null)
+                    attributes = attr;
+                else
+                    lastAttr._next = attr;
+
+                lastAttr = attr;
+            }
+
+            lastAttr = null;
+
+            for ( iterateMappings() ; hasMapping() ; nextMapping() )
+            {
+                String prefix = mappingPrefix();
+                String uri = mappingUri();
+
+                StartElementImpl.AttributeImpl attr =
+                    new StartElementImpl.XmlnsAttributeImpl(prefix, uri);
+
+                if (namespaces == null)
+                    namespaces = attr;
+                else
+                    lastAttr._next = attr;
+
+                lastAttr = attr;
+            }
+
+
+            QName name = c.getName();
+            enqueue( new StartElementImpl( computeName(name, this, false), attributes, namespaces, getPrefixMap() ) );
+
+            return false;  // still need to be called on end element
+        }
+

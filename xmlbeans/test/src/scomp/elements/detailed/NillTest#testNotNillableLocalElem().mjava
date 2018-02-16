@@ -1,0 +1,41 @@
+    /**
+     * Tests exceptions when setting values to
+     * null for non-nillable elems
+     *  * CR CR192914:
+     * Regardless of Schema definition,
+     * setXXX(null) will clear the value of the
+     * XXX attribute/element and if the container is an
+     * element, will also add the "xsi:nil" attribute.
+     */
+    // for all nillable tests, the validation falls thro only if the ValidateOnSet option is turned on
+    public void testNotNillableLocalElem() {
+
+        XmlOptions options = new XmlOptions();
+        options.setValidateOnSet();
+
+        // local element, not nillable. If setXXX is set to null & validateOnSet is true, it should throw XmlValueNotNillableException
+        Contact contact = Contact.Factory.newInstance(options);
+        try{
+            contact.setFirstName(null);
+            fail("XmlValueNotNillableException Expected here");
+        }
+        catch (XmlValueNotNillableException e) {
+            e.printStackTrace();
+        }
+
+        // with validate turned off, this should to thro
+        Contact contactWithValidateOff = Contact.Factory.newInstance();
+        try{
+            contactWithValidateOff.setFirstName(null);
+        }
+        catch (XmlValueNotNillableException e) {
+            e.printStackTrace();
+            fail("XmlValueNotNillableException NOT Expected here");
+        }
+        assertEquals("<firstName " +
+               "xsi:nil=\"true\" " +
+               "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"/>",
+               contactWithValidateOff.xmlText());
+
+    }
+

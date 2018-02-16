@@ -1,0 +1,37 @@
+        protected void emitText ( SaveCur c )
+        {
+            assert c.isText();
+
+            Object src = c.getChars();
+
+            try
+            {
+                if (src instanceof char[])
+                {
+                    // Pray the user does not modify the buffer ....
+                    _contentHandler.characters( (char[]) src, c._offSrc, c._cchSrc );
+                }
+                else
+                {
+                    if (_buf == null)
+                        _buf = new char [ 1024 ];
+
+                    while ( c._cchSrc > 0 )
+                    {
+                        int cch = java.lang.Math.min( _buf.length, c._cchSrc );
+
+                        CharUtil.getChars( _buf, 0, src, c._offSrc, cch );
+
+                        _contentHandler.characters( _buf, 0, cch );
+
+                        c._offSrc += cch;
+                        c._cchSrc -= cch;
+                    }
+                }
+            }
+            catch ( SAXException e )
+            {
+                throw new SaverSAXException( e );
+            }
+        }
+

@@ -1,0 +1,81 @@
+    public void testXmlObjectUsingCursor() throws Exception {
+        XmlCursor xc1, xc2, xc3;
+
+       PurchaseOrderDocument pod = PurchaseOrderDocument.Factory.parse(
+                 JarUtil.getResourceFromJar(Common.TRANXML_FILE_XMLCURSOR_PO));
+        xc1 = pod.newCursor();
+        xc2 = pod.newCursor();
+        xc3 = pod.newCursor();
+
+
+        //moving cursor location so that it comes to zip under shipto
+
+        toNextTokenOfType(xc1, TokenType.START);
+        toNextTokenOfType(xc1, TokenType.START);
+        toNextTokenOfType(xc2, TokenType.START);
+        toNextTokenOfType(xc2, TokenType.START);
+        toNextTokenOfType(xc3, TokenType.START);
+        toNextTokenOfType(xc3, TokenType.START);
+
+        xc1.toEndToken();
+        xc2.toEndToken();
+        xc3.toEndToken();
+
+        toPrevTokenOfType(xc1, TokenType.TEXT);
+        toPrevTokenOfType(xc1, TokenType.TEXT);
+        toPrevTokenOfType(xc2, TokenType.TEXT);
+        toPrevTokenOfType(xc2, TokenType.TEXT);
+        toPrevTokenOfType(xc3, TokenType.TEXT);
+        toPrevTokenOfType(xc3, TokenType.TEXT);
+       //all cursors are now at: 90952
+        assertEquals(xc1.getChars(), xc2.getChars(), xc3.getChars());
+       //at 52
+        xc2.toNextChar(3);
+        //after 90952
+        xc3.toNextChar(5);
+        assertEquals(false, xc2.isAtSamePositionAs(xc3));
+        assertEquals(false, xc3.isAtSamePositionAs(xc1));
+
+
+        //setting zip value through the object .
+        // once the set occurs comparing postions of cursors.
+        PurchaseOrderType pt = pod.getPurchaseOrder();
+        USAddress usa = pt.getShipTo();
+        usa.setZip(new BigDecimal(500));
+
+      assertEquals(500,usa.getZip().intValue());
+       //Any cursors in the value of an Element/attr should be positioned
+        // at the end of the elem/attr after the strong setter
+        assertEquals(true, xc2.isAtSamePositionAs(xc3));
+        assertEquals(true, xc3.isAtSamePositionAs(xc1));
+
+        assertEquals(TokenType.END,xc1.currentTokenType());
+
+
+//inserting an element through the cursor under zip and then doing a set of a valid value through object..
+
+        xc1.insertElementWithText("foo", "text");
+        toPrevTokenOfType(xc1, TokenType.START);
+        toPrevTokenOfType(xc1, TokenType.START);
+        //System.out.println("here" + xc1.getTextValue());
+
+        toNextTokenOfType(xc1, TokenType.START);
+
+        xc1.toNextChar(2);
+        usa.setZip(new BigDecimal(90852));
+
+        assertEquals(true, xc2.isAtSamePositionAs(xc3));
+        assertEquals(true, xc3.isAtSamePositionAs(xc1));
+        //cursors at the end of element
+        xc1.toPrevToken();
+        //assertEquals(5,xc1.toPrevChar(5));
+        assertEquals("90852", xc1.getChars());
+
+
+        xc1.dispose();
+        xc2.dispose();
+        xc3.dispose();
+
+
+    }
+

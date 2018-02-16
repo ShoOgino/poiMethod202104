@@ -1,0 +1,78 @@
+    public void testModifyAttributeAndElements() throws Exception
+    {
+        System.out.println("Inside test case testModifyAttributeAndElements()");
+
+        // Step 1 : create a Schema Type System with the base 'good' xsd and create the Schema Type System (STS) for it
+        String sBaseSourceName = "testsourcename";
+        SchemaTypeSystem baseSTS = createNewSTS("elemattr_added.xsd_",
+                null,
+                "BaseSchemaTS",
+                sBaseSourceName);
+
+        Assert.assertNotNull("Schema Type System created is Null.", baseSTS);
+
+        // the tests - Walk thro the SOM, save, validate against an xml instance
+        inspectSOM(baseSTS, 3, 2, 1, 0);
+
+        // validate successful save
+        Assert.assertTrue("Valid SOM " + baseSTS.getName() + "Save failed ",
+                checkPSOMSave(baseSTS));
+
+        // validate against instance successfully
+        Assert.assertTrue("Validation against instance Failed ",
+                validateInstance(getTestCaseFile("instance_elemattr_valid.xml"), baseSTS));
+
+        // Step 2: create a Schema Type System with the new xsd file with modifications to existing schema
+        SchemaTypeSystem modifiedSTS = createNewSTS("elemattr_modified.xsd_",
+                baseSTS,
+                "ModifiedSchemaTS",
+                sBaseSourceName);
+
+        Assert.assertNotNull("Schema Type System created is Null.", modifiedSTS);
+
+        // test for recoverable errors
+        Assert.assertTrue("No Recovered Errors for Invalid Schema",
+                printRecoveredErrors());
+
+        // test the PSOM created
+        inspectSOM(modifiedSTS, 2, 2, 1, 0); // walk thro the PSOM, look for # of elements,attributes,types & attribute groups
+
+        // Look for a modified attribute(s)/elements by name in the STS
+        Assert.assertTrue("Attribute expected, not found 'testAttributeComplex'",
+                lookForAttributeInSTS(modifiedSTS, "testAttributeComplex"));
+        Assert.assertTrue("Element expected, not found 'ComplexTypeElem'",
+                lookForElemInSTS(modifiedSTS, "ComplexTypeElem"));
+        Assert.assertFalse("Element expected, not found 'SimpleTypeElem'",
+                lookForElemInSTS(modifiedSTS, "SimpleTypeElem"));
+
+        // Test for saving of the PSOM - should not be able to save
+        Assert.assertFalse("Partial SOM " + modifiedSTS.getName() + " Save successful- should fail",
+                checkPSOMSave(modifiedSTS));
+
+        // validate against an xml instance - should fail
+        Assert.assertFalse("Validation against instance Success - should Fail",
+                validateInstance(getTestCaseFile("instance_elemattr_valid.xml"), modifiedSTS));
+
+        // Step 3: now creat the Schema Type System with the original XSD again
+        SchemaTypeSystem finalSTS = createNewSTS("elemattr_added.xsd_",
+                modifiedSTS,
+                "FinalSchemaTS",
+                sBaseSourceName);
+
+        Assert.assertNotNull("Schema Type System created is Null.", finalSTS);
+
+        // walk the PSOM
+        inspectSOM(finalSTS, 3, 2, 1, 0);
+
+        // should be able to save as its a valid SOM
+        Assert.assertTrue("Partial SOM " + finalSTS.getName() + "Save failed for complete SOM",
+                checkPSOMSave(finalSTS));
+
+        // validate against instance successfully
+        Assert.assertTrue("Validation against instance Failed ",
+                validateInstance(getTestCaseFile("instance_elemattr_valid.xml"), finalSTS));
+
+        // compare this to the original schema here - the root dir names used to save the PSOMs are the same as the STS names
+        Assert.assertTrue(compareSavedSOMs("BaseSchemaTS","FinalSchemaTS"));
+    }
+

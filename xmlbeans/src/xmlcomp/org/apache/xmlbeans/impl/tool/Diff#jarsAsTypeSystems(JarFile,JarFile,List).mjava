@@ -1,0 +1,71 @@
+    /**
+     * Diffs the contents of two jars, looking only at the schema typesystems
+     * saved inside those jars
+     */
+    public static void jarsAsTypeSystems(JarFile jar1, JarFile jar2, List diffs)
+    {
+        Enumeration entries1 = jar1.entries();
+        Enumeration entries2 = jar2.entries();
+        List list1 = new ArrayList();
+        List list2 = new ArrayList();
+        for (; entries1.hasMoreElements(); )
+        {
+            ZipEntry ze = (ZipEntry) entries1.nextElement();
+            String name = ze.getName();
+            if (name.startsWith("schema" + SchemaTypeSystemImpl.METADATA_PACKAGE_GEN + "/system/s") && name.endsWith(".xsb"))
+                list1.add(ze);
+        }
+        for (; entries2.hasMoreElements(); )
+        {
+            ZipEntry ze = (ZipEntry) entries2.nextElement();
+            String name = ze.getName();
+            if (name.startsWith("schema" + SchemaTypeSystemImpl.METADATA_PACKAGE_GEN + "/system/s") && name.endsWith(".xsb"))
+                list2.add(ze);
+        }
+        ZipEntry[] files1 = (ZipEntry[]) list1.toArray(new ZipEntry[list1.size()]);
+        ZipEntry[] files2 = (ZipEntry[]) list2.toArray(new ZipEntry[list2.size()]);
+        ZipEntryNameComparator comparator = new ZipEntryNameComparator();
+        Arrays.sort(files1, comparator);
+        Arrays.sort(files2, comparator);
+        int i1 = 0;
+        int i2 = 0;
+        while (i1 < files1.length && i2 < files2.length)
+        {
+            String name1 = files1[i1].getName();
+            String name2 = files2[i2].getName();
+            int dif = name1.compareTo(name2);
+            if (dif == 0)
+            {
+                // Compare the files
+                zipEntriesAsXsb(files1[i1], jar1, files2[i2], jar2, diffs);
+                i1++; i2++; // Move to next pair
+            }
+            else if (dif < 0)
+            {
+                // dir1 contains a file that dir2 doesn't
+                diffs.add("Jar \"" + jar1.getName() + "\" contains an extra file: \"" +
+                    name1 + "\"");
+                i1++;
+            }
+            else if (dif > 0)
+            {
+                // dir2 contains a file that dir1 doesn't
+                diffs.add("Jar \"" + jar2.getName() + "\" contains an extra file: \"" +
+                    name2 + "\"");
+                i2++;
+            }
+        }
+        while (i1 < files1.length)
+        {
+            diffs.add("Jar \"" + jar1.getName() + "\" contains an extra file: \"" +
+                files1[i1].getName() + "\"");
+            i1++;
+        }
+        while (i2 < files2.length)
+        {
+            diffs.add("Jar \"" + jar2.getName() + "\" contains an extra file: \"" +
+                files2[i2].getName() + "\"");
+            i2++;
+        }
+    }
+

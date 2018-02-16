@@ -1,0 +1,107 @@
+    /**
+     * factor ::= ('^' | '$' | '\A' | '\Z' | '\z' | '\b' | '\B' | '\<' | '\>'
+     *            | atom (('*' | '+' | '?' | minmax ) '?'? )?)
+     *            | '(?=' regex ')'  | '(?!' regex ')'  | '(?&lt;=' regex ')'  | '(?&lt;!' regex ')'
+     *            | '(?#' [^)]* ')'
+     * minmax ::= '{' min (',' max?)? '}'
+     * min ::= [0-9]+
+     * max ::= [0-9]+
+     */
+    Token parseFactor() throws ParseException {        
+        int ch = this.read();
+        Token tok;
+        switch (ch) {
+          case T_CARET:         return this.processCaret();
+          case T_DOLLAR:        return this.processDollar();
+          case T_LOOKAHEAD:     return this.processLookahead();
+          case T_NEGATIVELOOKAHEAD: return this.processNegativelookahead();
+          case T_LOOKBEHIND:    return this.processLookbehind();
+          case T_NEGATIVELOOKBEHIND: return this.processNegativelookbehind();
+
+          case T_COMMENT:
+            this.next();
+            return Token.createEmpty();
+
+          case T_BACKSOLIDUS:
+            switch (this.chardata) {
+              case 'A': return this.processBacksolidus_A();
+              case 'Z': return this.processBacksolidus_Z();
+              case 'z': return this.processBacksolidus_z();
+              case 'b': return this.processBacksolidus_b();
+              case 'B': return this.processBacksolidus_B();
+              case '<': return this.processBacksolidus_lt();
+              case '>': return this.processBacksolidus_gt();
+            }
+                                                // through down
+        }
+        tok = this.parseAtom();
+        ch = this.read();
+        switch (ch) {
+          case T_STAR:  return this.processStar(tok);
+          case T_PLUS:  return this.processPlus(tok);
+          case T_QUESTION: return this.processQuestion(tok);
+          case T_CHAR:
+            if (this.chardata == '{' && this.offset < this.regexlen) {
+
+                int off = this.offset;          // this.offset -> next of '{'
+                int min = 0, max = -1;
+
+                if ((ch = this.regex.charAt(off++)) >= '0' && ch <= '9') {
+
+                    min = ch -'0';
+                    while (off < this.regexlen
+                           && (ch = this.regex.charAt(off++)) >= '0' && ch <= '9') {
+                        min = min*10 +ch-'0';
+                        if (min < 0)
+                            throw ex("parser.quantifier.5", this.offset);
+                    }
+                }
+                else {
+                    throw ex("parser.quantifier.1", this.offset);
+                }
+
+                max = min;
+                if (ch == ',') {
+
+                   if (off >= this.regexlen) {
+                       throw ex("parser.quantifier.3", this.offset);
+                   }
+                   else if ((ch = this.regex.charAt(off++)) >= '0' && ch <= '9') {                       
+
+                        max = ch -'0';       // {min,max}
+                        while (off < this.regexlen
+                               && (ch = this.regex.charAt(off++)) >= '0'
+                               && ch <= '9') {
+                            max = max*10 +ch-'0';
+                            if (max < 0)
+                                throw ex("parser.quantifier.5", this.offset);
+                        }
+
+                        if (min > max)
+                            throw ex("parser.quantifier.4", this.offset);
+                   }
+                   else { // assume {min,}
+                        max = -1;           
+                    }
+                }
+
+               if (ch != '}')
+                   throw ex("parser.quantifier.2", this.offset);
+
+               if (this.checkQuestion(off)) {  // off -> next of '}'
+                    tok = Token.createNGClosure(tok);
+                    this.offset = off+1;
+                } else {
+                    tok = Token.createClosure(tok);
+                    this.offset = off;
+                }
+
+                tok.setMin(min);
+                tok.setMax(max);
+                //System.err.println("CLOSURE: "+min+", "+max);
+                this.next();
+            }
+        }
+        return tok;
+    }
+

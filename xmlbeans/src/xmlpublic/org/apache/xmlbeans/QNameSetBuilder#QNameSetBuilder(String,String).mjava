@@ -1,0 +1,55 @@
+    /**
+     * Constructs a QNameSetBuilder whose initial contents are given
+     * as a list of namespace URIs, using the same format used by wildcards
+     * in XSD files.
+     * 
+     * @param str a wildcard namespace specification string such as "##any",
+     *        "##other", "##local", "##targetNamespace", or a space-separated
+     *        list of URIs.
+     * @param targetURI the current targetNamespace
+     */
+    public QNameSetBuilder(String str, String targetURI)
+    {
+        this();
+
+        if (str == null)
+            str = "##any";
+
+        String[] uri = splitList(str);
+        for (int i = 0; i < uri.length; i++)
+        {
+            String adduri = uri[i];
+            if (adduri.startsWith("##"))
+            {
+                if (adduri.equals("##other"))
+                {
+                    if (targetURI == null)
+                        throw new IllegalArgumentException();
+                    QNameSetBuilder temp = new QNameSetBuilder();
+                    temp.addNamespace(targetURI);
+                    temp.addNamespace("");
+                    temp.invert();
+                    addAll(temp);
+                    continue;
+                }
+                else if (adduri.equals("##any"))
+                {
+                    clear();
+                    invert();
+                    continue;
+                }
+                else if (uri[i].equals("##targetNamespace"))
+                {
+                    if (targetURI == null)
+                        throw new IllegalArgumentException();
+                    adduri = targetURI;
+                }
+                else if (uri[i].equals("##local"))
+                {
+                    adduri = "";
+                }
+            }
+            addNamespace(adduri);
+        }
+    }
+

@@ -1,0 +1,88 @@
+    void printPropertySetters(QName qName, boolean isAttr,
+                       String propertyName, int javaType, String type, String xtype,
+                       boolean nillable, boolean optional,
+                       boolean several, boolean singleton)
+       throws IOException
+    {
+        String safeVarName = NameUtil.nonJavaKeyword(NameUtil.lowerCamelCase(propertyName));
+        if (safeVarName.equals("i"))
+            safeVarName = "iValue";
+        boolean xmltype = (javaType == SchemaProperty.XML_OBJECT);
+
+        String propdesc = "\"" + qName.getLocalPart() + "\"" + (isAttr ? " attribute" : " element");
+
+        if (singleton)
+        {
+            printJavaDoc((several ? "Sets first " : "Sets the ") + propdesc);
+            emit("void set" + propertyName + "(" + type + " " + safeVarName + ");");
+
+            if (!xmltype)
+            {
+                printJavaDoc((several ? "Sets (as xml) first " : "Sets (as xml) the ") + propdesc);
+                emit("void xset" + propertyName + "(" + xtype + " " + safeVarName + ");");
+            }
+
+            if (xmltype && !several)
+            {
+                printJavaDoc("Appends and returns a new empty " + propdesc);
+                emit(xtype + " addNew" + propertyName + "();");
+            }
+
+            if (nillable)
+            {
+                printJavaDoc((several ? "Nils the first " : "Nils the ") + propdesc);
+                emit("void setNil" + propertyName + "();");
+            }
+        }
+
+        if (optional)
+        {
+            printJavaDoc((several ? "Removes first " : "Unsets the ") + propdesc);
+            emit("void unset" + propertyName + "();");
+        }
+
+        if (several)
+        {
+            String arrayName = propertyName + "Array";
+
+            printJavaDoc("Sets array of all " + propdesc);
+            emit("void set" + arrayName + "(" + type + "[] " + safeVarName + "Array);");
+
+            printJavaDoc("Sets ith " + propdesc);
+            emit("void set" + arrayName + "(int i, " + type + " " + safeVarName + ");");
+
+            if (!xmltype)
+            {
+                printJavaDoc("Sets (as xml) array of all " + propdesc);
+                emit("void xset" + arrayName + "(" + xtype + "[] " + safeVarName + "Array);");
+
+                printJavaDoc("Sets (as xml) ith " + propdesc);
+                emit("void xset" + arrayName + "(int i, " + xtype + " " + safeVarName + ");");
+            }
+
+            if (nillable)
+            {
+                printJavaDoc("Nils the ith " + propdesc);
+                emit("void setNil" + arrayName + "(int i);");
+            }
+
+            if (!xmltype)
+            {
+                printJavaDoc("Inserts the value as the ith " + propdesc);
+                emit("void insert" + propertyName + "(int i, " + type + " " + safeVarName + ");");
+
+                printJavaDoc("Appends the value as the last " + propdesc);
+                emit("void add" + propertyName + "(" + type + " " + safeVarName + ");");
+            }
+
+            printJavaDoc("Inserts and returns a new empty value (as xml) as the ith " + propdesc);
+            emit(xtype + " insertNew" + propertyName + "(int i);");
+
+            printJavaDoc("Appends and returns a new empty value (as xml) as the last " + propdesc);
+            emit(xtype + " addNew" + propertyName + "();");
+
+            printJavaDoc("Removes the ith " + propdesc);
+            emit("void remove" + propertyName + "(int i);");
+        }
+    }
+

@@ -1,0 +1,56 @@
+    public SchemaTypeSystem createNewSTS(String xsdFileName,
+                                         SchemaTypeSystem baseSchema,
+                                         String sSTSName, String sBaseSourceName)
+    {
+        SchemaTypeSystem returnSTS = null;
+        try
+        {
+            File xsdModified = getTestCaseFile(xsdFileName);
+            XmlObject xsdModifiedObj = XmlObject.Factory.parse(xsdModified);
+            System.out.println("Source Name for STS: " + xsdModifiedObj.documentProperties().getSourceName());
+
+            // If null is passed for the basename, the basename is not set. Modified for namespace testcases.
+            // If a source name is specified, deferencing of location for schemaLocation attribute gets messed up.
+            if(sBaseSourceName != null)
+            {
+                xsdModifiedObj.documentProperties().setSourceName(sBaseSourceName);
+            }
+            Assert.assertNotNull("Xml Object creation failed", xsdModifiedObj);
+            XmlObject[] xobjArr = new XmlObject[]{xsdModifiedObj};
+
+            returnSTS = XmlBeans.compileXmlBeans(sSTSName, baseSchema, xobjArr, null, builtin, null, options);
+            Assert.assertNotNull("Schema Type System created is Null.", returnSTS);
+
+            // validate the XmlObject created
+            Assert.assertTrue("Return Value for Validate()", xsdModifiedObj.validate());
+        }
+        catch (XmlException xme)
+        {
+            // even if using "COMPILE_PARTIAL_TYPESYSTEM", compilation will fail if
+            // there are any non-recoverable errors and an XmlException will be thrown
+            System.out.println("Schema invalid, XML Exception thrown : couldn't recover from errors");
+            if (errors.isEmpty())
+            {
+                System.out.println(xme.getMessage());
+            }
+            else
+            {
+                for (Iterator i = errors.iterator(); i.hasNext();)
+                {
+                    System.out.println(i.next());
+                }
+            }
+            fail("Schema invalid, XML Exception thrown : couldn't recover from errors");
+        }
+        catch (IOException ioe)
+        {
+            ioe.getMessage();
+            ioe.printStackTrace();
+        }
+        finally
+        {
+            //printRecoveredErrors();
+            return returnSTS;
+        }
+    }
+

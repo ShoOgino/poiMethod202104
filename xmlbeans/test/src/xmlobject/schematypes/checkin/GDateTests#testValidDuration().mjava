@@ -1,0 +1,95 @@
+    public void testValidDuration()
+    {
+        for (int i = 0; i < validDurations.length; i++)
+        {
+            GDuration gd = null;
+            String str = validDurations[i];
+            try
+            {
+                gd = new GDuration(str);
+            }
+            catch (IllegalArgumentException e)
+            {
+                Assert.fail("Problem with " + str + ": " + e.getMessage());
+            }
+
+            Assert.assertEquals(str, gd.toString());
+
+            for (int j = 0; j < validDurations.length; j++)
+            {
+                GDuration gd2 = null;
+                String str2 = validDurations[j];
+                try
+                {
+                    gd2 = new GDuration(str2);
+                }
+                catch (IllegalArgumentException e)
+                {
+                    Assert.fail("Problem with " + str2 + ": " + e.getMessage());
+                }
+
+                // subtracting two ways works
+                GDuration diff = gd.subtract(gd2);
+                GDurationBuilder gdb = new GDurationBuilder(gd2);
+                gdb.setSign(-gdb.getSign());
+                gdb.addGDuration(gd);
+                GDuration sum2 = gdb.toGDuration();
+                Assert.assertEquals(0, diff.compareToGDuration(sum2));
+                gdb.normalize();
+                GDurationBuilder gdb1 = new GDurationBuilder(diff);
+                gdb1.normalize();
+                Assert.assertEquals("Problem: " + gd + " and " + gd2, gdb.toString(), gdb1.toString());
+
+                // comparing is reversible
+                int comp1 = gd.compareToGDuration(gd2);
+                int comp2 = gd2.compareToGDuration(gd);
+                if (comp1 == 2)
+                    Assert.assertEquals(2, comp2);
+                else
+                    Assert.assertEquals(-comp1, comp2);
+
+                // comparing translates to addition to dates
+                boolean[] seen = new boolean[3];
+
+                for (int k = 0; k < validDates.length; k++)
+                {
+                    GDate date = new GDate(validDates[k]);
+                    if (!date.hasDate() || date.getYear() > 99999 || date.getYear() < -4000)
+                        continue;
+                    if ((hasTime(gd) || hasTime(gd2)) && !date.hasTime())
+                        continue;
+                    // System.out.println("Adding " + gd + " and " + gd2 + " to " + date + ", expecting " + comp1);
+                    GDate date1 = date.add(gd);
+                    GDate date2 = date.add(gd2);
+
+                    comp2 = date1.compareToGDate(date2);
+                    if (comp1 != 2)
+                    {
+                        Assert.assertEquals("Adding " + date + " + " + gd + " -> " + date1 + ", " + gd2 + " -> " + date2 + ", expecting " + comp1, comp1, comp2);
+                    }
+                    else
+                    {
+                        Assert.assertTrue(comp2 != 2);
+                        seen[comp2 + 1] = true;
+                    }
+
+                    // subtraction should yield the same result
+                    if (comp1 != 2)
+                    {
+                        GDate date3 = date.add(diff);
+                        Assert.assertEquals(comp1, date3.compareToGDate(date));
+                    }
+                }
+
+                if (comp1 == 2)
+                {
+                    int seencount = 0;
+                    for (int k = 0; k < seen.length; k++)
+                        if (seen[k])
+                            seencount += 1;
+                    Assert.assertTrue("Not ambiguous as advertised" /* + gd + ", " + gd2 + " d: " + diff */, seencount > 1);
+                }
+            }
+        }
+    }
+

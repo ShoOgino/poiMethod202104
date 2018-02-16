@@ -1,0 +1,42 @@
+    /* package */ static final boolean isValidGDate(GDateSpecification date)
+    {
+        if (date.hasYear() && date.getYear() == 0)
+            return false;
+
+        if (date.hasMonth() && (date.getMonth() < 1 || date.getMonth() > 12))
+            return false;
+
+        if (date.hasDay() && 
+            (date.getDay() < 1 || date.getDay() > 31 || 
+             date.getDay() > 28 && 
+             date.hasMonth() && 
+             (date.hasYear() ? 
+              date.getDay() > _maxDayInMonthFor((date.getYear() > 0 ? 
+                                                 date.getYear() : 
+                                                 date.getYear() + 1), 
+                                                date.getMonth()) : 
+              date.getDay() > _maxDayInMonth(date.getMonth()))))
+            return false;
+
+        if (date.hasTime() && ((date.getHour() < 0 || date.getHour() > 23 ||
+            date.getMinute() < 0 || date.getMinute() > 59 ||
+            date.getSecond() < 0 || date.getSecond() > 59 ||
+            date.getFraction().signum() < 0 || date.getFraction().compareTo(GDate._one) >= 0)  ) &&
+            // check for 24:00:00 valid format
+            !(date.getHour() == 24 && date.getMinute() == 0 && date.getSecond() == 0 &&
+              date.getFraction().compareTo(GDate._zero) == 0 ) )
+            return false;
+
+        if (date.hasTimeZone() &&
+            (!((date.getTimeZoneSign() == 0 && date.getTimeZoneHour() == 0 && date.getTimeZoneMinute() == 0) ||
+              ((date.getTimeZoneSign() == -1 || date.getTimeZoneSign() == +1) &&
+                // NB: allow +00:00 and -00:00
+                // (date.getTimeZoneHour() == 0 && date.getTimeZoneMinute() > 0 || date.getTimeZoneHour() > 0 && date.getTimeZoneMinute() >= 0) &&
+               (date.getTimeZoneHour() >= 0 && date.getTimeZoneMinute() >= 0) &&
+               (date.getTimeZoneHour() == 14 && date.getTimeZoneMinute() == 0 || date.getTimeZoneHour() < 14 && date.getTimeZoneMinute() < 60)))))
+            return false;
+
+        // everyting looks kosher
+        return true;
+    }
+

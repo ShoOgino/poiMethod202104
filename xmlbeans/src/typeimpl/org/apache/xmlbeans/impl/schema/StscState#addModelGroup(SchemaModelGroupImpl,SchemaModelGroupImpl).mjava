@@ -1,0 +1,55 @@
+    void addModelGroup(SchemaModelGroupImpl modelGroup, SchemaModelGroupImpl redefined)
+    {
+        if (modelGroup != null)
+        {
+            QName name = modelGroup.getName();
+            SchemaContainer container = getContainer(name.getNamespaceURI());
+            assert container != null && container == modelGroup.getContainer();
+            if (redefined != null)
+            {
+                if (_redefinedModelGroups.containsKey(redefined))
+                {
+                    if (!ignoreMdef(name)) {
+                        if (_mdefAll) {
+                            warning(XmlErrorCodes.SCHEMA_PROPERTIES$DUPLICATE,
+                                    new Object[] { "model group", QNameHelper.pretty(name), ((SchemaComponent) _redefinedModelGroups.get(redefined)).getSourceName() },
+                                    modelGroup.getParseObject());
+                        } else {
+                            error(XmlErrorCodes.SCHEMA_PROPERTIES$DUPLICATE,
+                                new Object[] { "model group", QNameHelper.pretty(name), ((SchemaComponent) _redefinedModelGroups.get(redefined)).getSourceName() },
+                                modelGroup.getParseObject());
+                        }
+                    }
+                }
+                else
+                {
+                    _redefinedModelGroups.put(redefined, modelGroup);
+                    container.addRedefinedModelGroup(modelGroup.getRef());
+                }
+            }
+            else
+            {
+                if (_modelGroups.containsKey(name))
+                {
+                    if (!ignoreMdef(name)) {
+                        if (_mdefAll) {
+                            warning(XmlErrorCodes.SCHEMA_PROPERTIES$DUPLICATE,
+                                    new Object[] { "model group", QNameHelper.pretty(name), ((SchemaComponent) _modelGroups.get(name)).getSourceName() },
+                                    modelGroup.getParseObject());
+                        } else {
+                            error(XmlErrorCodes.SCHEMA_PROPERTIES$DUPLICATE,
+                                new Object[] { "model group", QNameHelper.pretty(name), ((SchemaComponent) _modelGroups.get(name)).getSourceName() },
+                                modelGroup.getParseObject());
+                        }
+                    }
+                }
+                else
+                {
+                    _modelGroups.put(modelGroup.getName(), modelGroup);
+                    addSpelling(modelGroup.getName(), modelGroup);
+                    container.addModelGroup(modelGroup.getRef());
+                }
+            }
+        }
+    }
+

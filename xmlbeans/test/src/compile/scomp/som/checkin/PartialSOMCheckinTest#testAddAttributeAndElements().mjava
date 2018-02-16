@@ -1,0 +1,92 @@
+    public void testAddAttributeAndElements() throws Exception
+    {
+        System.out.println("Inside test case testAddAttributeAndElements()");
+
+        // Step 1 : create a Schema Type System with the base 'bad' xsd and create the Schema Type System (STS) for it
+        String sBaseSourceName = "testsourcename";
+        SchemaTypeSystem baseSTS = createNewSTS("elemattr.xsd_",
+                null,
+                "BaseSchemaTS",
+                sBaseSourceName);
+
+        Assert.assertNotNull("Schema Type System created is Null.",
+                            baseSTS);
+
+        // the tests - Walk thro the SOM, save, validate against an xml instance
+        inspectSOM(baseSTS, 1, 1, 1, 0);
+
+        // test for recoverable errors
+        Assert.assertTrue("No Recovered Errors for Invalid Schema",
+                printRecoveredErrors());
+
+        // Test for saving of the PSOM - should not be able to save
+        Assert.assertFalse("Partial SOM " + baseSTS.getName() + "Save successful - should fail!",
+                checkPSOMSave(baseSTS));
+
+        // instance validation - should fail
+        Assert.assertFalse("Validation against instance Success - should fail ",
+                validateInstance(getTestCaseFile("instance_elemattr_valid.xml"), baseSTS));
+
+        // additional validation
+        Assert.assertFalse("Attribute found but not expected - 'testAttributeComplex'",
+                        lookForAttributeInSTS(baseSTS,
+                        "testAttributeComplex"));
+        Assert.assertFalse("Element found but not expected 'ComplexTypeElem'",
+                        lookForElemInSTS(baseSTS,
+                        "ComplexTypeElem"));
+        Assert.assertFalse("Element found but not expected  'SimpleTypeElem'",
+                lookForElemInSTS(baseSTS, "SimpleTypeElem"));
+
+
+        // Step 2: create a Schema Type System with the new xsd file that has additions to this schema
+        SchemaTypeSystem modifiedSTS = createNewSTS("elemattr_added.xsd_",
+                baseSTS,
+                "ModifiedSchemaTS",
+                sBaseSourceName);
+
+        Assert.assertNotNull("Schema Type System created is Null.",
+                modifiedSTS);
+
+        // test the PSOM created : walk thro the PSOM, look for # of elements,attributes,types & attribute groups
+        inspectSOM(modifiedSTS, 3, 2, 1, 0);
+
+        // Test for successful saving of the PSOM
+        Assert.assertTrue("Valid Partial SOM " + modifiedSTS.getName() + "Save failed",
+                checkPSOMSave(modifiedSTS));
+
+        // Look for  added attribute(s)/Element(s) by name in the STS
+        Assert.assertTrue("Attribute expected, not found 'testAttributeComplex'",
+                lookForAttributeInSTS(modifiedSTS,
+                "testAttributeComplex"));
+        Assert.assertTrue("Element expected, not found 'ComplexTypeElem'",
+                lookForElemInSTS(modifiedSTS,
+                "ComplexTypeElem"));
+        Assert.assertTrue("Element expected, not found 'SimpleTypeElem'",
+                lookForElemInSTS(modifiedSTS,
+                        "SimpleTypeElem"));
+
+        // validate against an xml instance
+        Assert.assertTrue("Validation against instance failed ",
+        validateInstance(getTestCaseFile("instance_elemattr_valid.xml"), modifiedSTS));
+
+        // Step 3: now creat the Schema Type System with the original XSD again
+        SchemaTypeSystem finalSTS = createNewSTS("elemattr.xsd_",
+                modifiedSTS,
+                "FinalSchemaTS",
+                sBaseSourceName);
+
+        Assert.assertNotNull("Schema Type System created is Null.", finalSTS);
+
+        //walk the SOM
+        inspectSOM(finalSTS, 1, 1, 1, 0);
+
+        // Test for saving of the PSOM - should not be able to save
+        Assert.assertFalse("Partial SOM " + finalSTS.getName() + "Save successful - should fail!",
+                checkPSOMSave(finalSTS));
+
+        // instance validation - should fail
+        Assert.assertFalse("Validation against instance Success - should fail ",
+                validateInstance(getTestCaseFile("instance_elemattr.xml"), finalSTS));
+
+    }
+

@@ -1,0 +1,103 @@
+    static void resolveListType(SchemaTypeImpl sImpl, org.apache.xmlbeans.impl.xb.xsdschema.ListDocument.List parseList, List anonTypes)
+    {
+        StscState state = StscState.get();
+
+        sImpl.setSimpleTypeVariety(SchemaType.LIST);
+        sImpl.setBaseTypeRef(BuiltinSchemaTypeSystem.ST_ANY_SIMPLE.getRef());
+        sImpl.setBaseDepth(BuiltinSchemaTypeSystem.ST_ANY_SIMPLE.getBaseDepth() + 1);
+        sImpl.setDerivationType(SchemaType.DT_RESTRICTION);
+
+        if (sImpl.isRedefinition())
+        {
+            state.error(XmlErrorCodes.SCHEMA_REDEFINE$EXTEND_OR_RESTRICT,
+                new Object[] { "list" }, parseList);
+            // recovery: oh well.
+        }
+        
+        QName itemName = parseList.getItemType();
+        LocalSimpleType parseInner = parseList.getSimpleType();
+
+        if (itemName != null && parseInner != null)
+        {
+            state.error(XmlErrorCodes.SCHEMA_SIMPLE_TYPE$LIST_HAS_BOTH_ITEM_OR_SIMPLE_TYPE, null, parseList);
+            // recovery: ignore the inner simple type.
+            parseInner = null;
+        }
+
+        SchemaTypeImpl itemImpl;
+        XmlObject errorLoc;
+
+        if (itemName != null)
+        {
+            itemImpl = state.findGlobalType(itemName, sImpl.getChameleonNamespace(), sImpl.getTargetNamespace());
+            errorLoc = parseList.xgetItemType();
+            if (itemImpl == null)
+            {
+                state.notFoundError(itemName, SchemaType.TYPE, parseList.xgetItemType(), true);
+                // recovery: treat it as a list of anySimpleType
+                itemImpl = BuiltinSchemaTypeSystem.ST_ANY_SIMPLE;
+            }
+        }
+        else if (parseInner != null)
+        {
+            itemImpl = StscTranslator.translateAnonymousSimpleType(parseInner,
+                sImpl.getTargetNamespace(), sImpl.getChameleonNamespace() != null,
+                sImpl.getElemFormDefault(), sImpl.getAttFormDefault(), anonTypes, sImpl);
+            errorLoc = parseInner;
+        }
+        else
+        {
+            state.error(XmlErrorCodes.SCHEMA_SIMPLE_TYPE$LIST_HAS_NEITHER_ITEM_OR_SIMPLE_TYPE, null, parseList);
+            // recovery: treat it as an extension of anySimpleType
+            resolveErrorSimpleType(sImpl);
+            return;
+        }
+
+        // Verify final restrictions
+        if (itemImpl.finalList())
+            state.error(XmlErrorCodes.SIMPLE_TYPE_PROPERTIES$LIST_FINAL, null, parseList);
+
+        // Recursion...
+        StscResolver.resolveType(itemImpl);
+
+        if (!itemImpl.isSimpleType())
+        {
+            state.error(XmlErrorCodes.SIMPLE_TYPE_RESTRICTION$LIST_ITEM_NOT_SIMPLE, null, errorLoc);
+            // recovery: treat the item type as anySimpleType
+            sImpl = BuiltinSchemaTypeSystem.ST_ANY_SIMPLE;
+        }
+
+        switch (itemImpl.getSimpleVariety())
+        {
+            case SchemaType.LIST:
+                state.error(XmlErrorCodes.SIMPLE_TYPE_RESTRICTION$LIST_ITEM_IS_LIST, null, errorLoc);
+                // recovery: treat the list as an anySimpleType
+                resolveErrorSimpleType(sImpl);
+                return;
+            case SchemaType.UNION:
+                if (itemImpl.isUnionOfLists())
+                {
+                    state.error(XmlErrorCodes.SIMPLE_TYPE_RESTRICTION$LIST_ITEM_IS_UNION_OF_LIST, null, errorLoc);
+                    resolveErrorSimpleType(sImpl);
+                    return;
+                }
+                // fallthrough: nonlist unions are just like atomic items
+            case SchemaType.ATOMIC:
+                sImpl.setListItemTypeRef(itemImpl.getRef());
+                // Check that the item type is not a plan NOTATION
+                if (sImpl.getBuiltinTypeCode() == SchemaType.BTC_NOTATION)
+                    state.recover(XmlErrorCodes.DATATYPE_ENUM_NOTATION, null, errorLoc);
+                break;
+            default:
+                assert(false);
+                sImpl.setListItemTypeRef(BuiltinSchemaTypeSystem.ST_ANY_SIMPLE.getRef());
+        }
+
+        // now deal with facets
+        sImpl.setBasicFacets(StscState.FACETS_LIST, StscState.FIXED_FACETS_LIST);
+        sImpl.setWhiteSpaceRule( SchemaType.WS_COLLAPSE );
+
+        // now compute our intrinsic properties
+        resolveFundamentalFacets(sImpl);
+    }
+

@@ -1,0 +1,72 @@
+        Xobj fetch(Xobj parent, QName name, QNameSet set, int n)
+        {
+            assert n >= 0;
+
+            if (_version != Locale.this.version() || _parent != parent ||
+                !cacheSame(name, set) || n == 0)
+            {
+                _version = Locale.this.version();
+                _parent = parent;
+                _name = name;
+                _child = null;
+                _n = -1;
+
+                loop:
+                for (Xobj x = parent._firstChild;
+                     x != null; x = x._nextSibling)
+                {
+                    if (x.isElem() && nameHit(name, set, x._name))
+                    {
+                        _child = x;
+                        _n = 0;
+
+                        break loop;
+                    }
+                }
+            }
+
+            if (_n < 0)
+                return null;
+
+            if (n > _n)
+            {
+                while (n > _n)
+                {
+                    for (Xobj x = _child._nextSibling; ; x = x._nextSibling)
+                    {
+                        if (x == null)
+                            return null;
+
+                        if (x.isElem() && nameHit(name, set, x._name))
+                        {
+                            _child = x;
+                            _n++;
+
+                            break;
+                        }
+                    }
+                }
+            }
+            else if (n < _n)
+            {
+                while (n < _n)
+                {
+                    for (Xobj x = _child._prevSibling; ; x = x._prevSibling)
+                    {
+                        if (x == null)
+                            return null;
+
+                        if (x.isElem() && nameHit(name, set, x._name))
+                        {
+                            _child = x;
+                            _n--;
+
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return _child;
+        }
+

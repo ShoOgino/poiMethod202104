@@ -1,0 +1,101 @@
+    final void removeCharsHelper (
+        int p, int cchRemove, Xobj xTo, int pTo, boolean moveCurs, boolean invalidate )
+    {
+        assert p > 0 && p < posMax() && p != posAfter() - 1;
+        assert cchRemove > 0;
+        assert cchRight( p ) >= cchRemove;
+        assert !moveCurs || xTo != null;
+
+        // Here I check the span of text to be removed for cursors.  If xTo/pTo is not specified,
+        // then the caller wants these cursors to collapse to be after the text being removed.  If
+        // the caller specifies moveCurs, then the caller has arranged for the text being removed
+        // to have been copied to xTp/pTo and wants the cursors to be moved there as well.
+        // Note that I call nextChars here.  I do this because trying to shift the cursor to the
+        // end of the text to be removed with a moveTo could cause the improper placement of the
+        // cursor just before an end tag, instead of placing it just before the first child.  Also,
+        // I adjust all positions of curs after the text to be removed to account for the removal.
+
+        for ( Cur c = getEmbedded() ; c != null ; )
+        {
+            Cur next = c._next;
+
+            // Here I test to see if the Cur c is in the range of chars to be removed.  Normally
+            // I would call inChars, but it can't handle the invalidity of the tree, so I heve
+            // inlined the inChars logic here (includeEnd is false, makes it much simpler).
+            // Note that I also call moveToNoCheck because the destination may have afterText
+            // and no parent which will cause normaliztion checks in MoveTo to fail.  I don't think
+            // that nextChars will be called under such circumstnaces.
+
+            assert c._xobj == this;
+
+            if (c._pos >= p && c._pos < p + cchRemove)
+            {
+                if (moveCurs)
+                    c.moveToNoCheck( xTo, pTo + c._pos - p );
+                else
+                    c.nextChars( cchRemove - c._pos + p );
+            }
+
+            // If c is still on this Xobj and it's to the right of the chars to remove, adjust
+            // it to adapt to the removal of the cars.  I don't have to worry about END_POS
+            // here, just curs in text.
+
+            if (c._xobj == this && c._pos >= p + cchRemove)
+                c._pos -= cchRemove;
+
+            c = next;
+        }
+
+        // Here I move bookmarks in this text to the span of text at xTo/pTo.  The text at this/p
+        // is going away, but a caller of this fcn who specifies xTo/pTo has copied the text to
+        // xTo/pTo.  The caller has to make sure that if xTo/pTo is not specified, then there are
+        // no bookmarks in the span of text to be removed.
+
+        for ( Bookmark b = _bookmarks ; b != null ; )
+        {
+            Bookmark next = b._next;
+
+            // Similarly, as above, I can't call inChars here
+
+            assert b._xobj == this;
+
+            if (b._pos >= p && b._pos < p + cchRemove)
+            {
+                assert xTo != null;
+                b.moveTo( xTo, pTo + b._pos - p );
+            }
+
+            if (b._xobj == this && b._pos >= p + cchRemove)
+                b._pos -= cchRemove;
+
+            b = b._next;
+        }
+
+        // Now, remove the actual chars
+
+        int pa = posAfter();
+        CharUtil cu = _locale.getCharUtil();
+
+        if (p < pa)
+        {
+            _srcValue = cu.removeChars( p - 1, cchRemove, _srcValue, _offValue, _cchValue );
+            _offValue = cu._offSrc;
+            _cchValue = cu._cchSrc;
+
+            if (invalidate)
+            {
+                invalidateUser();
+                invalidateSpecialAttr( null );
+            }
+        }
+        else
+        {
+            _srcAfter = cu.removeChars( p - pa, cchRemove, _srcAfter, _offAfter, _cchAfter );
+            _offAfter = cu._offSrc;
+            _cchAfter = cu._cchSrc;
+
+            if (invalidate && _parent != null)
+                _parent.invalidateUser();
+        }
+    }
+

@@ -1,0 +1,25 @@
+    public SchemaType.Ref findDocumentTypeRef(QName name)
+    {
+        Object cached = _documentCache.get(name);
+        if (cached == CACHED_NOT_FOUND)
+            return null;
+        SchemaType.Ref result = (SchemaType.Ref) cached;
+        if (result == null)
+        {
+            for (int i = 0; i < _searchPath.length; i++)
+                if (null != (result = _searchPath[i].findDocumentTypeRef(name)))
+                    break;
+            if (result == null)
+            {
+                SchemaTypeSystem ts = typeSystemForComponent("schema" + METADATA_PACKAGE_LOAD + "/element/", name);
+                if (ts != null)
+                {
+                    result = ts.findDocumentTypeRef(name);
+                    assert(result != null) : "Type system registered element " + QNameHelper.pretty(name) + " but does not contain document type";
+                }
+            }
+            _documentCache.put(name, result == null ? CACHED_NOT_FOUND : result);
+        }
+        return result;
+    }
+

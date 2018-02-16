@@ -1,0 +1,58 @@
+    public static void main(String args[])
+            throws Exception {
+
+        File file = new File(args[0]);
+        String resListener = null;
+        String outFile = null;
+        boolean showOutput = false;
+
+        Collection flags = new TreeSet();
+        flags.add("showoutput");
+
+        Collection options=new TreeSet();
+        options.add(JUnitXTask.resultListener);
+        options.add(JUnitXTask.outFile);
+
+        CommandLine cmdl = new CommandLine(args, flags, options);
+        showOutput = cmdl.getOpt("showoutput") != null;
+        resListener = cmdl.getOpt(JUnitXTask.resultListener);
+        if (resListener != null) {
+            outFile = cmdl.getOpt(JUnitXTask.outFile);
+            if (outFile == null)
+                throw new RuntimeException("No output file specified");
+        }
+        ArrayList files = new ArrayList();
+        try {
+            BufferedReader in = new BufferedReader(new FileReader(file));
+            String line;
+            while ((line = in.readLine()) != null)
+                files.add(line);
+            in.close();
+
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        JUnitXRunner runner;
+        if (resListener != null) {
+            // Try to instantiate a class of resListener
+            Object obj;
+            try {
+                Class c = Class.forName(resListener);
+                obj = c.newInstance();
+            }
+            catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            JUnitXResultFormatter fmt = (JUnitXResultFormatter) obj;
+            runner = new JUnitXRunner(files, fmt, outFile, showOutput);
+        } else
+            runner = new JUnitXRunner(files, showOutput);
+
+
+        int nFailureCount = runner.runTests();
+
+        System.exit(nFailureCount);
+    }
+

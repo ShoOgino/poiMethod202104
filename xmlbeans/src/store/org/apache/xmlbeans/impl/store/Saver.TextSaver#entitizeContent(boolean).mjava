@@ -1,0 +1,104 @@
+        private void entitizeContent ( boolean forceCData )
+        {
+            assert _free >=0;
+            
+            if (_lastEmitCch == 0)
+                return;
+
+            int i = _lastEmitIn;
+            final int n = _buf.length;
+
+            boolean hasCharToBeReplaced = false;
+
+            int count = 0;
+            char prevChar = 0;
+            char prevPrevChar = 0;
+            for ( int cch = _lastEmitCch ; cch > 0 ; cch-- )
+            {
+                char ch = _buf[ i ];
+
+                if (ch == '<' || ch == '&')
+                    count++;
+                else if (prevPrevChar == ']' && prevChar == ']' && ch == '>' )
+                    hasCharToBeReplaced = true;
+                else if (isBadChar( ch ) || isEscapedChar( ch ) || (!_isPrettyPrint && ch == '\r') )
+                    hasCharToBeReplaced = true;
+
+                if (++i == n)
+                    i = 0;
+
+                prevPrevChar = prevChar;
+                prevChar = ch;
+            }
+
+            if (!forceCData && count == 0 && !hasCharToBeReplaced && count<_cdataEntityCountThreshold)
+                return;
+
+            i = _lastEmitIn;
+
+            //
+            // Heuristic for knowing when to save out stuff as a CDATA.
+            //
+            if (forceCData || (_lastEmitCch > _cdataLengthThreshold && count > _cdataEntityCountThreshold) )
+            {
+                boolean lastWasBracket = _buf[ i ] == ']';
+
+                i = replace( i, "<![CDATA[" + _buf[ i ] );
+
+                boolean secondToLastWasBracket = lastWasBracket;
+
+                lastWasBracket = _buf[ i ] == ']';
+
+                if (++i == _buf.length)
+                    i = 0;
+
+                for ( int cch = _lastEmitCch ; cch > 0 ; cch-- )
+                {
+                    char ch = _buf[ i ];
+
+                    if (ch == '>' && secondToLastWasBracket && lastWasBracket)
+                        i = replace( i, "]]>><![CDATA[" );
+                    else if (isBadChar( ch ))
+                        i = replace( i, "?" );
+                    else
+                        i++;
+
+                    secondToLastWasBracket = lastWasBracket;
+                    lastWasBracket = ch == ']';
+
+                    if (i == _buf.length)
+                        i = 0;
+                }
+
+                emit( "]]>" );
+            }
+            else
+            {
+                char ch = 0, ch_1 = 0, ch_2;
+                for ( int cch = _lastEmitCch ; cch > 0 ; cch-- )
+                {
+                    ch_2 = ch_1;
+                    ch_1 = ch;
+                    ch = _buf[ i ];
+
+                    if (ch == '<')
+                        i = replace( i, "&lt;" );
+                    else if (ch == '&')
+                        i = replace( i, "&amp;" );
+                    else if (ch == '>' && ch_1 == ']' && ch_2 == ']')
+                        i = replace( i, "&gt;" );
+                    else if (isBadChar( ch ))
+                        i = replace( i, "?" );
+                    else if (!_isPrettyPrint && ch == '\r')
+                        i = replace( i, "&#13;" );
+                    else if (isEscapedChar( ch ))
+                        i = replace( i, _replaceChar.getEscapedString( ch ) );
+                    else
+                        i++;
+
+                    if (i == _buf.length)
+                        i = 0;
+                }
+            }
+        }
+

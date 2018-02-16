@@ -1,0 +1,121 @@
+    /**
+     * Constructs a GDate based on a java.util.Calendar.
+     * <p>
+     * If the calendar does not have some fields set, the same absence
+     * of information is reflected in the GDate.  Note that
+     * java.util.GregorianCalendar fills in all fields as soon as any
+     * are fetched, so constructing a GDate with the same calendar object
+     * twice may result in a different GDate because of a changed calendar.
+     * Note that org.apache.xmlbeans.XmlCalendar is stable if you re-get a set field,
+     * so it does not have the same problem.
+     */
+    public GDate(Calendar calendar)
+    {
+        // we must scrape the "isSet" information out before accessing anything
+        boolean isSetYear = calendar.isSet(Calendar.YEAR);
+        boolean isSetEra = calendar.isSet(Calendar.ERA);
+        boolean isSetMonth = calendar.isSet(Calendar.MONTH);
+        boolean isSetDay = calendar.isSet(Calendar.DAY_OF_MONTH);
+        boolean isSetHourOfDay = calendar.isSet(Calendar.HOUR_OF_DAY);
+        boolean isSetHour = calendar.isSet(Calendar.HOUR);
+        boolean isSetAmPm = calendar.isSet(Calendar.AM_PM);
+        boolean isSetMinute = calendar.isSet(Calendar.MINUTE);
+        boolean isSetSecond = calendar.isSet(Calendar.SECOND);
+        boolean isSetMillis = calendar.isSet(Calendar.MILLISECOND);
+        boolean isSetZone = calendar.isSet(Calendar.ZONE_OFFSET);
+        boolean isSetDst = calendar.isSet(Calendar.DST_OFFSET);
+
+        if (isSetYear)
+        {
+            int y = calendar.get(Calendar.YEAR);
+            if (isSetEra && calendar instanceof GregorianCalendar)
+                if (calendar.get(Calendar.ERA) == GregorianCalendar.BC)
+                    y = -y; //1 - y;
+            _bits |= HAS_YEAR;
+            _CY = y;
+        }
+        if (isSetMonth)
+        {
+            _bits |= HAS_MONTH;
+            _M = calendar.get(Calendar.MONTH) + 1; // !!note
+        }
+        if (isSetDay)
+        {
+            _bits |= HAS_DAY;
+            _D = calendar.get(Calendar.DAY_OF_MONTH);
+        }
+        boolean gotTime = false;
+
+        int h = 0;
+        int m = 0;
+        int s = 0;
+        BigDecimal fs = _zero;
+
+        if (isSetHourOfDay)
+        {
+            h = calendar.get(Calendar.HOUR_OF_DAY);
+            gotTime = true;
+        }
+        else if (isSetHour && isSetAmPm)
+        {
+            h = calendar.get(Calendar.HOUR) + calendar.get(Calendar.AM_PM) * 12;
+            gotTime = true;
+        }
+
+        if (isSetMinute)
+        {
+            m = calendar.get(Calendar.MINUTE);
+            gotTime = true;
+        }
+
+        if (isSetSecond)
+        {
+            s = calendar.get(Calendar.SECOND);
+            gotTime = true;
+        }
+
+        if (isSetMillis)
+        {
+            fs = BigDecimal.valueOf(calendar.get(Calendar.MILLISECOND), 3);
+            gotTime = true;
+        }
+
+        if (gotTime)
+        {
+            _bits |= HAS_TIME;
+            _h = h;
+            _m = m;
+            _s = s;
+            _fs = fs;
+        }
+
+        if (isSetZone)
+        {
+            int zoneOffsetInMilliseconds = calendar.get(Calendar.ZONE_OFFSET);
+            if (isSetDst)
+                zoneOffsetInMilliseconds += calendar.get(Calendar.DST_OFFSET);
+
+            _bits |= HAS_TIMEZONE;
+            if (zoneOffsetInMilliseconds == 0)
+            {
+                _tzsign = 0;
+                _tzh = 0;
+                _tzm = 0;
+                TimeZone zone = calendar.getTimeZone();
+                String id = zone.getID();
+                if (id != null && id.length() > 3) switch (id.charAt(3))
+                {
+                    case '+': _tzsign = 1; break;   // GMT+00:00
+                    case '-': _tzsign = -1; break;  // GMT-00:00
+                }
+            }
+            else
+            {
+                _tzsign = (zoneOffsetInMilliseconds < 0 ? -1 : +1);
+                zoneOffsetInMilliseconds = zoneOffsetInMilliseconds * _tzsign;
+                _tzh = zoneOffsetInMilliseconds / 3600000;
+                _tzm = (zoneOffsetInMilliseconds - _tzh * 3600000) / 60000;
+            }
+        }
+    }
+

@@ -1,0 +1,43 @@
+        public XsbReader(String handle, int filetype)
+        {
+            String resourcename = _basePackage + handle + ".xsb";
+            InputStream rawinput = getLoaderStream(resourcename);
+            if (rawinput == null)
+                throw new SchemaTypeLoaderException("XML-BEANS compiled schema: Could not locate compiled schema resource " + resourcename, _name, handle, SchemaTypeLoaderException.NO_RESOURCE);
+
+            _input = new DataInputStream(rawinput);
+            _handle = handle;
+
+            int magic = readInt();
+            if (magic != DATA_BABE)
+                throw new SchemaTypeLoaderException("XML-BEANS compiled schema: Wrong magic cookie", _name, handle, SchemaTypeLoaderException.WRONG_MAGIC_COOKIE);
+
+            _majorver = readShort();
+            _minorver = readShort();
+
+            if (_majorver != MAJOR_VERSION)
+                throw new SchemaTypeLoaderException("XML-BEANS compiled schema: Wrong major version - expecting " + MAJOR_VERSION + ", got " + _majorver, _name, handle, SchemaTypeLoaderException.WRONG_MAJOR_VERSION);
+
+            if (_minorver > MINOR_VERSION)
+                throw new SchemaTypeLoaderException("XML-BEANS compiled schema: Incompatible minor version - expecting up to " + MINOR_VERSION + ", got " + _minorver, _name, handle, SchemaTypeLoaderException.WRONG_MINOR_VERSION);
+
+            // Clip to 14 because we're not backward compatible with earlier
+            // minor versions.  Remove this when upgrading to a new major
+            // version
+
+            if (_minorver < 14)
+                throw new SchemaTypeLoaderException("XML-BEANS compiled schema: Incompatible minor version - expecting at least 14, got " + _minorver, _name, handle, SchemaTypeLoaderException.WRONG_MINOR_VERSION);
+
+            if (atLeast(2, 18, 0))
+                _releaseno = readShort();
+
+            int actualfiletype = readShort();
+            if (actualfiletype != filetype && filetype != 0xFFFF)
+                throw new SchemaTypeLoaderException("XML-BEANS compiled schema: File has the wrong type - expecting type " + filetype + ", got type " + actualfiletype, _name, handle, SchemaTypeLoaderException.WRONG_FILE_TYPE);
+
+            _stringPool = new StringPool(_handle, _name);
+            _stringPool.readFrom(_input);
+
+            _actualfiletype = actualfiletype;
+        }
+

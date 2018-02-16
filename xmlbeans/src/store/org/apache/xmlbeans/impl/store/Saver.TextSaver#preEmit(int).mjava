@@ -1,0 +1,49 @@
+        private boolean preEmit ( int cch )
+        {
+            assert cch >= 0;
+            assert _buf==null ||
+                (_out<_in && _free == _buf.length - ( _in - _out ) ) || // data in the middle, free on the edges
+                (_out>_in && _free == _out - _in ) ||                   // data on the edges, free in the middle
+                (_out==_in && _free == _buf.length) ||                  // no data, all buffer free
+                (_out==_in && _free == 0)                               // buffer full
+                : "_buf.length:" + _buf.length + " _in:" + _in + " _out:" + _out + " _free:" + _free;
+
+            _lastEmitCch = cch;
+
+            if (cch == 0)
+                return true;
+
+            if (_free <= cch)
+                resize( cch, -1 );
+
+            assert cch <= _free;
+
+            int used = getAvailable();
+
+            // if we are about to emit and there is noting in the buffer, reset
+            // the buffer to be at the beginning so as to not grow it anymore
+            // than needed.
+
+            if (used == 0)
+            {
+                assert _in == _out;
+                assert _free == _buf.length;
+                _in = _out = 0;
+            }
+
+            _lastEmitIn = _in;
+
+            _free -= cch;
+
+            assert _free >= 0;
+            assert _buf==null || _free == (_in>=_out ? _buf.length - (_in - _out) : _out - _in ) - cch : "_buf.length:" + _buf.length + " _in:" + _in + " _out:" + _out + " _free:" + _free;
+            assert _buf==null ||
+                (_out<_in && _free == _buf.length - ( _in - _out ) - cch) || // data in the middle, free on the edges
+                (_out>_in && _free == _out - _in - cch ) ||                  // data on the edges, free in the middle
+                (_out==_in && _free == _buf.length - cch) ||                 // no data, all buffer free
+                (_out==_in && _free == 0)                                    // buffer full
+                : "_buf.length:" + _buf.length + " _in:" + _in + " _out:" + _out + " _free:" + _free;
+
+            return false;
+        }
+

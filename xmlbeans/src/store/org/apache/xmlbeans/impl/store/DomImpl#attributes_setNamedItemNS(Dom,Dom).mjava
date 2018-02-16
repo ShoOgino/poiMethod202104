@@ -1,0 +1,52 @@
+    public static Dom attributes_setNamedItemNS ( Dom e, Dom a )
+    {
+        Dom owner = attr_getOwnerElement( a );
+
+        if (owner == e)
+            return a;
+        
+        if (owner != null)
+            throw new InuseAttributeError();
+
+        if (a.nodeType() != ATTR)
+            throw new HierarchyRequestErr( "Node is not an attribute" );
+
+        QName name = a.getQName();
+        Dom oldAttr = null;
+
+        Cur c = e.tempCur();
+
+        while ( c.toNextAttr() )
+        {
+            Dom aa = c.getDom();
+
+            if (aa.getQName().equals( name ))
+            {
+                if (oldAttr == null)
+                    oldAttr = aa;
+                else
+                {
+                    removeNode( aa );
+                    c.toPrevAttr();
+                }
+            }
+        }
+
+        if (oldAttr == null)
+        {
+            c.moveToDom( e );
+            c.next();
+            Cur.moveNode( (Xobj) a, c );
+        }
+        else
+        {
+            c.moveToDom( oldAttr );
+            Cur.moveNode( (Xobj) a, c );
+            removeNode( oldAttr );
+        }
+
+        c.release();
+
+        return oldAttr;
+    }
+

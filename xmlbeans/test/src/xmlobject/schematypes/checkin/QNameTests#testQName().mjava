@@ -1,0 +1,83 @@
+    public void testQName ( )
+        throws Exception
+    {
+        String schema =
+            "<xs:schema xmlns:xs='http://www.w3.org/2001/XMLSchema'>\n" +
+            "" +
+            "  <xs:element name='any'>\n" +
+            "  </xs:element>\n" +
+            "" +
+            "</xs:schema>\n" +
+            "";
+
+        SchemaTypeLoader stl =
+            XmlBeans.loadXsd( new XmlObject[] {
+                XmlObject.Factory.parse(schema) } );
+
+        
+        //
+        // Test the set_XMLName function on XmlQNameImpl
+        //
+
+        String ns =
+            "xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' " +
+                "xmlns:xs='http://www.w3.org/2001/XMLSchema'";
+        
+        XmlObject sourceDocument =
+            stl.parse(
+                "<any " + ns + " xsi:type='xs:QName' xmlns:xxx='xxx.com'>" +
+                    "xxx:abc</any>", null, null );
+
+        XmlCursor sourceCursor = sourceDocument.newCursor();
+
+        sourceCursor.toFirstChild();
+
+        XmlQName sourceQName = (XmlQName) sourceCursor.getObject();
+
+        XmlObject targetDocument =
+            stl.parse(
+                "<any " + ns + " xsi:type='xs:QName'>" +
+                    "</any>", null, null );
+
+        XmlCursor targetCursor = targetDocument.newCursor();
+
+        targetCursor.toFirstChild();
+
+        XmlQName targetQName = (XmlQName) targetCursor.getObject();
+
+        targetQName.set( sourceQName );
+
+        Assert.assertTrue(
+            targetQName.getQNameValue().getNamespaceURI().equals( "xxx.com" ) );
+
+        //
+        // Test the set_text function on XmlQNameImpl
+        //
+        
+        targetDocument =
+            stl.parse(
+                "<any " + ns + " xsi:type='xs:QName' xmlns:xxx='xxx.com'>" +
+                    "</any>", null, null );
+
+        targetCursor = targetDocument.newCursor();
+
+        targetCursor.toFirstChild();
+
+        targetQName = (XmlQName) targetCursor.getObject();
+
+        try
+        {
+            targetQName.setStringValue( "zzz:abc" );
+            
+            Assert.assertTrue( false ); // Must fail
+        }
+        catch ( Throwable t )
+        {
+        }
+        
+        targetQName.setStringValue( "xxx:abc" );
+        
+        Assert.assertTrue(
+            targetQName.getQNameValue().getNamespaceURI().equals( "xxx.com" ) );
+    }
+

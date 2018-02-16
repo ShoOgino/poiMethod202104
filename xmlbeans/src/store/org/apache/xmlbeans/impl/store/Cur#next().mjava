@@ -1,0 +1,74 @@
+    boolean next ( )
+    {
+        assert isNormal();
+
+        Xobj x = _xobj;
+        int  p = _pos;
+
+        int pa = x.posAfter();
+
+        if (p >= pa)
+            p = _xobj.posMax();
+        else if (p == END_POS)
+        {
+            if (x.isRoot() || (x.isAttr() && (x._nextSibling == null || !x._nextSibling.isAttr())))
+                return false;
+
+            p = pa;
+        }
+        else if (p > 0)
+        {
+            assert x._firstChild == null || !x._firstChild.isAttr();
+
+            if (x._firstChild != null)
+            {
+                x = x._firstChild;
+                p = 0;
+            }
+            else
+                p = END_POS;
+        }
+        else
+        {
+            assert p == 0;
+
+            x.ensureOccupancy();
+
+            p = 1;
+
+            if (x._cchValue == 0)
+            {
+                if (x._firstChild != null)
+                {
+                    if (x._firstChild.isAttr())
+                    {
+                        Xobj a = x._firstChild;
+
+                        while ( a._nextSibling != null && a._nextSibling.isAttr() )
+                            a = a._nextSibling;
+
+                        if (a._cchAfter > 0)
+                        {
+                            x = a;
+                            p = a.posAfter();
+                        }
+                        else if (a._nextSibling != null)
+                        {
+                            x = a._nextSibling;
+                            p = 0;
+                        }
+                    }
+                    else
+                    {
+                        x = x._firstChild;
+                        p = 0;
+                    }
+                }
+            }
+        }
+
+        moveTo( getNormal( x, p ), _posTemp );
+
+        return true;
+    }
+

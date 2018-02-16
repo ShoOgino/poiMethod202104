@@ -1,0 +1,31 @@
+        private static Reader copySchemaSource(String url, Reader reader, StscState state)
+        {
+            //Copy the schema file if it wasn't already copied
+            if (state.getSchemasDir() == null)
+                return reader;
+
+            String schemalocation = state.sourceNameForUri(url);
+            File targetFile = new File(state.getSchemasDir(), schemalocation);
+            if (targetFile.exists())
+                return reader;
+
+            try
+            {
+                File parentDir = new File(targetFile.getParent());
+                IOUtil.createDir(parentDir, null);
+
+                CharArrayReader car = copy(reader);
+                XmlEncodingSniffer xes = new XmlEncodingSniffer(car, null);
+                Writer out = new OutputStreamWriter(new FileOutputStream(targetFile), xes.getXmlEncoding());
+                IOUtil.copyCompletely(car, out);
+
+                car.reset();
+                return car;
+            }
+            catch (IOException e)
+            {
+                System.err.println("IO Error " + e);
+                return reader;
+            }
+        }
+

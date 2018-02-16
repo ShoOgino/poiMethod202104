@@ -1,0 +1,34 @@
+    private static boolean tryNowThatItsLater()
+    {
+        List files;
+
+        synchronized (deleteFileQueue)
+        {
+            files = new ArrayList(deleteFileQueue);
+            deleteFileQueue.clear();
+        }
+
+        List retry = new ArrayList();
+
+        for (Iterator i = files.iterator(); i.hasNext(); )
+        {
+            File file = (File)i.next();
+            tryToDelete(file);
+            if (file.exists())
+                retry.add(file);
+        }
+
+        synchronized (deleteFileQueue)
+        {
+            if (triesRemaining > 0)
+                triesRemaining -= 1;
+
+            if (triesRemaining <= 0 || retry.size() == 0) // done?
+                triesRemaining = 0;
+            else
+                deleteFileQueue.addAll(retry); // try again?
+
+            return (triesRemaining <= 0);
+        }
+    }
+

@@ -1,0 +1,30 @@
+    /**
+     * This method can writeReplace either an unwrapped XmlObjectBase
+     * or an XBean proxy.  A "true" argument means unwrapped.
+     *
+     * The serialization strategy for XmlObjects is this:
+     *
+     * (1) Only the root XmlObject for a document actually gets
+     *     fully serialized; it is serialized as a SerializedRootObject,
+     *     which simply saves itself as XML text.
+     *
+     * (2) Interior XmlObjects get serialized as a reference to the
+     *     root XmlObject for their document, plus an integer which
+     *     indicates the position of the XmlObject within the owner
+     *     document. This pair is stored as a SerializedInteriorObject.
+     *
+     * Both objects can be maked as wrapped or unwrapped. If wrapped,
+     * then the proxy is returned when deserializing; if unwrapped, then
+     * the proxy is stripped when deserializing.
+     */
+    public Object writeReplace()
+    {
+        synchronized (monitor())
+        {
+            if (isRootXmlObject())
+                return new SerializedRootObject(this);
+
+            return new SerializedInteriorObject(this, getRootXmlObject());
+        }
+    }
+

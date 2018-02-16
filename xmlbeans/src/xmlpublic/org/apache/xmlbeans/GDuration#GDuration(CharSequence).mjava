@@ -1,0 +1,134 @@
+    /**
+     * Constructs a GDuration from a lexical
+     * representation. The lexical space contains the
+     * union of the lexical spaces of all the schema
+     * date/time types (except for duration).
+     */
+    public GDuration(CharSequence str)
+    {
+        // Form:        -PnYnMnDTnHnMnS
+        // (where each n may be unsigned integer, i.e., an integer that conforms to the pattern [0-9]+
+        // {was: preceded by a - for us}, and the whole may be -)
+
+        // first trim XML whitespace
+        int len = str.length();
+        int start = 0;
+        while (len > 0 && GDate.isSpace(str.charAt(len - 1)))
+            len -= 1;
+        while (start < len && GDate.isSpace(str.charAt(start)))
+            start += 1;
+
+        _sign = 1;
+        boolean tmark = false;
+
+        if (start < len && str.charAt(start) == '-')
+        {
+            _sign = -1;
+            start += 1;
+        }
+
+        if (start >= len || str.charAt(start) != 'P')
+            throw new IllegalArgumentException("duration must begin with P");
+
+        start += 1;
+
+        int seen = SEEN_NOTHING;
+        _fs = GDate._zero;
+
+        for (;start < len; start += 1)
+        {
+            char ch = str.charAt(start);
+            if (ch == 'T')
+            {
+                if (tmark)
+                    throw new IllegalArgumentException("duration must have no more than one T'");
+                if (seen > SEEN_DAY)
+                    throw new IllegalArgumentException("T in duration must precede time fields");
+                seen = SEEN_DAY;
+                tmark = true;
+                start += 1;
+                if (start >= len)
+                    throw new IllegalArgumentException("illegal duration");
+                ch = str.charAt(start);
+            }
+            if (!GDate.isDigit(ch))
+                throw new IllegalArgumentException("illegal duration at char[" + start + "]: '" + ch + "'");
+            int value = GDate.digitVal(ch);
+            for (;;)
+            {
+                start += 1;
+                ch = (start < len) ? str.charAt(start) : '\0';
+                if (!GDate.isDigit(ch))
+                    break;
+                value = value * 10 + GDate.digitVal(ch);
+            }
+            if (ch == '.')
+            {
+                int i = start;
+                do i += 1;
+                while (i < len && GDate.isDigit(ch = str.charAt(i)));
+                _fs = new BigDecimal(str.subSequence(start, i).toString());
+                if (i >= len || ch != 'S')
+                    throw new IllegalArgumentException("illegal duration");
+                start = i;
+            }
+
+            switch (seen)
+            {
+                case SEEN_NOTHING:
+                    if (ch == 'Y')
+                    {
+                        seen = SEEN_YEAR;
+                        _CY = value;
+                        break;
+                    } // fallthrough
+                case SEEN_YEAR:
+                    if (ch == 'M')
+                    {
+                        seen = SEEN_MONTH;
+                        _M = value;
+                        break;
+                    } // fallthrough
+                case SEEN_MONTH:
+                    if (ch == 'D')
+                    {
+                        seen = SEEN_DAY;
+                        _D = value;
+                        break;
+                    } // fallthrough
+                case SEEN_DAY:
+                    if (ch == 'H')
+                    {
+                        if (!tmark)
+                            throw new IllegalArgumentException("time in duration must follow T");
+                        seen = SEEN_HOUR;
+                        _h = value;
+                        break;
+                    } // fallthrough
+                case SEEN_HOUR:
+                    if (ch == 'M')
+                    {
+                        if (!tmark)
+                            throw new IllegalArgumentException("time in duration must follow T");
+                        seen = SEEN_MINUTE;
+                        _m = value;
+                        break;
+                    } // fallthrough
+                case SEEN_MINUTE:
+                    if (ch == 'S')
+                    {
+                        if (!tmark)
+                            throw new IllegalArgumentException("time in duration must follow T");
+                        seen = SEEN_SECOND;
+                        _s = value;
+                        break;
+                    } // fallthrough
+                default:
+                    throw new IllegalArgumentException("duration must specify Y M D T H M S in order");
+            }
+        }
+
+        if ( seen == SEEN_NOTHING )
+            throw new IllegalArgumentException("duration must contain at least one number and its designator: " + str);
+    }
+

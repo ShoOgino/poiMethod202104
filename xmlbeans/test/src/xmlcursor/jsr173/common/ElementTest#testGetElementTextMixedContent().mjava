@@ -1,0 +1,30 @@
+    public void testGetElementTextMixedContent() throws Exception {
+        cur.toFirstChild(); //first element?
+        cur.toNextSibling();
+        cur.toNextSibling();
+        m_stream =getStream( cur );
+        assertEquals(new QName("foo.org", "foo", ""), m_stream.getName());
+        try {
+            assertEquals("\thooa", m_stream.getElementText());
+            fail("Mixed content needs exception");
+        }
+        catch (javax.xml.stream.XMLStreamException e) {
+        }
+
+        //mixed content txt1, PI, COMMENT,txt2:
+        //should coalesce txt1 & txt2
+        cur = XmlObject.Factory.newInstance().newCursor();
+        cur.toNextToken();
+        cur.beginElement("foo");
+        cur.insertChars("  \n ");
+        cur.insertComment("My comment");
+        cur.insertProcInst("xml-stylesheet", "http://foobar");
+        cur.insertChars("txt1\t");
+        cur.toStartDoc();
+         m_stream = getStream( cur );
+         assertEquals(XMLStreamConstants.START_ELEMENT, m_stream.next() );
+        assertEquals("  \n txt1\t", m_stream.getElementText());
+
+
+    }
+

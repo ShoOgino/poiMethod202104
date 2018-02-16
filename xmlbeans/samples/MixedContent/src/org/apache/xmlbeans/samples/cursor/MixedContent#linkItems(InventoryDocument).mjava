@@ -1,0 +1,114 @@
+    /**
+     * <p>Creates "links" between items in an inventory list by inserting
+     * a &lt;link&gt; element for each linked item. An XmlCursor
+     * instance passes through each &lt;description&gt; element, looking
+     * for text matching the name of an item.</p>
+     *
+     * @param inventoryDoc An XML document conforming to the schema in
+     *                     inventory.xsd.
+     */
+    public InventoryDocument linkItems(InventoryDocument inventoryDoc)
+    {
+        // Retrieve the &lt;inventory&gt; element and get an array of
+        // the &lt;item&gt; elements it contains.
+        InventoryDocument.Inventory inventory = inventoryDoc.getInventory();
+        ItemType[] items = inventory.getItemArray();
+
+        // Loop through the &lt;item&gt; elements, examining the
+        // description for each to see if another inventory item
+        // is mentioned.
+        for (int i = 0; i < items.length; i++)
+        {
+            // Get details about the current item, including
+            // its length. This will be used to measure text
+            // while exploring the description.
+            String itemName = items[i].getName();
+            String itemId = new Integer(items[i].getId()).toString();
+            int itemCharCount = itemName.length();
+
+            // Loop through the item descriptions, looking at each
+            // for the name of the current item.
+            for (int j = 0; j < items.length; j++)
+            {
+                DescriptionType description = items[j].getDescription();
+
+                // Insert an XmlCursor instance and set it at
+                // the beginning of the <&lt;description&gt; element's text,
+                // just after the start tag.
+                XmlCursor cursor = description.newCursor();
+                cursor.toLastAttribute();
+                cursor.toNextToken();
+
+                // Get a String containing the characters to the
+                // immediate right of the cursor, up to the next
+                // token (in this case, the next element after
+                // the description element). Get the number of
+                // characters to the right of the cursor; this will
+                // be used to mark the distance the cursor should move
+                // before trying another item's description. Also,
+                // create a charCount variable to mark the cursor's
+                // current position.
+                String cursorChars = cursor.getChars();
+                int descCharCount = cursorChars.length();
+                int charCount = 0;
+
+                // As long at the cursor hasn't reached the end of the
+                // description text, check to see if the text to the
+                // cursor's immediate right matches the item name sought.
+                // If it does match, remove the text and create a link
+                // element to replace it.
+                while (charCount < descCharCount)
+                {
+
+                    // A char array to hold the characters currently being
+                    // checked.
+                    char[] chars = new char[itemCharCount];
+
+                    // Pass the char array with the getChars method. This
+                    // method will find the chars from the cursor's
+                    // immediate right to the char at itemCharCount (the
+                    // length of the item name currently sought). The
+                    // method's second argument indicates where in the char
+                    // array the found text should begin -- in this case, at the
+                    // beginning.
+                    int charsReturned = cursor.getChars(chars, 0, itemCharCount);
+
+                    // If the characters in chars match the item name, then
+                    // make a link from the text.
+                    if (new String(chars).equals(itemName))
+                    {
+                        // Remove the found item name.
+                        cursor.removeChars(itemCharCount);
+
+                        // Begin a new link element whose namespace is the
+                        // same as the rest of the inventory document. The
+                        // beginElement method creates a new element with the
+                        // name specified around the current cursor.
+                        cursor.beginElement("link",
+                                "http://xmlbeans.apache.org/samples/cursor/mixedcontent");
+
+                        // Insert an id attribute and make its value the id of
+                        // the item sought.
+                        cursor.insertAttributeWithValue("id", itemId);
+
+                        // Insert the item name as the element's value.
+                        cursor.insertChars(itemName);
+                    }
+
+                    // Move on to the next character in the description.
+                    cursor.toNextChar(1);
+
+                    // Increment the counter tracking the cursor's position.
+                    charCount++;
+                }
+
+                // Be sure to dispose of a cursor that's no longer needed.
+                // This allows it to be garbage collected.
+                cursor.dispose();
+            }
+        }
+
+        // Return the edited document.
+        return inventoryDoc;
+    }
+

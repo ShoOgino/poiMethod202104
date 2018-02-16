@@ -1,0 +1,30 @@
+    public void testCursorDisposalEffectOnObject() throws Exception {
+        String sNamespace = "xmlns:loc=\"http://xbean.test/xmlcursor/Location\"";
+        String sXml = "<loc:Location " + sNamespace + ">" +
+                "<loc:CityName>DALLAS</loc:CityName><loc:StateCode>TX</loc:StateCode></loc:Location>";
+        LocationDocument locDoc = LocationDocument.Factory.parse(
+                sXml);
+        assertEquals(true, locDoc.validate());
+        Location loc0 = locDoc.getLocation();
+        Location loc1 = locDoc.getLocation();
+        XmlCursor xc0 = loc0.newCursor();
+        XmlCursor xc1 = loc1.newCursor();
+
+        xc0.toFirstChild();
+        xc1.toFirstChild();
+        xc0.setTextValue("AUSTIN");
+        try {
+            assertEquals("AUSTIN", loc0.getCityName());
+            loc1.setCityName("SAN ANTONIO");
+            xc0.dispose();
+            assertEquals("SAN ANTONIO", xc1.getTextValue());
+            xc1.setTextValue("HOUSTON");
+            xc1.dispose();
+            assertEquals("HOUSTON", loc0.getCityName());
+        }
+        finally {
+            xc0.dispose();
+            xc1.dispose();
+        }
+    }
+

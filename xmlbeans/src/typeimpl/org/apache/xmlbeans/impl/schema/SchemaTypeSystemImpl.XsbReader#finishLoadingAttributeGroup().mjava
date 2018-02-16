@@ -1,0 +1,32 @@
+        SchemaAttributeGroup finishLoadingAttributeGroup()
+        {
+            QName name = readQName();
+            SchemaContainer container = getContainer(name.getNamespaceURI());
+            checkContainerNotNull(container, name);
+            SchemaAttributeGroupImpl impl = new SchemaAttributeGroupImpl(container);
+
+            try
+            {
+                impl.init( name, readString(), readShort() == 1,
+                    atLeast(2, 22, 0) ? readString() : null,
+                    atLeast(2, 15, 0) ? readShort() == 1 : false,
+                    AttributeGroupDocument.Factory.parse( readString() ).getAttributeGroup(),
+                    readAnnotation(container), null);
+                if (atLeast(2, 21, 0))
+                    impl.setFilename(readString());
+                return impl;
+            }
+            catch (SchemaTypeLoaderException e)
+            {
+                throw e;
+            }
+            catch (Exception e)
+            {
+                throw new SchemaTypeLoaderException("Cannot load type from typesystem", _name, _handle, SchemaTypeLoaderException.NESTED_EXCEPTION, e);
+            }
+            finally
+            {
+                readEnd();
+            }
+        }
+

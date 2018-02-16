@@ -1,0 +1,94 @@
+    final String prefixForNamespace ( String ns, String suggestion, boolean createIfMissing )
+    {
+        if (ns == null)
+            ns = "";
+
+        // special cases
+
+        if (ns.equals( Locale._xml1998Uri ))
+            return "xml";
+
+        if (ns.equals( Locale._xmlnsUri ))
+            return "xmlns";
+
+        // Get the closest container for the spot we're on
+
+        Xobj base = this;
+
+        while ( !base.isContainer() )
+            base = base.ensureParent();
+
+        // Special handling for the no-namespace case
+
+        if (ns.length() == 0)
+        {
+            // Search for a namespace decl which defines the default namespace
+
+            Xobj a = base.findXmlnsForPrefix( "" );
+
+            // If I did not find a default decl or the decl maps to the no namespace, then
+            // the default namespace is mapped to ""
+
+            if (a == null || a.getXmlnsUri().length() == 0)
+                return "";
+
+            // At this point, I've found a default namespace which is *not* the no-namespace.
+            // If I can't modify the document to mape the desired no-namespace, I must fail.
+
+            if (!createIfMissing)
+                return null;
+
+            // Ok, I need to make the default namespace on the nearest container map to ""
+
+            base.setAttr( _locale.createXmlns( null ), "" );
+
+            return "";
+        }
+
+        // Look for an exisiting mapping for the desired uri which has a visible prefix
+
+        for ( Xobj c = base ; c != null ; c = c._parent )
+            for ( Xobj a = c.firstAttr() ; a != null ; a = a.nextAttr() )
+                if (a.isXmlns() && a.getXmlnsUri().equals( ns ))
+                    if (base.findXmlnsForPrefix( a.getXmlnsPrefix() ) == a)
+                        return a.getXmlnsPrefix();
+
+        // No exisiting xmlns I can use, need to create one.  See if I can first
+
+        if (!createIfMissing)
+            return null;
+
+        // Sanitize the suggestion.
+
+        if (suggestion != null &&
+              (suggestion.length() == 0 || suggestion.toLowerCase().startsWith( "xml" ) ||
+                    base.findXmlnsForPrefix( suggestion ) != null))
+        {
+            suggestion = null;
+        }
+
+        // If no suggestion, make one up
+
+        if (suggestion == null)
+        {
+            String prefixBase = QNameHelper.suggestPrefix( ns );
+
+            suggestion = prefixBase;
+
+            for ( int i = 1 ; ; suggestion = prefixBase + i++ )
+                if (base.findXmlnsForPrefix( suggestion ) == null)
+                    break;
+        }
+
+        // Add a new namespace decl at the top elem if one exists, otherwise at root
+
+        Xobj c = base;
+
+        while ( !c.isRoot() && !c.ensureParent().isRoot() )
+            c = c._parent;
+
+        base.setAttr( _locale.createXmlns( suggestion ), ns );
+
+        return suggestion;
+    }
+

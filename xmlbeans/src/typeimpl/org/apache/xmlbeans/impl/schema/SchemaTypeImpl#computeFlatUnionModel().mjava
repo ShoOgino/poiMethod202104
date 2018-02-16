@@ -1,0 +1,45 @@
+    private void computeFlatUnionModel()
+    {
+        if (getSimpleVariety() != SchemaType.UNION)
+            throw new IllegalStateException("Operation is only supported on union types");
+        Set constituentMemberTypes = new LinkedHashSet();
+        Set allSubTypes = new LinkedHashSet();
+        SchemaType commonBaseType = null;
+
+        allSubTypes.add(this);
+
+        for (int i = 0; i < _unionMemberTyperefs.length; i++)
+        {
+            SchemaTypeImpl mImpl = (SchemaTypeImpl)_unionMemberTyperefs[i].get();
+
+            switch (mImpl.getSimpleVariety())
+            {
+                case SchemaType.LIST:
+                    constituentMemberTypes.add(mImpl);
+                    allSubTypes.add(mImpl);
+                    commonBaseType = mImpl.getCommonBaseType(commonBaseType);
+                    break;
+                case SchemaType.UNION:
+                    constituentMemberTypes.addAll(Arrays.asList(mImpl.getUnionConstituentTypes()));
+                    allSubTypes.addAll(Arrays.asList(mImpl.getUnionSubTypes()));
+                    SchemaType otherCommonBaseType = mImpl.getUnionCommonBaseType();
+                    if (otherCommonBaseType != null)
+                        commonBaseType = otherCommonBaseType.getCommonBaseType(commonBaseType);
+                    break;
+                case SchemaType.ATOMIC:
+                    constituentMemberTypes.add(mImpl);
+                    allSubTypes.add(mImpl);
+                    commonBaseType = mImpl.getCommonBaseType(commonBaseType);
+                    break;
+                default:
+                    assert(false);
+            }
+        }
+
+        setUnionConstituentTypes((SchemaType[])
+                constituentMemberTypes.toArray(StscState.EMPTY_ST_ARRAY));
+        setUnionSubTypes((SchemaType[])
+                allSubTypes.toArray(StscState.EMPTY_ST_ARRAY));
+        setUnionCommonBaseType(commonBaseType);
+    }
+

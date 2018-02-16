@@ -1,0 +1,114 @@
+    private String validateSimpleType (
+        SchemaType type, SchemaField field, Event event,
+        boolean emptyContent, boolean canApplyDefault )
+    {
+        if (!type.isSimpleType() &&
+                type.getContentType() != SchemaType.SIMPLE_CONTENT)
+        {
+            assert false;
+            // throw new RuntimeException( "Not a simple type" );
+            return null; // should never happen
+        }
+
+        //
+        // the no-type is always invalid
+        //
+
+        if (type.isNoType())
+        {
+            emitError(event, (field.isAttribute() ? XmlErrorCodes.ATTR_LOCALLY_VALID$NO_TYPE : XmlErrorCodes.ELEM_LOCALLY_VALID$NO_TYPE),
+                null, field.getName(), type, null,  XmlValidationError.ELEMENT_TYPE_INVALID, null);
+
+            return null;
+        }
+
+        // Get the value as a string (as normalized by the white space rule
+        // TODO - will want to optimize this later
+
+        String value = "";
+
+        if (!emptyContent)
+        {
+            int wsr = type.getWhiteSpaceRule();
+            value = wsr == SchemaType.WS_PRESERVE ? event.getText() : event.getText( wsr );
+        }
+
+        // See if I can apply a default/fixed value
+
+        if (value.length() == 0 && canApplyDefault && field != null &&
+                (field.isDefault() || field.isFixed()))
+        {
+            if (XmlQName.type.isAssignableFrom(type))
+            {
+                // TODO: will be fixed in XmlSchema 1.1
+                emitError( event, "Default QName values are unsupported for " +
+                    QNameHelper.readable(type) + " - ignoring.", null, null,
+                    XmlError.SEVERITY_INFO, field.getName(), null, type, null,
+                    XmlValidationError.ELEMENT_TYPE_INVALID, null);
+
+                return null;
+            }
+
+            String defaultValue =
+                XmlWhitespace.collapse(
+                    field.getDefaultText(), type.getWhiteSpaceRule() );
+
+// BUGBUG - should validate defaultValue at compile time
+            // KHK: cvc-elt.5.1.2 ?
+            return
+                validateSimpleType( type, defaultValue, event )
+                    ? defaultValue
+                    : null;
+        }
+
+        // KHK: cvc-elt.5.2.1 ?
+        if (!validateSimpleType( type, value, event ))
+            return null;
+
+        if (field != null && field.isFixed())
+        {
+// TODO - fixed value should have been cooked at compile time
+            String fixedValue =
+                XmlWhitespace.collapse(
+                    field.getDefaultText(), type.getWhiteSpaceRule() );
+
+            if (!validateSimpleType( type, fixedValue, event ))
+                return null;
+
+            XmlObject val = type.newValue( value );
+            XmlObject def = type.newValue( fixedValue );
+
+            if (!val.valueEquals( def ))
+            {
+                // TODO (dutta) - make this more verbose
+                if (field.isAttribute())
+                {
+                    // KHK: check for is cvc-complex-type.3.1 or cvc-au
+                    emitError(event, XmlErrorCodes.ATTR_LOCALLY_VALID$FIXED,
+                        new Object[] { value, fixedValue, QNameHelper.pretty(event.getName()) },
+                        null, field.getType(), null, XmlValidationError.ELEMENT_TYPE_INVALID, null);
+                }
+                else
+                {
+                    String errorCode = null;
+
+                    // see rule 5 of cvc-elt: Element Locally Valid (Element)
+                    if (field.getType().getContentType() == SchemaType.MIXED_CONTENT)
+                        errorCode = XmlErrorCodes.ELEM_LOCALLY_VALID$FIXED_VALID_MIXED_CONTENT;
+                    else if (type.isSimpleType())
+                        errorCode = XmlErrorCodes.ELEM_LOCALLY_VALID$FIXED_VALID_SIMPLE_TYPE;
+                    else
+                        assert false : "Element with fixed may not be EMPTY or ELEMENT_ONLY";
+
+                    emitError(event, errorCode,
+                        new Object[] { value, fixedValue },
+                        field.getName(), field.getType(), null, XmlValidationError.ELEMENT_TYPE_INVALID, null);
+                }
+
+                return null;
+            }
+        }
+
+        return value;
+    }
+

@@ -1,0 +1,32 @@
+    public TokenType _toPrevToken() {
+        assert isValid();
+
+        // This method is different than the Cur version of prev in a few ways.  First,
+        // Cursor iterates over attrs inline with all the other content.  Cur will skip attrs, or
+        // if the Cur in in attrs, it will not jump out of attrs.  Also, if moving backwards and
+        // text is to the left and right, Cur will move to the beginning of that text, while
+        // Cursor will move further so that the token type to the right is not text.
+        
+        boolean wasText = _cur.isText();
+
+        if (!_cur.prev()) {
+            assert _cur.isRoot() || _cur.isAttr();
+
+            if (_cur.isRoot())
+                return TokenType.NONE;
+
+            _cur.toParent();
+        } else {
+            int k = _cur.kind();
+
+            if (k < 0 && (k == -COMMENT || k == -PROCINST || k == -ATTR))
+                _cur.toParent();
+            else if (_cur.isContainer())
+                _cur.toLastAttr();
+            else if (wasText && _cur.isText())
+                return _toPrevToken();
+        }
+
+        return _currentTokenType();
+    }
+

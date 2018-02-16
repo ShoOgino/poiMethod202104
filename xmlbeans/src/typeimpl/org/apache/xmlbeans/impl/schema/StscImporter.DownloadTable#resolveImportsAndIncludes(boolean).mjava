@@ -1,0 +1,134 @@
+        public SchemaToProcess[] resolveImportsAndIncludes(boolean forceSave)
+        {
+            StscState state = StscState.get();
+            List result = new ArrayList();
+            boolean hasRedefinitions = false;
+
+            // algorithm is to scan through each schema document and
+            // 1. download each import and include (if not already downloaded)
+            // 2. queue each imported or included schema to be process (if not already queued)
+
+            // The algorithm is run twice: first we begin with non-empty
+            // namespace schemas only.  Then we repeat starting with any
+            // empty empty-namespace schemas that have NOT been chameleon-
+            // included by other schemas and process them.
+
+            for (;;)
+            {
+                while (hasNextToScan())
+                {
+                    SchemaToProcess stp = nextToScan();
+                    String uri = stp.getSourceName();
+                    state.addSourceUri(uri, null);
+                    result.add(stp);
+                    copySchemaSource(uri, state, forceSave);
+
+                    {
+                        // handle imports
+                        Import[] imports = stp.getSchema().getImportArray();
+                        for (int i = 0; i < imports.length; i++)
+                        {
+                            Schema imported = downloadSchema(imports[i], emptyStringIfNull(imports[i].getNamespace()), imports[i].getSchemaLocation());
+
+                            // if download fails, an error has already been reported.
+                            if (imported == null)
+                                continue;
+    
+                            if (!nullableStringsMatch(imported.getTargetNamespace(), imports[i].getNamespace()))
+                            {
+                                StscState.get().error("Imported schema has a target namespace \"" + imported.getTargetNamespace() + "\" that does not match the specified \"" + imports[i].getNamespace() + "\"", XmlErrorCodes.MISMATCHED_TARGET_NAMESPACE, imports[i]);
+                            }
+                            else
+                            {
+                                addScanNeeded(new SchemaToProcess(imported, null));
+                            }
+                        }
+                    }
+                    
+                    {
+                        // handle includes
+                        Include[] includes = stp.getSchema().getIncludeArray();
+                        String sourceNamespace = stp.getChameleonNamespace();
+                        if (sourceNamespace == null)
+                            sourceNamespace = emptyStringIfNull(stp.getSchema().getTargetNamespace());
+    
+                        for (int i = 0; i < includes.length; i++)
+                        {
+                            Schema included = downloadSchema(includes[i], null, includes[i].getSchemaLocation());
+                            // if download fails, an error has already been reported.
+                            if (included == null)
+                                continue;
+    
+                            if (emptyStringIfNull(included.getTargetNamespace()).equals(sourceNamespace))
+                            {
+                                // non-chameleon case - just like an import
+                                SchemaToProcess s = addScanNeeded(new SchemaToProcess(included, null));
+                                stp.addInclude(s);
+                            }
+                            else if (included.getTargetNamespace() != null)
+                            {
+                                // illegal include: included schema in wrong namespace.
+                                StscState.get().error("Included schema has a target namespace \"" + included.getTargetNamespace() + "\" that does not match the source namespace \"" + sourceNamespace + "\"", XmlErrorCodes.MISMATCHED_TARGET_NAMESPACE, includes[i]);
+                            }
+                            else
+                            {
+                                // chameleon include
+                                SchemaToProcess s = addScanNeeded(new SchemaToProcess(included, sourceNamespace));
+                                stp.addInclude(s);
+                                usedEmptyNamespaceSchema(included);
+                            }
+                        }
+                    }
+                    
+                    {
+                        // handle redefines
+                        Redefine[] redefines = stp.getSchema().getRedefineArray();
+                        String sourceNamespace = stp.getChameleonNamespace();
+                        if (sourceNamespace == null)
+                            sourceNamespace = emptyStringIfNull(stp.getSchema().getTargetNamespace());
+                        for (int i = 0; i < redefines.length; i++)
+                        {
+                            Schema redefined = downloadSchema(redefines[i], null, redefines[i].getSchemaLocation());
+                            // if download fails, an error has already been reported.
+                            if (redefined == null)
+                                continue;
+    
+                            if (emptyStringIfNull(redefined.getTargetNamespace()).equals(sourceNamespace))
+                            {
+                                // non-chameleon case
+                                SchemaToProcess s = addScanNeeded(new SchemaToProcess(redefined, null));
+                                stp.addRedefine(s, redefines[i]);
+                                hasRedefinitions = true;
+                            }
+                            else if (redefined.getTargetNamespace() != null)
+                            {
+                                // illegal include: included schema in wrong namespace.
+                                StscState.get().error("Redefined schema has a target namespace \"" + redefined.getTargetNamespace() + "\" that does not match the source namespace \"" + sourceNamespace + "\"", XmlErrorCodes.MISMATCHED_TARGET_NAMESPACE, redefines[i]);
+                            }
+                            else
+                            {
+                                // chameleon redefine
+                                SchemaToProcess s = addScanNeeded(new SchemaToProcess(redefined, sourceNamespace));
+                                stp.addRedefine(s, redefines[i]);
+                                usedEmptyNamespaceSchema(redefined);
+                                hasRedefinitions = true;
+                            }
+                        }
+                    }
+                }
+
+                if (!fetchRemainingEmptyNamespaceSchemas())
+                    break;
+            }
+
+            // Build the lists of indirect references
+            // Make all the effort only if there are redefinitions
+            if (hasRedefinitions)
+                for (int i = 0; i < result.size(); i++)
+                {
+                    SchemaToProcess schemaToProcess = (SchemaToProcess) result.get(i);
+                    schemaToProcess.buildIndirectReferences();
+                }
+            return (SchemaToProcess[])result.toArray(new SchemaToProcess[result.size()]);
+        }
+

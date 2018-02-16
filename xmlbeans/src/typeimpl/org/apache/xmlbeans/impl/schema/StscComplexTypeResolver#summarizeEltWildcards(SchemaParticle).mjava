@@ -1,0 +1,32 @@
+    static WildcardResult summarizeEltWildcards(SchemaParticle contentModel)
+    {
+        if (contentModel == null)
+        {
+            return new WildcardResult(QNameSet.EMPTY, false);
+        }
+
+        switch (contentModel.getParticleType())
+        {
+            case SchemaParticle.ALL:
+            case SchemaParticle.SEQUENCE:
+            case SchemaParticle.CHOICE:
+                QNameSetBuilder set = new QNameSetBuilder();
+                boolean hasWildcards = false;
+                for (int i = 0; i < contentModel.countOfParticleChild(); i++)
+                {
+                    WildcardResult inner = summarizeEltWildcards(contentModel.getParticleChild(i));
+                    set.addAll(inner.typedWildcards);
+                    hasWildcards |= inner.hasWildcards;
+                }
+                return new WildcardResult(set.toQNameSet(), hasWildcards);
+            case SchemaParticle.WILDCARD:
+                return new WildcardResult(
+                    (contentModel.getWildcardProcess() == SchemaParticle.SKIP) ?
+                    QNameSet.EMPTY : contentModel.getWildcardSet(), true);
+                // otherwise fallthrough
+
+            default:
+                return new WildcardResult(QNameSet.EMPTY, false);
+        }
+    }
+

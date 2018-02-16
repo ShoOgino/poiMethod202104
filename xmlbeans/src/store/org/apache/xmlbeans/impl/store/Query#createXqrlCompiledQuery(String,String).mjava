@@ -1,0 +1,43 @@
+    private static Query createXqrlCompiledQuery(String queryExpr, String currentVar)
+    {
+        //if the XQRL engine has been determined unavailable, return null
+        if ( !_xqrlAvailable ) return null;
+        if ( _xqrlCompileQuery == null)
+        {
+            try
+            {
+                Class xqrlImpl = Class.forName("org.apache.xmlbeans.impl.store.XqrlImpl");
+
+                _xqrlCompileQuery =
+                        xqrlImpl.getDeclaredMethod("compileQuery",
+                                new Class[]{String.class, String.class, Boolean.class});
+            }
+            catch (ClassNotFoundException e)
+            {
+                _xqrlAvailable = false;
+                return null;
+            }
+            catch (Exception e)
+            {
+                _xqrlAvailable = false;
+                throw new RuntimeException(e.getMessage(), e);
+            }
+        }
+
+        Object[] args = new Object[]{queryExpr, currentVar, new Boolean(true)};
+
+        try
+        {
+            return (Query) _xqrlCompileQuery.invoke(null, args);
+        }
+        catch (InvocationTargetException e)
+        {
+            Throwable t = e.getCause();
+            throw new RuntimeException(t.getMessage(), t);
+        }
+        catch (IllegalAccessException e)
+        {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+    }
+

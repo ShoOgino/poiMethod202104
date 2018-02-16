@@ -1,0 +1,49 @@
+    /**
+     * Initialize dimensions based on SOAP11 parsed dimension substring
+     */
+    private void initDimensions(String s, int firstbrace)
+    {
+        List braces = new ArrayList();
+        int lastbrace = -1;
+        for (int i = firstbrace; i >= 0; )
+        {
+            lastbrace = s.indexOf(']', i);
+            if (lastbrace < 0)
+                throw new XmlValueOutOfRangeException();
+            braces.add(s.substring(i + 1, lastbrace));
+            i = s.indexOf('[', lastbrace);
+        }
+
+        String trailer = s.substring(lastbrace + 1);
+        if (!XmlWhitespace.isAllSpace(trailer))
+            throw new XmlValueOutOfRangeException();
+
+        // now fill in rank array
+        _ranks = new int[braces.size() - 1];
+        for (int i = 0; i < _ranks.length; i++)
+        {
+            String commas = (String)braces.get(i);
+            int commacount = 0;
+            for (int j = 0; j < commas.length(); j++)
+            {
+                char ch = commas.charAt(j);
+                if (ch == ',')
+                    commacount += 1;
+                else if (!XmlWhitespace.isSpace(ch))
+                    throw new XmlValueOutOfRangeException();
+            }
+            _ranks[i] = commacount + 1;
+        }
+
+        // finally fill in dimension array
+        _dimensions = internalParseCommaIntString((String)braces.get(braces.size() - 1));
+
+        /*
+        for (int i = 0; i < _dimensions.length; i++)
+        {
+            if (_dimensions[i] < 0)
+                _hasIndeterminateDimensions = true;
+        }
+        */
+    }
+

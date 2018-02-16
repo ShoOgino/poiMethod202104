@@ -1,0 +1,63 @@
+    static void resolveScExtension(SchemaTypeImpl sImpl, SimpleExtensionType parseTree)
+    {
+        SchemaType baseType;
+        StscState state = StscState.get();
+        String targetNamespace = sImpl.getTargetNamespace();
+        boolean chameleon = (sImpl.getChameleonNamespace() != null);
+        if (parseTree.getBase() == null)
+        {
+            state.error("A simpleContent extension must define a base type", XmlErrorCodes.MISSING_BASE, parseTree);
+            // recovery: extends ANY_SIMPLE type
+            baseType = BuiltinSchemaTypeSystem.ST_ANY_SIMPLE;
+        }
+        else
+        {
+            if (sImpl.isRedefinition())
+            {
+                baseType = state.findRedefinedGlobalType(parseTree.getBase(), sImpl.getChameleonNamespace(), sImpl);
+                if (baseType != null && !baseType.getName().equals(sImpl.getName()))
+                {
+                    state.error(XmlErrorCodes.SCHEMA_REDEFINE$SAME_TYPE,
+                        new Object[] { "<simpleType>",
+                                       QNameHelper.pretty(baseType.getName()),
+                                       QNameHelper.pretty(sImpl.getName())
+                        },
+                        parseTree);
+                }
+            }
+            else
+            {
+                baseType = state.findGlobalType(parseTree.getBase(), sImpl.getChameleonNamespace(), targetNamespace);
+            }
+            if (baseType == null)
+            {
+                state.notFoundError(parseTree.getBase(), SchemaType.TYPE, parseTree.xgetBase(), true);
+                // recovery: extends ANY_SIMPLE type
+                baseType = BuiltinSchemaTypeSystem.ST_ANY_SIMPLE;
+            }
+        }
+
+        // Recursion
+        StscResolver.resolveType((SchemaTypeImpl)baseType);
+
+        if (!baseType.isSimpleType() && baseType.getContentType() != SchemaType.SIMPLE_CONTENT)
+        {
+            // src-ct.2: complex types with simple content can only extend simple types
+            state.error(XmlErrorCodes.SCHEMA_COMPLEX_TYPE$SIMPLE_CONTENT,
+                new Object[] { QNameHelper.pretty(baseType.getName()) } ,
+                parseTree);
+            // recovery: extends ANY_SIMPLE type
+            baseType = BuiltinSchemaTypeSystem.ST_ANY_SIMPLE;
+        }
+
+        if (baseType != null && baseType.finalExtension())
+        {
+            state.error(XmlErrorCodes.COMPLEX_TYPE_EXTENSION$FINAL,
+                    new Object[] { QNameHelper.pretty(baseType.getName()), QNameHelper.pretty(sImpl.getName()) },
+                    parseTree.xgetBase());
+            // recovery: just keep going
+        }
+
+        resolveScExtensionPart2(sImpl, baseType, parseTree, targetNamespace, chameleon);
+    }
+

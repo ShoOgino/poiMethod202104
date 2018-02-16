@@ -1,0 +1,91 @@
+        public void testValidate1 ( )
+            throws Exception
+        {
+            String ericSchema =
+                "<xs:schema\n" +
+                "   xmlns:xs='http://www.w3.org/2001/XMLSchema'\n" +
+                "   xmlns:nw='http://openuri.org/ericschema'\n" +
+                "   targetNamespace='http://openuri.org/ericschema'\n" +
+                "   elementFormDefault='qualified'>\n" +
+                "\n" +
+                "  <xs:complexType name='foo'>\n" +
+                "  </xs:complexType>\n" +
+                "\n" +
+                "  <xs:element name='foo' type='nw:foo'>\n" +
+                "  </xs:element>\n" +
+                "\n" +
+                "  <xs:element name='eric'>\n" +
+                "    <xs:complexType>\n" +
+                "      <xs:sequence>\n" +
+                "        <xs:element name='a' maxOccurs='unbounded'/>\n" +
+                "        <xs:element name='b' />\n" +
+                "        <xs:any namespace='yaya' minOccurs='0' maxOccurs='1' processContents='lax'/>\n" +
+                "        <xs:element name='c' />\n" +
+                "        <xs:any minOccurs='0' maxOccurs='unbounded' processContents='strict'/>\n" +
+                "      </xs:sequence>\n" +
+                "      <xs:attribute name='x' use='optional'/>\n" +
+                "      <xs:attribute name='y' use='required'/>\n" +
+                "      <xs:attribute name='z' use='prohibited'/>\n" +
+                "    </xs:complexType>\n" +
+                "  </xs:element>\n" +
+                "" +
+                "</xs:schema>\n";
+
+            String eric2Schema =
+                "<xs:schema\n" +
+                "   xmlns:xs='http://www.w3.org/2001/XMLSchema'\n" +
+                "   xmlns:nw='http://openuri.org/ericschema2'\n" +
+                "   xmlns:eric='http://openuri.org/ericschema'\n" +
+                "   targetNamespace='http://openuri.org/ericschema2'\n" +
+                "   elementFormDefault='qualified'>\n" +
+                "\n" +
+                "  <xs:complexType name='eric2'>\n" +
+                "    <xs:complexContent>\n" +
+                "      <xs:extension base='eric:foo'>\n" +
+                "        <xs:sequence>\n" +
+                "          <xs:element name='a' maxOccurs='unbounded'/>\n" +
+                "        </xs:sequence>\n" +
+                "      </xs:extension>\n" +
+                "    </xs:complexContent>\n" +
+                "  </xs:complexType>\n" +
+                "</xs:schema>\n";
+
+            String eric = "<eric y='Y' xmlns='http://openuri.org/ericschema'>";
+            String eric2 = "<eric xmlns='http://openuri.org/ericschema2'>";
+            String xsi = "xmlns:eric2='http://openuri.org/ericschema2' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance'";
+
+            String[] valid = {
+                eric + "<a/><b/><c/><foo xsi:type='eric2:eric2' " +
+                    xsi + "><a xmlns=\"http://openuri.org/ericschema2\"/></foo></eric>",
+                eric + "<a/><b/><boo xmlns='yaya'/><c/></eric>",
+                eric + "<a/><b/><c/></eric>",
+                eric + "<a x='y'/><b/><c/></eric>",
+                "<eric y='Y' x='X' xmlns='http://openuri.org/ericschema'>" +
+                    "<a/><b/><c/></eric>"
+            };
+
+            String ericSansY =
+                "<eric xmlns='http://openuri.org/ericschema'>";
+
+            String[] invalid = {
+                "<foo/>",
+                "<eric><a/><foo/><c/></eric>",
+                eric + "text<a/><b/><c/></eric>",
+                eric + "<a/>text<b/><c/></eric>",
+                eric + "<a/><b/>text<c/></eric>",
+                eric + "<a/><b/><c/>text</eric>",
+                eric + "<a x='y'/><b/><c/>text</eric>",
+                eric + "<a/><b/><boo xmlns='yaya'/><moo xmlns='yaya'/><c/></eric>",
+                ericSansY + "<a/><b/><c/></eric>",
+                "<eric y='' z='' xmlns='http://openuri.org/ericschema'>" +
+                    "<a/><b/><c/></eric>"
+            };
+
+            String[] schemas = { ericSchema, eric2Schema };
+
+            doTest(
+                schemas,
+                new QName( "http://openuri.org/ericschema", "eric" ),
+                valid, invalid );
+        }
+

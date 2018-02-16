@@ -1,0 +1,44 @@
+    // complex types with simple content whose content is declared via an inline <simpleType>
+    // Issue fixed with Svn revision 165352
+    public void testSimpleContentDerivation() {
+        String sInputXsd = "<?xml version=\"1.0\"?>\n" +
+                "<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">\n" +
+                "    <xs:complexType name=\"myType\">\n" +
+                "        <xs:simpleContent>\n" +
+                "            <xs:extension base=\"xs:string\"/>\n" +
+                "        </xs:simpleContent>\n" +
+                "    </xs:complexType>\n" +
+                "    <xs:complexType name=\"fooType\">\n" +
+                "        <xs:simpleContent>\n" +
+                "            <xs:restriction base=\"myType\">\n" +
+                "                <xs:simpleType>\n" +
+                "                    <xs:restriction base=\"xs:string\"/>\n" +
+                "                </xs:simpleType>\n" +
+                "            </xs:restriction>\n" +
+                "        </xs:simpleContent>\n" +
+                "    </xs:complexType>\n" +
+                "    <xs:element name=\"root\" type=\"fooType\"/>\n" +
+                "</xs:schema>";
+
+        XmlOptions options = new XmlOptions();
+        List errors = new ArrayList();
+        options.setErrorListener(errors);
+
+        try {
+            XmlObject xobj = XmlObject.Factory.parse(sInputXsd);
+            assertTrue("Compiled XmlObject Validation Failed!",xobj.validate());
+        }
+        catch (XmlException xme) {
+            xme.printStackTrace();
+            Assert.fail("XmlException thrown when compiling schema");
+        }
+
+        // check for errors
+        for (Iterator iterator = errors.iterator(); iterator.hasNext();) {
+            System.out.println("Xsd Compilation Errors : " + iterator.next());
+        }
+        if (!errors.isEmpty()) {
+            Assert.fail("Errors found when compiling schema");
+        }
+    }
+

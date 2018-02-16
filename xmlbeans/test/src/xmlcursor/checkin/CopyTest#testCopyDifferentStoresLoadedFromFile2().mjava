@@ -1,0 +1,48 @@
+    /**
+     * Method testCopyDifferentStoresLoadedFromFile2
+     * <p/>
+     * Tests copy from document w/o namespaces to document with namespaces
+     *
+     * @throws Exception
+     */
+    public void testCopyDifferentStoresLoadedFromFile2() throws Exception {
+        // load the documents and obtain a cursor
+        XmlObject xobj0 = XmlObject.Factory.parse(
+                JarUtil.getResourceFromJar(Common.TRANXML_FILE_CLM));
+        XmlObject xobj1 = XmlObject.Factory.parse(
+                JarUtil.getResourceFromJar(Common.TRANXML_FILE_XMLCURSOR_PO));
+
+        XmlCursor xc0 = xobj0.newCursor();
+        XmlCursor xc1 = xobj1.newCursor();
+
+        xc0.selectPath(Common.CLM_NS_XQUERY_DEFAULT + " .//Initial");
+        xc0.toNextSelection();
+
+         String sQuery=
+                 "declare namespace po=\"http://xbean.test/xmlcursor/PurchaseOrder\"; "+
+                 ".//po:zip";
+        xc1.selectPath( sQuery );
+        xc1.selectPath( sQuery );
+        xc1.toNextSelection();
+
+        xc1.copyXml(xc0); // should copy the <zip>90952</zip> element
+        // verify xc1
+        assertEquals(
+                "<po:zip xmlns:po=\"http://xbean.test/xmlcursor/PurchaseOrder\">90952</po:zip>",
+                xc1.xmlText());
+        // verify xc0
+        // should contain all the namespaces for the document
+        xc0.toPrevSibling();
+        // assertEquals("<zip xmlns=\"" + Common.CLM_NS + "\" " + Common.CLM_XSI_NS + ">90952</zip>", xc0.xmlText());
+        String sExpected = "<po:zip " +
+                "xmlns=\"http://www.tranxml.org/TranXML/Version4.0\" " +
+                "xmlns:xsi=\"http://www.w3.org/2000/10/XMLSchema-instance\" " +
+                "xmlns:po=\"http://xbean.test/xmlcursor/PurchaseOrder\">" +
+                "90952</po:zip>";
+
+        assertEquals(sExpected, xc0.xmlText());
+        xc0.dispose();
+        xc1.dispose();
+
+    }
+

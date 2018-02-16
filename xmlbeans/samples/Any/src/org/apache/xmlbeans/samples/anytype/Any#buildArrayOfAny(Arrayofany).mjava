@@ -1,0 +1,55 @@
+    /**
+     * Like the code in the buildDocFromScratch method, this code
+     * uses the XmlCursor to build XML piece by piece, building
+     * out the Arrayofany instance it receives. 
+     * 
+     * @return A valid <arrayofany> element bound to an 
+     * Arrrayofany instance.
+     */
+    private Arrayofany buildArrayOfAny(Arrayofany arrayOfAny)
+    {
+        // Create a simple <stringelement> and move it into place
+        // under <arrayofany>.
+        StringelementDocument stringElementDoc = 
+            StringelementDocument.Factory.newInstance();        
+        stringElementDoc.setStringelement("some text");
+        XmlCursor childCursor = stringElementDoc.newCursor();
+        childCursor.toFirstContentToken();
+
+        // Add a cursor to mark the position at which the new child 
+        // XML will be moved.
+        XmlCursor arrayCursor = arrayOfAny.newCursor();
+        arrayCursor.toNextToken();
+        childCursor.moveXml(arrayCursor);        
+        childCursor.dispose();
+        
+        // Create a <someelement> that contains a <stringlist>
+        // child element, then get the XmlObject representing the new
+        // <stringlist>. Note that the XmlCursor.beginElement method
+        // leaves the cursor between START and END tokens -- where 
+        // content can be placed.
+        arrayCursor.beginElement("someelement", m_namespaceUri);
+        arrayCursor.beginElement("stringlist", m_namespaceUri);
+        arrayCursor.toPrevToken();
+        XmlObject stringList = arrayCursor.getObject();
+
+        // The cursor's no longer needed.
+        arrayCursor.dispose();
+
+        // Create the <stringlist> element's value and set it.
+        ListOfStrings stringListValue = buildListOfStrings();
+        if (stringListValue == null)
+        {
+            return null;
+        }
+        stringList.set(stringListValue);
+
+        // Validate the new XML.
+        if (!validateXml(arrayOfAny))
+        {
+            return null;
+        }
+
+        return arrayOfAny;
+    }
+

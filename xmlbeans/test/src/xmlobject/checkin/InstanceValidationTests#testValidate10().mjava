@@ -1,0 +1,40 @@
+        // Test validation of setting with the ValidateOnSet option
+        public void testValidate10() throws Exception {
+            String schema =
+                "<xs:schema xmlns:xs='http://www.w3.org/2001/XMLSchema'>\n" +
+                "  <xs:simpleType name='dec-restriction'>" +
+                "    <xs:restriction base='xs:decimal'>" +
+                "      <xs:maxExclusive value='100'/>" +
+                "    </xs:restriction>" +
+                "  </xs:simpleType>" +
+                "</xs:schema>" +
+                "";
+
+            String[] schemas = { schema };
+
+            SchemaTypeLoader stl = makeSchemaTypeLoader( schemas );
+
+            XmlOptions validate = new XmlOptions().setValidateOnSet();
+            XmlOptions noValidate = new XmlOptions();
+
+            SchemaType st = stl.findType(new QName("", "dec-restriction"));
+
+            XmlDecimal dec = (XmlDecimal)stl.newInstance(st, validate);
+
+            try {
+                dec.setStringValue("200");
+                fail("Expected XmlValueOutOfRangeException");
+            }
+            catch (XmlValueOutOfRangeException e) {}
+
+            dec = (XmlDecimal)stl.newInstance(st, noValidate);
+
+            try {
+                dec.setStringValue("200");
+            }
+            catch (XmlValueOutOfRangeException e) {
+                fail("Should not throw exception");
+            }
+
+        }
+

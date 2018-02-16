@@ -1,0 +1,115 @@
+    //note that mc obj will be changed
+    private String createSoapExampleXmlString(MyClass mc,
+                                              final Collection errors)
+        throws Exception
+    {
+        mc.setMyatt("attval");
+        YourClass myelt = new YourClass();
+        myelt.setAttrib(99999.777f);
+        myelt.setMyFloat(5555.4444f);
+
+        myelt.setQn(DUMMY_QNAME);
+        myelt.setQn2(DUMMY_QNAME);
+
+        myelt.setWrappedArrayOne(new String[]{"a", "a", "b4", "b4", "a"});
+
+        MySubClass sub = new MySubClass();
+        sub.setBigInt(new BigInteger("23522352235223522352"));
+        sub.quadStringArray = MySubClass.newQuadStringArray();
+
+        myelt.setMySubClass(sub);
+        myelt.setMyClass(sub);
+        sub.setMyelt(myelt);  //cycle
+
+        myelt.setMyBoss(myelt); //cycle: self reference
+
+        SimpleContentExample se = new SimpleContentExample();
+        se.setFloatAttOne(44.33f);
+        se.setSimpleContent("someSimpleContentOkay");
+        myelt.setSimpleContentExample(se);
+
+        myelt.setModeEnum(ModeEnum.On);
+
+        mc.setMyelt(myelt);
+
+        myelt.setStringArray(new String[]{"a", "b", "c", "a", "a", "b"});
+
+        myelt.setMyClassArray(new MyClass[]{sub,
+                                            new MyClass(),
+                                            mc,
+                                            sub});
+
+        final MySubSubClass subsub = new MySubSubClass();
+        subsub.setBigInt(BigInteger.ONE);
+
+        final Object[] obj_array = new Object[]{"a",
+                                                "a",
+                                                myelt,
+                                                null,
+                                                null,
+                                                null,
+                                                new Integer(5),
+                                                null,
+                                                subsub,
+        };
+        obj_array[3] = obj_array;
+        obj_array[4] = obj_array;
+        myelt.objectArray = obj_array;
+
+        final Object[] obj_array2 = new Object[4];
+        obj_array2[0] = "a";
+        obj_array2[1] = obj_array;
+        obj_array2[2] = obj_array2;
+        obj_array2[3] = null;
+
+        myelt.objectArrayTwo = obj_array2;
+        obj_array[7] = obj_array2;
+
+        BindingContext bindingContext = getBindingContext(getBindingConfigDocument());
+
+        final XmlOptions options = new XmlOptions();
+        options.setErrorListener(errors);
+
+        final SoapMarshaller ctx =
+            bindingContext.createSoapMarshaller(EncodingStyle.SOAP11);
+
+        Assert.assertNotNull(ctx);
+
+        StringWriter sw = new StringWriter();
+        XMLStreamWriter xml_out =
+            XMLOutputFactory.newInstance().createXMLStreamWriter(sw);
+
+        xml_out.writeStartDocument();
+        xml_out.writeStartElement("DUMMY_ROOT");
+//        xml_out.writeDefaultNamespace("java:com.mytest");
+        xml_out.writeNamespace("xs", XSD_URI);
+        xml_out.writeNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
+        xml_out.writeNamespace("jt", "java:com.mytest");
+
+
+        ctx.marshalType(xml_out, mc, DFLT_ELEM_NAME,
+                        MYCLASS_NAME,
+                        mc.getClass().getName(), options);
+
+//            xml_out.writeComment("simple string");
+//            ctx.marshalType(xml_out, "TEST1", new QName("someuri", "str"),
+//                            new QName(XSD_URI, "string"),
+//                            String.class.getName(), options);
+//
+
+
+        xml_out.writeComment("ids are coming next");
+
+
+        ctx.marshalReferenced(xml_out, options);
+        xml_out.writeEndElement();
+
+
+        xml_out.writeEndDocument();
+
+
+        xml_out.close();
+        sw.close();
+        return sw.getBuffer().toString();
+    }
+

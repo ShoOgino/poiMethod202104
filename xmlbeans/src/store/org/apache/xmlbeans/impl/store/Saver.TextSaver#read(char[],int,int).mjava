@@ -1,0 +1,49 @@
+        public int read ( char[] cbuf, int off, int len )
+        {
+            // Check for end of stream even if there is no way to return
+            // characters because the Reader doc says to return -1 at end of
+            // stream.
+
+            int n;
+
+            if ((n = ensure( len )) == 0)
+                return -1;
+
+            if (cbuf == null || len <= 0)
+                return 0;
+
+            if (n < len)
+                len = n;
+
+            if (_out < _in)
+            {
+                System.arraycopy( _buf, _out, cbuf, off, len );
+            }
+            else
+            {
+                int chunk = _buf.length - _out;
+
+                if (chunk >= len)
+                    System.arraycopy( _buf, _out, cbuf, off, len );
+                else
+                {
+                    System.arraycopy( _buf, _out, cbuf, off, chunk );
+                    System.arraycopy( _buf, 0, cbuf, off + chunk, len - chunk );
+                }
+            }
+
+            _out = (_out + len) % _buf.length;
+            _free += len;
+
+            assert _buf==null ||
+                (_out<_in && _free == _buf.length - ( _in - _out ) ) || // data in the middle, free on the edges
+                (_out>_in && _free == _out - _in ) ||                   // data on the edges, free in the middle
+                (_out==_in && _free == _buf.length) ||                  // no data, all buffer free
+                (_out==_in && _free == 0)                               // buffer full
+                : "_buf.length:" + _buf.length + " _in:" + _in + " _out:" + _out + " _free:" + _free;
+
+            assert _free >= 0;
+
+            return len;
+        }
+

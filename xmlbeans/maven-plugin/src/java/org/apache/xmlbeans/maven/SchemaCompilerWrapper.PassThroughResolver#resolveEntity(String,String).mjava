@@ -1,0 +1,30 @@
+        public InputSource resolveEntity(String publicId,
+                                         String systemId)
+                throws SAXException, IOException {
+            if (delegate != null) {
+                InputSource is = delegate.resolveEntity(publicId, systemId);
+                if (is != null) {
+                    return is;
+                }
+            }
+            System.out.println("Could not resolve publicId: " + publicId + ", systemId: " + systemId + " from catalog");
+            String localSystemId;
+            try {
+                 localSystemId = sourceDir.relativize(new URI(systemId)).toString();
+            } catch (URISyntaxException e) {
+                throw (IOException)new IOException("Could not relativeize systemId").initCause(e);
+            }
+            InputStream in = cl.getResourceAsStream(localSystemId);
+            if (in != null) {
+                System.out.println("found in classpath at: " + localSystemId);
+                return new InputSource(in);
+            }
+            in = cl.getResourceAsStream(baseSchemaLocation + localSystemId);
+            if (in != null) {
+                System.out.println("found in classpath at: META-INF/" + localSystemId);
+                return new InputSource(in);
+            }
+            System.out.println("Not found in classpath, looking in current directory: " + systemId);
+            return new InputSource(systemId);
+        }
+

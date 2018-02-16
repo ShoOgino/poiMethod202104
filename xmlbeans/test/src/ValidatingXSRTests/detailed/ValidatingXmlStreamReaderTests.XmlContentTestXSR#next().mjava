@@ -1,0 +1,73 @@
+        public int next()
+            throws XMLStreamException
+        {
+            int _next;
+            if (!initialized)
+            {
+                // First time next() is called..
+                // Scan for the first XMLEvent.START_ELEMENT
+                _next = UNDEFINED;
+                while ((super.hasNext()) && (_next != XMLEvent.START_ELEMENT))
+                     _next = super.next();
+
+                if (_next != XMLEvent.START_ELEMENT)
+                    throw new XMLStreamException(
+                                       "Could not find a start element");
+                initialized = true;
+
+                // Now move past the first tag
+                state = TAGOPEN;
+                depth = 1;
+
+                if ((attributeCount = super.getAttributeCount()) > 0)
+                {
+                    // The first element has attributes.. this is part of
+                    // the content. So the first event should XMLEvent.ATTRIBUTE
+                    _next = XMLEvent.ATTRIBUTE;
+                }
+                else
+                {
+                    // return super.next();
+                    /*
+                    If content is <xml-fragment/> then we will have returned
+                    END_ELEMENT above, without ever generating a START_ELEMENT
+                    In this case probably we should detect this and return a
+                    END_DOCUMENT
+                    */
+                    _next = super.next();
+                    if (_next == XMLEvent.END_ELEMENT)
+                    {
+                        _next = XMLEvent.END_DOCUMENT;
+                        state = ENDCONTENT;
+                    }
+                }
+                return _next;
+            }
+
+            _next = super.next();
+            switch (_next)
+            {
+                case XMLEvent.START_ELEMENT:
+                    state = TAGOPEN;
+                    depth++;
+                    break;
+
+                case XMLEvent.END_ELEMENT:
+                    --depth;
+                    if (depth < 0 && state == TAGOPEN)
+                    {
+                        throw new XMLStreamException(
+                                "Illegal XML Stream state");
+                    }
+                    else if (depth == 0 && state == TAGOPEN)
+                    {
+                        state = ENDCONTENT;
+                        // at this point we will return ENDDOCUMENT
+                        _next = XMLEvent.END_DOCUMENT;
+                    }
+                    break;
+            }
+
+            return _next;
+        }
+

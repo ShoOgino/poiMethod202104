@@ -1,0 +1,38 @@
+        SchemaProperty readPropertyData()
+        {
+            SchemaPropertyImpl prop = new SchemaPropertyImpl();
+            prop.setName(readQName());
+            prop.setTypeRef(readTypeRef());
+            int propflags = readShort();
+            prop.setAttribute((propflags & FLAG_PROP_ISATTR) != 0);
+            prop.setContainerTypeRef(readTypeRef());
+            prop.setMinOccurs(readBigInteger());
+            prop.setMaxOccurs(readBigInteger());
+            prop.setNillable(readShort());
+            prop.setDefault(readShort());
+            prop.setFixed(readShort());
+            prop.setDefaultText(readString());
+
+            prop.setJavaPropertyName(readString());
+            prop.setJavaTypeCode(readShort());
+            prop.setExtendsJava(readTypeRef(),
+                    (propflags & FLAG_PROP_JAVASINGLETON) != 0,
+                    (propflags & FLAG_PROP_JAVAOPTIONAL) != 0,
+                    (propflags & FLAG_PROP_JAVAARRAY) != 0);
+            if (atMost(2, 19, 0))
+                prop.setJavaSetterDelimiter(readQNameSet());
+            if (atLeast(2, 16, 0))
+                prop.setDefaultValue(readXmlValueObject());
+
+            if (!prop.isAttribute() && atLeast(2, 17, 0))
+            {
+                int size = readShort();
+                LinkedHashSet qnames = new LinkedHashSet(size);
+                for (int i = 0 ; i < size ; i++)
+                    qnames.add(readQName());
+                prop.setAcceptedNames(qnames);
+            }
+            prop.setImmutable();
+            return prop;
+        }
+

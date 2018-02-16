@@ -1,0 +1,38 @@
+        public void close() throws IOException
+        {
+            super.close();
+
+            // This is where all the real work happens
+            StringBuffer sb = _repackager != null ?
+                _repackager.repackage(getBuffer()) :
+                getBuffer();
+            String str = sb.toString();
+            List diffs = new ArrayList();
+            StringReader sReader = new StringReader(str);
+            FileReader fReader = new FileReader(_file);
+
+            try
+            {
+                Diff.readersAsText(sReader, "<generated>",
+                    fReader, _file.getName(), diffs);
+            }
+            finally
+            {
+                sReader.close();
+                fReader.close();
+            }
+
+            if (diffs.size() > 0)
+            {
+                // Diffs encountered, replace the file on disk with text from
+                // the buffer
+                Writer fw = writerForFile(_file);
+                try
+                {   fw.write(str); }
+                finally
+                {   fw.close(); }
+            }
+            else
+                ; // If no diffs, don't do anything
+        }
+

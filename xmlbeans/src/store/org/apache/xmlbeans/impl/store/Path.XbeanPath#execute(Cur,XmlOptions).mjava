@@ -1,0 +1,20 @@
+        PathEngine execute(Cur c, XmlOptions options)
+        {
+            options = XmlOptions.maskNull(options);
+            String delIntfName = 
+                options.hasOption(PATH_DELEGATE_INTERFACE) ? 
+                    (String)options.get(PATH_DELEGATE_INTERFACE) : _delIntfName;
+
+            // The builtin XPath engine works only on containers.  Delegate to
+            // xqrl otherwise.  Also, if the path had a //. at the end, the
+            // simple xpath engine can't do the generate case, it only handles
+            // attrs and elements.
+
+            if (!c.isContainer() || _compiledPath.sawDeepDot())
+            {
+                int force = USE_DELEGATE | USE_XQRL | USE_XDK;
+                return getCompiledPath(_pathKey, force, _currentVar, delIntfName).execute(c, options);
+            }
+            return new XbeanPathEngine(_compiledPath, c);
+        }
+

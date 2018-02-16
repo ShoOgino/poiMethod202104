@@ -1,0 +1,382 @@
+    public void testOps ( )
+        throws Exception
+    {
+        XmlObject x, x2, y;
+        XmlCursor cFrom, cTo, cTemp, cTemp2, c, d;
+        XmlBookmark anno;
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<foo>abcdef</foo>" );
+        cFrom = navDoc( x, "d" );
+        cTo = navNewCursor( cFrom, "" );
+        Assert.assertTrue( cFrom.moveXml( cTo ) );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        XmlOptions options = new XmlOptions();
+        
+        options.put(
+            XmlOptions.SAVE_SYNTHETIC_DOCUMENT_ELEMENT,
+            new QName( null, "bar" ) );
+
+        Assert.assertTrue(
+            x.xmlText( options ).equals( "<bar>[TO]<foo>abcdef</foo>[FROM]</bar>" ) ||
+                x.xmlText( options ).equals( "<bar>[FROM]<foo>abcdef</foo>[TO]</bar>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<foo>abcdef</foo>" );
+        
+        cFrom = navDoc( x, "d" );
+        cTo = navNewCursor( cFrom, "ttt" );
+        Assert.assertTrue( cFrom.moveXml( cTo ) );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(
+            x.xmlText( options ).equals( "<bar><foo>abcdef</foo>[FROM][TO]</bar>" ) ||
+                x.xmlText( options ).equals( "<bar><foo>abcdef</foo>[TO][FROM]</bar>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<foo>abcdef</foo>" );
+        
+        cFrom = navDoc( x, "d" );
+        cTo = navNewCursor( cFrom, "t3c" );
+        Assert.assertTrue( !cFrom.moveXml( cTo ) );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(
+            x.xmlText( options ).equals( "<bar>[FROM]<foo>abc[TO]def</foo></bar>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<r><a>xyz</a><b>pqr</b></r>" );
+        
+        cFrom = navDoc( x, "dd" );
+        cTo = navNewCursor( cFrom, "r-1t" );
+        Assert.assertTrue( cFrom.moveXml( cTo ) );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(
+            x.xmlText().equals( "<r>[FROM]<b>pqr</b><a>xyz</a>[TO]</r>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<r><a>xyz</a><b>pqr</b>AB</r>" );
+        
+        cFrom = navDoc( x, "dd" );
+        cTo = navNewCursor( cFrom, "r-1t-1c" );
+        Assert.assertTrue( cFrom.moveXml( cTo ) );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(
+            x.xmlText().equals( "<r>[FROM]<b>pqr</b>A<a>xyz</a>[TO]B</r>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<r><a>xyz</a><b>pqr</b>AB</r>" );
+        
+        cFrom = navDoc( x, "dd" );
+        cTo = navNewCursor( cFrom, "stc" );
+        Assert.assertTrue( cFrom.moveXml( cTo ) );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(
+            x.xmlText().equals( "<r>[FROM]<b>p<a>xyz</a>[TO]qr</b>AB</r>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<r><a>xyz</a><b>pqr</b>AB</r>" );
+        
+        cFrom = navDoc( x, "dd" );
+        cTo = navDoc( x, "d" );
+        Assert.assertTrue( cFrom.moveXml( cTo ) );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        testTextFrag( x.xmlText(), "<a>xyz</a>[TO]<r>[FROM]<b>pqr</b>AB</r>" );
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<r><a>xyz</a><b>pqr</b>AB</r>" );
+        
+        cFrom = navDoc( x, "dd" );
+        cTo = navDoc( x, "r" );
+        Assert.assertTrue( cFrom.moveXml( cTo ) );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(
+            x.xmlText( options ).equals( "<bar><r>[FROM]<b>pqr</b>AB</r><a>xyz</a>[TO]</bar>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<r><a>xyz</a></r>" );
+        x2 = XmlObject.Factory.parse( "<s></s>" );
+        
+        cFrom = navDoc( x, "dd" );
+        cTo = navDoc( x2, "dt" );
+        Assert.assertTrue( cFrom.moveXml( cTo ) );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(  x.xmlText().equals( "<r>[FROM]</r>" ) );
+        Assert.assertTrue( x2.xmlText().equals( "<s><a>xyz</a>[TO]</s>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<r><a>pq</a><b></b></r>" );
+        
+        cFrom = navDoc( x, "dd" );
+        cTo = navDoc( x, "ddst" );
+        cTemp = navDoc( x, "ddt1c" );
+        Assert.assertTrue( cFrom.moveXml( cTo ) );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+        cTemp.insertChars( "[TEMP]" );
+
+        Assert.assertTrue(
+            x.xmlText().equals( "<r>[FROM][TEMP]<b><a>pq</a>[TO]</b></r>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<foo>abcdef</foo>" );
+        
+        cFrom = navDoc( x, "2t2c" );
+        cTo = navNewCursor( cFrom, "-1c" );
+        cFrom.moveChars( 2, cTo );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(
+            x.xmlText().equals( "<foo>acd[TO]b[FROM]ef</foo>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<foo>abcdef</foo>" );
+        
+        cFrom = navDoc( x, "2t2c" );
+        cTo = navNewCursor( cFrom, "3c" );
+        cFrom.moveChars( 2, cTo );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(
+            x.xmlText().equals( "<foo>ab[FROM]ecd[TO]f</foo>" ) );
+    
+        //
+        
+        x = XmlObject.Factory.parse( "<bar><foo>abcdef</foo><foo>123456</foo></bar>" );
+        
+        cFrom = navDoc( x, "3t2c" );
+        cTo = navNewCursor( cFrom, "3t3c" );
+        cFrom.moveChars( 2, cTo );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(
+            x.xmlText().equals(
+                "<bar><foo>ab[FROM]ef</foo><foo>123cd[TO]456</foo></bar>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<bar><foo>abcdef</foo><foo>123456</foo></bar>" );
+        
+        cFrom = navDoc( x, "2d" );
+        cTo = navDoc( x, "2dst2c" );
+        Assert.assertTrue( cFrom.copyXml( cTo ) );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(
+            x.xmlText().equals(
+                "<bar>[FROM]<foo>abcdef</foo><foo>12" +
+                        "<foo>abcdef</foo>[TO]3456</foo></bar>" ) );
+
+        //
+        
+        x = XmlObject.Factory.parse( "<r><a>xyz</a></r>" );
+        x2 = XmlObject.Factory.parse( "<s></s>" );
+        
+        cFrom = navDoc( x, "dd" );
+        cTo = navDoc( x2, "dt" );
+        Assert.assertTrue( cFrom.copyXml( cTo ) );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(  x.xmlText().equals( "<r>[FROM]<a>xyz</a></r>" ) );
+        Assert.assertTrue( x2.xmlText().equals( "<s><a>xyz</a>[TO]</s>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse(
+            "<bar><foo>abcdef</foo>blah<foo>123456</foo></bar>" );
+        
+        cFrom = navDoc( x, "2d" );
+        cTo = navDoc( x, "2dst2c" );
+        Assert.assertTrue( cFrom.copyXml( cTo ) );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(
+            x.xmlText().equals(
+                "<bar>[FROM]<foo>abcdef</foo>blah<foo>12" +
+                        "<foo>abcdef</foo>[TO]3456</foo></bar>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse(
+            "<bar><foo x='y'>abcdef</foo><foo>123456</foo>7890</bar>" );
+        
+        cFrom = navDoc( x, "2dt" );
+        cTo = navDoc( x, "2dst" );
+        cTemp = navDoc( x, "2dst3c" );
+        cTemp2 = navDoc( x, "2ds3t2c" );
+        Assert.assertTrue( cFrom.copyXml( cTo ) );
+        cTemp.insertChars( "[TEMP]" );
+        cTemp2.insertChars( "[TEMP2]" );
+
+        Assert.assertTrue(
+            x.xmlText().equals(
+                "<bar><foo x=\"y\">abcdef</foo>" +
+                    "<foo x=\"y\">123[TEMP]456</foo>78[TEMP2]90</bar>" ) );
+
+        //
+        
+        x = XmlObject.Factory.parse(
+            "<bar>xy<foo x='y'>abcdef</foo>pqr<foo>123456</foo></bar>" );
+        
+        cFrom = navDoc( x, "2d" );
+        cTo = navDoc( x, "2ds-2c" );
+        
+        Assert.assertTrue( cFrom.removeXml() );
+
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(
+            x.xmlText().equals(
+                "<bar>xy[FROM]p[TO]qr<foo>123456</foo></bar>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse(
+            "<bar>xy<foo x='y'>abcdef</foo>pqr<foo>123456</foo></bar>" );
+        
+        cFrom = navDoc( x, "2d2t2c" );
+        cTo = navDoc( x, "2d2t5c" );
+        
+        cFrom.removeChars( 2 );
+
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue(
+            x.xmlText().equals(
+                "<bar>xy<foo x=\"y\">ab[FROM]e[TO]f" +
+                    "</foo>pqr<foo>123456</foo></bar>" ) );
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<bar><!---->abc</bar>" );
+        
+        cFrom = navDoc( x, "tt" );
+        cTo = navDoc( x, "tttc" );
+        
+        Assert.assertTrue( cFrom.removeXml() );
+
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+
+        Assert.assertTrue( x.xmlText().equals( "<bar>[FROM]a[TO]bc</bar>" ) );
+
+        //
+        
+        x = XmlObject.Factory.newInstance();
+
+        cTo = navDoc( x, "t" );
+        cTo.insertElement( "boo" );
+        cTo.toPrevToken();
+        cTo.insertElement( "moo" );
+        cTo.toPrevToken();
+        cTo.insertElement( "goo" );
+
+        Assert.assertTrue( x.xmlText().equals(
+            "<boo><moo><goo/></moo></boo>" ) );
+
+        //
+        
+        x = XmlObject.Factory.newInstance();
+
+        cTo = navDoc( x, "t" );
+        cTo.insertElement( "boo" );
+        cTo.toPrevToken();
+        cTo.insertElement( "moo" );
+        cTo.toPrevToken();
+        cTo.insertAttributeWithValue( "x", "y" );
+
+        Assert.assertTrue( x.xmlText().equals(
+            "<boo><moo x=\"y\"/></boo>" ) );
+                                              
+        //
+        
+        x = XmlObject.Factory.parse( "<bar x='y'>abc</bar>" );
+        cTo = navDoc( x, "tt" );
+        cTo.insertAttributeWithValue( "p", "q" );
+        
+        Assert.assertTrue( x.xmlText().equals(
+            "<bar p=\"q\" x=\"y\">abc</bar>" ) );
+
+        // Text XmlBookmark
+
+        x = XmlObject.Factory.parse( "<r><foo>abc</foo><bar></bar></r>" );
+        cFrom = navDoc( x, "tt" );
+        anno = new Anno();
+        cFrom.setBookmark( anno );
+        cTo = navDoc( x, "6t" );
+        Assert.assertTrue( cFrom.moveXml( cTo ) );
+        cFrom.insertChars( "[FROM]" );
+        cTo.insertChars( "[TO]" );
+        anno.createCursor().insertChars( "[ANNO]" );
+        
+        Assert.assertTrue( x.xmlText().equals(
+            "<r>[FROM]<bar>[ANNO]<foo>abc</foo>[TO]</bar></r>" ) );
+
+        // Test content ops
+
+        x = XmlObject.Factory.parse( "<foo x='y'>abc</foo>" );
+        y = XmlObject.Factory.newInstance();
+        d = y.newCursor();
+        d.toNextToken();
+        x.newCursor().moveXmlContents( d );
+        Assert.assertTrue( y.xmlText().equals( "<foo x=\"y\">abc</foo>" ) );
+        
+        x = XmlObject.Factory.parse( "<bar><foo x='y'>abc</foo></bar>" );
+        y = XmlObject.Factory.newInstance();
+        c = x.newCursor();
+        c.toNextToken();
+        d = y.newCursor();
+        d.toNextToken();
+        c.moveXmlContents( d );
+        Assert.assertTrue( y.xmlText().equals( "<foo x=\"y\">abc</foo>" ) );
+
+        x = XmlObject.Factory.parse( "<bar><foo x='y'>abc</foo></bar>" );
+        c = x.newCursor();
+        c.toNextToken();
+        c.removeXmlContents();
+        Assert.assertTrue( x.xmlText().equals( "<bar/>" ) );
+
+        x = XmlObject.Factory.parse( "<foo x='y'>abc</foo>" );
+        y = XmlObject.Factory.newInstance();
+        d = y.newCursor();
+        d.toNextToken();
+        x.newCursor().copyXmlContents( d );
+        Assert.assertTrue( y.xmlText().equals( "<foo x=\"y\">abc</foo>" ) );
+    }        
+

@@ -1,0 +1,35 @@
+    public void test_dupetype_diffns() throws Exception {
+        XmlObject obj1 = XmlObject.Factory.parse(getBaseSchema("baz", "elName", "string", "attrName", "string"));
+        XmlObject obj2 = XmlObject.Factory.parse(getBaseSchema("bar", "elName", "string", "attrName", "string"));
+        XmlObject[] schemas = new XmlObject[]{obj1};
+        XmlObject[] schemas2 = new XmlObject[]{obj2};
+        schemas[0].documentProperties().setSourceName("obj1");
+        schemas2[0].documentProperties().setSourceName("obj2");
+
+        SchemaTypeSystem base = compileSchemas(schemas, builtin, xm);
+        SchemaTypeSystem incr;
+        try {
+            incr = incrCompileXsd(base, schemas2, builtin, xm);
+        } catch (XmlException xmlEx) {
+            throw new Exception(xmlEx.getError().toString());
+        }
+        if (base.findElement(new QName("http://baz", "elName")) == null)
+            throw new Exception("BASE: Baz elName was not found");
+
+        if (incr.findElement(new QName("http://baz", "elName")) == null)
+            throw new Exception("INCR: Baz elName was not found");
+        for (int i = 0; i < incr.globalElements().length; i++) {
+            System.out.println("[" + i + "]-" + incr.globalElements()[i].getName());
+        }
+
+        for (int i = 0; i < base.globalElements().length; i++) {
+            System.out.println("[" + i + "]-" + base.globalElements()[i].getName());
+        }
+
+        if (incr.findElement(new QName("http://bar", "elName")) == null)
+            throw new Exception("INCR: Bar elName was not found");
+
+        compareandPopErrors(out, outincr, errors);
+        handleErrors(errors);
+    }
+

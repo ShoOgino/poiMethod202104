@@ -1,0 +1,39 @@
+    public XmlObject createAttributeType(QName attrName, SchemaTypeLoader wildcardTypeLoader)
+    {
+        SchemaTypeImpl type = null;
+        SchemaProperty prop = null;
+        if (isSimpleType() || isNoType())
+        {
+            type = BuiltinSchemaTypeSystem.ST_NO_TYPE;
+        }
+        else if (isURType())
+        {
+            type = BuiltinSchemaTypeSystem.ST_ANY_SIMPLE;
+        }
+        else
+        {
+            prop = (SchemaProperty)_propertyModelByAttributeName.get(attrName);
+            if (prop != null)
+            {
+                type = (SchemaTypeImpl)prop.getType();
+            }
+            else if (!_typedWildcardAttributes.contains(attrName))
+            {
+                type = BuiltinSchemaTypeSystem.ST_NO_TYPE;
+            }
+            else
+            {
+                SchemaGlobalAttribute attr = wildcardTypeLoader.findAttribute(attrName);
+                if (attr != null)
+                    type = (SchemaTypeImpl)attr.getType();
+                else
+                    type = BuiltinSchemaTypeSystem.ST_NO_TYPE;
+            }
+        }
+
+        if (type != null)
+            return type.createUnattachedNode(prop);
+
+        return null;
+    }
+

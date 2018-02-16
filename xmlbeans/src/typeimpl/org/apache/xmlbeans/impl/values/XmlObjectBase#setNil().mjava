@@ -1,0 +1,34 @@
+    /**
+     * Nils the value.
+     */
+    public final void setNil()
+    {
+        synchronized (monitor())
+        {
+            set_prepare();
+
+            // if we're not nillable, throw exception on setNil(true)
+            if ((_flags & FLAG_NILLABLE) == 0 &&
+                (_flags & FLAG_VALIDATE_ON_SET) != 0)
+                throw new XmlValueNotNillableException();
+
+            // the implementation should zero the value to reflect nil
+            set_nil();
+
+            // set the nil flag
+            _flags |= FLAG_NIL;
+
+            // ordinary commit except no clearing of nil flag
+            if ((_flags & FLAG_STORE) != 0)
+            {
+                get_store().invalidate_text();
+                _flags &= ~FLAGS_DATED;
+                get_store().invalidate_nil();
+            }
+            else
+            {
+                _textsource = null;
+            }
+        }
+    }
+

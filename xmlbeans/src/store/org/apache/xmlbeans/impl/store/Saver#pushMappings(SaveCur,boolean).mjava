@@ -1,0 +1,40 @@
+    private final void pushMappings ( SaveCur c, boolean ensureDefaultEmpty )
+    {
+        assert c.isContainer();
+
+        _namespaceStack.add( null );
+
+        c.push();
+
+        namespaces:
+        for ( boolean A = c.toFirstAttr() ; A ; A = c.toNextAttr() )
+            if (c.isXmlns())
+                addNewFrameMapping( c.getXmlnsPrefix(), c.getXmlnsUri(), ensureDefaultEmpty );
+
+        c.pop();
+
+        if (_ancestorNamespaces != null)
+        {
+            for ( int i = 0 ; i < _ancestorNamespaces.size() ; i += 2 )
+            {
+                String prefix = (String) _ancestorNamespaces.get( i );
+                String uri    = (String) _ancestorNamespaces.get( i + 1 );
+
+                addNewFrameMapping( prefix, uri, ensureDefaultEmpty );
+            }
+
+            _ancestorNamespaces = null;
+        }
+
+        if (ensureDefaultEmpty)
+        {
+            String defaultUri = (String) _prefixMap.get( "" );
+
+            // I map the default to "" at the very beginning
+            assert defaultUri != null;
+
+            if (defaultUri.length() > 0)
+                addMapping( "", "" );
+        }
+    }
+

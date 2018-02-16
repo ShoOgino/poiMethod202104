@@ -1,0 +1,102 @@
+    public void testUnmarshalValidation()
+        throws Exception
+    {
+        final File schema = TestEnv.xbeanCase("marshal/example.xsd");
+        final File instance = TestEnv.xbeanCase("marshal/example_instance.xml");
+
+        Assert.assertTrue(schema.exists());
+        Assert.assertTrue(instance.exists());
+
+        final SchemaDocument xsd_obj =
+            (SchemaDocument)XmlObject.Factory.parse(schema);
+        final XmlObject[] schemas = new XmlObject[]{xsd_obj};
+        final XmlOptions opts = new XmlOptions();
+        opts.setCompileDownloadUrls();
+        SchemaTypeSystem sts = XmlBeans.compileXsd(schemas,
+                                                   XmlBeans.getBuiltinTypeSystem(),
+                                                   opts);
+        Schema2Java s2j = new Schema2Java(sts);
+
+        s2j.includeSchema(xsd_obj, schema.getName());
+        final File tmpfile = File.createTempFile("marshalTests", "-tylar");
+        if (!tmpfile.delete()) {
+            throw new AssertionError("delete failed on " + tmpfile);
+        }
+        final boolean ok = tmpfile.mkdirs();
+        Assert.assertTrue("mkdir" + tmpfile + " failed", ok);
+
+        s2j.bindAsExplodedTylar(tmpfile);
+
+
+        final URL tylar_url = tmpfile.toURL();
+
+        //add tylar to classpath so we can load classes out of it
+        final Thread thread = Thread.currentThread();
+        final ClassLoader curr_cl = thread.getContextClassLoader();
+        final URLClassLoader cl =
+            new URLClassLoader(new URL[]{tylar_url}, curr_cl);
+        thread.setContextClassLoader(cl);
+
+        try {
+            final BindingContextFactory bcf = BindingContextFactory.newInstance();
+            final BindingContext binding_context =
+                bcf.createBindingContext(cl);
+            final Unmarshaller um = binding_context.createUnmarshaller();
+            InputStream is = new FileInputStream(instance);
+            XmlOptions opts_validation_on = new XmlOptions();
+            opts_validation_on.setUnmarshalValidate();
+            final List errors = new ArrayList();
+            opts_validation_on.setErrorListener(errors);
+            final Object obj = um.unmarshal(is, opts_validation_on);
+            Assert.assertNotNull(obj);
+            inform("address=" + obj);
+            is.close();
+
+            reportErrors(errors);
+            Assert.assertTrue(errors.isEmpty());
+
+            //now try unmarshalType...
+            final FileInputStream fis = new FileInputStream(instance);
+            final XMLStreamReader rdr =
+                XMLInputFactory.newInstance().createXMLStreamReader(fis);
+            QName schema_type = new QName("http://nosuch.domain.name", "USAddress");
+            String java_type = obj.getClass().getName();
+
+            //not super robust but this should work for valid xml
+            while (!rdr.isStartElement()) {
+                rdr.next();
+            }
+
+            um.unmarshalType(rdr, schema_type, java_type, opts_validation_on);
+            rdr.close();
+            fis.close();
+
+            reportErrors(errors);
+            Assert.assertTrue(errors.isEmpty());
+
+
+            // -- this is currently broken --
+            //now lets try validating our stream over objects
+            final Marshaller marshaller = binding_context.createMarshaller();
+            final XmlOptions empty_opts = new XmlOptions();
+            final XMLStreamReader obj_rdr =
+                marshaller.marshal(obj, empty_opts);
+            inform("VALIDATION-OBJ: " + obj);
+
+            final Object obj2 = um.unmarshal(obj_rdr, opts_validation_on);
+            inform("obj2=" + obj2);
+            obj_rdr.close();
+            reportErrors(errors);
+
+            //TODO: fix this use case
+            //Assert.assertTrue(errors.isEmpty());
+
+            // depends on reasonable equals methods which we do not have yet
+            //Assert.assertEquals(obj, obj2);
+
+        }
+        finally {
+            thread.setContextClassLoader(curr_cl);
+        }
+    }
+

@@ -1,0 +1,114 @@
+    void printInnerTypeImpl(
+        SchemaType sType, SchemaTypeSystem system, boolean isInner ) throws IOException
+    {
+        String shortName = sType.getShortJavaImplName();
+
+        printInnerTypeJavaDoc(sType);
+
+        startClass(sType, isInner);
+
+        printConstructor(sType, shortName);
+
+        printExtensionImplMethods(sType);
+
+        if (!sType.isSimpleType())
+        {
+            SchemaProperty[] properties;
+
+            if (sType.getContentType() == SchemaType.SIMPLE_CONTENT)
+            {
+                // simple content types impls derive directly from "holder" impls
+                // in order to handle the case (for ints or string enums e.g.) where
+                // there is a simple type restriction.  So property getters need to
+                // be implemented "from scratch" for each derived complex type
+                // Moreover, attribute or element properties can be removed via restriction,
+                // but we still need to implement them because this class is supposed to
+                // also implement all the interfaces
+                SchemaType baseType = sType.getBaseType();
+                List extraProperties = null;
+                while (!baseType.isSimpleType() && !baseType.isBuiltinType())
+                {
+                    SchemaProperty[] baseProperties = baseType.getDerivedProperties();
+                    for (int i = 0; i < baseProperties.length; i++)
+                        if (!(baseProperties[i].isAttribute() &&
+                                sType.getAttributeProperty(baseProperties[i].getName()) != null))
+                        {
+                            if (extraProperties == null)
+                                extraProperties = new ArrayList();
+                            extraProperties.add(baseProperties[i]);
+                        }
+                    baseType = baseType.getBaseType();
+                }
+
+                properties = sType.getProperties();
+                if (extraProperties != null)
+                {
+                    for (int i = 0; i < properties.length; i++)
+                        extraProperties.add(properties[i]);
+                    properties = (SchemaProperty[]) extraProperties.
+                        toArray(new SchemaProperty[extraProperties.size()]);
+                }
+            }
+            else
+            {
+                // complex content type implementations derive from base type impls
+                // so derived property impls can be reused
+
+                properties = getDerivedProperties(sType);
+            }
+
+            Map qNameMap = printStaticFields(properties);
+
+            for (int i = 0; i < properties.length; i++)
+            {
+                SchemaProperty prop = properties[i];
+
+                QName name = prop.getName();
+                String xmlType = xmlTypeForProperty( prop );
+
+                printGetterImpls(
+                    shortName,
+                    prop,
+                    name,
+                    prop.isAttribute(),
+                    prop.getJavaPropertyName(),
+                    prop.getJavaTypeCode(),
+                    javaTypeForProperty(prop),
+                    xmlType,
+                    prop.hasNillable() != SchemaProperty.NEVER,
+                    prop.extendsJavaOption(),
+                    prop.extendsJavaArray(),
+                    prop.extendsJavaSingleton(),
+                    xmlTypeForPropertyIsUnion(prop),
+                    getIdentifier(qNameMap, name),
+                    getSetIdentifier(qNameMap, name)
+                );
+
+                if (!prop.isReadOnly())
+                {
+                    printSetterImpls(
+                        name,
+                        prop,
+                        prop.isAttribute(),
+                        prop.getJavaPropertyName(),
+                        prop.getJavaTypeCode(),
+                        javaTypeForProperty(prop),
+                        xmlType,
+                        prop.hasNillable() != SchemaProperty.NEVER,
+                        prop.extendsJavaOption(),
+                        prop.extendsJavaArray(),
+                        prop.extendsJavaSingleton(),
+                        xmlTypeForPropertyIsUnion(prop),
+                        getIdentifier(qNameMap, name),
+                        getSetIdentifier(qNameMap, name),
+  	                    sType
+                    );
+                }
+            }
+        }
+
+        printNestedTypeImpls(sType, system);
+
+        endBlock();
+    }
+

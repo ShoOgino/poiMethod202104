@@ -1,0 +1,31 @@
+    public void testCircularRedefines() throws Exception
+    {
+        int N =CIRCULAR_SCHEMAS.length;
+        SchemaDocument[] sdocs = new SchemaDocument[N];
+        for (int i = 0; i < N; i++)
+        {
+            sdocs[i] = SchemaDocument.Factory.parse(CIRCULAR_SCHEMAS[i]);
+            sdocs[i].documentProperties().setSourceName(CIRCULAR_SCHEMAS_NAME[i]);
+        }
+
+        setUp();
+        boolean caught = false;
+        try
+        {
+            SchemaTypeSystem ts = XmlBeans.compileXsd(sdocs,
+                XmlBeans.getBuiltinTypeSystem(), validateOptions);
+        }
+        catch (XmlException e)
+        {
+            caught = true;
+            Iterator it = errorList.iterator();
+            XmlError err = (XmlError) it.next();
+            Assert.assertFalse(it.hasNext());
+            String message = err.getMessage();
+            // TODO check an error code instead
+            Assert.assertTrue(message.toLowerCase().indexOf("circular") >= 0);
+        }
+        clearErrors();
+        Assert.assertTrue("Compilation should fail", caught);
+    }
+

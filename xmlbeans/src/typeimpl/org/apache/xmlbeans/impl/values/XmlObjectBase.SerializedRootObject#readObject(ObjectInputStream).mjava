@@ -1,0 +1,63 @@
+        private void readObject(ObjectInputStream in) throws IOException
+        {
+            try
+            {
+                // read class object first - this is
+                // first just for historical reasons - really
+                // it would be better to have the version numbers
+                // first
+                _xbeanClass = (Class)in.readObject();
+
+                int utfBytes = in.readUnsignedShort();
+
+                // determine version numbers
+                // if utfBytes is non-zero then we default to 0.0
+                // otherwise expect major and minor version numbers
+                // to be next entries in stream
+                int majorVersionNum = 0;
+                int minorVersionNum = 0;
+                if (utfBytes == 0)
+                {
+                    majorVersionNum = in.readUnsignedShort();
+                    minorVersionNum = in.readUnsignedShort();
+                }
+
+                String xmlText = null;
+                switch (majorVersionNum)
+                {
+                    case 0: // original, unnumbered version
+                            // minorVersionNum is always zero
+                        xmlText = readObjectV0(in, utfBytes);
+                        in.readBoolean(); // ignored
+                        break;
+
+                    case 1:
+                        switch (minorVersionNum)
+                        {
+                            case 1:
+                                xmlText = (String)in.readObject();
+                                in.readBoolean(); // ignored
+                                break;
+
+                            default:
+                                throw new IOException("Deserialization error: " +
+                                        "version number " + majorVersionNum + "." +
+                                        minorVersionNum + " not supported.");
+                        }
+                        break;
+
+                    default:
+                        throw new IOException("Deserialization error: " +
+                                "version number " + majorVersionNum + "." +
+                                minorVersionNum + " not supported.");
+                }
+
+                XmlOptions opts = new XmlOptions().setDocumentType(XmlBeans.typeForClass(_xbeanClass));
+                _impl = XmlBeans.getContextTypeLoader().parse(xmlText, null, opts);
+            }
+            catch (Exception e)
+            {
+                throw (IOException)(new IOException(e.getMessage()).initCause(e));
+            }
+        }
+

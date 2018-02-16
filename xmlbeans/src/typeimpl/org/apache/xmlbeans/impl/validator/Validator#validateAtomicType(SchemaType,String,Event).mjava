@@ -1,0 +1,176 @@
+    private void validateAtomicType (
+        SchemaType type, String value, Event event )
+    {
+        // Now we should have only an atomic type to validate
+
+        assert type.getSimpleVariety() == SchemaType.ATOMIC;
+
+        // Record the current error state to see if any new errors are made
+        int errorState = _errorState;
+        _vc._event = event;
+
+        switch ( type.getPrimitiveType().getBuiltinTypeCode() )
+        {
+        case SchemaType.BTC_ANY_SIMPLE :
+        {
+            // Always valid!
+            _stringValue = value;
+            break;
+        }
+        case SchemaType.BTC_STRING :
+        {
+            JavaStringEnumerationHolderEx.validateLexical( value, type, _vc );
+            _stringValue = value;
+            break;
+        }
+        case SchemaType.BTC_DECIMAL :
+        {
+            JavaDecimalHolderEx.validateLexical( value, type, _vc );
+
+            // An additional rule states that if the type is xs:integer or derived from it,
+            // then the decimal dot is not allowed.
+            // verify that values extending xsd:integer don't have a decimal point
+            if ( derivedFromInteger( type ) && value.lastIndexOf('.') >= 0 )
+            {
+                _vc.invalid(XmlErrorCodes.INTEGER, new Object[] { value });
+            }
+
+            if (errorState == _errorState)
+            {
+                _decimalValue = new BigDecimal( value );
+                JavaDecimalHolderEx.validateValue( _decimalValue, type, _vc );
+            }
+
+            break;
+        }
+        case SchemaType.BTC_BOOLEAN :
+        {
+            _booleanValue = JavaBooleanHolderEx.validateLexical( value, type, _vc );
+            break;
+        }
+        case SchemaType.BTC_FLOAT :
+        {
+            float f =
+                JavaFloatHolderEx.validateLexical( value, type, _vc );
+
+            if (errorState == _errorState)
+                JavaFloatHolderEx.validateValue( f, type, _vc );
+
+            _floatValue = f;
+            break;
+        }
+        case SchemaType.BTC_DOUBLE :
+        {
+            double d =
+                JavaDoubleHolderEx.validateLexical( value, type, _vc );
+
+            if (errorState == _errorState)
+                JavaDoubleHolderEx.validateValue( d, type, _vc );
+
+            _doubleValue = d;
+            break;
+        }
+        case SchemaType.BTC_QNAME :
+        {
+            QName n =
+                JavaQNameHolderEx.validateLexical(
+                    value, type, _vc, event );
+
+            if (errorState == _errorState)
+                JavaQNameHolderEx.validateValue( n, type, _vc );
+
+            _qnameValue = n;
+            break;
+        }
+        case SchemaType.BTC_ANY_URI :
+        {
+            JavaUriHolderEx.validateLexical( value, type, _vc );
+            // Do strict validation
+            if (_strict)
+            {
+                try
+                {
+                    XsTypeConverter.lexAnyURI( value );
+                }
+                catch (InvalidLexicalValueException ilve)
+                {
+                     _vc.invalid(XmlErrorCodes.ANYURI, new Object[] { value });
+                }
+            }
+            _stringValue = value;
+            break;
+        }
+        case SchemaType.BTC_G_MONTH :
+        {
+            // In the case of gMonth, there is some strict mode validation to do
+            if (_strict && value.length() == 6 &&
+                value.charAt( 4 ) == '-' && value.charAt( 5 ) == '-')
+                _vc.invalid(XmlErrorCodes.DATE, new Object[] { value });
+            // Fall through
+        }
+        case SchemaType.BTC_DATE_TIME :
+        case SchemaType.BTC_TIME :
+        case SchemaType.BTC_DATE :
+        case SchemaType.BTC_G_YEAR_MONTH :
+        case SchemaType.BTC_G_YEAR :
+        case SchemaType.BTC_G_MONTH_DAY :
+        case SchemaType.BTC_G_DAY :
+        {
+            GDate d = XmlDateImpl.validateLexical( value, type, _vc );
+
+            if (d != null)
+                XmlDateImpl.validateValue( d, type, _vc );
+
+            _gdateValue = d;
+            break;
+        }
+        case SchemaType.BTC_DURATION :
+        {
+            GDuration d = XmlDurationImpl.validateLexical( value, type, _vc );
+
+            if (d != null)
+                XmlDurationImpl.validateValue( d, type, _vc );
+
+            _gdurationValue = d;
+            break;
+        }
+        case SchemaType.BTC_BASE_64_BINARY :
+        {
+            byte[] v =
+                JavaBase64HolderEx.validateLexical( value, type, _vc );
+
+            if (v != null)
+                JavaBase64HolderEx.validateValue( v, type, _vc );
+
+            _byteArrayValue = v;
+            break;
+        }
+        case SchemaType.BTC_HEX_BINARY :
+        {
+            byte[] v =
+                JavaHexBinaryHolderEx.validateLexical( value, type, _vc );
+
+            if (v != null)
+                JavaHexBinaryHolderEx.validateValue( v, type, _vc );
+
+            _byteArrayValue = v;
+            break;
+        }
+        case SchemaType.BTC_NOTATION :
+        {
+            QName n =
+                JavaNotationHolderEx.validateLexical(
+                    value, type, _vc, event );
+
+            if (errorState == _errorState)
+                JavaNotationHolderEx.validateValue( n, type, _vc );
+
+            _qnameValue = n;
+            break;
+        }
+
+        default :
+            throw new RuntimeException( "Unexpected primitive type code" );
+        }
+    }
+

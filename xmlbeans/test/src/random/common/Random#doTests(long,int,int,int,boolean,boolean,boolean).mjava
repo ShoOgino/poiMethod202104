@@ -1,0 +1,33 @@
+    private static void doTests(long seed, int iterations, int threadCount,
+                                int docCount, boolean readonly, boolean nosave,
+                                boolean noquery) {
+        long start = System.currentTimeMillis();
+
+        XmlObject[] sharedDocs = new XmlObject[docCount];
+        Thread[] threads = new Thread[threadCount];
+
+        for (int i = 0; i < iterations; i++) {
+            for (int j = 0; j < threadCount; j++) {
+                Random runnable = new Random(seed, sharedDocs, readonly,
+                        nosave, noquery, threadCount > 1);
+                threads[j] = new Thread(runnable);
+                threads[j].start();
+                seed++;
+            }
+            for (int j = 0; j < threadCount; j++) {
+                try {
+                    threads[j].join();
+                }
+                catch (InterruptedException e) {
+                    System.err.println("Thread interrupted");
+                }
+            }
+        }
+
+        long end = System.currentTimeMillis();
+
+        System.err.println();
+        System.err.println(
+                "Seconds to run random tests: " + (end - start) / 1000);
+    }
+

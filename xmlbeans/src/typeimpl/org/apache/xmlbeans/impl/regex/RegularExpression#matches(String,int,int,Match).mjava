@@ -1,0 +1,177 @@
+    /**
+     * Checks whether the <var>target</var> text <strong>contains</strong> this pattern
+     * in specified range or not.
+     *
+     * @param start Start offset of the range.
+     * @param end  End offset +1 of the range.
+     * @param match A Match instance for storing matching result.
+     * @return Offset of the start position in <VAR>target</VAR>; or -1 if not match.
+     */
+    public boolean matches(String  target, int start, int end, Match match) {
+
+        synchronized (this) {
+            if (this.operations == null)
+                this.prepare();
+            if (this.context == null)
+                this.context = new Context();
+        }
+        Context con = null;
+        synchronized (this.context) {
+            con = this.context.inuse ? new Context() : this.context;
+            con.reset(target, start, end, this.numberOfClosures);
+        }
+        if (match != null) {
+            match.setNumberOfGroups(this.nofparen);
+            match.setSource(target);
+        } else if (this.hasBackReferences) {
+            match = new Match();
+            match.setNumberOfGroups(this.nofparen);
+            // Need not to call setSource() because
+            // a caller can not access this match instance.
+        }
+        con.match = match;
+
+        if (RegularExpression.isSet(this.options, XMLSCHEMA_MODE)) {
+            if (DEBUG) {
+                System.err.println("target string="+target);
+            }
+            int matchEnd = this. matchString (con, this.operations, con.start, 1, this.options);
+            if (DEBUG) {
+                System.err.println("matchEnd="+matchEnd);
+                System.err.println("con.limit="+con.limit);
+            }
+            if (matchEnd == con.limit) {
+                if (con.match != null) {
+                    con.match.setBeginning(0, con.start);
+                    con.match.setEnd(0, matchEnd);
+                }
+                con.inuse = false;
+                return true;
+            }
+            return false;
+        }
+
+        /*
+         * The pattern has only fixed string.
+         * The engine uses Boyer-Moore.
+         */
+        if (this.fixedStringOnly) {
+            //System.err.println("DEBUG: fixed-only: "+this.fixedString);
+            int o = this.fixedStringTable.matches(target, con.start, con.limit);
+            if (o >= 0) {
+                if (con.match != null) {
+                    con.match.setBeginning(0, o);
+                    con.match.setEnd(0, o+this.fixedString.length());
+                }
+                con.inuse = false;
+                return true;
+            }
+            con.inuse = false;
+            return false;
+        }
+
+        /*
+         * The pattern contains a fixed string.
+         * The engine checks with Boyer-Moore whether the text contains the fixed string or not.
+         * If not, it return with false.
+         */
+        if (this.fixedString != null) {
+            int o = this.fixedStringTable.matches(target, con.start, con.limit);
+            if (o < 0) {
+                //System.err.println("Non-match in fixed-string search.");
+                con.inuse = false;
+                return false;
+            }
+        }
+
+        int limit = con.limit-this.minlength;
+        int matchStart;
+        int matchEnd = -1;
+
+        /*
+         * Checks whether the expression starts with ".*".
+         */
+        if (this.operations != null
+            && this.operations.type == Op.CLOSURE && this.operations.getChild().type == Op.DOT) {
+            if (isSet(this.options, SINGLE_LINE)) {
+                matchStart = con.start;
+                matchEnd = this. matchString (con, this.operations, con.start, 1, this.options);
+            } else {
+                boolean previousIsEOL = true;
+                for (matchStart = con.start;  matchStart <= limit;  matchStart ++) {
+                    int ch =  target .charAt(  matchStart ) ;
+                    if (isEOLChar(ch)) {
+                        previousIsEOL = true;
+                    } else {
+                        if (previousIsEOL) {
+                            if (0 <= (matchEnd = this. matchString (con, this.operations,
+                                                                    matchStart, 1, this.options)))
+                                break;
+                        }
+                        previousIsEOL = false;
+                    }
+                }
+            }
+        }
+
+        /*
+         * Optimization against the first character.
+         */
+        else if (this.firstChar != null) {
+            //System.err.println("DEBUG: with firstchar-matching: "+this.firstChar);
+            RangeToken range = this.firstChar;
+            if (RegularExpression.isSet(this.options, IGNORE_CASE)) {
+                range = this.firstChar.getCaseInsensitiveToken();
+                for (matchStart = con.start;  matchStart <= limit;  matchStart ++) {
+                    int ch =  target .charAt(  matchStart ) ;
+                    if (REUtil.isHighSurrogate(ch) && matchStart+1 < con.limit) {
+                        ch = REUtil.composeFromSurrogates(ch,  target .charAt(  matchStart+1 ) );
+                        if (!range.match(ch))  continue;
+                    } else {
+                        if (!range.match(ch)) {
+                            char ch1 = Character.toUpperCase((char)ch);
+                            if (!range.match(ch1))
+                                if (!range.match(Character.toLowerCase(ch1)))
+                                    continue;
+                        }
+                    }
+                    if (0 <= (matchEnd = this. matchString (con, this.operations,
+                                                            matchStart, 1, this.options)))
+                        break;
+                }
+            } else {
+                for (matchStart = con.start;  matchStart <= limit;  matchStart ++) {
+                    int ch =  target .charAt(  matchStart ) ;
+                    if (REUtil.isHighSurrogate(ch) && matchStart+1 < con.limit)
+                        ch = REUtil.composeFromSurrogates(ch,  target .charAt(  matchStart+1 ) );
+                    if (!range.match(ch))  continue;
+                    if (0 <= (matchEnd = this. matchString (con, this.operations,
+                                                            matchStart, 1, this.options)))
+                        break;
+                }
+            }
+        }
+
+        /*
+         * Straightforward matching.
+         */
+        else {
+            for (matchStart = con.start;  matchStart <= limit;  matchStart ++) {
+                if (0 <= (matchEnd = this. matchString (con, this.operations, matchStart, 1, this.options)))
+                    break;
+            }
+        }
+
+        if (matchEnd >= 0) {
+            if (con.match != null) {
+                con.match.setBeginning(0, matchStart);
+                con.match.setEnd(0, matchEnd);
+            }
+            con.inuse = false;
+            return true;
+        } else {
+            con.inuse = false;
+            return false;
+        }
+    }
+

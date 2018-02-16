@@ -1,0 +1,56 @@
+    void addGlobalType(SchemaTypeImpl type, SchemaTypeImpl redefined)
+    {
+        if (type != null)
+        {
+            QName name = type.getName();
+            SchemaContainer container = getContainer(name.getNamespaceURI());
+            assert container != null && container == type.getContainer();
+
+            if (redefined != null)
+            {
+                if (_redefinedGlobalTypes.containsKey(redefined))
+                {
+                    if (!ignoreMdef(name)) {
+                        if (_mdefAll) {
+                            warning(XmlErrorCodes.SCHEMA_PROPERTIES$DUPLICATE,
+                                    new Object[] { "global type", QNameHelper.pretty(name), ((SchemaType) _redefinedGlobalTypes.get(redefined)).getSourceName() } ,
+                                    type.getParseObject());
+                        } else {
+                            error(XmlErrorCodes.SCHEMA_PROPERTIES$DUPLICATE,
+                                new Object[] { "global type", QNameHelper.pretty(name), ((SchemaType) _redefinedGlobalTypes.get(redefined)).getSourceName() } ,
+                                type.getParseObject());
+                        }
+                    }
+                }
+                else
+                {
+                    _redefinedGlobalTypes.put(redefined, type);
+                    container.addRedefinedType(type.getRef());
+                }
+            }
+            else
+            {
+                if (_globalTypes.containsKey(name))
+                {
+                    if (!ignoreMdef(name)) {
+                        if (_mdefAll) {
+                            warning(XmlErrorCodes.SCHEMA_PROPERTIES$DUPLICATE,
+                                    new Object[] { "global type", QNameHelper.pretty(name), ((SchemaType) _globalTypes.get(name)).getSourceName() },
+                                    type.getParseObject());
+                        } else {
+                            error(XmlErrorCodes.SCHEMA_PROPERTIES$DUPLICATE,
+                                new Object[] { "global type", QNameHelper.pretty(name), ((SchemaType) _globalTypes.get(name)).getSourceName() },
+                                type.getParseObject());
+                        }
+                    }
+                }
+                else
+                {
+                    _globalTypes.put(name, type);
+                    container.addGlobalType(type.getRef());
+                    addSpelling(name, type);
+                }
+            }
+        }
+    }
+

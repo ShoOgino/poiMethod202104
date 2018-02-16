@@ -1,0 +1,26 @@
+    private static boolean nsCompat(SchemaParticle baseModel, SchemaLocalElement derivedElement, Collection errors, XmlObject context) {
+        // nsCompat is called when base: ANY, derived: ELEMENT
+        assert baseModel.getParticleType() == SchemaParticle.WILDCARD;
+        boolean nsCompat = false;
+        // For an element declaration particle to be a �valid restriction� of a wildcard particle all of the following must be true:
+        // 1 The element declaration's {target namespace} is �valid� with respect to the wildcard's {namespace constraint}
+        // as defined by Wildcard allows Namespace Name (�3.10.4).
+        if (baseModel.getWildcardSet().contains(derivedElement.getName())) {
+            // 2 R's occurrence range is a valid restriction of B's occurrence range as defined by Occurrence Range OK (�3.9.6).
+            if (occurrenceRangeOK(baseModel, (SchemaParticle) derivedElement, errors, context)) {
+                nsCompat = true;
+            } else {
+                // error already produced by occurrenceRangeOK
+                //errors.add(XmlError.forObject(formatOccurenceRangeMinError(baseModel, (SchemaParticle) derivedElement), context));
+            }
+        } else {
+            nsCompat = false;
+            errors.add(XmlError.forObject(XmlErrorCodes.PARTICLE_DERIVATION_NS_COMPAT$WILDCARD_VALID,
+                new Object[] { printParticle((SchemaParticle)derivedElement), printParticle(baseModel) },
+                context));
+        }
+
+
+        return nsCompat;
+    }
+

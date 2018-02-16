@@ -1,0 +1,31 @@
+    public void testMultipleRedefines() throws Exception
+    {
+        int N = MULTIPLE_SCHEMAS.length;
+        SchemaDocument[] sdocs = new SchemaDocument[N];
+        for (int i = 0; i < N; i++)
+        {
+            sdocs[i] = SchemaDocument.Factory.parse(MULTIPLE_SCHEMAS[i]);
+            sdocs[i].documentProperties().setSourceName(MULTIPLE_SCHEMAS_NAME[i]);
+        }
+
+        SchemaTypeSystem ts = XmlBeans.compileXsd(sdocs,
+            XmlBeans.getBuiltinTypeSystem(), validateOptions);
+        Assert.assertNotNull(ts);
+
+        SchemaType t = ts.findType(new QName("", "T"));
+        Assert.assertNotNull(t);
+
+        SchemaParticle p = t.getContentModel();
+        Assert.assertNotNull(p);
+        Assert.assertEquals(p.getParticleType(), SchemaParticle.SEQUENCE);
+        SchemaParticle[] elts = p.getParticleChildren();
+        Assert.assertEquals(elts.length, 4);
+        for (int i = 0; i < elts.length; i++)
+            Assert.assertEquals(elts[i].getParticleType(), SchemaParticle.ELEMENT);
+
+        Assert.assertEquals("A", elts[0].getName().getLocalPart());
+        Assert.assertEquals("B", elts[1].getName().getLocalPart());
+        Assert.assertEquals("D", elts[2].getName().getLocalPart());
+        Assert.assertEquals("E", elts[3].getName().getLocalPart());
+    }
+

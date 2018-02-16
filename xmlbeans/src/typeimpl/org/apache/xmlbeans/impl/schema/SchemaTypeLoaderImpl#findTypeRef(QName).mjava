@@ -1,0 +1,32 @@
+    public SchemaType.Ref findTypeRef(QName name)
+    {
+        /**
+         * The maps are synchronized, we use two accesses to the cache (one read
+         * and one write), but the code inbetween is not synchronized. The
+         * assumption is that the underlying datastructures (the search path and
+         * the classloader) do not change, so two threads running the code in
+         * parallel will come up with the same result.
+         */
+        Object cached = _typeCache.get(name);
+        if (cached == CACHED_NOT_FOUND)
+            return null;
+        SchemaType.Ref result = (SchemaType.Ref) cached;
+        if (result == null)
+        {
+            for (int i = 0; i < _searchPath.length; i++)
+                if (null != (result = _searchPath[i].findTypeRef(name)))
+                    break;
+            if (result == null)
+            {
+                SchemaTypeSystem ts = typeSystemForComponent("schema" + METADATA_PACKAGE_LOAD + "/type/", name);
+                if (ts != null)
+                {
+                    result = ts.findTypeRef(name);
+                    assert(result != null) : "Type system registered type " + QNameHelper.pretty(name) + " but does not return it";
+                }
+            }
+            _typeCache.put(name, result == null ? CACHED_NOT_FOUND : result);
+        }
+        return result;
+    }
+

@@ -1,0 +1,106 @@
+    static void autoTypeDocument(Cur c, SchemaType requestedType,
+        XmlOptions options)
+        throws XmlException
+    {
+        assert c.isRoot();
+
+        // The type in the options overrides all sniffing
+
+        options = XmlOptions.maskNull(options);
+
+        SchemaType optionType = (SchemaType) options.get(
+            XmlOptions.DOCUMENT_TYPE);
+
+        if (optionType != null)
+        {
+            c.setType(optionType);
+            return;
+        }
+
+        SchemaType type = null;
+
+        // An xsi:type can be used to pick a type out of the loader, or used to refine
+        // a type with a name.
+
+        if (requestedType == null || requestedType.getName() != null)
+        {
+            QName xsiTypeName = c.getXsiTypeName();
+
+            SchemaType xsiSchemaType =
+                xsiTypeName == null ?
+                null : c._locale._schemaTypeLoader.findType(xsiTypeName);
+
+            if (requestedType == null ||
+                requestedType.isAssignableFrom(xsiSchemaType))
+                type = xsiSchemaType;
+        }
+
+        // Look for a document element to establish type
+        
+        if (type == null &&
+            (requestedType == null || requestedType.isDocumentType()))
+        {
+            assert c.isRoot();
+
+            c.push();
+
+            QName docElemName =
+                !c.hasAttrs() && Locale.toFirstChildElement(c) &&
+                !Locale.toNextSiblingElement(c)
+                ? c.getName() : null;
+
+            c.pop();
+
+            if (docElemName != null)
+            {
+                type =
+                    c._locale._schemaTypeLoader.findDocumentType(docElemName);
+
+                if (type != null && requestedType != null)
+                {
+                    QName requesteddocElemNameName = requestedType.getDocumentElementName();
+
+                    if (!requesteddocElemNameName.equals(docElemName) &&
+                        !requestedType.isValidSubstitution(docElemName))
+                    {
+                        throw
+                            new XmlException("Element " +
+                            QNameHelper.pretty(docElemName) +
+                            " is not a valid " +
+                            QNameHelper.pretty(requesteddocElemNameName) +
+                            " document or a valid substitution.");
+                    }
+                }
+            }
+        }
+
+        if (type == null && requestedType == null)
+        {
+            c.push();
+
+            type =
+                Locale.toFirstNormalAttr(c) && !Locale.toNextNormalAttr(c)
+                ?
+                c._locale._schemaTypeLoader.findAttributeType(c.getName()) :
+                null;
+
+            c.pop();
+        }
+
+        if (type == null)
+            type = requestedType;
+
+        if (type == null)
+            type = XmlBeans.NO_TYPE;
+
+        c.setType(type);
+
+        if (requestedType != null)
+        {
+            if (type.isDocumentType())
+                verifyDocumentType(c, type.getDocumentElementName());
+            else if (type.isAttributeType())
+                verifyAttributeType(c, type.getAttributeTypeAttributeName());
+        }
+    }
+

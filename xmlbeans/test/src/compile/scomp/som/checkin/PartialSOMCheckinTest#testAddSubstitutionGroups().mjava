@@ -1,0 +1,83 @@
+    public void testAddSubstitutionGroups() throws Exception
+    {
+        System.out.println("Inside test case testAddSubstitutionGroups()");
+
+        // step1: load an invalid PSOM by with incomplete/missing Subst Grp head elem definition
+        String sBaseSourceName = "testsourcename";
+        SchemaTypeSystem baseSTS = createNewSTS("groups.xsd_",
+                null,
+                "BaseSchemaTS",
+                sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", baseSTS);
+
+        // errors recovered
+        Assert.assertTrue("No Recovered Errors for recovered PSOM",
+                printRecoveredErrors());
+
+        // Recovered Errors, Test for saving of the SOM
+        Assert.assertFalse("SOM " + baseSTS.getName() + "Save Success - should fail!",
+                checkPSOMSave(baseSTS));
+
+        // the tests - Walk thro the valid SOM
+        inspectSOM(baseSTS, 7, 0, 4, 1);
+
+        // instance validation - should fail
+        Assert.assertFalse("Validation against instance failed",
+                validateInstance(getTestCaseFile("instance_subst_grps_valid.xml"), baseSTS));
+
+        // verify types
+        Assert.assertEquals("Elem Type  should be 'anyType'",
+                anyType,
+                getElementType(baseSTS, "SubGrpHeadElem"));
+        Assert.assertEquals("Elem Type  should be 'anyType' (Member of Sub. Group)",
+                anyType,
+                getElementType(baseSTS, "SubGrpMemberElem1"));
+        Assert.assertEquals("Elem Type  should be 'ExtensionSubGrpHeadElemType' (base)",
+                "ExtensionSubGrpHeadElemType",
+                getElementType(baseSTS, "SubGrpMemberElem2"));
+
+        // named model groups
+        Assert.assertEquals("Elem Type  should be 'ModelGrpType'",
+                "ModelGrpType",
+                getElementType(baseSTS, "ModelGrpTypeElem"));
+        Assert.assertTrue("Elem Type  should be 'AttributeGroup'",
+                getAttributeGroup(baseSTS, "AttributeGroup"));
+
+        // Step 2: create a valid SOM and add to these
+        SchemaTypeSystem modifiedSTS = createNewSTS("groups_added.xsd_",
+                baseSTS,
+                "ModifiedSchemaTS",
+                sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", modifiedSTS);
+
+        // there should be NO recovearble errors
+        Assert.assertFalse("Recovered Errors for Valid Schema",
+                printRecoveredErrors());
+
+        // the tests - Walk thro the valid SOM
+        inspectSOM(modifiedSTS, 7, 0, 5, 2);
+
+        // Test for saving of the SOM - should go thro
+        Assert.assertTrue("SOM " + modifiedSTS.getName() + "Save failed!",
+                checkPSOMSave(modifiedSTS));
+
+        // instance validation - should be ok
+        Assert.assertTrue("Validation against instance failed",
+                validateInstance(getTestCaseFile("instance_subst_grps_valid.xml"), modifiedSTS));
+
+        // verify types - substitution groups
+        Assert.assertEquals("Elem Type  should be 'SubGrpHeadElemType' (base)",
+                "SubGrpHeadElemType",
+                getElementType(modifiedSTS, "SubGrpHeadElem"));
+        Assert.assertEquals("Elem Type  should be 'SubGrpHeadElemType' (derived)",
+                "SubGrpHeadElemType",
+                getElementType(modifiedSTS, "SubGrpMemberElem1"));
+        Assert.assertEquals("Elem Type  should be 'ExtensionSubGrpHeadElemType' (base)",
+                "ExtensionSubGrpHeadElemType",
+                getElementType(modifiedSTS, "SubGrpMemberElem2"));
+
+        // named model groups - moved to check in test
+        //Assert.assertEquals("Elem Type  should be 'ModelGrpType'", "ModelGrpType", getElementType(baseSTS, "ModelGrpTypeElem"));
+        //Assert.assertEquals("Elem Type  should be 'AttributeGroup'", "AttributeGroup", getAttributeGroup(baseSTS,"AttributeGroup"));
+    }
+

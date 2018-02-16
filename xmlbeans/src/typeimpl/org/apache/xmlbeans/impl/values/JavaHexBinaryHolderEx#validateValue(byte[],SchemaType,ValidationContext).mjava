@@ -1,0 +1,56 @@
+    public static void validateValue(byte[] v, SchemaType sType, ValidationContext context)
+    {
+        int i;
+        XmlObject o;
+
+        if ((o = sType.getFacet(SchemaType.FACET_LENGTH)) != null)
+        {
+            if ((i = ((XmlObjectBase)o).bigIntegerValue().intValue()) != v.length)
+            {
+                context.invalid(XmlErrorCodes.DATATYPE_LENGTH_VALID$BINARY,
+                    new Object[] { "hexBinary", new Integer(v.length), new Integer(i), QNameHelper.readable(sType) } );
+            }
+        }
+
+        if ((o = sType.getFacet( SchemaType.FACET_MIN_LENGTH )) != null)
+        {
+            if ((i = ((XmlObjectBase)o).bigIntegerValue().intValue()) > v.length)
+            {
+                context.invalid(XmlErrorCodes.DATATYPE_MIN_LENGTH_VALID$BINARY,
+                    new Object[] { "hexBinary", new Integer(v.length), new Integer(i), QNameHelper.readable(sType) } );
+            }
+        }
+
+        if ((o = sType.getFacet( SchemaType.FACET_MAX_LENGTH )) != null)
+        {
+            if ((i = ((XmlObjectBase)o).bigIntegerValue().intValue()) < v.length)
+            {
+                context.invalid(XmlErrorCodes.DATATYPE_MAX_LENGTH_VALID$BINARY,
+                    new Object[] { "hexBinary", new Integer(v.length), new Integer(i), QNameHelper.readable(sType) } );
+            }
+        }
+        
+        XmlObject[] vals = sType.getEnumerationValues();
+
+        if (vals != null)
+        {
+            enumLoop: for ( i = 0 ; i < vals.length ; i++ )
+            {
+                byte[] enumBytes = ((XmlObjectBase)vals[i]).byteArrayValue();
+
+                if (enumBytes.length != v.length)
+                    continue;
+
+                for ( int j = 0 ; j < enumBytes.length ; j++ )
+                    if (enumBytes[j] != v[j])
+                        continue enumLoop;
+                
+                break;
+            }
+            
+            if (i >= vals.length)
+                context.invalid(XmlErrorCodes.DATATYPE_ENUM_VALID$NO_VALUE,
+                    new Object[] { "hexBinary", QNameHelper.readable(sType) });
+        }
+    }
+

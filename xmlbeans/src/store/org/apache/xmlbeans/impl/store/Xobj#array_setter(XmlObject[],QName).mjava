@@ -1,0 +1,97 @@
+    public void array_setter ( XmlObject[] sources, QName elementName )
+    {
+        _locale.enter();
+
+        try
+        {
+            // TODO - this is the quick and dirty implementation, make this faster
+
+            int m = sources.length;
+
+            ArrayList copies = new ArrayList();
+            ArrayList types = new ArrayList();
+
+            for ( int i = 0 ; i < m ; i++ )
+            {
+    // TODO - deal with null sources[ i ] here -- what to do?
+
+                if (sources[ i ] == null)
+                    throw new IllegalArgumentException( "Array element null" );
+
+                else if (sources[ i ].isImmutable())
+                {
+                    copies.add( null );
+                    types.add( null );
+                }
+                else
+                {
+                    Xobj x = ((Xobj) ((TypeStoreUser) sources[ i ]).get_store());
+
+                    if (x._locale == _locale)
+                        copies.add( x.copyNode( _locale ) );
+                    else
+                    {
+                        x._locale.enter();
+
+                        try
+                        {
+                            copies.add( x.copyNode( _locale ) );
+                        }
+                        finally
+                        {
+                            x._locale.exit();
+                        }
+                    }
+
+                    types.add( sources[ i ].schemaType() );
+                }
+            }
+
+            int n = count_elements( elementName );
+
+            for ( ; n > m ; n-- )
+                remove_element( elementName, m );
+
+            for ( ; m > n ; n++ )
+                add_element_user( elementName );
+
+            assert m == n;
+
+            ArrayList elements = new ArrayList();
+
+            find_all_element_users( elementName, elements );
+
+            for ( int i = 0 ; i < elements.size() ; i++ )
+                elements.set( i, (Xobj) ((TypeStoreUser) elements.get( i )).get_store() );
+
+            assert elements.size() == n;
+
+            Cur c = tempCur();
+
+            for ( int i = 0 ; i < n ; i++ )
+            {
+                Xobj x = (Xobj) elements.get( i );
+
+                if (sources[ i ].isImmutable())
+                    x.getObject().set( sources[ i ] );
+                else
+                {
+                    Cur.moveNodeContents( x, null, true );
+
+                    c.moveTo( x );
+                    c.next();
+
+                    Cur.moveNodeContents( (Xobj) copies.get( i ), c, true );
+
+                    x.change_type( (SchemaType) types.get( i ) );
+                }
+            }
+
+            c.release();
+        }
+        finally
+        {
+            _locale.exit();
+        }
+    }
+

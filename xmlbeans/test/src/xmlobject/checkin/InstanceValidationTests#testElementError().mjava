@@ -1,0 +1,40 @@
+    public void testElementError() throws XmlException
+    {
+        String bobSchema = "<xs:schema\n" + "   xmlns:xs='http://www.w3.org/2001/XMLSchema'\n" +
+            "   xmlns:bob='http://openuri.org/bobschema'\n" +
+            "   targetNamespace='http://openuri.org/bobschema'\n" +
+            "   elementFormDefault='qualified'>\n" +
+            "\n" +
+            "  <xs:complexType name='biff'>\n" +
+            "   <xs:complexContent>\n" +
+            "    <xs:extension base='bob:foo'>\n" +
+            "     <xs:sequence>\n" +
+            "       <xs:element name='a' minOccurs='0' maxOccurs='unbounded'/>\n" +
+            "     </xs:sequence>\n" +
+            "    </xs:extension>\n" +
+            "   </xs:complexContent>\n" +
+            "  </xs:complexType>\n" + "" +
+            "  <xs:complexType name='foo'>\n" +
+            "  </xs:complexType>\n" + "" +
+            "  <xs:element name='foo' type='bob:foo'>\n" +
+            "  </xs:element>\n" + "" +
+            "</xs:schema>\n";
+
+        String invalid = "<bob:foo xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' " +
+            "xmlns:bob='http://openuri.org/bobschema' " +
+            "xsi:type='bob:biff'><bob:q/></bob:foo>";
+
+        String[] schemas = {bobSchema};
+
+        List errors = performValidation(schemas, null, invalid, true);
+        Assert.assertTrue(errors != null);
+        Assert.assertTrue(errors.size()>0);
+
+        for (Iterator it = errors.iterator(); it.hasNext();)
+        {
+            XmlError xmlError = (XmlError) it.next();
+            Assert.assertEquals(xmlError.getMessage(), "Expected element 'a@http://openuri.org/bobschema' instead of 'q@http://openuri.org/bobschema' here in element foo@http://openuri.org/bobschema");
+            // todo check XmlValidationError
+        }
+    }
+

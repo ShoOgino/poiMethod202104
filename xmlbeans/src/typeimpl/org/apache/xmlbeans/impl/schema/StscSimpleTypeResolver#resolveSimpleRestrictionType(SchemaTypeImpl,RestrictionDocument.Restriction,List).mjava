@@ -1,0 +1,107 @@
+    static void resolveSimpleRestrictionType(SchemaTypeImpl sImpl, RestrictionDocument.Restriction parseRestr, List anonTypes)
+    {
+        QName baseName = parseRestr.getBase();
+        SimpleType parseInner = parseRestr.getSimpleType();
+        StscState state = StscState.get();
+
+        if (baseName != null && parseInner != null)
+        {
+            state.error(XmlErrorCodes.SCHEMA_SIMPLE_TYPE$RESTRICTION_HAS_BOTH_BASE_OR_SIMPLE_TYPE, null, parseRestr);
+            // recovery: ignore the inner simple type.
+            parseInner = null;
+        }
+
+        SchemaTypeImpl baseImpl;
+
+        if (baseName != null)
+        {
+            if (sImpl.isRedefinition())
+            {
+                baseImpl = state.findRedefinedGlobalType(parseRestr.getBase(), sImpl.getChameleonNamespace(), sImpl);
+                if (baseImpl != null && !baseImpl.getName().equals(sImpl.getName()))
+                {
+                    state.error(XmlErrorCodes.SCHEMA_REDEFINE$SAME_TYPE,
+                        new Object[] { "<simpleType>",
+                                       QNameHelper.pretty(baseName), 
+                                       QNameHelper.pretty(sImpl.getName())
+                        },
+                        parseRestr);
+                }
+            }
+            else
+            {
+                baseImpl = state.findGlobalType(baseName, sImpl.getChameleonNamespace(), sImpl.getTargetNamespace());
+            }
+            if (baseImpl == null)
+            {
+                state.notFoundError(baseName, SchemaType.TYPE, parseRestr.xgetBase(), true);
+                // recovery: treat it as an extension of anySimpleType
+                baseImpl = BuiltinSchemaTypeSystem.ST_ANY_SIMPLE;
+            }
+        }
+        else if (parseInner != null)
+        {
+            if (sImpl.isRedefinition())
+            {
+                StscState.get().error(XmlErrorCodes.SCHEMA_REDEFINE$EXTEND_OR_RESTRICT,
+                    new Object[] { "<simpleType>" }, parseInner);
+                // recovery: oh well.
+            }
+            
+            baseImpl = StscTranslator.translateAnonymousSimpleType(parseInner,
+                sImpl.getTargetNamespace(), sImpl.getChameleonNamespace() != null,
+                sImpl.getElemFormDefault(), sImpl.getAttFormDefault(), anonTypes, sImpl);
+        }
+        else
+        {
+            state.error(XmlErrorCodes.SCHEMA_SIMPLE_TYPE$RESTRICTION_HAS_NEITHER_BASE_OR_SIMPLE_TYPE, null, parseRestr);
+            // recovery: treat it as an extension of anySimpleType
+            baseImpl = BuiltinSchemaTypeSystem.ST_ANY_SIMPLE;
+        }
+
+        // Recursion!
+        if (!StscResolver.resolveType(baseImpl))
+        {
+            // cyclic dependency recovery: treat it as an extension of anySimpleType
+            baseImpl = BuiltinSchemaTypeSystem.ST_ANY_SIMPLE;
+        }
+
+        if (baseImpl.finalRestriction())
+            state.error(XmlErrorCodes.SIMPLE_TYPE_PROPERTIES$RESTRICTION_FINAL, null, parseRestr);
+
+        sImpl.setBaseTypeRef(baseImpl.getRef());
+        sImpl.setBaseDepth(baseImpl.getBaseDepth() + 1);
+        sImpl.setDerivationType(SchemaType.DT_RESTRICTION);
+
+        if (!baseImpl.isSimpleType())
+        {
+            state.error(XmlErrorCodes.SIMPLE_TYPE_RESTRICTION$ATOMIC_NOT_SIMPLE, null, parseRestr.xgetBase());
+            // recovery: treat it as a restriction of anySimpleType
+            resolveErrorSimpleType(sImpl);
+            return;
+        }
+
+        sImpl.setSimpleTypeVariety(baseImpl.getSimpleVariety());
+
+        // copy variety-specific properties
+        switch (baseImpl.getSimpleVariety())
+        {
+            case SchemaType.ATOMIC:
+                sImpl.setPrimitiveTypeRef(baseImpl.getPrimitiveType().getRef());
+                break;
+            case SchemaType.UNION:
+                sImpl.setUnionOfLists(baseImpl.isUnionOfLists());
+                sImpl.setUnionMemberTypeRefs(makeRefArray(Arrays.asList(baseImpl.getUnionMemberTypes())));
+                break;
+            case SchemaType.LIST:
+                sImpl.setListItemTypeRef(baseImpl.getListItemType().getRef());
+                break;
+        }
+
+        // deal with facets
+        resolveFacets(sImpl, parseRestr, baseImpl);
+
+        // now compute our intrinsic properties
+        resolveFundamentalFacets(sImpl);
+    }
+

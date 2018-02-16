@@ -1,0 +1,66 @@
+    private void pushBufferedAttributes()
+    {
+        SchemaType validationType = null;
+
+        if (_xsiType!=null)
+        {
+            if (_contentType==null)
+            {
+                validationType = _xsiType;
+            }
+            else
+            {
+                // we have both _xsiType and _contentType
+                if (_contentType.isAssignableFrom(_xsiType))
+                {
+                    validationType = _xsiType;
+                }
+                else
+                {
+                    addError("Specified type '" + _contentType +
+                        "' not compatible with found xsi:type '" + _xsiType + "'.");
+                    _state = STATE_ERROR;
+                    return;
+                }
+            }
+        }
+        else
+        {
+            if (_contentType != null)
+            {
+                validationType = _contentType;
+            }
+            else if (_attNamesList!=null)
+            {
+                // no xsi:type, no _contentType
+                // this is the global attribute case
+                validationType = _stl.findAttributeType((QName)_attNamesList.get(0));
+                if (validationType==null)
+                {
+                    addError("A schema global attribute with name '" + _attNamesList.get(0) +
+                        "' could not be found in the current schema type loader.");
+                    _state = STATE_ERROR;
+                    return;
+                }
+                // if _attNamesList.size() > 1 than the validator will add an error
+            }
+            else
+            {
+                addError("No content type provided for validation of a content model.");
+                _state = STATE_ERROR;
+                return;
+            }
+        }
+
+        // here validationType is the right type, start pushing all acumulated attributes
+        initValidator(validationType);
+        _validator.nextEvent(Validator.BEGIN, _simpleEvent);
+
+        // validate attributes from _attNamesList
+        validate_attributes(_attNamesList.size());
+        _attNamesList = null;
+        _attValuesList = null;
+
+        _state = STATE_VALIDATING;
+    }
+

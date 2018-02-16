@@ -1,0 +1,160 @@
+    void dumpTypeFileData()
+    {
+        emit("Name: " + qnameString(readQName()));
+        emit("Outer type: " + readType());
+        emit("Depth: " + readShort());
+        emit("Base type: " + readType());
+        emit("Derivation type: " + derivationTypeString(readShort()));
+        dumpAnnotation();
+
+        emit("Container field:");
+        indent();
+        int containerfieldtype = readShort();
+        emit("Reftype: " + containerfieldTypeString(containerfieldtype));
+        switch (containerfieldtype)
+        {
+            case FIELD_GLOBAL:
+                emit("Handle: " + readHandle());
+                break;
+            case FIELD_LOCALATTR:
+                emit("Index: " + readShort());
+                break;
+            case FIELD_LOCALELT:
+                emit("Index: " + readShort());
+                break;
+        }
+        outdent();
+        emit("Java class name: " + readString());
+        emit("Java impl class name: " + readString());
+
+        dumpTypeArray("Anonymous types");
+
+        emit("Anonymous union member ordinal: " + readShort());
+
+        int flags;
+        flags = readInt();
+        emit("Flags: " + typeflagsString(flags));
+        boolean isComplexType = ((flags & FLAG_SIMPLE_TYPE) == 0);
+
+        int complexVariety = SchemaType.NOT_COMPLEX_TYPE;
+        if (isComplexType)
+        {
+            complexVariety = readShort();
+            emit("Complex variety: " + complexVarietyString(complexVariety));
+
+            if (atLeast(2, 23, 0))
+                emit("Content based on type: " + readType());
+
+            int attrCount = readShort();
+            emit("Attribute model (" + attrCount + "):");
+            indent();
+            for (int i = 0; i < attrCount; i++)
+                dumpAttributeData(false);
+
+            emit("Wildcard set: " + qnameSetString(readQNameSet()));
+            emit("Wildcard process: " + wcprocessString(readShort()));
+            outdent();
+
+            // Attribute Property Table
+            int attrPropCount = readShort();
+            emit("Attribute properties (" + attrPropCount + "):");
+            indent();
+            for (int i = 0; i < attrPropCount; i++)
+            {
+                dumpPropertyData();
+            }
+            outdent();
+
+            if (complexVariety == SchemaType.ELEMENT_CONTENT || complexVariety == SchemaType.MIXED_CONTENT)
+            {
+                emit("IsAll: " + readShort());
+
+                // Content model tree
+                dumpParticleArray("Content model");
+
+                // Element Property Table
+                int elemPropCount = readShort();
+                emit("Element properties (" + elemPropCount + "):");
+                indent();
+                for (int i = 0; i < elemPropCount; i++)
+                {
+                    dumpPropertyData();
+                }
+                outdent();
+            }
+        }
+
+        if (!isComplexType || complexVariety == SchemaType.SIMPLE_CONTENT)
+        {
+            int simpleVariety = readShort();
+            emit("Simple type variety: " + simpleVarietyString(simpleVariety));
+
+            boolean isStringEnum = ((flags & FLAG_STRINGENUM) != 0);
+
+            int facetCount = readShort();
+            emit("Facets (" + facetCount + "):");
+            indent();
+            for (int i = 0; i < facetCount; i++)
+            {
+                emit(facetCodeString(readShort()));
+                emit("Value: " + readXmlValueObject());
+                emit("Fixed: " + readShort());
+            }
+            outdent();
+
+            emit("Whitespace rule: " + whitespaceCodeString(readShort()));
+
+            int patternCount = readShort();
+            emit("Patterns (" + patternCount + "):");
+            indent();
+            for (int i = 0; i < patternCount; i++)
+            {
+                emit(readString());
+            }
+            outdent();
+
+            int enumCount = readShort();
+            emit("Enumeration values (" + enumCount + "):");
+            indent();
+            for (int i = 0; i < enumCount; i++)
+            {
+                emit(readXmlValueObject());
+            }
+            outdent();
+
+            emit("Base enum type: " + readType());
+            if (isStringEnum)
+            {
+                int seCount = readShort();
+                emit("String enum entries (" + seCount + "):");
+                indent();
+                for (int i = 0; i < seCount; i++)
+                {
+                    emit("\"" + readString() + "\" -> " + readShort() + " = " + readString());
+                }
+                outdent();
+            }
+
+            switch (simpleVariety)
+            {
+                case SchemaType.ATOMIC:
+                    emit("Primitive type: " + readType());
+                    emit("Decimal size: " + readInt());
+                    break;
+
+                case SchemaType.LIST:
+                    emit("List item type: " + readType());
+                    break;
+
+                case SchemaType.UNION:
+                    dumpTypeArray("Union members");
+                    break;
+
+                default:
+                    error("Unknown simple type variety");
+            }
+        }
+
+        emit("Filename: " + readString());
+    }
+

@@ -1,0 +1,39 @@
+    /**
+     * Normalizes time so that fractions are 0..1(exc), seconds/minutes 0..59,
+     * and hours 0..24. Returns the number of days to carry over from normalizing
+     * away more than 24 hours.
+     */
+    private long _normalizeTime()
+    {
+        long carry = 0;
+        long temp;
+
+        // fractions
+        if (_fs != null && (_fs.signum() < 0 || _fs.compareTo(GDate._one) >= 0))
+        {
+            BigDecimal bdcarry = _fs.setScale(0, BigDecimal.ROUND_FLOOR);
+            _fs = _fs.subtract(bdcarry);
+            carry = bdcarry.longValue();
+        }
+
+        if (carry != 0 || _s < 0 || _s > 59 || _m < 0 || _m > 50 || _h < 0 || _h > 23)
+        {
+            // seconds
+            temp = _s + carry;
+            carry = _fQuotient(temp, 60);
+            _s = _mod(temp, 60, carry);
+
+            // minutes
+            temp = _m + carry;
+            carry = _fQuotient(temp, 60);
+            _m = _mod(temp, 60, carry);
+
+            // hours
+            temp = _h + carry;
+            carry = _fQuotient(temp, 24);
+            _h = _mod(temp, 24, carry);
+        }
+
+        return carry;
+    }
+

@@ -1,0 +1,53 @@
+    public SchemaComponent resolveHandle(String handle)
+    {
+        SchemaComponent result;
+
+        synchronized (_resolvedHandles)
+        {
+            result = (SchemaComponent)_resolvedHandles.get(handle);
+        }
+        if (result == null)
+        {
+            XsbReader reader = new XsbReader(handle, 0xFFFF);
+            int filetype = reader.getActualFiletype();
+            switch (filetype)
+            {
+                case FILETYPE_SCHEMATYPE:
+                    XBeanDebug.trace(XBeanDebug.TRACE_SCHEMA_LOADING, "Resolving type for handle " + handle, 0);
+                    result = reader.finishLoadingType();
+                    break;
+                case FILETYPE_SCHEMAELEMENT:
+                    XBeanDebug.trace(XBeanDebug.TRACE_SCHEMA_LOADING, "Resolving element for handle " + handle, 0);
+                    result = reader.finishLoadingElement();
+                    break;
+                case FILETYPE_SCHEMAATTRIBUTE:
+                    XBeanDebug.trace(XBeanDebug.TRACE_SCHEMA_LOADING, "Resolving attribute for handle " + handle, 0);
+                    result = reader.finishLoadingAttribute();
+                    break;
+                case FILETYPE_SCHEMAMODELGROUP:
+                    XBeanDebug.trace(XBeanDebug.TRACE_SCHEMA_LOADING, "Resolving model group for handle " + handle, 0);
+                    result = reader.finishLoadingModelGroup();
+                    break;
+                case FILETYPE_SCHEMAATTRIBUTEGROUP:
+                    XBeanDebug.trace(XBeanDebug.TRACE_SCHEMA_LOADING, "Resolving attribute group for handle " + handle, 0);
+                    result = reader.finishLoadingAttributeGroup();
+                    break;
+                case FILETYPE_SCHEMAIDENTITYCONSTRAINT:
+                    XBeanDebug.trace(XBeanDebug.TRACE_SCHEMA_LOADING, "Resolving id constraint for handle " + handle, 0);
+                    result = reader.finishLoadingIdentityConstraint();
+                    break;
+                default:
+                    throw new IllegalStateException("Illegal handle type");
+            }
+
+            synchronized (_resolvedHandles)
+            {
+                if (!_resolvedHandles.containsKey(handle))
+                    _resolvedHandles.put(handle, result);
+                else
+                    result = (SchemaComponent)_resolvedHandles.get(handle);
+            }
+        }
+        return result;
+    }
+

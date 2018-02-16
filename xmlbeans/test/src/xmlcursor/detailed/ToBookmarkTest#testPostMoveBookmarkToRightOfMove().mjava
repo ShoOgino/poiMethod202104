@@ -1,0 +1,31 @@
+    public void testPostMoveBookmarkToRightOfMove() throws Exception {
+        m_xo = XmlObject.Factory.parse(JarUtil.getResourceFromJar(Common.TRANXML_FILE_XMLCURSOR_PO));
+        String ns = "declare namespace po=\"http://xbean.test/xmlcursor/PurchaseOrder\"";
+        String exp_ns = "xmlns:po=\"http://xbean.test/xmlcursor/PurchaseOrder\"";
+
+        m_xc = m_xo.newCursor();
+        XmlCursor xc1 = m_xo.newCursor();
+        m_xc.selectPath(ns + " $this//po:shipTo/po:city");
+        while (m_xc.toNextSelection()) {
+            m_xc.setBookmark(_theBookmark);
+            toNextTokenOfType(m_xc, TokenType.TEXT);
+            m_xc.toNextToken();
+            m_xc.toNextToken();  // move to behind the <city>Mill Valley</city> element
+            assertEquals(TokenType.TEXT, m_xc.currentTokenType());
+            m_xc.setBookmark(_theBookmark1);
+            m_xc.toBookmark(_theBookmark);
+            xc1.selectPath(ns + " $this//po:billTo/po:city");
+            while (xc1.toNextSelection()) {
+                m_xc.moveXml(xc1);
+                m_xc.toStartDoc();
+                try {
+                    assertEquals(true, xc1.toBookmark(_theBookmark1));
+                    xc1.toPrevSibling();
+                    assertEquals("<po:street " + exp_ns + ">123 Maple Street</po:street>", xc1.xmlText());
+                } catch (Exception e) {
+                }
+            }
+        }
+        xc1.dispose();
+    }
+

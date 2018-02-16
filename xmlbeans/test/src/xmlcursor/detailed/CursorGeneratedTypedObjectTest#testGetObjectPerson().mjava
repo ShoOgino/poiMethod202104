@@ -1,0 +1,44 @@
+    /**
+     * Method testGetObjectPerson
+     *
+     * @throws Exception
+     */
+    public void testGetObjectPerson() throws Exception {
+        String sFF = "<First>Fred</First><Last>Flintstone</Last>";
+        String sXml = "<Person xmlns=\"person\"><Name>" + sFF +
+                "</Name></Person>";
+        XmlCursor xc = XmlObject.Factory.parse(sXml).newCursor();
+        PersonDocument pdoc = (PersonDocument) xc.getObject();
+
+        xc.toFirstChild();
+        XmlCursor xcPlaceHolder = xc.newCursor();
+
+        try {
+            Person p = (Person) xc.getObject();
+            assertEquals(true, p.validate());
+            // move to </Person>
+            xc.toEndToken();
+
+            xc.insertElement("Sibling", "person");
+            xc.toPrevToken();
+            xc.insertElement("Name", "person");
+            xc.toPrevToken();
+            xc.insertElementWithText("First", "person", "Barney");
+            xc.insertElementWithText("Last", "person", "Rubble");
+
+            p = (Person) xcPlaceHolder.getObject();
+            assertEquals(true, p.validate());
+
+            assertEquals("Fred", p.getName().getFirst());
+            assertEquals("Flintstone", p.getName().getLast());
+            Person[] ap = p.getSiblingArray();
+            assertEquals(1, ap.length);
+            assertEquals("Barney", ap[0].getName().getFirst());
+            assertEquals("Rubble", ap[0].getName().getLast());
+        }
+        finally {
+            xc.dispose();
+            xcPlaceHolder.dispose();
+        }
+    }
+

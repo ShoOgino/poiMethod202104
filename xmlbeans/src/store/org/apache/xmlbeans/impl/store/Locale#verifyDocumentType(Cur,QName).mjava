@@ -1,0 +1,69 @@
+    private static void verifyDocumentType(Cur c, QName docElemName)
+        throws XmlException
+    {
+        assert c.isRoot();
+
+        c.push();
+
+        try
+        {
+            StringBuffer sb = null;
+
+            if (!Locale.toFirstChildElement(c) ||
+                Locale.toNextSiblingElement(c))
+            {
+                sb = new StringBuffer();
+
+                sb.append("The document is not a ");
+                sb.append(QNameHelper.pretty(docElemName));
+                sb.append(
+                    c.isRoot() ?
+                    ": no document element" : ": multiple document elements");
+            }
+            else
+            {
+                QName name = c.getName();
+
+                if (!name.equals(docElemName))
+                {
+                    sb = new StringBuffer();
+
+                    sb.append("The document is not a ");
+                    sb.append(QNameHelper.pretty(docElemName));
+
+                    if (docElemName.getLocalPart().equals(name.getLocalPart()))
+                    {
+                        sb.append(": document element namespace mismatch ");
+                        sb.append("expected ");
+                        addNamespace(sb, docElemName);
+                        sb.append(" got ");
+                        addNamespace(sb, name);
+                    }
+                    else if (namespacesSame(docElemName, name))
+                    {
+                        sb.append(": document element local name mismatch ");
+                        sb.append("expected " + docElemName.getLocalPart());
+                        sb.append(" got " + name.getLocalPart());
+                    }
+                    else
+                    {
+                        sb.append(": document element mismatch ");
+                        sb.append("got ");
+                        sb.append(QNameHelper.pretty(name));
+                    }
+                }
+            }
+
+            if (sb != null)
+            {
+                XmlError err = XmlError.forCursor(sb.toString(),
+                    new Cursor(c));
+                throw new XmlException(err.toString(), null, err);
+            }
+        }
+        finally
+        {
+            c.pop();
+        }
+    }
+

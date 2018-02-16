@@ -1,0 +1,44 @@
+    /**
+     * Normalizes the instance, ensuring date and time fields are within
+     * their normal ranges.
+     * <p>
+     * If no timezone or no time is specified, or if a partial date is specified, this
+     * method does nothing, and leaves the timezone information as-is.
+     * <p>
+     * If a time or time and date is specified, this method normalizes the timezone
+     * to UTC.
+     */
+    public void normalize()
+    {
+        // DateTime or Time, with TimeZone: normalize to UTC.
+        // In the process all the fields will be normalized.
+        if (hasDay() == hasMonth() && hasDay() == hasYear() &&
+            hasTimeZone() && hasTime() )
+        {
+            normalizeToTimeZone(0, 0, 0);
+        }
+        else
+        {
+            // No timezone, or incomplete date.
+            _normalizeTimeAndDate();
+        }
+
+        // remove trailing zeros from fractional seconds
+        if (hasTime() && _fs != null && _fs.scale() > 0)
+        {
+            if (_fs.signum() == 0)
+                _fs = GDate._zero;
+            else
+            {
+                BigInteger bi = _fs.unscaledValue();
+                String str = bi.toString();
+                int lastzero;
+                for (lastzero = str.length(); lastzero > 0; lastzero -= 1)
+                    if (str.charAt(lastzero - 1) != '0')
+                        break;
+                if (lastzero < str.length())
+                    _fs = _fs.setScale(_fs.scale() - str.length() + lastzero);
+            }
+        }
+    }
+

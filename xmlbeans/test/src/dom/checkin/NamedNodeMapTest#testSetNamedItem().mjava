@@ -1,0 +1,47 @@
+    /**
+     * pathological cases:
+     * node created from diff doc
+     * node in diff elt
+     * node not an attr
+     */
+    public void testSetNamedItem() {
+        Node newAt = m_doc.createAttribute("newAt");
+        ((Attr) newAt).setValue("newval");
+        m_nodeMap.setNamedItem(newAt);
+        assertEquals(nCount + 1, m_nodeMap.getLength());
+        result = m_nodeMap.getNamedItem("newAt");
+        assertEquals("newval", result.getNodeValue());
+
+        //node cr. diff doc
+        newAt = m_docNS.createAttribute("newAt");
+        ((Attr) newAt).setValue("newval");
+        try {
+            m_nodeMap.setNamedItem(newAt);
+            fail("Inserting node created from a different doc");
+        }
+        catch (DOMException de) {
+            assertEquals(de.code, DOMException.WRONG_DOCUMENT_ERR);
+        }
+
+        //node in diff elt
+        newAt = m_node.getFirstChild().getAttributes().getNamedItem("bat0");
+        try {
+            m_nodeMap.setNamedItem(newAt);
+            fail("Inserting node in use");
+        }
+        catch (DOMException de) {
+            assertEquals(de.code, DOMException.INUSE_ATTRIBUTE_ERR);
+        }
+
+        //not an attr
+        newAt = m_doc.createElement("newElt");
+        try {
+            m_nodeMap.setNamedItem(newAt);
+            fail("Inserting node  different doc");
+        }
+        catch (DOMException de) {
+            assertEquals(de.code, DOMException.HIERARCHY_REQUEST_ERR);
+        }
+
+    }
+

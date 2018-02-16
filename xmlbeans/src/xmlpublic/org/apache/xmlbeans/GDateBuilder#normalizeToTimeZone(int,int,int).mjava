@@ -1,0 +1,35 @@
+    /**
+     * If the time and timezone are known, this method changes the timezone to the
+     * specified UTC offset, altering minutes, hours, day, month, and year as
+     * necessary to ensure that the actual described moment in time is the same.
+     * <p>
+     * It is an error to operate on instances without a time or timezone, or
+     * with a partially specified date.
+     * 
+     * @param tzSign the timezone offset sign, either +1, 0, or -1
+     * @param tzHour the timezone offset hour
+     * @param tzMinute the timezone offset minute 
+     */
+    public void normalizeToTimeZone(int tzSign, int tzHour, int tzMinute)
+    {
+        if (!((tzSign == 0 && tzHour == 0 && tzMinute == 0) ||
+              ((tzSign == -1 || tzSign == 1) &&
+               (tzHour >= 0 && tzMinute >= 0) &&
+               (tzHour == 14 && tzMinute == 0 || tzHour < 14 && tzMinute < 60))))
+            throw new IllegalArgumentException("time zone must be between -14:00 and +14:00");
+
+        if (!hasTimeZone() || !hasTime())
+            throw new IllegalStateException("cannot normalize time zone without both time and timezone");
+
+        if (!(hasDay() == hasMonth() && hasDay() == hasYear()))
+            throw new IllegalStateException("cannot do date math without a complete date");
+
+        int hshift = tzSign * tzHour - _tzsign * _tzh;
+        int mshift = tzSign * tzMinute - _tzsign * _tzm;
+
+        _tzsign = tzSign;
+        _tzh = tzHour;
+        _tzm = tzMinute;
+        addDuration(1, 0, 0, 0, hshift, mshift, 0, null);
+    }
+

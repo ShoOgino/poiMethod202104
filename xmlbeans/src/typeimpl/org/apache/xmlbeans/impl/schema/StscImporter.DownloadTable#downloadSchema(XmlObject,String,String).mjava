@@ -1,0 +1,142 @@
+        private Schema downloadSchema(XmlObject referencedBy, String targetNamespace, String locationURL)
+        {
+            // no location URL provided?  Then nothing to do.
+            if (locationURL == null)
+                return null;
+            
+            StscState state = StscState.get();
+            
+            // First resolve relative URLs with respect to base URL for doc
+            URI baseURI = parseURI(baseURLForDoc(referencedBy));
+            String absoluteURL = null;
+            try
+            {
+                absoluteURL = baseURI == null ? locationURL : resolve(baseURI, locationURL).toString();
+            }
+            catch (URISyntaxException e)
+            {
+                state.error("Could not find resource - invalid location URL: " + e.getMessage(), XmlErrorCodes.CANNOT_FIND_RESOURCE, referencedBy);
+                return null;
+            }
+
+            // probe 0: this url is already processed, from a previous compile
+            if (state.isFileProcessed(absoluteURL))
+                return null;
+
+            // probe 1: ns+url - perfect match
+            if (absoluteURL != null && targetNamespace != null)
+            {
+                Schema result = (Schema)schemaByNsLocPair.get(new NsLocPair(targetNamespace, absoluteURL));
+                if (result != null)
+                    return result;
+            }
+
+            // probe 2: we have preexisting knowledge of this namespace,
+            // either from another schema file or from the linker.
+            // If we're not downloading the given URL, skip it silently if the
+            // namespace is already represented by a file we have.
+            // Also, suppress downloads of URLs to namespaces that are already
+            // known by the linker.
+            // (We never assume preexisting knowledge of the no-namespace,
+            // even if we have some definitions, since it's likely that
+            // more than one person is playing in the no-namespace at once.)
+            if (targetNamespace != null && !targetNamespace.equals(""))
+            {
+                // the URL is not one to download; should we assume we know about the namespace?
+                if (!state.shouldDownloadURI(absoluteURL))
+                {
+                    // If we already have a schema representing this namespace,
+                    // then skip this URL silently without producing an error.
+                    Schema result = (Schema)schemaByNsLocPair.get(new NsLocPair(targetNamespace, null));
+                    if (result != null)
+                        return result;
+                }
+
+                // If the linker already knows about this namespace, skip
+                // this URL.
+                if (state.linkerDefinesNamespace(targetNamespace))
+                    return null;
+            }
+
+            // probe 3: url only
+            if (absoluteURL != null)
+            {
+                Schema result = (Schema)schemaByNsLocPair.get(new NsLocPair(null, absoluteURL));
+                if (result != null)
+                    return result;
+            }
+
+            // no match: error if we can't or won't download.
+            if (absoluteURL == null)
+            {
+                state.error("Could not find resource - no valid location URL.", XmlErrorCodes.CANNOT_FIND_RESOURCE, referencedBy);
+                return null;
+            }
+
+            if (previouslyFailedToDownload(absoluteURL))
+            {
+                // an error message has already been produced.
+                return null;
+            }
+
+            if (!state.shouldDownloadURI(absoluteURL))
+            {
+                state.error("Could not load resource \"" + absoluteURL + "\" (network downloads disabled).", XmlErrorCodes.CANNOT_FIND_RESOURCE, referencedBy);
+                addFailedDownload(absoluteURL);
+                return null;
+            }
+
+            // try to download
+            download: try
+            {
+                XmlObject xdoc = downloadDocument(state.getS4SLoader(), targetNamespace, absoluteURL);
+
+                Schema result = findMatchByDigest(xdoc);
+                String shortname = state.relativize(absoluteURL);
+                if (result != null)
+                {
+                    // if an exactly-the-same document has already been loaded, use the original and spew
+                    String dupname = state.relativize(result.documentProperties().getSourceName());
+                    if (dupname != null)
+                        state.info(shortname + " is the same as " + dupname + " (ignoring the duplicate file)");
+                    else
+                        state.info(shortname + " is the same as another schema");
+                }
+                else
+                {
+                    // otherwise, it's a new document: validate it and grab the contents
+                    XmlOptions voptions = new XmlOptions();
+                    voptions.setErrorListener(state.getErrorListener());
+                    if (!(xdoc instanceof SchemaDocument) || !xdoc.validate(voptions))
+                    {
+                        state.error("Referenced document is not a valid schema", XmlErrorCodes.CANNOT_FIND_RESOURCE, referencedBy);
+                        break download;
+                    }
+
+                    SchemaDocument sDoc = (SchemaDocument)xdoc;
+
+                    result = sDoc.getSchema();
+                    state.info("Loading referenced file " + shortname);
+                }
+                NsLocPair key = new NsLocPair(emptyStringIfNull(result.getTargetNamespace()), absoluteURL);
+                addSuccessfulDownload(key, result);
+                return result;
+            }
+            catch (MalformedURLException malformed)
+            {
+                state.error("URL \"" + absoluteURL + "\" is not well-formed", XmlErrorCodes.CANNOT_FIND_RESOURCE, referencedBy);
+            }
+            catch (IOException connectionProblem)
+            {
+                state.error(connectionProblem.toString(), XmlErrorCodes.CANNOT_FIND_RESOURCE, referencedBy);
+            }
+            catch (XmlException e)
+            {
+                state.error("Problem parsing referenced XML resource - " + e.getMessage(), XmlErrorCodes.CANNOT_FIND_RESOURCE, referencedBy);
+            }
+
+            // record failure so that we don't try to download this URL again
+            addFailedDownload(absoluteURL);
+            return null;
+        }
+

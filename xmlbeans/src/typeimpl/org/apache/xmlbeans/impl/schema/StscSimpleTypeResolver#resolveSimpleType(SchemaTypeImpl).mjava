@@ -1,0 +1,97 @@
+    /**************************************************************************
+     * SIMPLE TYPE RESOLUTION HERE
+     *
+     * Simple types can be declared as lists, unions, or restrictions.
+     * These three cases are treated separately in resolveListType,
+     * resolveUnionType, and resolveSimpleRestrictionType.
+     *
+     * The intricate work with facets is done in the restriction case,
+     * using method called resolveFacets (the union and list cases have
+     * trivial facet rules). Then all simple types call resolveProperties
+     * in the end to have their "fundamental facets" resolved.
+     */
+
+    public static void resolveSimpleType(SchemaTypeImpl sImpl)
+    {
+        SimpleType parseSt = (SimpleType)sImpl.getParseObject();
+        
+        assert sImpl.isSimpleType();
+
+        Schema schema = StscComplexTypeResolver.getSchema(parseSt);
+
+        // Verify: have list, union, or restriction, but not more than one
+        int count =
+                (parseSt.isSetList() ? 1 : 0) +
+                (parseSt.isSetUnion() ? 1 : 0) +
+                (parseSt.isSetRestriction() ? 1 : 0);
+        if (count > 1)
+        {
+            StscState.get().error(
+                    "A simple type must define either a list, a union, or a restriction: more than one found.",
+                    XmlErrorCodes.MALFORMED_SIMPLE_TYPE_DEFN,
+                    parseSt);
+            // recovery: treat it as the first of list, union, restr
+        }
+        else if (count < 1)
+        {
+            StscState.get().error("A simple type must define either a list, a union, or a restriction: none was found.",
+                    XmlErrorCodes.MALFORMED_SIMPLE_TYPE_DEFN,
+                    parseSt);
+            // recovery: treat it as restriction of anySimpleType
+            resolveErrorSimpleType(sImpl);
+            return;
+        }
+
+        // Set final flags
+        boolean finalRest = false;
+        boolean finalList = false;
+        boolean finalUnion = false;
+
+        Object finalValue = null;
+        if (parseSt.isSetFinal())
+        {
+            finalValue = parseSt.getFinal();
+        }
+        // Inspect the finalDefault attribute on the schema
+        else if (schema != null && schema.isSetFinalDefault())
+        {
+            finalValue = schema.getFinalDefault();
+        }
+
+        if (finalValue != null)
+        {
+            if (finalValue instanceof String)
+            {
+                if ("#all".equals((String)finalValue))
+                {
+                    finalRest = finalList = finalUnion = true;
+                }
+            }
+            else if (finalValue instanceof List)
+            {
+                List lFinalValue = (List) finalValue;
+                if (lFinalValue.contains("restriction"))
+                    finalRest = true;
+
+                if (lFinalValue.contains("list"))
+                    finalList = true;
+
+                if (lFinalValue.contains("union"))
+                    finalUnion= true;
+            }
+        }
+
+        sImpl.setSimpleFinal(finalRest, finalList, finalUnion);
+
+        List anonTypes = new ArrayList();
+
+        if (parseSt.getList() != null)
+            resolveListType(sImpl, parseSt.getList(), anonTypes);
+        else if (parseSt.getUnion() != null)
+            resolveUnionType(sImpl, parseSt.getUnion(), anonTypes);
+        else if (parseSt.getRestriction() != null)
+            resolveSimpleRestrictionType(sImpl, parseSt.getRestriction(), anonTypes);
+
+        sImpl.setAnonymousTypeRefs(makeRefArray(anonTypes));
+    }
+

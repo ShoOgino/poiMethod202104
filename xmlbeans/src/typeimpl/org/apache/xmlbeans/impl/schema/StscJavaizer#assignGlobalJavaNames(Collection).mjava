@@ -1,0 +1,25 @@
+    static void assignGlobalJavaNames(Collection schemaTypes)
+    {
+        HashSet usedNames = new HashSet();
+        StscState state = StscState.get();
+
+        for (Iterator i = schemaTypes.iterator(); i.hasNext(); )
+        {
+            SchemaTypeImpl sImpl = (SchemaTypeImpl)i.next();
+            QName topName = findTopName(sImpl);
+            String pickedName = state.getJavaname(topName, sImpl.isDocumentType() ?
+                BindingConfig.QNAME_DOCUMENT_TYPE : BindingConfig.QNAME_TYPE);
+            if (sImpl.isUnjavaized())
+            {
+                sImpl.setFullJavaName(pickFullJavaClassName(usedNames, findTopName(sImpl), pickedName, sImpl.isDocumentType(), sImpl.isAttributeType()));
+                sImpl.setFullJavaImplName(pickFullJavaImplName(usedNames, sImpl.getFullJavaName()));
+
+                setUserTypes(sImpl, state);
+
+                setExtensions(sImpl, state);
+            }
+        }
+
+        verifyInterfaceNameCollisions(usedNames, state);
+    }
+

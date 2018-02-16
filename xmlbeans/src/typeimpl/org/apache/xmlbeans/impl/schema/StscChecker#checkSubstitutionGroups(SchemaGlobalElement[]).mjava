@@ -1,0 +1,53 @@
+    private static void checkSubstitutionGroups(SchemaGlobalElement[] elts)
+    {
+        StscState state = StscState.get();
+
+        for (int i = 0 ; i < elts.length ; i++)
+        {
+            SchemaGlobalElement elt = elts[i];
+            SchemaGlobalElement head = elt.substitutionGroup();
+
+            if (head != null)
+            {
+                SchemaType headType = head.getType();
+                SchemaType tailType = elt.getType();
+                XmlObject parseTree = ((SchemaGlobalElementImpl)elt)._parseObject;
+
+                if (! headType.isAssignableFrom(tailType))
+                {
+                    state.error(XmlErrorCodes.ELEM_PROPERTIES$SUBSTITUTION_VALID,
+                        new Object[] {QNameHelper.pretty(elt.getName()),
+                                      QNameHelper.pretty(head.getName())},
+                        parseTree);
+                }
+                else if (head.finalExtension() && head.finalRestriction())
+                {
+                    state.error(XmlErrorCodes.ELEM_PROPERTIES$SUBSTITUTION_FINAL,
+                        new Object[] {QNameHelper.pretty(elt.getName()),
+                                      QNameHelper.pretty(head.getName()),
+                                      "#all"}, parseTree);
+                }
+                else if (! headType.equals(tailType))
+                {
+                    if (head.finalExtension() && 
+                             tailType.getDerivationType() == SchemaType.DT_EXTENSION)
+                    {
+                        state.error(XmlErrorCodes.ELEM_PROPERTIES$SUBSTITUTION_FINAL,
+                            new Object[] {QNameHelper.pretty(elt.getName()),
+                                          QNameHelper.pretty(head.getName()),
+                                          "extension"}, parseTree);
+                    }
+                    else if (head.finalRestriction() &&
+                             tailType.getDerivationType() == SchemaType.DT_RESTRICTION)
+                    {
+                        state.error(XmlErrorCodes.ELEM_PROPERTIES$SUBSTITUTION_FINAL,
+                            new Object[] {QNameHelper.pretty(elt.getName()),
+                                          QNameHelper.pretty(head.getName()),
+                                          "restriction"}, parseTree);
+                    }
+                }
+            }
+
+        }
+    }
+

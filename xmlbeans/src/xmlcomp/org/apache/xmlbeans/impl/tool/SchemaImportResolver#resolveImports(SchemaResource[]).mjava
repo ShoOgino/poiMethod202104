@@ -1,0 +1,69 @@
+    protected final void resolveImports(SchemaResource[] resources)
+    {
+        LinkedList queueOfResources = new LinkedList(Arrays.asList(resources));
+        LinkedList queueOfLocators = new LinkedList();
+        Set seenResources = new HashSet();
+
+        for (;;)
+        {
+            SchemaResource nextResource;
+
+            // fetch next resource.
+            if (!queueOfResources.isEmpty())
+            {
+                // either off the initial queue
+                nextResource = (SchemaResource)queueOfResources.removeFirst();
+            }
+            else if (!queueOfLocators.isEmpty())
+            {
+                // or off the list of locators
+                SchemaLocator locator = (SchemaLocator)queueOfLocators.removeFirst();
+                nextResource = lookupResource(locator.namespace, locator.schemaLocation);
+                if (nextResource == null)
+                    continue;
+            }
+            else
+            {
+                // if no more, then terminate loop
+                break;
+            }
+
+            // track and skip duplicates
+            if (seenResources.contains(nextResource))
+                continue;
+            seenResources.add(nextResource);
+
+            // get resource contents
+            Schema schema = nextResource.getSchema();
+            if (schema == null)
+                continue;
+
+            // check actual namespace
+            String actualTargetNamespace = schema.getTargetNamespace();
+            if (actualTargetNamespace == null)
+                actualTargetNamespace = "";
+
+            // report actual namespace
+            String expectedTargetNamespace = nextResource.getNamespace();
+            if (expectedTargetNamespace == null ||
+                    !actualTargetNamespace.equals(expectedTargetNamespace))
+            {
+                reportActualNamespace(nextResource, actualTargetNamespace);
+            }
+
+            // now go through and record all the imports
+            Import[] schemaImports = schema.getImportArray();
+            for (int i = 0; i < schemaImports.length; i++)
+            {
+                queueOfLocators.add(new SchemaLocator(schemaImports[i].getNamespace() == null ? "" : schemaImports[i].getNamespace(), schemaImports[i].getSchemaLocation()));
+            }
+            
+            // and record all the includes too
+            Include[] schemaIncludes = schema.getIncludeArray();
+            for (int i = 0; i < schemaIncludes.length; i++)
+            {
+                queueOfLocators.add(new SchemaLocator(null, schemaIncludes[i].getSchemaLocation()));
+            }
+        }
+    }
+

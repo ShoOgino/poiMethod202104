@@ -1,0 +1,506 @@
+    /**
+     * Links a type.
+     */
+    public void fillInType(int btc)
+    {
+        SchemaTypeImpl result = getBuiltinType(btc);
+        SchemaType base;
+        SchemaType item = null;
+        int variety = SchemaType.ATOMIC;
+        int derivationType = SchemaType.DT_RESTRICTION;
+
+        switch (btc)
+        {
+            case SchemaType.BTC_NOT_BUILTIN:
+                variety = SchemaType.NOT_SIMPLE;
+                base = ST_ANY_TYPE;
+                break;
+
+            case SchemaType.BTC_ANY_TYPE:
+                variety = SchemaType.NOT_SIMPLE;
+                base = null;
+                derivationType = SchemaType.DT_RESTRICTION;
+                break;
+
+            default:
+                assert(false);
+
+            case SchemaType.BTC_ANY_SIMPLE:
+                base = ST_ANY_TYPE; break;
+
+            case BTC_ANY_ATOMIC:
+                base = ST_ANY_SIMPLE;
+
+            case SchemaType.BTC_BOOLEAN:
+            case SchemaType.BTC_BASE_64_BINARY:
+            case SchemaType.BTC_HEX_BINARY:
+            case SchemaType.BTC_ANY_URI:
+            case SchemaType.BTC_QNAME:
+            case SchemaType.BTC_NOTATION:
+            case SchemaType.BTC_FLOAT:
+            case SchemaType.BTC_DOUBLE:
+            case SchemaType.BTC_DECIMAL:
+            case SchemaType.BTC_STRING:
+            case SchemaType.BTC_DURATION:
+            case SchemaType.BTC_DATE_TIME:
+            case SchemaType.BTC_TIME:
+            case SchemaType.BTC_DATE:
+            case SchemaType.BTC_G_YEAR_MONTH:
+            case SchemaType.BTC_G_YEAR:
+            case SchemaType.BTC_G_MONTH_DAY:
+            case SchemaType.BTC_G_DAY:
+            case SchemaType.BTC_G_MONTH:
+                base = ST_ANY_ATOMIC; break;
+
+            // derived numerics
+            case SchemaType.BTC_INTEGER:
+                base = ST_DECIMAL; break;
+
+            case SchemaType.BTC_LONG:
+                base = ST_INTEGER; break;
+
+            case SchemaType.BTC_INT:
+                base = ST_LONG; break;
+
+            case SchemaType.BTC_SHORT:
+                base = ST_INT; break;
+
+            case SchemaType.BTC_BYTE:
+                base = ST_SHORT; break;
+
+            case SchemaType.BTC_NON_POSITIVE_INTEGER:
+                base = ST_INTEGER; break;
+
+            case SchemaType.BTC_NEGATIVE_INTEGER:
+                base = ST_NON_POSITIVE_INTEGER; break;
+
+            case SchemaType.BTC_NON_NEGATIVE_INTEGER:
+                base = ST_INTEGER; break;
+
+            case SchemaType.BTC_POSITIVE_INTEGER:
+                base = ST_NON_NEGATIVE_INTEGER; break;
+
+            case SchemaType.BTC_UNSIGNED_LONG:
+                base = ST_NON_NEGATIVE_INTEGER; break;
+
+            case SchemaType.BTC_UNSIGNED_INT:
+                base = ST_UNSIGNED_LONG; break;
+
+            case SchemaType.BTC_UNSIGNED_SHORT:
+                base = ST_UNSIGNED_INT; break;
+
+            case SchemaType.BTC_UNSIGNED_BYTE:
+                base = ST_UNSIGNED_SHORT; break;
+
+            // derived strings
+            case SchemaType.BTC_NORMALIZED_STRING:
+                base = ST_STRING; break;
+
+            case SchemaType.BTC_TOKEN:
+                base = ST_NORMALIZED_STRING; break;
+
+            case SchemaType.BTC_NAME:
+                base = ST_TOKEN; break;
+
+            case SchemaType.BTC_NCNAME:
+                base = ST_NAME; break;
+
+            case SchemaType.BTC_ID:
+            case SchemaType.BTC_IDREF:
+            case SchemaType.BTC_ENTITY:
+                base = ST_NCNAME; break;
+
+            case SchemaType.BTC_LANGUAGE:
+            case SchemaType.BTC_NMTOKEN:
+                base = ST_TOKEN; break;
+
+            case SchemaType.BTC_IDREFS:
+            case SchemaType.BTC_ENTITIES:
+            case SchemaType.BTC_NMTOKENS:
+                variety = SchemaType.LIST;
+                base = ST_ANY_SIMPLE;
+                if (btc == SchemaType.BTC_IDREFS)
+                    item = ST_IDREF;
+                else if (btc == SchemaType.BTC_ENTITIES)
+                    item = ST_ENTITY;
+                else
+                    item = ST_NMTOKEN;
+                break;
+
+            // derived durations
+            case BTC_DAY_TIME_DURATION:
+            case BTC_YEAR_MONTH_DURATION:
+                base = ST_DURATION;
+                break;
+
+        }
+
+        result.setDerivationType(derivationType);
+        result.setSimpleTypeVariety(variety);
+        if (variety != SchemaType.NOT_SIMPLE)
+        {
+            result.setSimpleType(true);
+        }
+        else
+        {
+            assert (btc == SchemaType.BTC_ANY_TYPE || btc == SchemaType.BTC_NOT_BUILTIN);
+        }
+        result.setBaseTypeRef(base == null ? null : base.getRef());
+        result.setBaseDepth(base == null ? 0 : ((SchemaTypeImpl)base).getBaseDepth() + 1);
+        result.setListItemTypeRef(item == null ? null : item.getRef());
+        if (btc >= SchemaType.BTC_FIRST_PRIMITIVE && btc <= SchemaType.BTC_LAST_PRIMITIVE ||
+                btc == BTC_ANY_ATOMIC)
+            result.setPrimitiveTypeRef(result.getRef());
+        else if (variety == SchemaType.ATOMIC)
+        {
+            if (base == null)
+                throw new IllegalStateException("Base was null for " + btc);
+            if (base.getPrimitiveType() == null)
+                throw new IllegalStateException("Base.gpt was null for " + btc);
+            result.setPrimitiveTypeRef(base.getPrimitiveType().getRef());
+        }
+
+        XmlValueRef[] facets;
+        boolean[] fixedf;
+        int wsr = SchemaType.WS_COLLAPSE;
+        int decimalSize = SchemaType.NOT_DECIMAL;
+
+        // now set up facets
+        switch (btc)
+        {
+            default:
+                assert(false);
+
+            case SchemaType.BTC_ANY_TYPE:
+            case SchemaType.BTC_ANY_SIMPLE:
+            case SchemaType.BTC_NOT_BUILTIN:
+            case BTC_ANY_ATOMIC:
+                facets = FACETS_NONE;
+                fixedf = FIXED_FACETS_NONE;
+                wsr = SchemaType.WS_UNSPECIFIED;
+                break;
+
+            case SchemaType.BTC_STRING:
+                facets = FACETS_WS_PRESERVE;
+                fixedf = FIXED_FACETS_NONE;
+                wsr = SchemaType.WS_PRESERVE;
+                break;
+
+            case SchemaType.BTC_BOOLEAN:
+            case SchemaType.BTC_BASE_64_BINARY:
+            case SchemaType.BTC_HEX_BINARY:
+            case SchemaType.BTC_ANY_URI:
+            case SchemaType.BTC_QNAME:
+            case SchemaType.BTC_FLOAT:
+            case SchemaType.BTC_DOUBLE:
+            case SchemaType.BTC_NOTATION:
+            case SchemaType.BTC_DURATION:
+            case SchemaType.BTC_DATE_TIME:
+            case SchemaType.BTC_TIME:
+            case SchemaType.BTC_DATE:
+            case SchemaType.BTC_G_YEAR_MONTH:
+            case SchemaType.BTC_G_YEAR:
+            case SchemaType.BTC_G_MONTH_DAY:
+            case SchemaType.BTC_G_DAY:
+            case SchemaType.BTC_G_MONTH:
+                facets = FACETS_WS_COLLAPSE;
+                fixedf = FIXED_FACETS_WS;
+                break;
+
+            case SchemaType.BTC_DECIMAL:
+                facets = FACETS_WS_COLLAPSE;
+                fixedf = FIXED_FACETS_WS;
+                decimalSize = SchemaType.SIZE_BIG_DECIMAL;
+                break;
+
+            // derived numerics
+            case SchemaType.BTC_INTEGER:
+                facets = FACETS_INTEGER;
+                fixedf = FIXED_FACETS_INTEGER;
+                decimalSize = SchemaType.SIZE_BIG_INTEGER;
+                break;
+
+            case SchemaType.BTC_LONG:
+                facets = FACETS_LONG;
+                fixedf = FIXED_FACETS_INTEGER;
+                decimalSize = SchemaType.SIZE_LONG;
+                break;
+
+            case SchemaType.BTC_INT:
+                facets = FACETS_INT;
+                fixedf = FIXED_FACETS_INTEGER;
+                decimalSize = SchemaType.SIZE_INT;
+                break;
+
+            case SchemaType.BTC_SHORT:
+                facets = FACETS_SHORT;
+                fixedf = FIXED_FACETS_INTEGER;
+                decimalSize = SchemaType.SIZE_SHORT;
+                break;
+
+            case SchemaType.BTC_BYTE:
+                facets = FACETS_BYTE;
+                fixedf = FIXED_FACETS_INTEGER;
+                decimalSize = SchemaType.SIZE_BYTE;
+                break;
+
+            case SchemaType.BTC_NON_POSITIVE_INTEGER:
+                facets = FACETS_NONPOSITIVE;
+                fixedf = FIXED_FACETS_INTEGER;
+                decimalSize = SchemaType.SIZE_BIG_INTEGER;
+                break;
+
+            case SchemaType.BTC_NEGATIVE_INTEGER:
+                facets = FACETS_NEGATIVE;
+                fixedf = FIXED_FACETS_INTEGER;
+                decimalSize = SchemaType.SIZE_BIG_INTEGER;
+                break;
+
+            case SchemaType.BTC_NON_NEGATIVE_INTEGER:
+                facets = FACETS_NONNEGATIVE;
+                fixedf = FIXED_FACETS_INTEGER;
+                decimalSize = SchemaType.SIZE_BIG_INTEGER;
+                break;
+
+            case SchemaType.BTC_POSITIVE_INTEGER:
+                facets = FACETS_POSITIVE;
+                fixedf = FIXED_FACETS_INTEGER;
+                decimalSize = SchemaType.SIZE_BIG_INTEGER;
+                break;
+
+            case SchemaType.BTC_UNSIGNED_LONG:
+                facets = FACETS_UNSIGNED_LONG;
+                fixedf = FIXED_FACETS_INTEGER;
+                decimalSize = SchemaType.SIZE_BIG_INTEGER;
+                break;
+
+            case SchemaType.BTC_UNSIGNED_INT:
+                facets = FACETS_UNSIGNED_INT;
+                fixedf = FIXED_FACETS_INTEGER;
+                decimalSize = SchemaType.SIZE_LONG;
+                break;
+
+            case SchemaType.BTC_UNSIGNED_SHORT:
+                facets = FACETS_UNSIGNED_SHORT;
+                fixedf = FIXED_FACETS_INTEGER;
+                decimalSize = SchemaType.SIZE_INT;
+                break;
+
+            case SchemaType.BTC_UNSIGNED_BYTE:
+                facets = FACETS_UNSIGNED_BYTE;
+                fixedf = FIXED_FACETS_INTEGER;
+                decimalSize = SchemaType.SIZE_SHORT;
+                break;
+
+
+            // derived strings
+            case SchemaType.BTC_NORMALIZED_STRING:
+                facets = FACETS_WS_REPLACE;
+                fixedf = FIXED_FACETS_NONE;
+                wsr = SchemaType.WS_REPLACE;
+                break;
+
+            case SchemaType.BTC_TOKEN:
+            case SchemaType.BTC_NAME:
+            case SchemaType.BTC_NCNAME:
+            case SchemaType.BTC_LANGUAGE:
+            case SchemaType.BTC_ID:
+            case SchemaType.BTC_IDREF:
+            case SchemaType.BTC_IDREFS:
+            case SchemaType.BTC_ENTITY:
+            case SchemaType.BTC_NMTOKEN:
+                facets = FACETS_WS_COLLAPSE;
+                fixedf = FIXED_FACETS_NONE;
+                wsr = SchemaType.WS_COLLAPSE;
+                break;
+
+            case SchemaType.BTC_ENTITIES:
+            case SchemaType.BTC_NMTOKENS:
+                facets = FACETS_BUILTIN_LIST;
+                fixedf = FIXED_FACETS_NONE;
+                wsr = SchemaType.WS_UNSPECIFIED;
+                break;
+
+            case BTC_DAY_TIME_DURATION:
+            case BTC_YEAR_MONTH_DURATION:
+                facets = FACETS_WS_COLLAPSE;
+                fixedf = FIXED_FACETS_WS;
+                wsr = SchemaType.WS_COLLAPSE;
+                break;
+                
+        }
+
+        // fundamental facets
+        int ordered = SchemaType.UNORDERED;
+        boolean isNumeric = false;
+        boolean isFinite = false;
+        boolean isBounded = false;
+
+        switch (btc)
+        {
+            default:
+                assert(false);
+
+            case SchemaType.BTC_ANY_TYPE:
+            case SchemaType.BTC_NOT_BUILTIN:
+            case SchemaType.BTC_ANY_SIMPLE:
+            case BTC_ANY_ATOMIC:
+            case SchemaType.BTC_STRING:
+            case SchemaType.BTC_BASE_64_BINARY:
+            case SchemaType.BTC_HEX_BINARY:
+            case SchemaType.BTC_ANY_URI:
+            case SchemaType.BTC_QNAME:
+            case SchemaType.BTC_NOTATION:
+            case SchemaType.BTC_NORMALIZED_STRING:
+            case SchemaType.BTC_TOKEN:
+            case SchemaType.BTC_NAME:
+            case SchemaType.BTC_NCNAME:
+            case SchemaType.BTC_LANGUAGE:
+            case SchemaType.BTC_ID:
+            case SchemaType.BTC_IDREF:
+            case SchemaType.BTC_IDREFS:
+            case SchemaType.BTC_ENTITY:
+            case SchemaType.BTC_NMTOKEN:
+            case SchemaType.BTC_ENTITIES:
+            case SchemaType.BTC_NMTOKENS:
+                break;
+
+            case SchemaType.BTC_BOOLEAN:
+                isFinite = true;
+                break;
+
+
+            case SchemaType.BTC_FLOAT:
+            case SchemaType.BTC_DOUBLE:
+            case SchemaType.BTC_DECIMAL:
+            case SchemaType.BTC_INTEGER:
+                isNumeric = true;
+                ordered = SchemaType.TOTAL_ORDER;
+                break;
+
+            case SchemaType.BTC_DURATION:
+            case SchemaType.BTC_DATE_TIME:
+            case SchemaType.BTC_TIME:
+            case SchemaType.BTC_DATE:
+            case SchemaType.BTC_G_YEAR_MONTH:
+            case SchemaType.BTC_G_YEAR:
+            case SchemaType.BTC_G_MONTH_DAY:
+            case SchemaType.BTC_G_DAY:
+            case SchemaType.BTC_G_MONTH:
+            case BTC_DAY_TIME_DURATION:
+            case BTC_YEAR_MONTH_DURATION:
+                ordered = SchemaType.PARTIAL_ORDER;
+                break;
+
+            case SchemaType.BTC_LONG:
+            case SchemaType.BTC_INT:
+            case SchemaType.BTC_SHORT:
+            case SchemaType.BTC_BYTE:
+            case SchemaType.BTC_NON_POSITIVE_INTEGER:
+            case SchemaType.BTC_NEGATIVE_INTEGER:
+            case SchemaType.BTC_NON_NEGATIVE_INTEGER:
+            case SchemaType.BTC_POSITIVE_INTEGER:
+            case SchemaType.BTC_UNSIGNED_LONG:
+            case SchemaType.BTC_UNSIGNED_INT:
+            case SchemaType.BTC_UNSIGNED_SHORT:
+            case SchemaType.BTC_UNSIGNED_BYTE:
+                isNumeric = true;
+                ordered = SchemaType.TOTAL_ORDER;
+                isFinite = true;
+                isBounded = true;
+                break;
+        }
+
+        result.setBasicFacets(facets, fixedf);
+        result.setWhiteSpaceRule(wsr);
+        result.setOrdered(ordered);
+        result.setBounded(isBounded);
+        result.setNumeric(isNumeric);
+        result.setFinite(isFinite);
+        result.setDecimalSize(decimalSize);
+        result.setAnonymousTypeRefs(EMPTY_SCHEMATYPEREF_ARRAY);
+
+        String pattern = null;
+        boolean hasPattern = false;
+
+        switch (btc)
+        {
+            case SchemaType.BTC_LANGUAGE:
+                pattern = "[a-zA-Z]{1,8}(-[a-zA-Z0-9]{1,8})*"; // we used to have ([a-zA-Z]{2}|[iI]-[a-zA-Z]+|[xX]-[a-zA-Z]{1,8})(-[a-zA-Z]{1,8})*", but s4s uses the more lenient pattern to the left. 
+                hasPattern = true;
+                break;
+            case SchemaType.BTC_NMTOKEN:
+                pattern = "\\c+"; 
+                hasPattern = true;
+                break;
+            case SchemaType.BTC_NAME:
+                pattern = "\\i\\c*";
+                hasPattern = true;
+                break;
+            case SchemaType.BTC_NCNAME:
+                pattern = "[\\i-[:]][\\c-[:]]*";
+                hasPattern = true;
+                break;
+            case BTC_DAY_TIME_DURATION:
+                pattern = "[^YM]*[DT].*";
+                hasPattern = true;
+                break;
+            case BTC_YEAR_MONTH_DURATION:
+                pattern = "[^DT]*";
+                hasPattern = true;
+                break;
+
+            // These types inherit their patterns
+            case SchemaType.BTC_ID:
+            case SchemaType.BTC_IDREF:
+            case SchemaType.BTC_ENTITY:
+                hasPattern = true;
+                break;
+        }
+
+        if (pattern != null)
+        {
+            org.apache.xmlbeans.impl.regex.RegularExpression p = null;
+            try { p = org.apache.xmlbeans.impl.regex.SchemaRegularExpression.forPattern(pattern); }
+            catch (org.apache.xmlbeans.impl.regex.ParseException e) { assert false; }
+            result.setPatterns(new org.apache.xmlbeans.impl.regex.RegularExpression[] {p});
+        }
+        result.setPatternFacet(hasPattern);
+
+
+
+        // ANY_TYPE has to be able to act like a complex type
+        if (btc == SchemaType.BTC_ANY_TYPE)
+        {
+            SchemaParticleImpl contentModel = new SchemaParticleImpl();
+            contentModel.setParticleType(SchemaParticle.WILDCARD);
+            contentModel.setWildcardSet(QNameSet.ALL);
+            contentModel.setWildcardProcess(SchemaParticle.LAX);
+            contentModel.setMinOccurs(BigInteger.ZERO);
+            contentModel.setMaxOccurs(null);
+            contentModel.setTransitionRules(QNameSet.ALL, true);
+            contentModel.setTransitionNotes(QNameSet.ALL, true);
+
+            SchemaAttributeModelImpl attrModel = new SchemaAttributeModelImpl();
+            attrModel.setWildcardProcess(SchemaAttributeModel.LAX);
+            attrModel.setWildcardSet(QNameSet.ALL);
+
+            result.setComplexTypeVariety(SchemaType.MIXED_CONTENT);
+            result.setContentModel(contentModel, attrModel, Collections.EMPTY_MAP, Collections.EMPTY_MAP, false);
+            result.setAnonymousTypeRefs(EMPTY_SCHEMATYPEREF_ARRAY);
+            result.setWildcardSummary(QNameSet.ALL, true, QNameSet.ALL, true);
+        }
+        else if (btc == SchemaType.BTC_NOT_BUILTIN)
+        {
+            // so does the no_type : it permits no contents (and even empty contents is invalid, but that's special-cased)
+            SchemaParticleImpl contentModel = null; // empty
+            SchemaAttributeModelImpl attrModel = new SchemaAttributeModelImpl(); // empty
+            result.setComplexTypeVariety(SchemaType.EMPTY_CONTENT);
+            result.setContentModel(contentModel, attrModel, Collections.EMPTY_MAP, Collections.EMPTY_MAP, false);
+            result.setAnonymousTypeRefs(EMPTY_SCHEMATYPEREF_ARRAY);
+            result.setWildcardSummary(QNameSet.EMPTY, false, QNameSet.EMPTY, false);
+        }
+
+        result.setOrderSensitive(false);
+    }
+

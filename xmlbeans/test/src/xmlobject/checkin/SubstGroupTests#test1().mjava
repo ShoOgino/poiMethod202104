@@ -1,0 +1,52 @@
+    public void test1() throws Exception {
+        String xml1 = "<root xmlns='http://openuri.org/sgs'>" +
+            "<A>\ta\ta\t</A>" +
+            "<B>\tb\tb\t</B>" +
+            "<C>\tc\tc\t</C>" +
+            "</root>";
+
+
+        RootDocument doc1 = RootDocument.Factory.parse(xml1);
+        RootDocument.Root root = doc1.getRoot();
+        assertTrue(doc1.validate());
+
+        XmlString a = root.xgetAArray(0);
+        assertTrue(a.schemaType().equals(XmlString.type));
+        assertEquals("\ta\ta\t", a.getStringValue());
+
+        XmlString b = root.xgetAArray(1);
+        assertTrue(b.schemaType().equals(XmlNormalizedString.type));
+        assertEquals(" b b ", b.getStringValue());
+
+        XmlString c = root.xgetAArray(2);
+        assertTrue(c.schemaType().equals(XmlToken.type));
+        assertEquals("c c", c.getStringValue());
+
+        root.insertA(2, "d d");
+        assertEquals("d d", root.getAArray(2));
+        assertEquals(4, root.sizeOfAArray());
+        root.removeA(2);
+
+        root.removeA(1);
+        assertEquals("c c", root.getAArray(1));
+        assertEquals(2, root.sizeOfAArray());
+
+        root.addA("f f");
+        assertEquals(3, root.sizeOfAArray());
+        assertEquals("f f", root.getAArray(2));
+
+        // Test array setters
+
+        // test m < n case
+        String[] smaller = new String[]{ "x", "y" };
+        root.setAArray(smaller);
+        assertEquals(2, root.sizeOfAArray());
+        assertEquals("y", root.getAArray(1));
+
+        // test m > n case
+        String[] larger = new String[] { "p", "q", "r", "s" };
+        root.setAArray(larger);
+        assertEquals(4, root.sizeOfAArray());
+        assertEquals("r", root.getAArray(2));
+    }
+

@@ -1,0 +1,46 @@
+    void secondPhaseValidation()
+    {
+        // validate interface methods collisions
+        Map methodSignatures = new HashMap();
+
+        for (int i = 0; i < _interfaceExtensions.size(); i++)
+        {
+            InterfaceExtensionImpl interfaceExtension = (InterfaceExtensionImpl) _interfaceExtensions.get(i);
+
+            InterfaceExtensionImpl.MethodSignatureImpl[] methods = (InterfaceExtensionImpl.MethodSignatureImpl[])interfaceExtension.getMethods();
+            for (int j = 0; j < methods.length; j++)
+            {
+                InterfaceExtensionImpl.MethodSignatureImpl ms = methods[j];
+
+                if (methodSignatures.containsKey(methods[j]))
+                {
+
+                    InterfaceExtensionImpl.MethodSignatureImpl ms2 = (InterfaceExtensionImpl.MethodSignatureImpl) methodSignatures.get(methods[j]);
+                    if (!ms.getReturnType().equals(ms2.getReturnType()))
+                    {
+                        BindingConfigImpl.error("Colliding methods '" + ms.getSignature() + "' in interfaces " +
+                        ms.getInterfaceName() + " and " + ms2.getInterfaceName() + ".", null);
+                    }
+
+                    return;
+                }
+
+                // store it into hashmap
+                methodSignatures.put(methods[j], methods[j]);
+            }
+        }
+
+        // validate that PrePostExtension-s do not intersect
+        for (int i = 0; i < _prePostExtensions.size() - 1; i++)
+        {
+            PrePostExtensionImpl a = (PrePostExtensionImpl) _prePostExtensions.get(i);
+            for (int j = 1; j < _prePostExtensions.size(); j++)
+            {
+                PrePostExtensionImpl b = (PrePostExtensionImpl) _prePostExtensions.get(j);
+                if (a.hasNameSetIntersection(b))
+                    BindingConfigImpl.error("The applicable domain for handler '" + a.getHandlerNameForJavaSource() +
+                        "' intersects with the one for '" + b.getHandlerNameForJavaSource() + "'.", null);
+            }
+        }
+    }
+

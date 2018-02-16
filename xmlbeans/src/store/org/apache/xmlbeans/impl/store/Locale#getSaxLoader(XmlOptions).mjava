@@ -1,0 +1,46 @@
+    private static SaxLoader getSaxLoader(XmlOptions options)
+    {
+        options = XmlOptions.maskNull(options);
+
+        EntityResolver er = null;
+
+        if (!options.hasOption(XmlOptions.LOAD_USE_DEFAULT_RESOLVER))
+        {
+            er = (EntityResolver) options.get(XmlOptions.ENTITY_RESOLVER);
+
+            if (er == null)
+                er = ResolverUtil.getGlobalEntityResolver();
+
+            if (er == null)
+                er = new DefaultEntityResolver();
+        }
+
+        SaxLoader sl;
+
+        if (options.hasOption(XmlOptions.LOAD_USE_XMLREADER))
+        {
+            XMLReader xr = (XMLReader) options.get(
+                XmlOptions.LOAD_USE_XMLREADER);
+
+            if (xr == null)
+                throw new IllegalArgumentException("XMLReader is null");
+
+            sl = new XmlReaderSaxLoader(xr);
+
+            // I've noticed that most XMLReaders don't like a null EntityResolver...
+
+            if (er != null)
+                xr.setEntityResolver(er);
+        }
+        else
+        {
+            sl = getPiccoloSaxLoader();
+
+            // Piccolo doesnot mind a null entity resolver ...
+
+            sl.setEntityResolver(er);
+        }
+
+        return sl;
+    }
+

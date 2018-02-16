@@ -1,0 +1,50 @@
+    private Locale(SchemaTypeLoader stl, XmlOptions options)
+    {
+        options = XmlOptions.maskNull(options);
+
+        //
+        //
+        //
+
+        // TODO - add option for no=sync, or make it all thread safe
+        //
+        // Also - have a thread local setting for thread safety?  .. Perhaps something
+        // in the type loader which defines whether ot not sync is on????
+        
+        _noSync = options.hasOption(XmlOptions.UNSYNCHRONIZED);
+
+        _tempFrames = new Cur[_numTempFramesLeft = 8];
+
+        // BUGBUG - this cannot be thread local ....
+        // BUGBUG - this cannot be thread local ....
+        // BUGBUG - this cannot be thread local .... uhh what, again?
+        // 
+        // Lazy create this (loading up a locale should use the thread locale one)
+        // same goes for the qname factory .. use thread local for hte most part when loading
+        
+        _qnameFactory = new DefaultQNameFactory(); //new LocalDocumentQNameFactory();
+
+        _locations = new Locations(this);
+
+        _schemaTypeLoader = stl;
+
+        _validateOnSet = options.hasOption(XmlOptions.VALIDATE_ON_SET);
+        
+        //
+        // Check for Saaj implementation request
+        //
+        
+        Object saajObj = options.get(Saaj.SAAJ_IMPL);
+
+        if (saajObj != null)
+        {
+            if (!(saajObj instanceof Saaj))
+                throw new IllegalStateException(
+                    "Saaj impl not correct type: " + saajObj);
+
+            _saaj = (Saaj) saajObj;
+
+            _saaj.setCallback(this);
+        }
+    }
+

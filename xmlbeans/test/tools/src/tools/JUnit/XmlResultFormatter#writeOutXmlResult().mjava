@@ -1,0 +1,44 @@
+    /**
+     * Write out the current TestRecord as an Xml
+     * Ant's JUnit Task gives us a OutputStream to write out too.
+     */
+    private void writeOutXmlResult()
+    {
+        // First build the XmlBean
+        XmlOptions opts = new XmlOptions();
+        opts.setSavePrettyPrint();
+
+        TestResultContainerDocument doc =
+                        TestResultContainerDocument.Factory.newInstance();
+        TestResultContainer container = doc.addNewTestResultContainer();
+
+        Iterator itr = records.iterator();
+        int count = 0;
+        while (itr.hasNext())
+        {
+            TestRecord rec = (TestRecord) itr.next();
+            container.addNewTestResult();
+            container.setTestResultArray(count++, getTestResultType(rec));
+        }
+
+        if (out != null)
+        {
+            try {
+                out.write(doc.xmlText(opts).getBytes());
+                out.flush();
+            } catch (IOException ioex) {
+                throw new BuildException("Unable to write output", ioex);
+            } finally {
+                if (out != System.out && out != System.err) {
+                    try {
+                        out.close();
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                }
+            }
+        }
+
+
+    }
+

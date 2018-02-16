@@ -1,0 +1,44 @@
+    void printInnerTypeJavaDoc(SchemaType sType) throws IOException
+    {
+        QName name = sType.getName();
+        if (name == null)
+        {
+            if (sType.isDocumentType())
+                name = sType.getDocumentElementName();
+            else if (sType.isAttributeType())
+                name = sType.getAttributeTypeAttributeName();
+            else if (sType.getContainerField() != null)
+                name = sType.getContainerField().getName();
+        }
+
+        emit("/**");
+        if (sType.isDocumentType())
+            emit(" * A document containing one " + prettyQName(name) + " element.");
+        else if (sType.isAttributeType())
+            emit(" * A document containing one " + prettyQName(name) + " attribute.");
+        else if (name != null)
+            emit(" * An XML " + prettyQName(name) + ".");
+        else
+            emit(" * An anonymous inner XML type.");
+        emit(" *");
+        switch (sType.getSimpleVariety())
+        {
+            case SchemaType.NOT_SIMPLE:
+                emit(" * This is a complex type.");
+                break;
+            case SchemaType.ATOMIC:
+                emit(" * This is an atomic type that is a restriction of " + getFullJavaName(sType) + ".");
+                break;
+            case SchemaType.LIST:
+                emit(" * This is a list type whose items are " + sType.getListItemType().getFullJavaName() + ".");
+                break;
+            case SchemaType.UNION:
+                emit(" * This is a union type. Instances are of one of the following types:");
+                SchemaType[] members = sType.getUnionConstituentTypes();
+                for (int i = 0; i < members.length; i++)
+                    emit(" *     " + members[i].getFullJavaName());
+                break;
+        }
+        emit(" */");
+    }
+

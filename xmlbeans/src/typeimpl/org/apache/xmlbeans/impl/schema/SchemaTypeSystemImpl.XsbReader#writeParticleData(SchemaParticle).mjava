@@ -1,0 +1,82 @@
+        void writeParticleData(SchemaParticle part)
+        {
+            writeShort(part.getParticleType());
+            short flags = 0;
+            if (part.isSkippable())
+                flags |= FLAG_PART_SKIPPABLE;
+            if (part.getParticleType() == SchemaParticle.ELEMENT)
+            {
+                SchemaLocalElement lpart = (SchemaLocalElement)part;
+                if (lpart.isFixed())
+                    flags |= FLAG_PART_FIXED;
+                if (lpart.isNillable())
+                    flags |= FLAG_PART_NILLABLE;
+                if (lpart.blockExtension())
+                    flags |= FLAG_PART_BLOCKEXT;
+                if (lpart.blockRestriction())
+                    flags |= FLAG_PART_BLOCKREST;
+                if (lpart.blockSubstitution())
+                    flags |= FLAG_PART_BLOCKSUBST;
+                if (lpart.isAbstract())
+                    flags |= FLAG_PART_ABSTRACT;
+
+                if (lpart instanceof SchemaGlobalElement)
+                {
+                    SchemaGlobalElement gpart = (SchemaGlobalElement)lpart;
+                    if (gpart.finalExtension())
+                        flags |= FLAG_PART_FINALEXT;
+                    if (gpart.finalRestriction())
+                        flags |= FLAG_PART_FINALREST;
+                }
+            }
+            writeShort(flags);
+            writeBigInteger(part.getMinOccurs());
+            writeBigInteger(part.getMaxOccurs());
+            writeQNameSet(part.acceptedStartNames());
+
+            switch (part.getParticleType())
+            {
+                case SchemaParticle.WILDCARD:
+                    writeQNameSet(part.getWildcardSet());
+                    writeShort(part.getWildcardProcess());
+                    break;
+
+                case SchemaParticle.ELEMENT:
+                    SchemaLocalElement lpart = (SchemaLocalElement)part;
+                    writeQName(lpart.getName());
+                    writeType(lpart.getType());
+                    writeString(lpart.getDefaultText());
+                    writeXmlValueObject(lpart.getDefaultValue());
+                    writeSOAPArrayType(((SchemaWSDLArrayType)lpart).getWSDLArrayType());
+                    writeAnnotation(lpart.getAnnotation());
+                    if (lpart instanceof SchemaGlobalElement)
+                    {
+                        SchemaGlobalElement gpart = (SchemaGlobalElement)lpart;
+
+                        writeHandle(gpart.substitutionGroup());
+
+                        QName[] substGroupMembers = gpart.substitutionGroupMembers();
+                        writeShort(substGroupMembers.length);
+                        for (int i = 0; i < substGroupMembers.length; i++)
+                            writeQName(substGroupMembers[i]);
+                    }
+
+                    SchemaIdentityConstraint[] idcs = lpart.getIdentityConstraints();
+
+                    writeShort(idcs.length);
+                    for (int i = 0 ; i < idcs.length ; i++)
+                        writeHandle(idcs[i]);
+
+                    break;
+
+                case SchemaParticle.ALL:
+                case SchemaParticle.SEQUENCE:
+                case SchemaParticle.CHOICE:
+                    writeParticleArray(part.getParticleChildren());
+                    break;
+
+                default:
+                    throw new SchemaTypeLoaderException("Unrecognized particle type ", _name, _handle, SchemaTypeLoaderException.BAD_PARTICLE_TYPE);
+            }
+        }
+

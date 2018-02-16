@@ -1,0 +1,43 @@
+    public int _getTextValue(char[] chars, int offset, int max) {
+        if (_cur.isText())
+            return _getChars(chars, offset, max);
+
+        if (chars == null)
+            throw new IllegalArgumentException("char buffer is null");
+
+        if (offset < 0)
+            throw new IllegalArgumentException("offset < 0");
+
+        if (offset >= chars.length)
+            throw new IllegalArgumentException("offset off end");
+
+        if (max < 0)
+            max = Integer.MAX_VALUE;
+
+        if (offset + max > chars.length)
+            max = chars.length - offset;
+
+        if (!_cur.isNode()) {
+            throw new IllegalStateException("Can't get text value, current token can have no text value");
+        }
+
+        // If there are no children (hopefully the common case), I can get the text faster.
+
+        if (_cur.hasChildren())
+            return Locale.getTextValue(_cur, Locale.WS_PRESERVE, chars, offset, max);
+
+        // Fast way
+            
+        Object src = _cur.getFirstChars();
+
+        if (_cur._cchSrc > max)
+            _cur._cchSrc = max;
+
+        if (_cur._cchSrc <= 0)
+            return 0;
+
+        CharUtil.getChars(chars, offset, src, _cur._offSrc, _cur._cchSrc);
+
+        return _cur._cchSrc;
+    }
+

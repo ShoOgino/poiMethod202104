@@ -1,0 +1,73 @@
+    /* package */ static String formatGDate(GDateSpecification spec)
+    {
+        // We've used a char[] rather than a StringBuffer for a 4x speedup
+        // -YY(10)YY-MM-DDTHH:MM:SS.FFFFFF+ZH:ZM
+        // 1 + 10   + 3+ 3+ 3+ 3+ 3+1 + s + 3+ 3 = 33 + s
+        BigDecimal fs = spec.getFraction();
+        char[] message = new char[33 + (fs == null ? 0 : fs.scale())];
+        int i = 0;
+
+        if (spec.hasYear() || spec.hasMonth() || spec.hasDay())
+        {
+            dmy: {
+                if (spec.hasYear())
+                    i = _padFourAppend(message, 0, spec.getYear());
+                else
+                    message[i++] = '-';
+
+                if (!(spec.hasMonth() || spec.hasDay()))
+                    break dmy;
+
+                message[i++] = '-';
+                if (spec.hasMonth())
+                    i = _padTwoAppend(message, i, spec.getMonth());
+
+                if (!spec.hasDay())
+                    break dmy;
+
+                message[i++] = '-';
+                i = _padTwoAppend(message, i, spec.getDay());
+                break dmy;
+            }
+            if (spec.hasTime())
+                message[i++] = 'T';
+        }
+
+        if (spec.hasTime())
+        {
+            i = _padTwoAppend(message, i, spec.getHour());
+            message[i++] = ':';
+            i = _padTwoAppend(message, i, spec.getMinute());
+            message[i++] = ':';
+            i = _padTwoAppend(message, i, spec.getSecond());
+            if (fs != _zero) // (optimization ~3%)
+            {
+                String frac = fs.toString();
+                int point = frac.indexOf('.');
+                if (point >= 0)
+                {
+                    frac.getChars(point, frac.length(), message, i);
+                    i += frac.length() - point;
+                }
+            }
+        }
+
+        if (spec.hasTimeZone())
+        {
+            if (spec.getTimeZoneSign() == 0)
+            {
+                message[i++] = 'Z';
+            }
+            else
+            {
+                message[i++] = spec.getTimeZoneSign() > 0 ? '+' : '-';
+                i = _padTwoAppend(message, i, spec.getTimeZoneHour());
+                message[i++] = ':';
+                i = _padTwoAppend(message, i, spec.getTimeZoneMinute());
+            }
+        }
+
+        // it would be nice to use (0, i, message) ctor instead
+        return new String(message, 0, i);
+    }
+

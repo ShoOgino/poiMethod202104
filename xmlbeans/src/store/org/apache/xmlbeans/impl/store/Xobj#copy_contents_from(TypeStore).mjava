@@ -1,0 +1,83 @@
+    public TypeStoreUser copy_contents_from ( TypeStore source )
+    {
+        Xobj xSrc = (Xobj) source;
+
+        if (xSrc == this)
+            return getUser();
+
+        _locale.enter();
+
+        try
+        {
+            xSrc._locale.enter();
+
+            Cur c = tempCur();
+
+            try
+            {
+                Cur cSrc1 = xSrc.tempCur();
+                Map sourceNamespaces = Locale.getAllNamespaces( cSrc1, null );
+                cSrc1.release();
+
+                if (isAttr())
+                {
+                    Cur cSrc = xSrc.tempCur();
+                    String value = Locale.getTextValue( cSrc );
+                    cSrc.release();
+
+                    c.setValue( value );
+                }
+                else
+                {
+                    // Here I save away the user of this node so that it does not get whacked
+                    // in the following operations.
+
+                    disconnectChildrenUsers();
+
+                    assert !inhibitDisconnect();
+
+                    setBit( INHIBIT_DISCONNECT );
+
+                    QName xsiType = isContainer() ? getXsiTypeName() : null;
+
+                    Xobj copy = xSrc.copyNode( _locale );
+
+                    Cur.moveNodeContents( this, null, true );
+
+                    c.next();
+
+                    Cur.moveNodeContents( copy, c, true );
+
+                    c.moveTo( this );
+
+                    if (xsiType != null)
+                        c.setXsiType( xsiType );
+
+                    assert inhibitDisconnect();
+                    clearBit( INHIBIT_DISCONNECT );
+                }
+
+                if (sourceNamespaces != null)
+                {
+                    if (!c.isContainer())
+                        c.toParent();
+
+                    Locale.applyNamespaces( c, sourceNamespaces );
+                }
+
+            }
+            finally
+            {
+                c.release();
+
+                xSrc._locale.exit();
+            }
+        }
+        finally
+        {
+            _locale.exit();
+        }
+
+        return getUser();
+    }
+

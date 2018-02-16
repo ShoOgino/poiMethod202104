@@ -1,0 +1,228 @@
+    static SchemaLocalAttributeImpl translateAttribute(
+        Attribute xsdAttr, String targetNamespace, String formDefault, boolean chameleon,
+        List anonymousTypes, SchemaType outerType, SchemaAttributeModel baseModel,
+        boolean local)
+    {
+        StscState state = StscState.get();
+
+        String name = xsdAttr.getName();
+        QName ref = xsdAttr.getRef();
+
+        if (ref != null && name != null)
+        {
+            if (name.equals(ref.getLocalPart()) && uriMatch(targetNamespace, ref.getNamespaceURI()))
+                state.warning(XmlErrorCodes.SCHEMA_ATTR$REF_OR_NAME_HAS_BOTH, new Object[] { name }, xsdAttr.xgetRef());
+            else
+                state.error(XmlErrorCodes.SCHEMA_ATTR$REF_OR_NAME_HAS_BOTH, new Object[] { name }, xsdAttr.xgetRef());
+            // ignore name
+            name = null;
+        }
+        if (ref == null && name == null)
+        {
+            state.error(XmlErrorCodes.SCHEMA_ATTR$REF_OR_NAME_HAS_NEITHER, null, xsdAttr);
+            // recovery: ignore this element
+            return null;
+        }
+        if (name != null && !XMLChar.isValidNCName(name))
+        {
+            state.error(XmlErrorCodes.INVALID_VALUE, new Object[] { name, "name" }, xsdAttr.xgetName());
+            // recovery: let the name go through anyway.
+        }
+
+        boolean isFixed = false;
+        String deftext = null;
+        String fmrfixedtext = null;
+        QName qname;
+        SchemaLocalAttributeImpl sAttr;
+        SchemaType sType = null;
+        int use = SchemaLocalAttribute.OPTIONAL;
+
+        if (local)
+            sAttr = new SchemaLocalAttributeImpl();
+        else
+        {
+            sAttr = new SchemaGlobalAttributeImpl(state.get().getContainer(targetNamespace));
+            ((SchemaGlobalAttributeImpl)sAttr).setParseContext(xsdAttr, targetNamespace, chameleon);
+        }
+
+        if (ref != null)
+        {
+            if (xsdAttr.getType() != null)
+            {
+                state.error(XmlErrorCodes.SCHEMA_ATTR$REF_FEATURES, new Object[] { "type" }, xsdAttr.xgetType());
+                // recovery: ignore type, simpleType
+            }
+
+            if (xsdAttr.getSimpleType() != null)
+            {
+                state.error(XmlErrorCodes.SCHEMA_ATTR$REF_FEATURES, new Object[] { "<simpleType>" }, xsdAttr.getSimpleType());
+                // recovery: ignore type, simpleType
+            }
+
+            if (xsdAttr.getForm() != null)
+            {
+                state.error(XmlErrorCodes.SCHEMA_ATTR$REF_FEATURES, new Object[] { "form" }, xsdAttr.xgetForm());
+                // recovery: ignore form
+            }
+
+            SchemaGlobalAttribute referenced = state.findGlobalAttribute(ref, chameleon ? targetNamespace : null, targetNamespace);
+            if (referenced == null)
+            {
+                state.notFoundError(ref, SchemaType.ATTRIBUTE, xsdAttr.xgetRef(), true);
+                // recovery: ignore this element
+                return null;
+            }
+
+            qname = ref;
+            use = referenced.getUse();
+            sType = referenced.getType();
+            deftext = referenced.getDefaultText();
+            if (deftext != null)
+            {
+                isFixed = referenced.isFixed();
+                if (isFixed)
+                    fmrfixedtext = deftext;
+            }
+        }
+        else
+        {
+            if (local)
+            {
+                boolean qualified = false; // default
+                FormChoice form = xsdAttr.xgetForm();
+                if (form != null)
+                    qualified = form.getStringValue().equals(FORM_QUALIFIED);
+                else if (formDefault != null)
+                    qualified = formDefault.equals(FORM_QUALIFIED);
+                else
+                {
+                    form = findAttributeFormDefault(xsdAttr);
+                    qualified = form != null && form.getStringValue().equals(FORM_QUALIFIED);
+                }
+
+                qname = qualified ? QNameHelper.forLNS(name, targetNamespace) : QNameHelper.forLN(name);
+            }
+            else
+            {
+                qname = QNameHelper.forLNS(name, targetNamespace);
+            }
+
+            if (xsdAttr.getType() != null)
+            {
+                sType = state.findGlobalType(xsdAttr.getType(), chameleon ? targetNamespace : null, targetNamespace );
+                if (sType == null)
+                    state.notFoundError(xsdAttr.getType(), SchemaType.TYPE, xsdAttr.xgetType(), true);
+            }
+
+            if (qname.getNamespaceURI().equals("http://www.w3.org/2001/XMLSchema-instance"))
+            {
+                state.error(XmlErrorCodes.NO_XSI, new Object[] { "http://www.w3.org/2001/XMLSchema-instance" }, xsdAttr.xgetName());
+            }
+
+            if (qname.getNamespaceURI().length() == 0 && qname.getLocalPart().equals("xmlns"))
+            {
+                state.error(XmlErrorCodes.NO_XMLNS, null, xsdAttr.xgetName());
+            }
+
+            LocalSimpleType typedef = xsdAttr.getSimpleType();
+
+            if ((sType != null) && typedef != null)
+            {
+                state.error(XmlErrorCodes.SCHEMA_ATTR$TYPE_ATTR_OR_NESTED_TYPE, null, typedef);
+                typedef = null;
+            }
+
+            if (typedef != null)
+            {
+                SchemaTypeImpl sTypeImpl = new SchemaTypeImpl(state.getContainer(targetNamespace));
+                sType = sTypeImpl;
+                sTypeImpl.setContainerField(sAttr);
+                sTypeImpl.setOuterSchemaTypeRef(outerType == null ? null : outerType.getRef());
+                // leave the anonymous type unresolved: it will be resolved later.
+                anonymousTypes.add(sType);
+                sTypeImpl.setSimpleType(true);
+                sTypeImpl.setParseContext(typedef, targetNamespace, chameleon, null, null, false);
+                sTypeImpl.setAnnotation(SchemaAnnotationImpl.getAnnotation(state.getContainer(targetNamespace), typedef));
+                sTypeImpl.setUserData(getUserData(typedef));
+            }
+
+            if (sType == null && baseModel != null && baseModel.getAttribute(qname) != null)
+                sType = baseModel.getAttribute(qname).getType();
+        }
+
+        if (sType == null)
+            sType = BuiltinSchemaTypeSystem.ST_ANY_SIMPLE;
+
+        if (!sType.isSimpleType())
+        {
+            // KHK: which rule? could use #a-simple_type_definition
+            state.error("Attributes must have a simple type (not complex).", XmlErrorCodes.INVALID_SCHEMA, xsdAttr);
+            // recovery: switch to the any-type
+            sType = BuiltinSchemaTypeSystem.ST_ANY_SIMPLE;
+        }
+
+        if (xsdAttr.isSetUse())
+        {
+            use = translateUseCode(xsdAttr.xgetUse());
+
+            // ignore referenced default if no longer optional
+            if (use != SchemaLocalAttribute.OPTIONAL && !isFixed)
+                deftext = null;
+        }
+
+        if (xsdAttr.isSetDefault() || xsdAttr.isSetFixed())
+        {
+            if (isFixed && !xsdAttr.isSetFixed())
+                state.error("A use of a fixed attribute definition must also be fixed", XmlErrorCodes.REDUNDANT_DEFAULT_FIXED, xsdAttr.xgetFixed());
+
+            isFixed = xsdAttr.isSetFixed();
+
+            if (xsdAttr.isSetDefault() && isFixed)
+            {
+                state.error(XmlErrorCodes.SCHEMA_ATTR$DEFAULT_OR_FIXED, null, xsdAttr.xgetFixed());
+                // recovery: ignore fixed
+                isFixed = false;
+            }
+            deftext = isFixed ? xsdAttr.getFixed() : xsdAttr.getDefault();
+            // BUGBUG(radup) this is not good, since they should be compared by value
+            // in StscChecker; but there we don't have yet access to the referred attr
+            if (fmrfixedtext != null && !fmrfixedtext.equals(deftext))
+            {
+                state.error(XmlErrorCodes.SCHEMA_ATTR$FIXED_NOT_MATCH, null, xsdAttr.xgetFixed());
+                // recovery: reset fixed to the original value
+                deftext = fmrfixedtext;
+            }
+        }
+
+        if (!local)
+        {
+            ((SchemaGlobalAttributeImpl)sAttr).setFilename(findFilename(xsdAttr));
+        }
+
+        SOAPArrayType wat = null;
+        XmlCursor c = xsdAttr.newCursor();
+        String arrayType = c.getAttributeText(WSDL_ARRAYTYPE_NAME);
+        c.dispose();
+        if (arrayType != null)
+        {
+            try
+            {
+                wat = new SOAPArrayType(arrayType, new NamespaceContext(xsdAttr));
+            }
+            catch (XmlValueOutOfRangeException e)
+            {
+                state.error(XmlErrorCodes.SOAPARRAY, new Object[] {arrayType}, xsdAttr);
+            }
+        }
+
+        SchemaAnnotationImpl ann = SchemaAnnotationImpl.getAnnotation(state.getContainer(targetNamespace), xsdAttr);
+        sAttr.init(
+            qname,
+            sType.getRef(),
+            use,
+            deftext, xsdAttr, null, isFixed,
+            wat, ann, getUserData(xsdAttr));
+
+        return sAttr;
+    }
+

@@ -1,0 +1,43 @@
+    /**
+     * [XMLBEANS-57]   scomp failure for XSD namespace "DAV:"
+     */
+    public void test_jira_XmlBeans57() throws Exception
+    {
+        String P = File.separator;
+        String outputDir = OUTPUTROOT + P + "dav";
+
+        File srcDir = new File(outputDir + P + "src");
+        srcDir.mkdirs();
+        File classDir = new File(outputDir + P + "classes");
+        classDir.mkdirs();
+
+        SchemaCompiler.Parameters params = new SchemaCompiler.Parameters();
+        params.setXsdFiles(new File[]{new File(JIRA_CASES + "xmlbeans_57.xml")});
+        params.setErrorListener(errorList);
+        params.setSrcDir(srcDir);
+        params.setClassesDir(classDir);
+        SchemaCompiler.compile(params);
+        Collection errs = params.getErrorListener();
+        boolean outTextPresent = true;
+
+        if (errs.size() != 0) {
+            for (Iterator iterator = errs.iterator(); iterator.hasNext();) {
+                Object o = iterator.next();
+                String out = o.toString();
+                System.out.println("Dav: " + out);
+                if (out.startsWith("Compiled types to"))
+                    outTextPresent = false;
+            }
+        }
+
+        //cleanup gen'd dirs
+        srcDir.deleteOnExit();
+        classDir.deleteOnExit();
+
+        if (outTextPresent)
+            System.out.println("No errors when running schemacompiler with DAV namespace");
+        else
+            throw new Exception("There were errors while compiling XSD with DAV " +
+                    "namespace. See sys.out for more info");
+    }
+

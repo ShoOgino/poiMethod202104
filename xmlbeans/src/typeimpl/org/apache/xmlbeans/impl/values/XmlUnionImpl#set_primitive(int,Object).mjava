@@ -1,0 +1,103 @@
+    /**
+     * Grabs a chained value of type st, creating and attaching
+     * one if not present.
+     */
+    private void set_primitive(int typecode, Object val)
+    {
+        SchemaType[] members = _schemaType.getUnionConstituentTypes();
+        assert(members != null);
+
+        boolean pushed = false;
+        if (has_store())
+        {
+            NamespaceContext.push(new NamespaceContext(get_store()));
+            pushed = true;
+        }
+        try
+        {
+            for (boolean validate = true; validate || !_validateOnSet(); validate = false)
+            {
+            outer: for (int i = 0; i < members.length; i++)
+            {
+                // candidates must be a logical match for the desired typecode
+                if (logical_overlap(members[i], typecode))
+                {
+                    XmlAnySimpleType newval;
+
+                    try
+                    {
+                        newval = ((SchemaTypeImpl) members[i]).newValue(val, validate);
+                    }
+                    catch (XmlValueOutOfRangeException e)
+                    {
+                        // doesn't match this type even though logical categories
+                        // line up (probably because of restriciton); try the next type.
+                        continue outer;
+                    }
+                    catch (Exception e)
+                    {
+                        assert(false) : "Unexpected " + e;
+                        continue outer;
+                    }
+
+                    /* TODO: rethink this - disabling for now.
+
+                    // OK, now we've got a newval... We have to verify
+                    // that lexically it doesn't overlap with previous types
+
+                    String newvaltext = null;
+
+                    inner: for (int j = 0; j < i; j++)
+                    {
+                        if (members[j].getSimpleVariety() == SchemaType.LIST ||
+                            lexical_overlap(members[j].getPrimitiveType().getBuiltinTypeCode(),
+                                            newval.schemaType().getPrimitiveType().getBuiltinTypeCode()))
+                        {
+                            // there is a preceding type that may lexically overlap with ours...
+                            // if it lexically contains the string representation of our new
+                            // proposed value, then it's impossible for the union to have our
+                            // logical value (because it would have been masked) and throw an
+                            // error.
+                            if (newvaltext == null)
+                                newvaltext = newval.stringValue();
+                            try
+                            {
+                                // discard return value
+                                members[i].newValue(newvaltext);
+
+                                // oh bad, we succeeded. Our instance lexically looks like a
+                                // previous type, and this isn't a valid value. Keep on hunting.
+                                continue outer;
+                            }
+                            catch (XmlValueOutOfRangeException e)
+                            {
+                                // this is good: this error means that our value doesn't look like
+                                // the other type.
+                                continue inner;
+                            }
+                        }
+                    }
+
+                    */
+
+                    // No lexical masking: we're OK
+                    _value = newval;
+                    _textvalue = _value.stringValue();
+                    return;
+                }
+            }
+            if (!validate)
+                break;
+            }
+        }
+        finally
+        {
+            if (pushed)
+                NamespaceContext.pop();
+        }
+
+        // doesn't match any of the members; throw
+        throw new XmlValueOutOfRangeException(XmlErrorCodes.DATATYPE_VALID$UNION,
+            new Object[] { val.toString(), QNameHelper.readable(_schemaType) });
+    }
+

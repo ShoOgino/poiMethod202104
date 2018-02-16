@@ -1,0 +1,49 @@
+    private static void validateQualifiedName ( String name, String uri, boolean isAttr )
+    {
+        assert name != null;
+
+        if (uri == null)
+            uri = "";
+        
+        int i = name.indexOf( ':' );
+
+        String local;
+        
+        if (i < 0)
+        {
+            validateNcName( local = name );
+
+            if (isAttr && local.equals( "xmlns" ) && !uri.equals( Locale._xmlnsUri ))
+            {
+                throw
+                    new NamespaceErr(
+                        "Default xmlns attribute does not have namespace: " + Locale._xmlnsUri );
+            }
+        }
+        else
+        {
+            if (i == 0)
+                throw new NamespaceErr( "Invalid qualified name, no prefix specified" );
+
+            String prefix = name.substring( 0, i );
+            
+            validateNcName( prefix );
+
+            if (uri.length() == 0)
+                throw new NamespaceErr( "Attempt to give a prefix for no namespace" );
+            
+            local = name.substring( i + 1 );
+            
+            if (local.indexOf( ':' ) >= 0)
+                throw new NamespaceErr( "Invalid qualified name, more than one colon" );
+            
+            validateNcName( local );
+
+            if (prefix.equals( "xml" ) && !uri.equals( Locale._xml1998Uri ))
+                throw new NamespaceErr( "Invalid prefix - begins with 'xml'" );
+        }
+        
+        if (local.length() == 0)
+            throw new NamespaceErr( "Invalid qualified name, no local part specified" );
+    }
+

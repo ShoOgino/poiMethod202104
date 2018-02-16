@@ -1,0 +1,383 @@
+    /**
+     * Translates a local or global schema element.
+     */
+    // check rule 3.3.3
+    // http://www.w3c.org/TR/#section-Constraints-on-XML-Representations-of-Element-Declarations
+    public static SchemaLocalElementImpl translateElement(
+        Element xsdElt, String targetNamespace, boolean chameleon,
+        String elemFormDefault, String attFormDefault,
+        List anonymousTypes, SchemaType outerType)
+    {
+        StscState state = StscState.get();
+
+        SchemaTypeImpl sgHead = null;
+
+        // translate sg head
+        if (xsdElt.isSetSubstitutionGroup())
+        {
+            sgHead = state.findDocumentType(xsdElt.getSubstitutionGroup(),
+                ((SchemaTypeImpl)outerType).getChameleonNamespace(), targetNamespace);
+
+            if (sgHead != null)
+                StscResolver.resolveType(sgHead);
+        }
+
+        String name = xsdElt.getName();
+        QName ref = xsdElt.getRef();
+
+
+        if (ref != null && name != null)
+        {
+            // if (name.equals(ref.getLocalPart()) && uriMatch(targetNamespace, ref.getNamespaceURI()))
+            //     state.warning("Element " + name + " specifies both a ref and a name", XmlErrorCodes.ELEMENT_EXTRA_REF, xsdElt.xgetRef());
+            // else
+                state.error(XmlErrorCodes.SCHEMA_ELEM$REF_OR_NAME_HAS_BOTH, new Object[] { name }, xsdElt.xgetRef());
+            // ignore name
+            name = null;
+        }
+        if (ref == null && name == null)
+        {
+            state.error(XmlErrorCodes.SCHEMA_ELEM$REF_OR_NAME_HAS_NEITHER, null, xsdElt);
+            // recovery: ignore this element
+            return null;
+        }
+        if (name != null && !XMLChar.isValidNCName(name))
+        {
+            state.error(XmlErrorCodes.INVALID_VALUE, new Object[] { name, "name" }, xsdElt.xgetName());
+            // recovery: let the name go through anyway.
+        }
+
+        if (ref != null)
+        {
+            if (xsdElt.getType() != null)
+            {
+                state.error(XmlErrorCodes.SCHEMA_ELEM$REF_FEATURES, new Object[] { "type" }, xsdElt.xgetType());
+                // recovery: let the name go through anyway.
+            }
+
+            if (xsdElt.getSimpleType() != null)
+            {
+                state.error(XmlErrorCodes.SCHEMA_ELEM$REF_FEATURES, new Object[] { "<simpleType>" }, xsdElt.getSimpleType());
+                // recovery: let the name go through anyway.
+            }
+
+            if (xsdElt.getComplexType() != null)
+            {
+                state.error(XmlErrorCodes.SCHEMA_ELEM$REF_FEATURES, new Object[] { "<complexType>" }, xsdElt.getComplexType());
+                // recovery: let the name go through anyway.
+            }
+
+            if (xsdElt.getForm() != null)
+            {
+                state.error(XmlErrorCodes.SCHEMA_ELEM$REF_FEATURES, new Object[] { "form" }, xsdElt.xgetForm());
+                // recovery: let the name go through anyway.
+            }
+
+            if (xsdElt.sizeOfKeyArray() > 0)
+            {
+                state.warning(XmlErrorCodes.SCHEMA_ELEM$REF_FEATURES, new Object[] { "<key>" }, xsdElt);
+                // recovery: ignore
+            }
+
+            if (xsdElt.sizeOfKeyrefArray() > 0)
+            {
+                state.warning(XmlErrorCodes.SCHEMA_ELEM$REF_FEATURES, new Object[] { "<keyref>" }, xsdElt);
+                // recovery: ignore
+            }
+
+            if (xsdElt.sizeOfUniqueArray() > 0)
+            {
+                state.warning(XmlErrorCodes.SCHEMA_ELEM$REF_FEATURES, new Object[] { "<unique>" }, xsdElt);
+                // recovery: ignore
+            }
+
+            if (xsdElt.isSetDefault())
+            {
+                state.warning(XmlErrorCodes.SCHEMA_ELEM$REF_FEATURES, new Object[] { "default" }, xsdElt.xgetDefault());
+                // recovery: ignore
+            }
+
+            if (xsdElt.isSetFixed())
+            {
+                state.warning(XmlErrorCodes.SCHEMA_ELEM$REF_FEATURES, new Object[] { "fixed" }, xsdElt.xgetFixed());
+                // recovery: ignore
+            }
+
+            if (xsdElt.isSetBlock())
+            {
+                state.warning(XmlErrorCodes.SCHEMA_ELEM$REF_FEATURES, new Object[] { "block" }, xsdElt.xgetBlock());
+                // recovery: ignore
+            }
+
+            if (xsdElt.isSetNillable())
+            {
+                state.warning(XmlErrorCodes.SCHEMA_ELEM$REF_FEATURES, new Object[] { "nillable" }, xsdElt.xgetNillable());
+                // recovery: ignore
+            }
+
+            assert(xsdElt instanceof LocalElement);
+            SchemaGlobalElement referenced = state.findGlobalElement(ref, chameleon ? targetNamespace : null, targetNamespace);
+            if (referenced == null)
+            {
+                state.notFoundError(ref, SchemaType.ELEMENT, xsdElt.xgetRef(), true);
+                // recovery: ignore this element
+                return null;
+            }
+            SchemaLocalElementImpl target = new SchemaLocalElementImpl();
+            target.setParticleType(SchemaParticle.ELEMENT);
+            target.setUserData(getUserData(xsdElt));
+            copyGlobalElementToLocalElement( referenced, target );
+            return target;
+        }
+
+        QName qname;
+        SchemaLocalElementImpl impl;
+        SchemaType sType = null;
+
+        if (xsdElt instanceof LocalElement)
+        {
+            impl = new SchemaLocalElementImpl();
+            boolean qualified = false; // default
+            FormChoice form = xsdElt.xgetForm();
+            if (form != null)
+                qualified = form.getStringValue().equals(FORM_QUALIFIED);
+            else if (elemFormDefault != null)
+                qualified = elemFormDefault.equals(FORM_QUALIFIED);
+            else
+            {
+                form = findElementFormDefault(xsdElt);
+                qualified = form != null && form.getStringValue().equals(FORM_QUALIFIED);
+            }
+
+            qname = qualified ? QNameHelper.forLNS(name, targetNamespace) : QNameHelper.forLN(name);
+        }
+        else
+        {
+            SchemaGlobalElementImpl gelt = new SchemaGlobalElementImpl(state.getContainer(targetNamespace));
+            impl = gelt;
+
+            // Set subst group head
+            if (sgHead != null)
+            {
+                SchemaGlobalElementImpl head = state.findGlobalElement(xsdElt.getSubstitutionGroup(), chameleon ? targetNamespace : null, targetNamespace);
+                if (head != null)
+                    gelt.setSubstitutionGroup(head.getRef());
+            }
+
+            // Set subst group members
+            qname = QNameHelper.forLNS(name, targetNamespace);
+            SchemaTypeImpl docType = (SchemaTypeImpl)outerType;
+
+            QName[] sgMembers = docType.getSubstitutionGroupMembers();
+            QNameSetBuilder transitionRules = new QNameSetBuilder();
+            transitionRules.add(qname);
+
+            for (int i = 0 ; i < sgMembers.length ; i++)
+            {
+                gelt.addSubstitutionGroupMember(sgMembers[i]);
+                transitionRules.add(sgMembers[i]);
+            }
+
+            impl.setTransitionRules(QNameSet.forSpecification(transitionRules), false);
+            impl.setTransitionNotes(QNameSet.EMPTY, true);
+
+            boolean finalExt = false;
+            boolean finalRest = false;
+            Object ds = xsdElt.getFinal();
+            if (ds != null)
+            {
+                if (ds instanceof String && ds.equals("#all"))
+                {
+                    // #ALL value
+                    finalExt = finalRest = true;
+                }
+                else if (ds instanceof List)
+                {
+                    if (((List)ds).contains("extension"))
+                        finalExt = true;
+                    if (((List)ds).contains("restriction"))
+                        finalRest = true;
+                }
+            }
+
+            gelt.setFinal(finalExt, finalRest);
+            gelt.setAbstract(xsdElt.getAbstract());
+            gelt.setFilename(findFilename(xsdElt));
+            gelt.setParseContext(xsdElt, targetNamespace, chameleon);
+        }
+
+        SchemaAnnotationImpl ann = SchemaAnnotationImpl.getAnnotation(state.getContainer(targetNamespace), xsdElt);
+        impl.setAnnotation(ann);
+        impl.setUserData(getUserData(xsdElt));
+        if (xsdElt.getType() != null)
+        {
+            sType = state.findGlobalType(xsdElt.getType(), chameleon ? targetNamespace : null, targetNamespace );
+            if (sType == null)
+                state.notFoundError(xsdElt.getType(), SchemaType.TYPE, xsdElt.xgetType(), true);
+        }
+
+        boolean simpleTypedef = false;
+        Annotated typedef = xsdElt.getComplexType();
+        if (typedef == null)
+        {
+            typedef = xsdElt.getSimpleType();
+            simpleTypedef = true;
+        }
+
+        if ((sType != null) && typedef != null)
+        {
+            state.error(XmlErrorCodes.SCHEMA_ELEM$TYPE_ATTR_OR_NESTED_TYPE, null, typedef);
+            typedef = null;
+        }
+
+        if (typedef != null)
+        {
+            Object[] grps = state.getCurrentProcessing();
+            QName[] context = new QName[grps.length];
+            for (int i = 0; i < context.length; i++)
+                if (grps[i] instanceof SchemaModelGroupImpl)
+                    context[i] = ((SchemaModelGroupImpl ) grps[i]).getName();
+            SchemaType repeat = checkRecursiveGroupReference(context, qname, (SchemaTypeImpl)outerType);
+            if (repeat != null)
+                sType = repeat;
+            else
+            {
+            SchemaTypeImpl sTypeImpl = new SchemaTypeImpl(state.getContainer(targetNamespace));
+            sType = sTypeImpl;
+            sTypeImpl.setContainerField(impl);
+            sTypeImpl.setOuterSchemaTypeRef(outerType == null ? null : outerType.getRef());
+            sTypeImpl.setGroupReferenceContext(context);
+            // leave the anonymous type unresolved: it will be resolved later.
+            anonymousTypes.add(sType);
+            sTypeImpl.setSimpleType(simpleTypedef);
+            sTypeImpl.setParseContext(typedef, targetNamespace, chameleon,
+                 elemFormDefault, attFormDefault, false);
+            sTypeImpl.setAnnotation(SchemaAnnotationImpl.getAnnotation(state.getContainer(targetNamespace), typedef));
+            sTypeImpl.setUserData(getUserData(typedef));
+            }
+        }
+
+        if (sType == null)
+        {
+            // type may inherit from substitution group head
+            if (sgHead != null)
+            {
+                SchemaGlobalElement head = state.findGlobalElement(xsdElt.getSubstitutionGroup(), chameleon ? targetNamespace : null, targetNamespace);
+
+                // Bug - Do I need to copy the type if it's anonymous?
+                // If element does not exist, error has already been reported
+                if (head != null)
+                    sType = head.getType();
+            }
+
+        }
+
+
+
+        if (sType == null)
+            sType = BuiltinSchemaTypeSystem.ST_ANY_TYPE;
+
+        SOAPArrayType wat = null;
+        XmlCursor c = xsdElt.newCursor();
+        String arrayType = c.getAttributeText(WSDL_ARRAYTYPE_NAME);
+        c.dispose();
+        if (arrayType != null)
+        {
+            try
+            {
+                wat = new SOAPArrayType(arrayType, new NamespaceContext(xsdElt));
+            }
+            catch (XmlValueOutOfRangeException e)
+            {
+                state.error(XmlErrorCodes.SOAPARRAY, new Object[] {arrayType}, xsdElt);
+            }
+        }
+        impl.setWsdlArrayType(wat);
+
+        boolean isFixed = xsdElt.isSetFixed();
+        if (xsdElt.isSetDefault() && isFixed)
+        {
+            state.error(XmlErrorCodes.SCHEMA_ELEM$DEFAULT_OR_FIXED, null, xsdElt.xgetFixed());
+            // recovery: ignore fixed
+            isFixed = false;
+        }
+        impl.setParticleType(SchemaParticle.ELEMENT);
+        impl.setNameAndTypeRef(qname, sType.getRef());
+        impl.setNillable(xsdElt.getNillable());
+        impl.setDefault(isFixed ? xsdElt.getFixed() : xsdElt.getDefault(), isFixed, xsdElt);
+
+        Object block = xsdElt.getBlock();
+        boolean blockExt = false;
+        boolean blockRest = false;
+        boolean blockSubst = false;
+
+        if (block != null)
+        {
+            if (block instanceof String && block.equals("#all"))
+            {
+                // #ALL value
+                blockExt = blockRest = blockSubst = true;
+            }
+            else if (block instanceof List)
+            {
+                if (((List)block).contains("extension"))
+                    blockExt = true;
+                if (((List)block).contains("restriction"))
+                    blockRest = true;
+                if (((List)block).contains("substitution"))
+                    blockSubst = true;
+            }
+        }
+
+        impl.setBlock(blockExt, blockRest, blockSubst);
+
+        boolean constraintFailed = false;
+
+        // Translate Identity constraints
+
+        int length = xsdElt.sizeOfKeyArray() + xsdElt.sizeOfKeyrefArray() + xsdElt.sizeOfUniqueArray();
+        SchemaIdentityConstraintImpl[] constraints = new SchemaIdentityConstraintImpl[length];
+        int cur = 0;
+
+        // Handle key constraints
+        Keybase[] keys = xsdElt.getKeyArray();
+        for (int i = 0 ; i < keys.length ; i++, cur++) {
+            constraints[cur] = translateIdentityConstraint(keys[i], targetNamespace, chameleon);
+            if (constraints[cur] != null)
+                constraints[cur].setConstraintCategory(SchemaIdentityConstraint.CC_KEY);
+            else
+                constraintFailed = true;
+        }
+
+        // Handle unique constraints
+        Keybase[] uc = xsdElt.getUniqueArray();
+        for (int i = 0 ; i < uc.length ; i++, cur++) {
+            constraints[cur] = translateIdentityConstraint(uc[i], targetNamespace, chameleon);
+            if (constraints[cur] != null)
+                constraints[cur].setConstraintCategory(SchemaIdentityConstraint.CC_UNIQUE);
+            else
+                constraintFailed = true;
+        }
+
+        // Handle keyref constraints
+        KeyrefDocument.Keyref[] krs = xsdElt.getKeyrefArray();
+        for (int i = 0 ; i < krs.length ; i++, cur++) {
+            constraints[cur] = translateIdentityConstraint(krs[i], targetNamespace, chameleon);
+            if (constraints[cur] != null)
+                constraints[cur].setConstraintCategory(SchemaIdentityConstraint.CC_KEYREF);
+            else
+                constraintFailed = true;
+        }
+
+        if (!constraintFailed)
+        {
+            SchemaIdentityConstraint.Ref[] refs = new SchemaIdentityConstraint.Ref[length];
+            for (int i = 0 ; i < refs.length ; i++)
+                refs[i] = constraints[i].getRef();
+
+            impl.setIdentityConstraints(refs);
+        }
+
+        return impl;
+    }
+

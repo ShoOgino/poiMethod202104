@@ -1,0 +1,25 @@
+    public SchemaType.Ref findAttributeTypeRef(QName name)
+    {
+        Object cached = _attributeTypeCache.get(name);
+        if (cached == CACHED_NOT_FOUND)
+            return null;
+        SchemaType.Ref result = (SchemaType.Ref) cached;
+        if (result == null)
+        {
+            for (int i = 0; i < _searchPath.length; i++)
+                if (null != (result = _searchPath[i].findAttributeTypeRef(name)))
+                    break;
+            if (result == null)
+            {
+                SchemaTypeSystem ts = typeSystemForComponent("schema" + METADATA_PACKAGE_LOAD + "/attribute/", name);
+                if (ts != null)
+                {
+                    result = ts.findAttributeTypeRef(name);
+                    assert(result != null) : "Type system registered attribute " + QNameHelper.pretty(name) + " but does not contain attribute type";
+                }
+            }
+            _attributeTypeCache.put(name, result == null ? CACHED_NOT_FOUND : result);
+        }
+        return result;
+    }
+

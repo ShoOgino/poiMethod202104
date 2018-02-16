@@ -1,0 +1,79 @@
+    private static BigInteger getEffectiveMaxRangeAllSeq(SchemaParticle derivedModel) {
+        BigInteger maxRange = BigInteger.ZERO;
+        BigInteger UNBOUNDED = null;
+        // Schema Component Constraint: Effective Total Range (all and sequence)
+        // The effective total range of a particle whose {term} is a group whose {compositor} is all or sequence is a
+        // pair of minimum and maximum, as follows:
+        // MAXIMUM
+        // 1) unbounded if the {max occurs} of any wildcard or element declaration particle in the group's {particles} or
+        // the maximum part of the effective total range of any of the group particles in the group's {particles} is
+        // unbounded, or 2) if any of those is non-zero and the {max occurs} of the particle itself is unbounded, otherwise
+        // 3) the product of the particle's {max occurs} and the *sum* of the {max occurs} of every wildcard or element
+        // declaration particle in the group's {particles} and the maximum part of the effective total range of each of
+        // the group particles in the group's {particles} (or 0 if there are no {particles}).
+
+        boolean nonZeroParticleChildFound = false;
+        BigInteger maxOccursTotal = BigInteger.ZERO;
+        BigInteger maxOccursInGroup = BigInteger.ZERO;
+        SchemaParticle[] particleChildren = derivedModel.getParticleChildren();
+        for (int i = 0; i < particleChildren.length; i++) {
+            SchemaParticle particle = particleChildren[i];
+            switch (particle.getParticleType()) {
+                case SchemaParticle.WILDCARD:
+                case SchemaParticle.ELEMENT:
+                    // if unbounded then maxoccurs will be null
+                    if (particle.getMaxOccurs() == UNBOUNDED) {
+                        maxRange = UNBOUNDED;
+                    } else {
+                        if (particle.getIntMaxOccurs() > 0) {
+                            // show tht at least one non-zero particle is found for later test
+                            nonZeroParticleChildFound = true;
+                            maxOccursTotal = maxOccursTotal.add(particle.getMaxOccurs());
+                        }
+                    }
+                    break;
+                case SchemaParticle.ALL:
+                case SchemaParticle.SEQUENCE:
+                    maxRange = getEffectiveMaxRangeAllSeq(particle);
+                    if (maxRange != UNBOUNDED) {
+                        // keep highest maxoccurs found
+                        if (maxRange.compareTo(maxOccursInGroup) > 0) {
+                            maxOccursInGroup = maxRange;
+                        }
+                    }
+                    break;
+                case SchemaParticle.CHOICE:
+                    maxRange = getEffectiveMaxRangeChoice(particle);
+                    if (maxRange != UNBOUNDED) {
+                        // keep highest maxoccurs found
+                        if (maxRange.compareTo(maxOccursInGroup) > 0) {
+                            maxOccursInGroup = maxRange;
+                        }
+                    }
+                    break;
+            }
+            // if an unbounded has been found then we are done
+            if (maxRange == UNBOUNDED) {
+                break;
+            }
+        }
+
+        // 1) unbounded if the {max occurs} of any wildcard or element declaration particle in the group's {particles} or
+        // the maximum part of the effective total range of any of the group particles in the group's {particles} is
+        // unbounded
+        if (maxRange != UNBOUNDED) {
+            // 2) if any of those is non-zero and the {max occurs} of the particle itself is unbounded
+            if (nonZeroParticleChildFound && derivedModel.getMaxOccurs() == UNBOUNDED) {
+                maxRange = UNBOUNDED;
+            } else {
+                // 3) the product of the particle's {max occurs} and the sum of the {max occurs} of every wildcard or element
+                // declaration particle in the group's {particles} and the maximum part of the effective total range of each of
+                // the group particles in the group's {particles}
+                maxRange = derivedModel.getMaxOccurs().multiply(maxOccursTotal.add(maxOccursInGroup));
+            }
+        }
+
+        return maxRange;
+
+    }
+

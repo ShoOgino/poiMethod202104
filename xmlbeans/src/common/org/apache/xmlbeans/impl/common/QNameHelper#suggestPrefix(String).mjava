@@ -1,0 +1,59 @@
+    public static String suggestPrefix(String namespace)
+    {
+        String result = (String)WELL_KNOWN_PREFIXES.get(namespace);
+        if (result != null)
+            return result;
+        
+        int len = namespace.length();
+        int i = namespace.lastIndexOf('/');
+        if (i > 0 && i == namespace.length() - 1)
+        {
+            len = i;
+            i = namespace.lastIndexOf('/', i - 1);
+        }
+        
+        i += 1; // skip '/', also covers -1 case.
+        
+        if (namespace.startsWith("www.", i))
+        {
+            i += 4; // "www.".length()
+        }
+        
+        while (i < len)
+        {
+            if (XMLChar.isNCNameStart(namespace.charAt(i)))
+                break;
+            i += 1;
+        }
+        
+        for (int end = i + 1; end < len; end += 1)
+        {
+            if (!XMLChar.isNCName(namespace.charAt(end)) || !Character.isLetterOrDigit(namespace.charAt(end)))
+            {
+                len = end;
+                break;
+            }
+        }
+        
+        // prefixes starting with "xml" are forbidden, so change "xmls" -> "xs"
+        if (namespace.length() >= i + 3 && startsWithXml(namespace, i))
+        {
+            if (namespace.length() >= i + 4)
+                return "x" + Character.toLowerCase(namespace.charAt(i + 3));
+            return "ns";
+        }
+        
+        if (len - i > 4) // four or less? leave it.
+        {
+            if (isVowel(namespace.charAt(i + 2)) && !isVowel(namespace.charAt(i + 3)))
+                len = i + 4;
+            else
+                len = i + 3; // more than four? truncate to 3.
+        }
+        
+        if (len - i == 0)
+            return "ns";
+        
+        return namespace.substring(i, len).toLowerCase();
+    }
+

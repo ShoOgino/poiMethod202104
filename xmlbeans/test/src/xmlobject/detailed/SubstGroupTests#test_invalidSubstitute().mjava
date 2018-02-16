@@ -1,0 +1,61 @@
+    /**
+     * TODO: Determine what the proper Return value is
+     *
+     * @throws Exception
+     */
+    public void test_invalidSubstitute() throws Exception
+    {
+        OrderItem order = OrderItem.Factory.newInstance();
+        ItemType item = order.addNewItem();
+        item.setName("ItemType");
+        item.setSku(new BigInteger("42"));
+
+        //FootstoolDocument fsd;
+        boolean cClassException = false;
+        try {
+
+            //on invalid substitute orignal value is returned.
+            FootstoolDocument fsd = (FootstoolDocument) item.substitute(
+                    FootstoolDocument.type.getDocumentElementName(),
+                    FootstoolDocument.type);
+            fail("Class Cast Exception was thrown on invalid substitute ");
+
+
+        } catch (ClassCastException ccEx) {
+            cClassException = true;
+        }
+
+        if (!cClassException)
+            throw new Exception("An Invalid Substitution did not throw " +
+                    "a Class Cast Exception");
+
+        try {
+            XmlObject xm = item.substitute(
+                    FootstoolDocument.type.getDocumentElementName(),
+                    FootstoolDocument.type);
+
+            System.out.println("XM: " + xm.xmlText());
+            ArrayList err = new ArrayList();
+            XmlOptions xOpts = new XmlOptions().setErrorListener(err);
+            //no way this should happen
+            if (xm.validate(xOpts)) {
+                System.err.println("Invalid substitute validated");
+
+                for (Iterator iterator = err.iterator(); iterator.hasNext();) {
+                    System.err.println("Error: " + iterator.next());
+                }
+            }
+
+            //invalid substitute should leave good state
+            System.out.println("Item: " + item.xmlText());
+
+            String exp = "<xml-fragment><sku>42</sku><name>ItemType</name></xml-fragment>";
+
+            Assert.assertTrue("text values should be the same",
+                    exp.compareTo(xm.xmlText()) == 0);
+
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+

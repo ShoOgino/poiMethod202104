@@ -1,0 +1,34 @@
+    /*
+    * [XMLBEANS-2] Problem with XmlError.forObject(String,int,XmlObject)
+    */
+    public void test_jira_xmlbeans02() throws Exception {
+        StringBuffer xmlstringbuf = new StringBuffer("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+        xmlstringbuf.append("<test>");
+        xmlstringbuf.append("<testchild attr=\"abcd\"> Jira02 </testchild>");
+        xmlstringbuf.append("</test>");
+
+        XmlObject myxmlobj = null;
+        List errors = new ArrayList();
+        XmlOptions options = new XmlOptions().setErrorListener(errors);
+        try {
+            myxmlobj = XmlObject.Factory.parse(xmlstringbuf.toString(), options);
+            XmlCursor cur = myxmlobj.newCursor();
+            XmlError xmlerr = XmlError.forObject("This is my custom error message", XmlError.SEVERITY_ERROR, myxmlobj);
+
+            // call an API on the cursor : verification of cursor not being disposed
+            System.out.println("Cursor Text Value: " + cur.getTextValue());
+
+        } catch (XmlException xme) {
+            if (!xme.getErrors().isEmpty()) {
+                for (Iterator itr = xme.getErrors().iterator(); itr.hasNext();) {
+                    System.out.println("Parse Errors :" + itr.next());
+                }
+            }
+
+        } catch (NullPointerException npe) {
+            Assert.fail("test_jira_xmlbeans02() : Null Pointer Exception thrown !");
+        }
+
+        printOptionErrMsgs(errors);
+    }
+

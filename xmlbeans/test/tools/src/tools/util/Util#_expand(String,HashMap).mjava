@@ -1,0 +1,71 @@
+    /**
+     * /**
+     * Expand key/value pairs in a String.
+     * Replaces patterns in the string of the form ${key} where
+     * the keys and values are taken from the hash map.  I'm sure someone
+     * could write this more efficiently if they wanted to.  Replacement is
+     * recursive.  Eg, if the map contains the key "foo" with value "bar", the
+     * string "My dog has ${foo}." will become "My dog has bar."
+     *
+     * @param str String to be expanded.
+     * @param map Map of key value pairs.
+     * @return The string after replacement.
+     *
+     * @deprecated See <code>expand()</code>.
+     */
+    public static String _expand(String str, HashMap map)
+    {
+        if (str == null)
+            return null;
+
+        if (map == null)
+            return str;
+
+        StringBuffer result = new StringBuffer();
+
+        int pos = 0;
+        int open = -1;
+
+        //System.out.println("expand("+str+")");
+
+        while (-1 != (open = str.indexOf("${", pos)))
+        {
+            //System.out.println("open: " + open + " = " + str.charAt(open));
+            //System.out.println("appending: " + str.substring(pos, open) + "<");
+
+            // replace everything we've passed so far.
+            result.append(str.substring(pos, open));
+            pos = open + 1;
+
+            int close = str.indexOf("}", open);
+            if (close == -1)
+                continue;
+            //System.out.println("close: " + close + " = " + str.charAt(close));
+            //System.out.println("whole region: " + str.substring(open, close+1));
+            //System.out.println("match region: " + str.substring(open+2, close));
+
+            String key = str.substring(open + 2, close);
+            if (map.containsKey(key))
+            {
+                String value = expand((String) map.get(key), map);
+                result.append(value);
+
+                // non-recursive implementation below:
+                //result.append(map.get(key));
+
+                pos = close + 1;
+                continue;
+            }
+
+            // we've passed the start character (pos = open+1) and didn't find
+            // a match, so copy the '$' to the result string
+            result.append('$');
+
+        }
+
+        result.append(str.substring(pos));
+
+        //System.out.println("## expanded: " + result.toString());
+        return result.toString();
+    }
+

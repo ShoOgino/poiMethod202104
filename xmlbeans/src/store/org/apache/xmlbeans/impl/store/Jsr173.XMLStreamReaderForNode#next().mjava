@@ -1,0 +1,45 @@
+        public int next ( ) throws XMLStreamException
+        {
+            checkChanged();
+
+            if (!hasNext())
+                throw new IllegalStateException( "No next event in stream" );
+
+            int kind = _cur.kind();
+
+            if (kind == -Cur.ROOT)
+            {
+                assert _wholeDoc;
+                _done = true;
+            }
+            else
+            {
+                if (kind == Cur.ATTR)
+                {
+                    if (!_cur.toNextAttr())
+                    {
+                        _cur.toParent();
+                        _cur.next();
+                    }
+                }
+                else if (kind == Cur.COMMENT || kind == Cur.PROCINST)
+                    _cur.skip();
+                else if (kind == Cur.ROOT)
+                {
+                    if (!_cur.toFirstAttr())
+                        _cur.next();
+                }
+                else
+                    _cur.next();
+
+                assert _wholeDoc || _end != null;
+                
+                _done = _wholeDoc ? _cur.kind() == -Cur.ROOT : _cur.isSamePos( _end );
+            }
+
+            _textFetched = false;
+            _srcFetched = false;
+
+            return getEventType();
+        }
+

@@ -1,0 +1,35 @@
+    /**
+     * for RANGE: Creates complement.
+     * for NRANGE: Creates the same meaning RANGE.
+     */
+    static Token complementRanges(Token token) {
+        if (token.type != RANGE && token.type != NRANGE)
+            throw new IllegalArgumentException("Token#complementRanges(): must be RANGE: "+token.type);
+        RangeToken tok = (RangeToken)token;
+        tok.sortRanges();
+        tok.compactRanges();
+        int len = tok.ranges.length+2;
+        if (tok.ranges[0] == 0)
+            len -= 2;
+        int last = tok.ranges[tok.ranges.length-1];
+        if (last == UTF16_MAX)
+            len -= 2;
+        RangeToken ret = Token.createRange();
+        ret.ranges = new int[len];
+        int wp = 0;
+        if (tok.ranges[0] > 0) {
+            ret.ranges[wp++] = 0;
+            ret.ranges[wp++] = tok.ranges[0]-1;
+        }
+        for (int i = 1;  i < tok.ranges.length-2;  i += 2) {
+            ret.ranges[wp++] = tok.ranges[i]+1;
+            ret.ranges[wp++] = tok.ranges[i+1]-1;
+        }
+        if (last != UTF16_MAX) {
+            ret.ranges[wp++] = last+1;
+            ret.ranges[wp] = UTF16_MAX;
+        }
+        ret.setCompacted();
+        return ret;
+    }
+

@@ -1,0 +1,79 @@
+    void printListGetter15Impl(String parentJavaName,
+        String propdesc, String propertyName,
+        String wrappedType, String xtype,
+        boolean xmltype, boolean xget)
+            throws IOException
+    {
+        String arrayName = propertyName + "Array";
+        String listName = propertyName + "List";
+        String parentThis = parentJavaName + ".this.";
+
+        String xgetMethod = (xget ? "x" : "") + "get";
+        String xsetMethod = (xget ? "x" : "") + "set";
+
+        printJavaDoc("Gets " + (xget ? "(as xml) " : "") + "a List of " + propdesc + "s");
+
+        emit("public java.util.List<" + wrappedType + "> " + xgetMethod + listName  + "()");
+        startBlock();
+
+        emit("final class " + listName + " extends java.util.AbstractList<" + wrappedType + ">");
+        startBlock();
+
+        // Object get(i)
+        if (_useJava15)
+            emit("@Override");
+        emit("public " + wrappedType + " get(int i)");
+        emit("    { return " + parentThis + xgetMethod + arrayName + "(i); }");
+        emit("");
+
+        // Object set(i, o)
+        if (_useJava15)
+            emit("@Override");
+        emit("public " + wrappedType + " set(int i, " + wrappedType + " o)");
+        startBlock();
+        emit(wrappedType + " old = " + parentThis + xgetMethod + arrayName + "(i);");
+        emit(parentThis + xsetMethod + arrayName + "(i, o);");
+        emit("return old;");
+        endBlock();
+        emit("");
+
+        // void add(i, o)
+        if (_useJava15)
+            emit("@Override");
+        emit("public void add(int i, " + wrappedType +" o)");
+        if (xmltype || xget)
+            emit("    { " + parentThis + "insertNew" + propertyName + "(i).set(o); }");
+        else
+            emit("    { " + parentThis + "insert" + propertyName + "(i, o); }");
+        emit("");
+
+        // Object remove(i)
+        if (_useJava15)
+            emit("@Override");
+        emit("public " + wrappedType +" remove(int i)");
+        startBlock();
+        emit(wrappedType + " old = " + parentThis + xgetMethod + arrayName + "(i);");
+        emit(parentThis + "remove" + propertyName + "(i);");
+        emit("return old;");
+        endBlock();
+        emit("");
+
+        // int size()
+        if (_useJava15)
+            emit("@Override");
+        emit("public int size()");
+        emit("    { return " + parentThis + "sizeOf" + arrayName + "(); }");
+        emit("");
+
+        endBlock();
+
+        emit("");
+
+        emitImplementationPreamble();
+
+        emit("return new " + listName + "();");
+
+        emitImplementationPostamble();
+        endBlock();
+    }
+

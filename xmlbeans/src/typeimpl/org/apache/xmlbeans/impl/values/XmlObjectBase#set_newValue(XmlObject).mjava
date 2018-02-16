@@ -1,0 +1,207 @@
+    public final void set_newValue(XmlObject obj)
+    {
+        if (obj == null || obj.isNil())
+        {
+            setNil();
+            return;
+        }
+
+        primitive:
+        if (obj instanceof XmlAnySimpleType)
+        {
+            XmlAnySimpleType v = (XmlAnySimpleType)obj;
+            SchemaType instanceType = ((SimpleValue)v).instanceType();
+            assert(instanceType != null) : "Nil case should have been handled already";
+
+            // handle lists
+            if (instanceType.getSimpleVariety() == SchemaType.LIST)
+            {
+                synchronized (monitor())
+                {
+                    set_prepare();
+                    set_list(((SimpleValue)v).xgetListValue());
+                    set_commit();
+                    return;
+                }
+            }
+
+            // handle atomic types
+            synchronized (monitor())
+            {
+                assert(instanceType.getSimpleVariety() == SchemaType.ATOMIC);
+                switch (instanceType.getPrimitiveType().getBuiltinTypeCode())
+                {
+                    default:
+                        assert(false) : "encountered nonprimitive type.";
+                    // case SchemaType.BTC_ANY_SIMPLE:  This is handled below...
+                    // but we eventually want to handle it with a treecopy, so
+                    // eventually we should break here.
+                        break primitive;
+
+                    case SchemaType.BTC_BOOLEAN:
+                    {
+                        boolean bool = ((SimpleValue)v).getBooleanValue();
+                        set_prepare();
+                        set_boolean(bool);
+                        break;
+                    }
+                    case SchemaType.BTC_BASE_64_BINARY:
+                    {
+                        byte[] byteArr = ((SimpleValue)v).getByteArrayValue();
+                        set_prepare();
+                        set_b64(byteArr);
+                        break;
+                    }
+                    case SchemaType.BTC_HEX_BINARY:
+                    {
+                        byte[] byteArr = ((SimpleValue)v).getByteArrayValue();
+                        set_prepare();
+                        set_hex(byteArr);
+                        break;
+                    }
+                    case SchemaType.BTC_QNAME:
+                    {
+                        QName name = ((SimpleValue)v).getQNameValue();
+                        set_prepare();
+                        set_QName(name);
+                        break;
+                    }
+                    case SchemaType.BTC_FLOAT:
+                    {
+                        float f = ((SimpleValue)v).getFloatValue();
+                        set_prepare();
+                        set_float(f);
+                        break;
+                    }
+                    case SchemaType.BTC_DOUBLE:
+                    {
+                        double d = ((SimpleValue)v).getDoubleValue();
+                        set_prepare();
+                        set_double(d);
+                        break;
+                    }
+                    case SchemaType.BTC_DECIMAL:
+                    {
+                        switch (instanceType.getDecimalSize())
+                        {
+                            case SchemaType.SIZE_BYTE:
+                            {
+                                byte b = ((SimpleValue)v).getByteValue();
+                                set_prepare();
+                                set_byte(b);
+                                break;
+                            }
+                            case SchemaType.SIZE_SHORT:
+                            {
+                                short s = ((SimpleValue)v).getShortValue();
+                                set_prepare();
+                                set_short(s);
+                                break;
+                            }
+                            case SchemaType.SIZE_INT:
+                            {
+                                int i = ((SimpleValue)v).getIntValue();
+                                set_prepare();
+                                set_int(i);
+                                break;
+                            }
+                            case SchemaType.SIZE_LONG:
+                            {
+                                long l = ((SimpleValue)v).getLongValue();
+                                set_prepare();
+                                set_long(l);
+                                break;
+                            }
+                            case SchemaType.SIZE_BIG_INTEGER:
+                            {
+                                BigInteger bi = ((SimpleValue)v).getBigIntegerValue();
+                                set_prepare();
+                                set_BigInteger(bi);
+                                break;
+                            }
+                            default:
+                            {
+                                assert(false) : "invalid numeric bit count";
+                                // fallthrough
+                            }
+                            case SchemaType.SIZE_BIG_DECIMAL:
+                            {
+                                BigDecimal bd = ((SimpleValue)v).getBigDecimalValue();
+                                set_prepare();
+                                set_BigDecimal(bd);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                    case SchemaType.BTC_ANY_URI:
+                    {
+                        String uri = v.getStringValue();
+                        set_prepare();
+                        set_text(uri);
+                        break;
+                    }
+                    case SchemaType.BTC_NOTATION:
+                    {
+                        String s = v.getStringValue();
+                        set_prepare();
+                        set_notation(s);
+                        break;
+                    }
+                    case SchemaType.BTC_DURATION:
+                    {
+                        GDuration gd = ((SimpleValue)v).getGDurationValue();
+                        set_prepare();
+                        set_GDuration(gd);
+                        break;
+                    }
+                    case SchemaType.BTC_DATE_TIME:
+                    case SchemaType.BTC_TIME:
+                    case SchemaType.BTC_DATE:
+                    case SchemaType.BTC_G_YEAR_MONTH:
+                    case SchemaType.BTC_G_YEAR:
+                    case SchemaType.BTC_G_MONTH_DAY:
+                    case SchemaType.BTC_G_DAY:
+                    case SchemaType.BTC_G_MONTH:
+                    {
+                        GDate gd = ((SimpleValue)v).getGDateValue();
+                        set_prepare();
+                        set_GDate(gd);
+                        break;
+                    }
+                    case SchemaType.BTC_STRING:
+                    {
+                        String s = v.getStringValue();
+                        set_prepare();
+                        set_String(s);
+                        break;
+                    }
+                    case SchemaType.BTC_ANY_SIMPLE:
+                        {
+                            boolean pushed = false;
+                            if (!v.isImmutable())
+                            {
+                                pushed = true;
+                                NamespaceContext.push(new NamespaceContext(v));
+                            }
+                            try
+                            {
+                                set_prepare();
+                                set_xmlanysimple(v);
+                            }
+                            finally
+                            {
+                                if (pushed)
+                                    NamespaceContext.pop();
+                            }
+                            break;
+                        }
+                }
+                set_commit();
+                return; // primitive node tree copy handled.
+            }
+        }
+
+        throw new IllegalStateException("Complex type unexpected");
+    }
+

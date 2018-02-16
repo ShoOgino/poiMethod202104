@@ -1,0 +1,53 @@
+            public XmlObject[] objectExecute()
+            {
+                if (_cur != null && _version != _cur._locale.version())
+                //throw new ConcurrentModificationException
+                // ("Document changed during select")
+                    ;
+
+                Map bindings = (Map) XmlOptions.maskNull(_options).
+                    get(XmlOptions.XQUERY_VARIABLE_MAP);
+                List resultsList;
+                resultsList = _engine.execQuery(_cur.getDom(), bindings);
+
+                assert resultsList.size() > -1;
+
+                XmlObject[] result = new XmlObject[resultsList.size()];
+                int i;
+                for (i = 0; i < resultsList.size(); i++) {
+                    //copy objects into the locale
+                    Locale l = Locale.getLocale(_cur._locale._schemaTypeLoader,
+                            _options);
+
+                    l.enter();
+                    Object node = resultsList.get(i);
+                    Cur res = null;
+                    try {
+                        //typed function results of XQuery
+                        if (!(node instanceof Node)) {
+                            //TODO: exact same code as Path.java
+                            //make a common super-class and pull this--what to name that
+                            //superclass???
+                            res = l.load("<xml-fragment/>").tempCur();
+                            res.setValue(node.toString());
+                            SchemaType type=getType(node);
+                            Locale.autoTypeDocument(res, type, null);
+                            result[i] = res.getObject();
+                        }
+                        else
+                            res = loadNode(l, (Node) node);
+                        result[i] = res.getObject();
+                    }
+                    catch (XmlException e) {
+                        throw new RuntimeException(e);
+                    }
+                    finally {
+                        l.exit();
+                    }
+                    res.release();
+                }
+                release();
+                _engine = null;
+                return result;
+            }
+

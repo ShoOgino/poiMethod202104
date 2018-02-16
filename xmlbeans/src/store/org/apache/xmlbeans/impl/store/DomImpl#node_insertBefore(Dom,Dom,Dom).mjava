@@ -1,0 +1,173 @@
+    public static Dom node_insertBefore ( Dom p, Dom nc, Dom rc )
+    {
+        assert nc != null;
+
+        // Inserting self before self is a no-op
+
+        if (nc == rc)
+            return nc;
+
+        if (rc != null && parent( rc ) != p)
+            throw new NotFoundErr( "RefChild is not a child of this node" );
+
+        // TODO - obey readonly status of a substree
+
+        int nck = nc.nodeType();
+
+        if (nck == DOCFRAG)
+        {
+            for ( Dom c = firstChild( nc ) ; c != null ; c = nextSibling( c ) )
+                validateNewChild( p, c );
+
+            for ( Dom c = firstChild( nc ) ; c != null ;  )
+            {
+                Dom n = nextSibling( c );
+
+                if (rc == null)
+                    append( c, p );
+                else
+                    insert( c, rc );
+                
+                c = n;
+            }
+            
+            return nc;
+        }
+
+        //
+        // Make sure the new child is allowed here
+        //
+
+        validateNewChild( p, nc );
+
+        //
+        // Orphan the child before establishing a new parent
+        //
+
+        remove( nc );
+        
+        int pk = p.nodeType();
+
+        // Only these nodes can be modifiable parents
+        assert pk == ATTR || pk == DOCFRAG || pk == DOCUMENT || pk == ELEMENT;
+
+        switch ( nck )
+        {
+        case ELEMENT :
+        case COMMENT :
+        case PROCINST :
+        {
+            if (rc == null)
+            {
+                Cur cTo = p.tempCur();
+                cTo.toEnd();
+                Cur.moveNode( (Xobj) nc, cTo );
+                cTo.release();
+            }
+            else
+            {
+                int rck = rc.nodeType();
+
+                if (rck == TEXT || rck == CDATA)
+                {
+                    // Quick and dirty impl....
+                    
+                    ArrayList charNodes = new ArrayList();
+                    
+                    while ( rc != null && (rc.nodeType() == TEXT || rc.nodeType() == CDATA ) )
+                    {
+                        Dom next = nextSibling( rc );
+                        charNodes.add( remove( rc ) );
+                        rc = next;
+                    }
+
+                    if (rc == null)
+                        append( nc, p );
+                    else
+                        insert( nc, rc );
+
+                    rc = nextSibling( nc );
+
+                    for ( int i = 0 ; i < charNodes.size() ; i++ )
+                    {
+                        Dom n = (Dom) charNodes.get( i );
+
+                        if (rc == null)
+                            append( n, p );
+                        else
+                            insert( n, rc );
+                    }
+                }
+                else if (rck == ENTITYREF)
+                {
+                    throw new RuntimeException( "Not implemented" );
+                }
+                else
+                {
+                    assert rck == ELEMENT || rck == PROCINST || rck == COMMENT;
+                    Cur cTo = rc.tempCur();
+                    Cur.moveNode( (Xobj) nc, cTo );
+                    cTo.release();
+                }
+            }
+
+            break;
+        }
+        
+        case TEXT :
+        case CDATA :
+        {
+            CharNode n = (CharNode) nc;
+
+            assert n._prev == null && n._next == null;
+
+            CharNode refCharNode = null;
+            Cur c = p.tempCur();
+            
+            if (rc == null)
+                c.toEnd();
+            else
+            {
+                int rck = rc.nodeType();
+                
+                if (rck == TEXT || rck == CDATA)
+                    c.moveToCharNode( refCharNode = (CharNode) rc );
+                else if (rck == ENTITYREF)
+                    throw new RuntimeException( "Not implemented" );
+                else
+                    c.moveToDom( rc );
+            }
+
+            CharNode nodes = c.getCharNodes();
+
+            nodes = CharNode.insertNode( nodes, n, refCharNode );
+
+            c.insertChars( n._src, n._off, n._cch );
+
+            c.setCharNodes( nodes );
+
+            c.release();
+
+            break;
+        }
+
+        case ENTITYREF :
+        {
+            throw new RuntimeException( "Not implemented" );
+        }
+            
+        case DOCTYPE :
+        {
+            // TODO - don't actually insert this here, associate it with the
+            // doc??  Hmm .. Perhaps I should disallow insertion into the tree
+            // at all.
+            
+            throw new RuntimeException( "Not implemented" );
+        }
+            
+        default : throw new RuntimeException( "Unexpected child node type" );
+        }
+        
+        return nc;
+    }
+

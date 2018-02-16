@@ -1,0 +1,46 @@
+    public static void summarizeResultAsHTMLTableRows(TestCaseResult result, PrintWriter out, boolean errcode)
+    {
+        TestCase testCase = result.getTestCase();
+
+        boolean errorRow = errcode && testCase.getErrorCode() != null;
+        boolean messagesRow = !result.getIvMessages().isEmpty() || !result.getSvMessages().isEmpty();
+
+        boolean sRight = testCase.getSchemaFile() == null || testCase.isSvExpected() == result.isSvActual();
+        boolean iRight = testCase.getInstanceFile() == null || testCase.isIvExpected() == result.isIvActual();
+        boolean codeRight = true;
+        if (errorRow)
+            codeRight = (errorReported(testCase.getErrorCode(), result.svMessages) || errorReported(testCase.getErrorCode(), result.ivMessages));
+
+        out.println(result.isCrash() ? "<tr bgcolor=black color=white>" : "<tr>");
+        int idRowSpan = 1 + (errorRow ? 1 : 0) + (messagesRow ? 1 : 0);
+        out.println("<td rowspan=" + idRowSpan + " valign=top>" + testCase.getId() + "</td>");
+        out.println("<td valign=top>" + makeHTMLDescription(testCase) + "</td>");
+        String sLinks;
+        if (testCase.getResourceFile() == null)
+            sLinks = makeHTMLLink(testCase.getSchemaFile(), result.isSvActual());
+        else
+            sLinks = makeHTMLLink(testCase.getSchemaFile(), result.isSvActual()) + "<br>" + makeHTMLLink(testCase.getResourceFile(), result.isSvActual());
+        
+        out.println((sRight ? "<td valign=top>" : result.isSvActual() ? "<td bgcolor=orange valign=top>" : "<td bgcolor=red valign=top>") + sLinks + "</td>");
+        out.println((iRight ? "<td valign=top>" : result.isIvActual() ? "<td bgcolor=orange valign=top>" : "<td bgcolor=red valign=top>") + makeHTMLLink(testCase.getInstanceFile(), result.isIvActual()) + "</td>");
+        out.println("</tr>");
+        if (errorRow)
+        {
+            out.println("<tr>");
+            out.println((codeRight ? "<td colspan=4 valid=top>" : "<td colspan=4 bgcolor=orange valign=top>") + "expected error: " + testCase.getErrorCode() + "</td>");
+            out.println("</tr>");
+        }
+        if (messagesRow)
+        {
+            if (!result.succeeded(errcode))
+                out.println("<tr><td colspan=4 bgcolor=yellow><xmp>");
+            else
+                out.println("<tr><td colspan=4><xmp>");
+            for (Iterator j = result.getSvMessages().iterator(); j.hasNext(); )
+                out.println(j.next());
+            for (Iterator j = result.getIvMessages().iterator(); j.hasNext(); )
+                out.println(j.next());
+            out.println("</xmp></tr></td>");
+        }
+    }
+

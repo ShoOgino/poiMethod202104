@@ -1,0 +1,45 @@
+        public int write ( Writer writer, int cchMin )
+        {
+            while ( getAvailable() < cchMin)
+            {
+                if (!process())
+                    break;
+            }
+
+            int charsAvailable = getAvailable();
+
+            if (charsAvailable > 0)
+            {
+                // I don't want to deal with the circular cases
+
+                assert _out == 0;
+                assert _in >= _out : "_in:" + _in + " < _out:" + _out;
+                assert _free == _buf.length - _in;
+
+                try
+                {
+//System.out.println("-------------\nWriting in corverter: TextSaver.write():1703  " + charsAvailable + " chars\n" + new String(_buf, 0, charsAvailable));
+                    writer.write( _buf, 0, charsAvailable );
+                    writer.flush();
+                }
+                catch ( IOException e )
+                {
+                    throw new RuntimeException( e );
+                }
+
+                _free += charsAvailable;
+
+                assert _free >= 0;
+
+                _in = 0;
+            }
+            assert _buf==null ||
+                (_out<_in && _free == _buf.length - ( _in - _out ) ) || // data in the middle, free on the edges
+                (_out>_in && _free == _out - _in ) ||                   // data on the edges, free in the middle
+                (_out==_in && _free == _buf.length) ||                  // no data, all buffer free
+                (_out==_in && _free == 0)                               // buffer full
+                : "_buf.length:" + _buf.length + " _in:" + _in + " _out:" + _out + " _free:" + _free;
+
+            return charsAvailable;
+        }
+

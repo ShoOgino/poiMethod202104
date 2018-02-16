@@ -1,0 +1,27 @@
+    synchronized Token parse(String regex, int options) throws ParseException {
+        this.options = options;
+        this.offset = 0;
+        this.setContext(S_NORMAL);
+        this.parennumber = 1;
+        this.hasBackReferences = false;
+        this.regex = regex;
+        if (this.isSet(RegularExpression.EXTENDED_COMMENT))
+            this.regex = REUtil.stripExtendedComment(this.regex);
+        this.regexlen = this.regex.length();
+
+
+        this.next();
+        Token ret = this.parseRegex();
+        if (this.offset != this.regexlen)
+            throw ex("parser.parse.1", this.offset);
+        if (this.references != null) {
+            for (int i = 0;  i < this.references.size();  i ++) {
+                ReferencePosition position = (ReferencePosition)this.references.elementAt(i);
+                if (this.parennumber <= position.refNumber)
+                    throw ex("parser.parse.2", position.position);
+            }
+            this.references.removeAllElements();
+        }
+        return ret;
+    }
+

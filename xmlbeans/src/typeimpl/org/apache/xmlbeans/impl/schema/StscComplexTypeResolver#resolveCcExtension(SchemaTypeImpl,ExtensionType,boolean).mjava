@@ -1,0 +1,170 @@
+    static void resolveCcExtension(SchemaTypeImpl sImpl, ExtensionType parseTree, boolean mixed)
+    {
+        SchemaType baseType;
+        StscState state = StscState.get();
+        String targetNamespace = sImpl.getTargetNamespace();
+        boolean chameleon = (sImpl.getChameleonNamespace() != null);
+
+        if (parseTree.getBase() == null)
+        {
+            // KHK: s4s
+            state.error("A complexContent must define a base type", XmlErrorCodes.MISSING_BASE, parseTree);
+            baseType = null; // recovery: no inheritance.
+        }
+        else
+        {
+            if (sImpl.isRedefinition())
+            {
+                baseType = state.findRedefinedGlobalType(parseTree.getBase(), sImpl.getChameleonNamespace(), sImpl);
+                if (baseType != null && !baseType.getName().equals(sImpl.getName()))
+                {
+                    state.error(XmlErrorCodes.SCHEMA_REDEFINE$SAME_TYPE,
+                        new Object[] { "<complexType>",
+                                       QNameHelper.pretty(baseType.getName()),
+                                       QNameHelper.pretty(sImpl.getName())
+                        },
+                        parseTree);
+                }
+            }
+            else
+            {
+                baseType = state.findGlobalType(parseTree.getBase(), sImpl.getChameleonNamespace(), targetNamespace);
+            }
+            if (baseType == null)
+                state.notFoundError(parseTree.getBase(), SchemaType.TYPE, parseTree.xgetBase(), true);
+        }
+
+        // Recursion
+        if (baseType != null)
+        {
+            if (!StscResolver.resolveType((SchemaTypeImpl)baseType))
+                baseType = null; // circular dependency: no inheritance
+        }
+
+        if (baseType != null && baseType.isSimpleType())
+        {
+            state.recover(XmlErrorCodes.SCHEMA_COMPLEX_TYPE$COMPLEX_CONTENT,
+                new Object[] { QNameHelper.pretty(baseType.getName()) },
+                parseTree.xgetBase());
+            baseType = null; // recovery: no inheritance.
+        }
+
+        if (baseType != null && baseType.finalExtension())
+        {
+            state.error(XmlErrorCodes.COMPLEX_TYPE_EXTENSION$FINAL,
+                new Object[] { QNameHelper.pretty(baseType.getName()), QNameHelper.pretty(sImpl.getName()) },
+                parseTree.xgetBase());
+            // recovery: just keep going
+        }
+
+        // get base content model
+        SchemaParticle baseContentModel = (baseType == null ? null : baseType.getContentModel());
+        // TODO: attribute model also
+
+        List anonymousTypes = new ArrayList();
+        Map baseElementModel = extractElementModel(baseType);
+        Group parseEg = getContentModel(parseTree);
+
+        if (baseType != null &&
+            (baseType.getContentType() == SchemaType.SIMPLE_CONTENT))
+        if (parseEg != null)
+        {
+            // if this type has complexContent, baseType is complexType
+            // but with non-empty simpleContent then this type cannot
+            // add extra elements
+            state.recover(XmlErrorCodes.COMPLEX_TYPE_EXTENSION$EXTENDING_SIMPLE_CONTENT,
+                new Object[] { QNameHelper.pretty(baseType.getName()) },
+                parseTree.xgetBase());
+            baseType = null; // recovery: no inheritance.
+        }
+        else
+        {
+            // No extra elements, the type is a complex type with simple content
+            resolveScExtensionPart2(sImpl, baseType, parseTree, targetNamespace, chameleon);
+            return;
+        }
+
+        // build extension model
+        SchemaParticle extensionModel = translateContentModel(sImpl,
+            parseEg, targetNamespace, chameleon,
+            sImpl.getElemFormDefault(), sImpl.getAttFormDefault(),
+            translateParticleCode(parseEg), anonymousTypes, baseElementModel, false, null);
+
+        // apply rule #2 near http://www.w3.org/TR/xmlschema-1/#c-mve: empty ext model -> mixed taken from base
+        if (extensionModel == null && !mixed)
+            mixed = (baseType != null && baseType.getContentType() == SchemaType.MIXED_CONTENT);
+
+        // apply Derivation Valid (Extension) rule 1.4.2.2
+        if (baseType != null && (baseType.getContentType() != SchemaType.EMPTY_CONTENT) &&
+                ((baseType.getContentType() == SchemaType.MIXED_CONTENT) != mixed))
+        {
+            state.error(XmlErrorCodes.COMPLEX_TYPE_EXTENSION$BOTH_ELEMEMENT_OR_MIXED, null, parseTree.xgetBase());
+            // recovery: just keep going
+        }
+
+        // detect the "all" base case
+        if (baseType != null && baseType.hasAllContent() && extensionModel != null)
+        {
+            // KHK: which rule? cos-particle-extend.2 or cos-all-limited.1.2.  I think the limited one.
+            state.error("Cannot extend a type with 'all' content model", XmlErrorCodes.CANNOT_EXTEND_ALL, parseTree.xgetBase());
+            extensionModel = null; // recovery: drop extension
+        }
+
+        // build content model and anonymous types
+        SchemaParticle contentModel = extendContentModel(baseContentModel, extensionModel, parseTree);
+
+        // detect the nonempty "all" case (empty <all> doesn't count - it needs to be eliminated to match XSD test cases)
+        boolean isAll = contentModel != null && contentModel.getParticleType() == SchemaParticle.ALL;
+
+        // build attr model and anonymous types
+        SchemaAttributeModelImpl attrModel;
+        if (baseType == null)
+            attrModel = new SchemaAttributeModelImpl();
+        else
+            attrModel = new SchemaAttributeModelImpl(baseType.getAttributeModel());
+        translateAttributeModel(parseTree, targetNamespace, chameleon, sImpl.getAttFormDefault(),
+            anonymousTypes, sImpl, null, attrModel, baseType, true, null);
+
+        // summarize wildcard information
+        WildcardResult wcElt = summarizeEltWildcards(contentModel);
+        WildcardResult wcAttr = summarizeAttrWildcards(attrModel);
+
+        // build state machine and verify that content model is deterministic
+        if (contentModel != null)
+        {
+            buildStateMachine(contentModel);
+            if (!StscState.get().noUpa() && !((SchemaParticleImpl)contentModel).isDeterministic())
+                StscState.get().error(XmlErrorCodes.UNIQUE_PARTICLE_ATTRIBUTION, null, parseEg);
+        }
+
+        // build property model
+        // emitDBG("Building content Model for " + sImpl);
+        Map elementPropertyModel = buildContentPropertyModelByQName(contentModel, sImpl);
+
+        // add attribute property model
+        Map attributePropertyModel = buildAttributePropertyModelByQName(attrModel, sImpl);
+
+        // compute empty/element/mixed
+        int complexVariety;
+        if (contentModel == null && baseType != null &&
+            baseType.getContentType() == SchemaType.SIMPLE_CONTENT)
+        {
+            complexVariety = SchemaType.SIMPLE_CONTENT;
+            sImpl.setContentBasedOnTypeRef(baseType.getContentBasedOnType().getRef());
+        }
+        else
+            complexVariety = ( mixed ? SchemaType.MIXED_CONTENT :
+            (contentModel == null ? SchemaType.EMPTY_CONTENT : SchemaType.ELEMENT_CONTENT));
+
+        // now fill in the actual schema type implementation
+        if (baseType == null)
+            baseType = XmlObject.type;
+        sImpl.setBaseTypeRef(baseType.getRef());
+        sImpl.setBaseDepth(((SchemaTypeImpl)baseType).getBaseDepth() + 1);
+        sImpl.setDerivationType(SchemaType.DT_EXTENSION);
+        sImpl.setComplexTypeVariety(complexVariety);
+        sImpl.setContentModel(contentModel, attrModel, elementPropertyModel, attributePropertyModel, isAll);
+        sImpl.setAnonymousTypeRefs(makeRefArray(anonymousTypes));
+        sImpl.setWildcardSummary(wcElt.typedWildcards, wcElt.hasWildcards, wcAttr.typedWildcards, wcAttr.hasWildcards);
+    }
+

@@ -1,0 +1,119 @@
+    public void testSave ( )
+        throws Exception
+    {
+        XmlObject x;
+        XmlCursor cTo;
+        
+        //
+        
+        x = XmlObject.Factory.parse( "<foo>abcdef</foo>" );
+        
+        Assert.assertTrue( x.xmlText().equals( "<foo>abcdef</foo>" ) );
+
+        //
+        
+        x = XmlObject.Factory.parse( "<foo>a&lt;b&amp;c</foo>" );
+        
+        Assert.assertTrue( x.xmlText().equals( "<foo>a&lt;b&amp;c</foo>" ) );
+
+        //
+        
+        x = XmlObject.Factory.parse( "<foo></foo>" );
+        
+        cTo = navDoc( x, "dt" );
+        cTo.insertChars( "&<" );
+        
+        Assert.assertTrue( x.xmlText().equals( "<foo>&amp;&lt;</foo>" ) );
+
+        //
+        
+        x = XmlObject.Factory.parse( "<foo><boo>bar</boo></foo>" );
+        
+        cTo = navDoc( x, "dt" );
+        
+        Assert.assertTrue( cTo.xmlText().equals( "<boo>bar</boo>" ) );
+
+        //
+        
+        x = XmlObject.Factory.parse( "<foo><boo x=\"y\">bar</boo></foo>" );
+        
+        cTo = navDoc( x, "dt" );
+        
+        Assert.assertTrue( cTo.xmlText().equals( "<boo x=\"y\">bar</boo>" ) );
+
+        // Tests fragment saving and loading
+        
+        x = XmlObject.Factory.parse( "<foo>Eric</foo>" );
+        
+        cTo = navDoc( x, "dt" );
+
+        x = XmlObject.Factory.parse( cTo.xmlText() );
+        
+        cTo = navDoc( x, "" );
+        
+        Assert.assertTrue( cTo.getTextValue().equals( "Eric" ) );
+
+        // test save where I replace the name of an element
+        
+        x = XmlObject.Factory.parse( "<foo>Eric</foo>" );
+        
+        cTo = navDoc( x, "d" );
+
+        XmlOptions options = new XmlOptions();
+        
+        options.put(
+            XmlOptions.SAVE_SYNTHETIC_DOCUMENT_ELEMENT,
+            new QName( null, "bar" ) );
+        
+        x = XmlObject.Factory.parse( cTo.xmlText( options ) );
+        
+        cTo = navDoc( x, "" );
+        
+        Assert.assertTrue( cTo.xmlText().equals( "<bar>Eric</bar>" ) );
+
+        // test save where I replace the name of the document
+        
+        x = XmlObject.Factory.parse( "<foo>Eric</foo>" );
+        
+        cTo = navDoc( x, "" );
+
+        options = new XmlOptions();
+        
+        options.put(
+            XmlOptions.SAVE_SYNTHETIC_DOCUMENT_ELEMENT,
+            new QName( null, "bar" ) );
+        
+        x = XmlObject.Factory.parse( cTo.xmlText( options ) );
+        
+        cTo = navDoc( x, "" );
+        
+        Assert.assertTrue(
+            cTo.xmlText().equals( "<bar><foo>Eric</foo></bar>" ) );
+
+        //
+        //
+        //
+        
+        x = XmlObject.Factory.parse( "<a xmlns='foo'/>" );
+
+        XmlCursor c = x.newCursor();
+
+        c.toFirstContentToken();
+        c.toFirstContentToken();
+
+        c.insertElement( "b" );
+        c.toPrevSibling();
+        Assert.assertTrue( c.getName().getLocalPart().equals( "b" ) );
+        Assert.assertTrue( c.getName().getNamespaceURI().length() == 0 );
+        
+        x = XmlObject.Factory.parse( x.xmlText() );
+        
+        c = x.newCursor();
+        
+        c.toFirstContentToken();
+        c.toFirstContentToken();
+
+        Assert.assertTrue( c.getName().getLocalPart().equals( "b" ) );
+        Assert.assertTrue( c.getName().getNamespaceURI().length() == 0 );
+    }
+

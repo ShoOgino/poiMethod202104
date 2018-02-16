@@ -1,0 +1,63 @@
+    public static void resolveDocumentType ( SchemaTypeImpl sImpl )
+    {
+        assert sImpl.isResolving();
+        
+        assert sImpl.isDocumentType();
+        
+
+        // translate the global element associated with this document type
+        // and construct a content model which allows just that element
+        
+        List anonTypes = new ArrayList();
+
+        SchemaGlobalElementImpl element =
+            (SchemaGlobalElementImpl)
+                StscTranslator.translateElement(
+                    (Element) sImpl.getParseObject(),
+                    sImpl.getTargetNamespace(), sImpl.isChameleon(), null, null,
+                    anonTypes, sImpl );
+
+        SchemaLocalElementImpl contentModel = null;
+
+        if (element != null)
+        {
+            StscState.get().addGlobalElement( element );
+                    
+            contentModel = new SchemaLocalElementImpl();
+        
+            contentModel.setParticleType( SchemaParticle.ELEMENT );
+            StscTranslator.copyGlobalElementToLocalElement( element, contentModel );
+            contentModel.setMinOccurs( BigInteger.ONE );
+            contentModel.setMaxOccurs( BigInteger.ONE );
+
+            contentModel.setTransitionNotes(QNameSet.EMPTY, true);
+        }
+
+        Map elementPropertyModel =
+            StscComplexTypeResolver.buildContentPropertyModelByQName(
+                contentModel, sImpl );
+
+        SchemaTypeImpl baseType = sImpl.getSubstitutionGroup() == null ?
+            BuiltinSchemaTypeSystem.ST_ANY_TYPE :
+            StscState.get().findDocumentType(sImpl.getSubstitutionGroup(), 
+                sImpl.isChameleon() ? sImpl.getTargetNamespace() : null, null/*already added*/)
+            ;
+
+        sImpl.setBaseTypeRef( baseType.getRef() );
+        sImpl.setBaseDepth( baseType.getBaseDepth() + 1 );
+        sImpl.setDerivationType( SchemaType.DT_RESTRICTION );
+        sImpl.setComplexTypeVariety( SchemaType.ELEMENT_CONTENT );
+
+        sImpl.setContentModel(
+            contentModel, new SchemaAttributeModelImpl(),
+            elementPropertyModel, Collections.EMPTY_MAP, false );
+        
+        sImpl.setWildcardSummary(
+            QNameSet.EMPTY, false, QNameSet.EMPTY, false );
+
+        sImpl.setAnonymousTypeRefs( makeRefArray( anonTypes ) );
+
+
+
+    }
+

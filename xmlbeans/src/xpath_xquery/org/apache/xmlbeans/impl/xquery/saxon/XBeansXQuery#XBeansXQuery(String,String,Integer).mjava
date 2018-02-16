@@ -1,0 +1,32 @@
+    /**
+     * Construct given an XQuery expression string.
+     * @param query The XQuery expression
+     * @param contextVar The name of the context variable
+     * @param boundary The offset of the end of the prolog
+     */
+    public XBeansXQuery(String query, String contextVar, Integer boundary)
+    {
+        config = new Configuration();
+        config.setDOMLevel(2);
+        config.setTreeModel(net.sf.saxon.event.Builder.STANDARD_TREE);
+        StaticQueryContext sc = new StaticQueryContext(config);
+        this.contextVar = contextVar;
+        int bdry = boundary.intValue();
+        //Saxon requires external variables at the end of the prolog...
+        query = (bdry == 0) ?
+                "declare variable $" +
+                contextVar + " external;" + query :
+                query.substring(0, bdry) +
+                "declare variable $" +
+                contextVar + " external;" +
+                query.substring(bdry);
+        try
+        {
+            xquery = sc.compileQuery(query);
+        }
+        catch (TransformerException e)
+        {
+            throw new XmlRuntimeException(e);
+        }
+    }
+

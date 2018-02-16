@@ -1,0 +1,40 @@
+    private static void validate(ValidatingXMLStreamReader valXsr, File file) throws XMLStreamException, IOException
+    {
+        Collection errors = new ArrayList();
+        XMLStreamReader xsr = null;
+        try {
+            xsr = XmlObject.Factory.
+                        parse(new FileInputStream(file)).newXMLStreamReader();
+        } catch (XmlException e) {
+            throw new XMLStreamException(e);
+        }
+
+        valXsr.init(xsr, true, null /* validate an entire document */ ,
+            XmlBeans.typeLoaderForClassLoader(ValidatingXMLStreamReader.class.getClassLoader()),
+            null,
+            errors);
+
+        while( valXsr.hasNext() )
+        {
+            valXsr.next();
+        }
+
+        if (!valXsr.isValid())
+            System.out.println("File '" + file + "' is: " + (valXsr.isValid() ? "Valid" : "INVALID"));
+
+        for (Iterator i = errors.iterator(); i.hasNext(); )
+        {
+            XmlError err = (XmlError)i.next();
+
+            String sev = (err.getSeverity()==XmlError.SEVERITY_WARNING ? "WARNING" :
+                (err.getSeverity()==XmlError.SEVERITY_INFO ? "INFO" : "ERROR"));
+
+            System.out.println(sev + " " + err.getLine() + ":" + err.getColumn() + " " + err.getMessage() + " ");
+        }
+
+        if (!valXsr.isValid())
+            System.out.println("---------------\n");
+
+        Assert.assertTrue("File '" + file.getName() +"' is invalid.", valXsr.isValid());
+    }
+

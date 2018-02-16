@@ -1,0 +1,111 @@
+    void printStringEnumeration(SchemaType sType) throws IOException
+    {
+        SchemaType baseEnumType = sType.getBaseEnumType();
+        String baseEnumClass = baseEnumType.getFullJavaName();
+        boolean hasBase = hasBase(sType);
+
+        if (!hasBase)
+        {
+            emit("");
+            emit("org.apache.xmlbeans.StringEnumAbstractBase enumValue();");
+            emit("void set(org.apache.xmlbeans.StringEnumAbstractBase e);");
+        }
+
+        emit("");
+        SchemaStringEnumEntry[] entries = sType.getStringEnumEntries();
+        HashSet seenValues = new HashSet();
+        HashSet repeatValues = new HashSet();
+        for (int i = 0; i < entries.length; i++)
+        {
+            String enumValue = entries[i].getString();
+            if (seenValues.contains(enumValue))
+            {
+                repeatValues.add(enumValue);
+                continue;
+            }
+            else
+                seenValues.add(enumValue);
+            String constName = entries[i].getEnumName();
+            if (hasBase)
+                emit("static final " + baseEnumClass + ".Enum " + constName + " = " + baseEnumClass + "." + constName + ";");
+            else
+                emit("static final Enum " + constName + " = Enum.forString(\"" + javaStringEscape(enumValue) + "\");");
+        }
+        emit("");
+        for (int i = 0; i < entries.length; i++)
+        {
+            if (repeatValues.contains(entries[i].getString()))
+                continue;
+            String constName = "INT_" + entries[i].getEnumName();
+            if (hasBase)
+                emit("static final int " + constName + " = " + baseEnumClass + "." + constName + ";");
+            else
+                emit("static final int " + constName + " = Enum." + constName + ";");
+        }
+        if (!hasBase)
+        {
+            emit("");
+            emit("/**");
+            emit(" * Enumeration value class for " + baseEnumClass + ".");
+            emit(" * These enum values can be used as follows:");
+            emit(" * <pre>");
+            emit(" * enum.toString(); // returns the string value of the enum");
+            emit(" * enum.intValue(); // returns an int value, useful for switches");
+            if (entries.length > 0)
+            emit(" * // e.g., case Enum.INT_" + entries[0].getEnumName());
+            emit(" * Enum.forString(s); // returns the enum value for a string");
+            emit(" * Enum.forInt(i); // returns the enum value for an int");
+            emit(" * </pre>");
+            emit(" * Enumeration objects are immutable singleton objects that");
+            emit(" * can be compared using == object equality. They have no");
+            emit(" * public constructor. See the constants defined within this");
+            emit(" * class for all the valid values.");
+            emit(" */");
+            emit("static final class Enum extends org.apache.xmlbeans.StringEnumAbstractBase");
+            emit("{");
+            indent();
+            emit("/**");
+            emit(" * Returns the enum value for a string, or null if none.");
+            emit(" */");
+            emit("public static Enum forString(java.lang.String s)");
+            emit("    { return (Enum)table.forString(s); }");
+            emit("/**");
+            emit(" * Returns the enum value corresponding to an int, or null if none.");
+            emit(" */");
+            emit("public static Enum forInt(int i)");
+            emit("    { return (Enum)table.forInt(i); }");
+            emit("");
+            emit("private Enum(java.lang.String s, int i)");
+            emit("    { super(s, i); }");
+            emit("");
+            for (int i = 0; i < entries.length; i++)
+            {
+                String constName = "INT_" + entries[i].getEnumName();
+                int intValue = entries[i].getIntValue();
+                emit("static final int " + constName + " = " + intValue + ";");
+            }
+            emit("");
+            emit("public static final org.apache.xmlbeans.StringEnumAbstractBase.Table table =");
+            emit("    new org.apache.xmlbeans.StringEnumAbstractBase.Table");
+            emit("(");
+            indent();
+            emit("new Enum[]");
+            emit("{");
+            indent();
+            for (int i = 0; i < entries.length; i++)
+            {
+                String enumValue = entries[i].getString();
+                String constName = "INT_" + entries[i].getEnumName();
+                emit("new Enum(\"" + javaStringEscape(enumValue) + "\", " + constName + "),");
+            }
+            outdent();
+            emit("}");
+            outdent();
+            emit(");");
+            emit("private static final long serialVersionUID = 1L;");
+            emit("private java.lang.Object readResolve() { return forInt(intValue()); } ");
+            outdent();
+            emit("}");
+        }
+    }
+

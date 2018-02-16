@@ -1,0 +1,32 @@
+    /**
+     * The canonical string representation. Specific moments or
+     * times-of-day in a specified timezone are normalized to
+     * UTC time to produce a canonical string form for them.
+     * Other recurring time specifications keep their timezone
+     * information.
+     */
+    private void ensureCanonicalString()
+    {
+        if (_canonicalString != null)
+            return;
+
+        boolean needNormalize =
+            (hasTimeZone() && getTimeZoneSign() != 0 && hasTime() &&
+            ((hasDay() == hasMonth() && hasDay() == hasYear())));
+
+        if (!needNormalize && getFraction() != null && getFraction().scale() > 0)
+        {
+            BigInteger bi = getFraction().unscaledValue();
+            needNormalize = (bi.mod(GDateBuilder.TEN).signum() == 0);
+        }
+
+        if (!needNormalize)
+            _canonicalString = toString();
+        else
+        {
+            GDateBuilder gdb = new GDateBuilder(this);
+            gdb.normalize();
+            _canonicalString = gdb.toString();
+        }
+    }
+

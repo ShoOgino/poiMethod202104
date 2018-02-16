@@ -1,0 +1,71 @@
+    Saver ( Cur c, XmlOptions options )
+    {
+        assert c._locale.entered();
+
+        options = XmlOptions.maskNull( options );
+
+        _cur = createSaveCur( c, options );
+
+        _locale = c._locale;
+        _version = _locale.version();
+
+        _namespaceStack = new ArrayList();
+        _uriMap = new HashMap();
+        _prefixMap = new HashMap();
+
+        _attrNames = new ArrayList();
+        _attrValues = new ArrayList ();
+
+        // Define implicit xml prefixed namespace
+
+        addMapping( "xml", Locale._xml1998Uri );
+
+        if (options.hasOption( XmlOptions.SAVE_IMPLICIT_NAMESPACES ))
+        {
+            Map m = (Map) options.get( XmlOptions.SAVE_IMPLICIT_NAMESPACES );
+
+            for ( Iterator i = m.keySet().iterator() ; i.hasNext() ; )
+            {
+                String prefix = (String) i.next();
+                addMapping( prefix, (String) m.get( prefix ) );
+            }
+        }
+
+        // define character map for escaped replacements
+        if (options.hasOption( XmlOptions.SAVE_SUBSTITUTE_CHARACTERS ))
+        {
+            _replaceChar = (XmlOptionCharEscapeMap)
+                options.get( XmlOptions.SAVE_SUBSTITUTE_CHARACTERS);
+        }
+
+        // If the default prefix has not been mapped, do so now
+
+        if (getNamespaceForPrefix( "" ) == null)
+        {
+            _initialDefaultUri = new String( "" );
+            addMapping( "", _initialDefaultUri );
+        }
+
+        if (options.hasOption( XmlOptions.SAVE_AGGRESSIVE_NAMESPACES ) &&
+                !(this instanceof SynthNamespaceSaver))
+        {
+            SynthNamespaceSaver saver = new SynthNamespaceSaver( c, options );
+
+            while ( saver.process() )
+                ;
+
+            if (!saver._synthNamespaces.isEmpty())
+                _preComputedNamespaces = saver._synthNamespaces;
+        }
+
+        _useDefaultNamespace =
+            options.hasOption( XmlOptions.SAVE_USE_DEFAULT_NAMESPACE );
+
+        _saveNamespacesFirst = options.hasOption( XmlOptions.SAVE_NAMESPACES_FIRST );
+
+        if (options.hasOption( XmlOptions.SAVE_SUGGESTED_PREFIXES ))
+            _suggestedPrefixes = (Map) options.get( XmlOptions.SAVE_SUGGESTED_PREFIXES);
+
+        _ancestorNamespaces = _cur.getAncestorNamespaces();
+    }
+

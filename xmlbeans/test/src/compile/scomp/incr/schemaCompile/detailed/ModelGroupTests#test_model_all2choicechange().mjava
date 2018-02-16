@@ -1,0 +1,40 @@
+    public void test_model_all2choicechange() throws Exception {
+        //XmlObject.Factory.parse(getBaseSchema("baz","elName", "elType", "attrName","attrType"));
+        XmlObject obj1 = XmlObject.Factory.parse(getSchemaTop("baz") +
+                "<xs:element name=\"elName\" type=\"bas:aType\" xmlns:bas=\"http://baz\" />" +
+                "<xs:complexType name=\"aType\">" +
+                "<xs:all>" +
+                "<xs:element name=\"a\" type=\"xs:string\" />" +
+                "<xs:element name=\"b\" type=\"xs:string\" />" +
+                "</xs:all>" +
+                "</xs:complexType>" + getSchemaBottom());
+        XmlObject obj2 = XmlObject.Factory.parse(getSchemaTop("baz") +
+                "<xs:element name=\"elName\" type=\"bas:aType\" xmlns:bas=\"http://baz\" />" +
+                "<xs:complexType name=\"aType\">" +
+                "<xs:choice>" +
+                "<xs:element name=\"a\" type=\"xs:string\" />" +
+                "<xs:element name=\"b\" type=\"xs:string\" />" +
+                "</xs:choice>" +
+                "</xs:complexType>" + getSchemaBottom());
+        XmlObject[] schemas = new XmlObject[]{obj1};
+        XmlObject[] schemas2 = new XmlObject[]{obj2};
+        schemas[0].documentProperties().setSourceName("obj1");
+        schemas2[0].documentProperties().setSourceName("obj2");
+
+        SchemaTypeSystem base = compileSchemas(schemas, builtin, xm);
+        SchemaTypeSystem incr = incrCompileXsd(base, schemas2, builtin, xm);
+
+        echoSts(base, incr);
+        QName[] baseTypes = new QName[]{new QName("http://baz", "elName")};
+        QName[] incrTypes = new QName[]{new QName("http://baz", "elName")};
+
+        findElementbyQName(base, baseTypes);
+        findElementbyQName(incr, incrTypes);
+
+        //        if (incr.findElement(incrTypes[0]).getType().g
+        Assert.assertNotSame(base, incr);
+
+        compareandPopErrors(out, outincr, errors);
+        handleErrors(errors);
+    }
+

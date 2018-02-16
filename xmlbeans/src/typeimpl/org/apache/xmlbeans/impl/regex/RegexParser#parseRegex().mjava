@@ -1,0 +1,24 @@
+    /**
+     * regex ::= term (`|` term)*
+     * term ::= factor+
+     * factor ::= ('^' | '$' | '\A' | '\Z' | '\z' | '\b' | '\B' | '\<' | '\>'
+     *            | atom (('*' | '+' | '?' | minmax ) '?'? )?)
+     *            | '(?=' regex ')'  | '(?!' regex ')'  | '(?&lt;=' regex ')'  | '(?&lt;!' regex ')'
+     * atom ::= char | '.' | range | '(' regex ')' | '(?:' regex ')' | '\' [0-9]
+     *          | '\w' | '\W' | '\d' | '\D' | '\s' | '\S' | category-block 
+     */
+    Token parseRegex() throws ParseException {
+        Token tok = this.parseTerm();
+        Token parent = null;
+        while (this.read() == T_OR) {
+            this.next();                    // '|'
+            if (parent == null) {
+                parent = Token.createUnion();
+                parent.addChild(tok);
+                tok = parent;
+            }
+            tok.addChild(this.parseTerm());
+        }
+        return tok;
+    }
+

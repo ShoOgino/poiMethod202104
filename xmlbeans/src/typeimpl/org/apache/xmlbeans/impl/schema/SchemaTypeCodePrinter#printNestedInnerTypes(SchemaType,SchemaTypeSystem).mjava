@@ -1,0 +1,23 @@
+    void printNestedInnerTypes(SchemaType sType, SchemaTypeSystem system) throws IOException
+    {
+        boolean redefinition = sType.getName() != null &&
+            sType.getName().equals(sType.getBaseType().getName());
+        while (sType != null)
+        {
+            SchemaType[] anonTypes = sType.getAnonymousTypes();
+            for (int i = 0; i < anonTypes.length; i++)
+            {
+                if (anonTypes[i].isSkippedAnonymousType())
+                    printNestedInnerTypes(anonTypes[i], system);
+                else
+                    printInnerType(anonTypes[i], system);
+            }
+            // For redefinition other than by extension for complex types, go ahead and print
+            // the anonymous types in the base
+            if (!redefinition ||
+                (sType.getDerivationType() != SchemaType.DT_EXTENSION && !sType.isSimpleType()))
+                break;
+            sType = sType.getBaseType();
+        }
+    }
+

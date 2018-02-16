@@ -1,0 +1,25 @@
+    public SchemaGlobalElement.Ref findElementRef(QName name)
+    {
+        Object cached = _elementCache.get(name);
+        if (cached == CACHED_NOT_FOUND)
+            return null;
+        SchemaGlobalElement.Ref result = (SchemaGlobalElement.Ref) cached;
+        if (result == null)
+        {
+            for (int i = 0; i < _searchPath.length; i++)
+                if (null != (result = _searchPath[i].findElementRef(name)))
+                    break;
+            if (result == null)
+            {
+                SchemaTypeSystem ts = typeSystemForComponent("schema" + METADATA_PACKAGE_LOAD + "/element/", name);
+                if (ts != null)
+                {
+                    result = ts.findElementRef(name);
+                    assert(result != null) : "Type system registered element " + QNameHelper.pretty(name) + " but does not return it";
+                }
+            }
+            _elementCache.put(name, result == null ? CACHED_NOT_FOUND : result);
+        }
+        return result;
+    }
+

@@ -1,0 +1,82 @@
+    public void testDeleteReusableGroups() throws Exception
+    {
+        System.out.println("Inside test case testDeleteSubstitutionGroups()");
+
+        // Step 1: read in a clean XSD groups_added.xsd
+        String sBaseSourceName = "testsourcename";
+        SchemaTypeSystem baseSTS = createNewSTS("reusable_grps_added.xsd_",
+                null,
+                "BaseSchemaTS",
+                sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", baseSTS);
+
+        // there should be NO recovearble errors
+        Assert.assertFalse("Recovered Errors for Valid Schema",
+                printRecoveredErrors());
+
+        // the tests - Walk thro the valid SOM
+        inspectSOM(baseSTS, 7, 0, 5, 1);
+
+        // Test for saving of the SOM - should go thro
+        Assert.assertTrue("SOM " + baseSTS.getName() + "Save failed!",
+                checkPSOMSave(baseSTS));
+
+        // instance validation - should be ok
+        Assert.assertTrue("Validation against instance failed",
+                validateInstance(getTestCaseFile("instance_subst_grps_valid.xml"), baseSTS));
+
+        // verify named model groups
+        Assert.assertTrue("Attribute Group 'AttributeGroup' should exist",
+                getAttributeGroup(baseSTS, "AttributeGroup"));
+        Assert.assertTrue("Model Group 'NamedModelGroup' should exist",
+                getModelGroup(baseSTS, "NamedModelGroup"));
+
+        // step2: load an invalid PSOM by deleting the ModelGroup and AttributeGroup definitions commented
+        SchemaTypeSystem modifiedSTS = createNewSTS("reusable_grps.xsd_",
+                baseSTS,
+                "ModifiedSchemaTS",
+                sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", modifiedSTS);
+
+        // Recovered Errors, Test for saving of the SOM
+        printRecoveredErrors();
+        Assert.assertFalse("SOM " + modifiedSTS.getName() + "Save Success - should fail!",
+                checkPSOMSave(modifiedSTS));
+
+        // the tests - Walk thro the valid SOM
+        inspectSOM(modifiedSTS, 7, 0, 5, 0);
+
+        // instance validation - should fail
+        Assert.assertFalse("Validation against instance failed",
+                validateInstance(getTestCaseFile("instance_subst_grps_valid.xml"), modifiedSTS));
+
+        // named model groups
+        Assert.assertFalse("Attribute Group 'AttributeGroup' should not exist",
+                getAttributeGroup(modifiedSTS, "AttributeGroup"));
+        Assert.assertFalse("Model Group 'NamedModelGroup' should not exist",
+                getModelGroup(modifiedSTS, "NamedModelGroup"));
+
+        // step 3: create a PSOM with the original xsd
+        SchemaTypeSystem finalSTS = createNewSTS("groups_added.xsd_",
+                modifiedSTS,
+                "FinalSchemaTS", sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", finalSTS);
+
+        // Test for saving of the SOM - should go thro
+        Assert.assertTrue("SOM " + finalSTS.getName() + "Save failed!",
+                checkPSOMSave(finalSTS));
+
+        // instance validation - should be ok
+        Assert.assertTrue("Validation against instance failed",
+                validateInstance(getTestCaseFile("instance_subst_grps_valid.xml"), finalSTS));
+
+        // verify named model groups types
+        Assert.assertTrue("Attribute Group 'AttributeGroup' should exist",
+                getAttributeGroup(baseSTS, "AttributeGroup"));
+        Assert.assertTrue("Model Group 'NamedModelGroup' should exist",
+                getModelGroup(baseSTS, "NamedModelGroup"));
+
+        // compare this to the original schema here
+        Assert.assertTrue(compareSavedSOMs("BaseSchemaTS","FinalSchemaTS"));
+    }
+

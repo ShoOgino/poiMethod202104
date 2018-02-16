@@ -1,0 +1,53 @@
+    public static void main(String[] args) throws org.apache.xmlbeans.XmlException
+    {
+        String xml =
+            "<root>\n" +
+                "<ns:a xmlns:ns=\"http://a.com\"><b foo=\"value\">text1<c/>text2<c/>text3<c>text</c>text4</b></ns:a>\n" +
+                "</root>";
+        NamespaceContext ns = new NamespaceContext() {
+            public String getNamespaceURI(String prefix)
+            {
+                if ("ns".equals(prefix))
+                    return "http://a.com";
+                else
+                    return null;
+            }
+            public String getPrefix(String namespaceUri)
+            {
+                return null;
+            }
+            public java.util.Iterator getPrefixes(String namespaceUri)
+            {
+                return null;
+            }
+        };
+        XmlCursor c = org.apache.xmlbeans.XmlObject.Factory.parse(xml).newCursor();
+        c.toFirstContentToken(); // on <root>
+        c.toFirstContentToken(); // on <a>
+        c.toFirstChild();        // on <b>
+        c.toFirstChild();        // on <c>
+        c.push(); System.out.println(generateXPath(c, null, ns)); c.pop();
+        c.toNextSibling();
+        c.toNextSibling();       // on the last <c>
+        c.push(); System.out.println(generateXPath(c, null, ns)); c.pop();
+        XmlCursor d = c.newCursor();
+        d.toParent();
+        c.push(); System.out.println(generateXPath(c, d, ns)); c.pop();
+        d.toParent();
+        c.push(); System.out.println(generateXPath(c, d, ns)); c.pop();
+        c.toFirstContentToken(); // on text content of the last <c>
+        c.push(); System.out.println(generateXPath(c, d, ns)); c.pop();
+        c.toParent();
+        c.toPrevToken();         // on text content before the last <c>
+        c.push(); System.out.println(generateXPath(c, d, ns)); c.pop();
+        c.toParent();            // on <b>
+        c.push(); System.out.println(generateXPath(c, d, ns)); c.pop();
+        c.toFirstAttribute();    // on the "foo" attribute
+        c.push(); System.out.println(generateXPath(c, d, ns)); c.pop();
+        c.toParent();
+        c.toParent();
+        c.toNextToken();         // on the "xmlns:ns" attribute
+        c.push(); System.out.println(generateXPath(c, d, ns)); c.pop();
+        c.push(); System.out.println(generateXPath(c, null, ns)); c.pop();
+    }
+

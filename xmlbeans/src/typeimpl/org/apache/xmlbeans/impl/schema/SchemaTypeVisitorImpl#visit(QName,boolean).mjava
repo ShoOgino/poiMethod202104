@@ -1,0 +1,151 @@
+    /**
+     * The actual implementation that
+     * traverses a deterministic content model, checking for
+     * validity at any given point.
+     *
+     * When testValidity is false then this method will change states
+     * if the current state is valid
+     *
+     * When testValidity is true then this method will not change states
+     * and will return if a particular state is valid or invalid
+     */
+
+    public boolean visit(QName eltName, boolean testValidity)
+    {
+        if (!prepare())
+            return notValid();
+
+        // init with some values out of processedChildCount and stackSize range
+        int lastAtProcessedChildCount = -2;
+        int lastAtStackSize = -2;
+
+        traversing: for (;;)
+        {
+            //  optimization for cases where state doesn't change between _top._curMin and _top._curMax
+            //  check for state change        see JIRA bug XMLBEANS-37
+            if (_top._curCount>_top._curMin &&
+                lastAtProcessedChildCount==_top._processedChildCount &&
+                lastAtStackSize==_stackSize)
+            {
+                _top._curCount = _top._curMax;
+            }
+
+            // save state
+            lastAtProcessedChildCount = _top._processedChildCount;
+            lastAtStackSize = _stackSize;
+
+            while (_top._curCount >= _top._curMax)
+            {
+                if (!pop())
+                    break traversing;
+            }
+
+            minmax: switch (_top._curPart.getParticleType())
+            {
+                default:
+                    assert(false);
+
+                case SchemaParticle.WILDCARD:
+                    if (!_top._curPart.canStartWithElement(eltName))
+                    {
+                        if (_top._curCount < _top._curMin)
+                            return notValid();
+                        break minmax;
+                    }
+                    _top._curCount++;
+                    return ok(_top._curPart, testValidity);
+
+                case SchemaParticle.ELEMENT:
+                    if (!_top._curPart.canStartWithElement(eltName))
+                    {
+                        if (_top._curCount < _top._curMin)
+                            return notValid();
+                        break minmax;
+                    }
+                    _top._curCount++;
+                    return ok(_top._curPart, testValidity);
+
+                case SchemaParticle.SEQUENCE:
+                    for (int i = _top._processedChildCount; i < _top._childCount; i++)
+                    {
+                        SchemaParticle candidate = _top._curPart.getParticleChild(i);
+                        if (candidate.canStartWithElement(eltName))
+                        {
+                            _top._processedChildCount = i + 1;
+                            push(candidate);
+                            continue traversing;
+                        }
+                        if (!candidate.isSkippable())
+                        {
+                            if (_top._processedChildCount != 0 || _top._curCount < _top._curMin)
+                                return notValid();
+                            break minmax;
+                        }
+                    }
+                    _top._curCount++;
+                    _top._processedChildCount = 0;
+
+                    continue traversing;
+
+
+                case SchemaParticle.CHOICE:
+                    for (int i = 0; i < _top._childCount; i++)
+                    {
+                        SchemaParticle candidate = _top._curPart.getParticleChild(i);
+                        if (candidate.canStartWithElement(eltName))
+                        {
+                            _top._curCount++;
+                            push(candidate);
+                            continue traversing;
+                        }
+                    }
+                    if (_top._curCount < _top._curMin && !_top._curPart.isSkippable())
+                        return notValid();
+                    break minmax;
+
+                case SchemaParticle.ALL:
+
+                    int skipped = _top._processedChildCount;
+                    allscan: for (int i = 0; i < _top._childCount; i++)
+                    {
+                        if (_top._seen[i])
+                            continue allscan;
+
+                        SchemaParticle candidate = _top._curPart.getParticleChild(i);
+                        if (candidate.canStartWithElement(eltName))
+                        {
+                            _top._processedChildCount++;
+                            _top._seen[i] = true;
+                            push(candidate);
+                            continue traversing;
+                        }
+                        else if (candidate.isSkippable())
+                        {
+                            skipped += 1;
+                        }
+                    }
+                    if (skipped < _top._childCount)
+                    {
+                        if (_top._curCount < _top._curMin)
+                            return notValid();
+                        break minmax;
+                    }
+                    _top._curCount++;
+                    _top._processedChildCount = 0;
+                    Arrays.fill(_top._seen, false);
+                    continue traversing;
+            }
+
+            // somebody called "break minmax", so pop out of loop
+            if (!pop())
+                break traversing;
+        }
+
+        // we've completed the outermost loop
+        if (eltName == null)
+            return ok(null, testValidity);
+
+        // this means we have extra elements at the end
+        return notValid();
+    }
+

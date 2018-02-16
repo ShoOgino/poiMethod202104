@@ -1,0 +1,74 @@
+    /**
+     * [XMLBEANS-72]   Document properties are lost
+     */
+    public void test_jira_XmlBeans72() throws Exception
+    {
+        String docTypeName = "struts-config";
+        String docTypePublicID = "-//Apache Software Foundation//DTD Struts Configuration 1.1//EN";
+        String docTypeSystemID = "http://jakarta.apache.org/struts/dtds/struts-config_1_1.dtd";
+        String fileName = "xmlbeans72.xml";
+
+        //create instance and set doc properties
+        PurchaseOrderDocument po = PurchaseOrderDocument.Factory.newInstance();
+        org.apache.xmlbeans.XmlDocumentProperties docProps = po.documentProperties();
+        docProps.setDoctypeName(docTypeName);
+        docProps.setDoctypePublicId(docTypePublicID);
+        docProps.setDoctypeSystemId(docTypeSystemID);
+        po.addNewPurchaseOrder();
+        po.save(new File(fileName));
+
+        //parse saved out file and verify values set above are present
+        PurchaseOrderDocument po2 = PurchaseOrderDocument.Factory.parse(new File(fileName));
+        //XmlObject po2 = XmlObject.Factory.parse(new File(fileName));
+
+        org.apache.xmlbeans.XmlDocumentProperties doc2Props = po2.documentProperties();
+
+        //verify information using DOM
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setValidating(false);
+        factory.setNamespaceAware(true);
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document document = builder.parse(new File(fileName));
+
+        DocumentType docType = document.getDoctype();
+
+        //System.out.println("Name: "+ doc2Props.getDoctypeName() +" = " + docType.getName());
+        //System.out.println("System: "+ doc2Props.getDoctypeSystemId() + " = " + docType.getSystemId());
+        //System.out.println("Public: "+ doc2Props.getDoctypePublicId()+ " = " + docType.getPublicId());
+
+        StringBuffer compareText = new StringBuffer();
+        //check values - compare to expected and DOM
+        if (doc2Props != null) {
+            if (doc2Props.getDoctypeName() == null ||
+                    doc2Props.getDoctypeName().compareTo(docTypeName) != 0 ||
+                    doc2Props.getDoctypeName().compareTo(docType.getName()) != 0)
+                compareText.append("docTypeName was not as " +
+                        "expected in the document properties " +
+                        doc2Props.getDoctypeName()+"\n");
+
+            if (doc2Props.getDoctypePublicId() == null ||
+                    doc2Props.getDoctypePublicId().compareTo(docTypePublicID) != 0 ||
+                    doc2Props.getDoctypePublicId().compareTo(docType.getPublicId()) != 0)
+                compareText.append("docTypePublicID was not as " +
+                        "expected in the document properties " +
+                        doc2Props.getDoctypePublicId()+"\n");
+
+            if (doc2Props.getDoctypeSystemId() == null ||
+                    doc2Props.getDoctypeSystemId().compareTo(docTypeSystemID) != 0 ||
+                    doc2Props.getDoctypeSystemId().compareTo(docType.getSystemId()) != 0)
+                compareText.append("docTypeSystemID was not as " +
+                        "expected in the document properties "+
+                        doc2Props.getDoctypeSystemId()+"\n" );
+        } else {
+            compareText.append("Document Properties were null, should have been set");
+        }
+
+        //cleanup
+        po2 = null;
+        po = null;
+        new File(fileName).deleteOnExit();
+
+        if (compareText.toString().length() > 1)
+            throw new Exception("Doc properties were not saved or read correctly\n" + compareText.toString());
+    }
+

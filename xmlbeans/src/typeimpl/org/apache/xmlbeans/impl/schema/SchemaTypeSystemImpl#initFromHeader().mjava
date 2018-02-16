@@ -1,0 +1,65 @@
+    private void initFromHeader()
+    {
+        XBeanDebug.trace(XBeanDebug.TRACE_SCHEMA_LOADING, "Reading unresolved handles for type system " + _name, 0);
+        XsbReader reader = null;
+        try
+        {
+            // Read the index file, which starts with a header.
+            reader = new XsbReader("index", FILETYPE_SCHEMAINDEX);
+
+            // has a handle pool (count, handle/type, handle/type...)
+            _localHandles = new HandlePool();
+            reader.readHandlePool(_localHandles);
+
+            // then a qname map of global elements (count, qname/handle, qname/handle...)
+            _globalElements = reader.readQNameRefMap();
+
+            // qname map of global attributes
+            _globalAttributes = reader.readQNameRefMap();
+
+            // qname map of model groups
+            _modelGroups = reader.readQNameRefMap();
+
+            // qname map of attribute groups
+            _attributeGroups = reader.readQNameRefMap();
+
+            _identityConstraints = reader.readQNameRefMap();
+
+            // qname map of global types
+            _globalTypes = reader.readQNameRefMap();
+
+            // qname map of document types, by the qname of the contained element
+            _documentTypes = reader.readQNameRefMap();
+
+            // qname mape of attribute types, by the qname of the contained attribute
+            _attributeTypes = reader.readQNameRefMap();
+
+            // string map of all types, by fully qualified classname
+            _typeRefsByClassname = reader.readClassnameRefMap();
+
+            _namespaces = reader.readNamespaces();
+
+            // support for redefine, at the end of the file
+            List typeNames = new ArrayList();
+            List modelGroupNames = new ArrayList();
+            List attributeGroupNames = new ArrayList();
+            if (reader.atLeast(2, 15, 0))
+            {
+                _redefinedGlobalTypes = reader.readQNameRefMapAsList(typeNames);
+                _redefinedModelGroups = reader.readQNameRefMapAsList(modelGroupNames);
+                _redefinedAttributeGroups = reader.readQNameRefMapAsList(attributeGroupNames);
+            }
+            if (reader.atLeast(2, 19, 0))
+            {
+                _annotations = reader.readAnnotations();
+            }
+
+            buildContainers(typeNames, modelGroupNames, attributeGroupNames);
+        }
+        finally
+        {
+            if (reader != null)
+                reader.readEnd();
+        }
+    }
+

@@ -1,0 +1,111 @@
+    //
+    // Compiles a SchemaTypeSystem
+    //
+    /* package */ static SchemaTypeSystemImpl compileImpl( SchemaTypeSystem system, String name,
+        Schema[] schemas, BindingConfig config, SchemaTypeLoader linkTo,
+        XmlOptions options, Collection outsideErrors, boolean javaize,
+        URI baseURI, Map sourcesToCopyMap, File schemasDir)
+    {
+        if (linkTo == null)
+            throw new IllegalArgumentException("Must supply linkTo");
+
+        XmlErrorWatcher errorWatcher = new XmlErrorWatcher(outsideErrors);
+        boolean incremental = system != null;
+
+        // construct the state
+        StscState state = StscState.start();
+        boolean validate = (options == null || !options.hasOption(XmlOptions.COMPILE_NO_VALIDATION));
+        try
+        {
+            state.setErrorListener(errorWatcher);
+            state.setBindingConfig(config);
+            state.setOptions(options);
+            state.setGivenTypeSystemName(name);
+            state.setSchemasDir(schemasDir);
+            if (baseURI != null)
+                state.setBaseUri(baseURI);
+
+            // construct the classpath (you always get the builtin types)
+            linkTo = SchemaTypeLoaderImpl.build(new SchemaTypeLoader[] { BuiltinSchemaTypeSystem.get(), linkTo }, null, null);
+            state.setImportingTypeLoader(linkTo);
+
+            List validSchemas = new ArrayList(schemas.length);
+
+            // load all the xsd files into it
+            if (validate)
+            {
+                XmlOptions validateOptions = new XmlOptions().setErrorListener(errorWatcher);
+                if (options.hasOption(XmlOptions.VALIDATE_TREAT_LAX_AS_SKIP))
+                    validateOptions.setValidateTreatLaxAsSkip();
+                for (int i = 0; i < schemas.length; i++)
+                {
+                    if (schemas[i].validate(validateOptions))
+                        validSchemas.add(schemas[i]);
+                }
+            }
+            else
+            {
+                validSchemas.addAll(Arrays.asList(schemas));
+            }
+
+            Schema[] startWith = (Schema[])validSchemas.toArray(new Schema[validSchemas.size()]);
+
+            if (incremental)
+            {
+                Set namespaces = new HashSet();
+                startWith = getSchemasToRecompile((SchemaTypeSystemImpl)system, startWith, namespaces);
+                state.initFromTypeSystem((SchemaTypeSystemImpl)system, namespaces);
+            }
+            else
+            {
+                state.setDependencies(new SchemaDependencies());
+            }
+
+            // deal with imports and includes
+            StscImporter.SchemaToProcess[] schemasAndChameleons = StscImporter.resolveImportsAndIncludes(startWith, incremental);
+
+            // call the translator so that it may also perform magic
+            StscTranslator.addAllDefinitions(schemasAndChameleons);
+
+            // call the resolver to do its magic
+            StscResolver.resolveAll();
+            
+            // call the checker to check both restrictions and defaults
+            StscChecker.checkAll();
+
+            // call the javaizer to do its magic
+            StscJavaizer.javaizeAllTypes(javaize);
+
+            // construct the loader out of the state
+            state.get().sts().loadFromStscState(state);
+
+            // fill in the source-copy map
+            if (sourcesToCopyMap != null)
+                sourcesToCopyMap.putAll(state.sourceCopyMap());
+
+            if (errorWatcher.hasError())
+            {
+                // EXPERIMENTAL: recovery from compilation errors and partial type system
+                if (state.allowPartial() && state.getRecovered() == errorWatcher.size())
+                {
+                    // if partial type system allowed and all errors were recovered
+                    state.get().sts().setIncomplete(true);
+                }
+                else
+                {
+                    // if any non-recoverable errors, return null
+                    return null;
+                }
+            }
+
+            if (system != null)
+                ((SchemaTypeSystemImpl) system).setIncomplete(true);
+
+            return state.get().sts();
+        }
+        finally
+        {
+            StscState.end();
+        }
+    }
+

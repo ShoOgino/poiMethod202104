@@ -1,0 +1,47 @@
+    private static BigInteger getEffectiveMinRangeChoice(SchemaParticle derivedModel) {
+        // Schema Component Constraint: Effective Total Range (choice)
+        // The effective total range of a particle whose {term} is a group whose {compositor} is choice is a pair of
+        // minimum and maximum, as follows:
+        // MINIMUM
+        // The product of the particle's {min occurs}
+        // and the *minimum* of the {min occurs} of every wildcard or element
+        // declaration particle in the group's {particles} and the minimum part of the effective total range of each of
+        // the group particles in the group's {particles} (or 0 if there are no {particles}).
+        SchemaParticle[] particleChildren = derivedModel.getParticleChildren();
+        if (particleChildren.length == 0)
+            return BigInteger.ZERO;
+        BigInteger minRange = null;
+        // get the minimum of every wildcard or element
+        // total up the effective total range for each group
+        for (int i = 0; i < particleChildren.length; i++) {
+            SchemaParticle particle = particleChildren[i];
+            switch (particle.getParticleType()) {
+                case SchemaParticle.WILDCARD:
+                case SchemaParticle.ELEMENT:
+                    if (minRange == null || minRange.compareTo(particle.getMinOccurs()) > 0) {
+                        minRange = particle.getMinOccurs();
+                    }
+                    break;
+                case SchemaParticle.ALL:
+                case SchemaParticle.SEQUENCE:
+                    BigInteger mrs = getEffectiveMinRangeAllSeq(particle);
+                    if (minRange == null || minRange.compareTo(mrs) > 0) {
+                        minRange = mrs;
+                    }
+                    break;
+                case SchemaParticle.CHOICE:
+                    BigInteger mrc = getEffectiveMinRangeChoice(particle);
+                    if (minRange == null || minRange.compareTo(mrc) > 0) {
+                        minRange = mrc;
+                    }
+                    break;
+            }
+        }
+        if (minRange == null)
+            minRange = BigInteger.ZERO;
+
+        // calculate the total
+        minRange = derivedModel.getMinOccurs().multiply(minRange);
+        return minRange;
+    }
+

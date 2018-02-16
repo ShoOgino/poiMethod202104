@@ -1,0 +1,40 @@
+    public static Dom attributes_removeNamedItemNS ( Dom e, String uri, String local )
+    {
+        if (uri == null)
+            uri = "";
+        
+        Dom oldAttr = null;
+
+        Cur c = e.tempCur();
+
+        while ( c.toNextAttr() )
+        {
+            Dom aa = c.getDom();
+
+            QName qn = aa.getQName();
+
+            if (qn.getNamespaceURI().equals( uri ) && qn.getLocalPart().equals( local ))
+            {
+                if (oldAttr == null)
+                    oldAttr = aa;
+                 if (((Xobj.AttrXobj) aa).isId())
+                 {
+                     Dom d = DomImpl.node_getOwnerDocument(aa);
+                     String val = node_getNodeValue( aa );
+                     if (d instanceof Xobj.DocumentXobj)
+                         ((Xobj.DocumentXobj) d).removeIdElement(val);
+                 }
+                removeNode( aa );
+                
+                c.toPrevAttr();
+            }
+        }
+
+        c.release();
+
+        if (oldAttr == null)
+            throw new NotFoundErr( "Named item not found: uri=" + uri + ", local=" + local );
+
+        return oldAttr;
+    }
+

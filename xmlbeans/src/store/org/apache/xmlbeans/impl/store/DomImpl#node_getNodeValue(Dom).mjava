@@ -1,0 +1,44 @@
+    public static String node_getNodeValue ( Dom n )
+    {
+        String s = null;
+
+        switch ( n.nodeType() )
+        {
+        case ATTR :
+        case PROCINST :
+        case COMMENT :
+        {
+            s = ((Xobj)n).getValueAsString();
+            break;
+        }
+
+        case TEXT :
+        case CDATA :
+        {
+            assert n instanceof CharNode: "Text/CData should be a CharNode";
+            CharNode node = (CharNode) n;
+            if (! (node._src instanceof Xobj) )
+                s = CharUtil.getString( node._src, node._off, node._cch );
+            else{
+                Xobj src = (Xobj) node._src;
+                src.ensureOccupancy();
+                boolean isThisNodeAfterText = node.isNodeAftertext();
+                if( isThisNodeAfterText ){
+                    src._charNodesAfter =
+                        Cur.updateCharNodes( src._locale, src, src._charNodesAfter, src._cchAfter );
+                    s = src.getCharsAfterAsString(node._off, node._cch);
+                }
+                else{
+                    src._charNodesValue =
+                       Cur.updateCharNodes( src._locale, src, src._charNodesValue, src._cchValue );
+                    s = src.getCharsValueAsString(node._off, node._cch);
+                }
+
+            }
+            break;
+        }
+        }
+
+        return s;
+    }
+

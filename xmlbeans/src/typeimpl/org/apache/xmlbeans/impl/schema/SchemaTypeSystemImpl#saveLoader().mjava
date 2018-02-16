@@ -1,0 +1,112 @@
+    /**
+     * The strategy here is to copy the compiled TypeSystemHolder.template class
+     * to a new TypeSystemHolder.class needed by the schema type system.  When
+     * saving a loader, we read the TypeSystemHolder.template class file and
+     * swap out the utf8 string constants with new ones to create a new
+     * TypeSystemHolder class file.  This saves us the need to rely on javac
+     * to compile a generated .java file into the class file.
+     *
+     * See the JVM spec on how to interpret the bytes of a class file.
+     */
+    void saveLoader()
+    {
+        String indexClassName = SchemaTypeCodePrinter.indexClassForSystem(this);
+        String[] replace = makeClassStrings(indexClassName);
+        assert replace.length == HOLDER_TEMPLATE_NAMES.length;
+
+        InputStream is = null;
+        OutputStream os = null;
+
+        DataInputStream in = null;
+        DataOutputStream out = null;
+
+        Repackager repackager = null;
+        if (_filer instanceof FilerImpl)
+            repackager = ((FilerImpl)_filer).getRepackager();
+
+        try
+        {
+            is = SchemaTypeSystemImpl.class.getResourceAsStream(HOLDER_TEMPLATE_CLASSFILE);
+            if (is == null)
+                throw new SchemaTypeLoaderException("couldn't find resource: " + HOLDER_TEMPLATE_CLASSFILE, _name, null, SchemaTypeLoaderException.IO_EXCEPTION);
+            in = new DataInputStream(is);
+
+            os = _filer.createBinaryFile(indexClassName.replace('.', '/') + ".class");
+            out = new DataOutputStream(os);
+
+            // java magic
+            out.writeInt(in.readInt());
+
+            // java minor and major version
+            out.writeShort(in.readUnsignedShort());
+            out.writeShort(in.readUnsignedShort());
+
+            int poolsize = in.readUnsignedShort();
+            out.writeShort(poolsize);
+
+            // the constant pool is indexed from 1 to poolsize-1
+            for (int i = 1; i < poolsize; i++)
+            {
+                int tag = in.readUnsignedByte();
+                out.writeByte(tag);
+
+                switch (tag)
+                {
+                    case CONSTANT_UTF8:
+                        String value = in.readUTF();
+                        out.writeUTF(repackageConstant(value, replace, repackager));
+                        break;
+
+                    case CONSTANT_CLASS:
+                    case CONSTANT_STRING:
+                        out.writeShort(in.readUnsignedShort());
+                        break;
+
+                    case CONSTANT_NAMEANDTYPE:
+                    case CONSTANT_METHOD:
+                    case CONSTANT_FIELD:
+                    case CONSTANT_INTERFACEMETHOD:
+                        out.writeShort(in.readUnsignedShort());
+                        out.writeShort(in.readUnsignedShort());
+                        break;
+
+                    case CONSTANT_INTEGER:
+                    case CONSTANT_FLOAT:
+                        out.writeInt(in.readInt());
+                        break;
+
+                    case CONSTANT_LONG:
+                    case CONSTANT_DOUBLE:
+                        out.writeInt(in.readInt());
+                        out.writeInt(in.readInt());
+                        break;
+
+                    default:
+                        throw new RuntimeException("Unexpected constant type: " + tag);
+                }
+            }
+
+            // we're done with the class' constant pool,
+            // we can just copy the rest of the bytes
+            try
+            {
+                while (true)
+                    out.writeByte(in.readByte());
+            }
+            catch (java.io.EOFException e)
+            {
+                // ok
+            }
+
+        }
+        catch (IOException e)
+        {
+            // ok
+        }
+        finally
+        {
+            if (is != null) try { is.close(); } catch (Exception e) { }
+            if (os != null) try { os.close(); } catch (Exception e) { }
+        }
+    }
+

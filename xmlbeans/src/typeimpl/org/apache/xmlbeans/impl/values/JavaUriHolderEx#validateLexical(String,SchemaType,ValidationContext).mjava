@@ -1,0 +1,53 @@
+    public static void validateLexical(String v, SchemaType sType, ValidationContext context)
+    {
+        XmlAnyUriImpl.validateLexical(v, context);
+        
+        XmlObject[] vals = sType.getEnumerationValues();
+
+        if (vals != null)
+        {
+            int i;
+            
+            for ( i = 0 ; i < vals.length ; i++ )
+            {
+                String e = ((SimpleValue)vals[i]).getStringValue();
+
+                if (e.equals( v ))
+                    break;
+            }
+            
+            if (i >= vals.length)
+                context.invalid(XmlErrorCodes.DATATYPE_ENUM_VALID,
+                    new Object[] { "anyURI", v, QNameHelper.readable(sType) });
+        }
+        
+        // check pattern
+        if (sType.hasPatternFacet())
+        {
+            if (!sType.matchPatternFacet(v))
+            {
+                // TODO - describe string and pattern here in error
+                context.invalid(XmlErrorCodes.DATATYPE_VALID$PATTERN_VALID,
+                    new Object[] { "anyURI", v, QNameHelper.readable(sType) });
+            }
+        }
+
+        XmlObject x;
+        int i;
+
+        if ((x = sType.getFacet(SchemaType.FACET_LENGTH)) != null)
+            if ((i = ((SimpleValue)x).getBigIntegerValue().intValue()) != v.length())
+                context.invalid(XmlErrorCodes.DATATYPE_LENGTH_VALID$STRING,
+                    new Object[] { "anyURI", v, new Integer(i), QNameHelper.readable(sType) });
+        
+        if ((x = sType.getFacet(SchemaType.FACET_MIN_LENGTH)) != null)
+            if ((i = ((SimpleValue)x).getBigIntegerValue().intValue()) > v.length())
+                context.invalid(XmlErrorCodes.DATATYPE_MIN_LENGTH_VALID$STRING,
+                    new Object[] { "anyURI", v, new Integer(i), QNameHelper.readable(sType) });
+        
+        if ((x = sType.getFacet(SchemaType.FACET_MAX_LENGTH)) != null)
+            if ((i = ((SimpleValue)x).getBigIntegerValue().intValue()) < v.length())
+                context.invalid(XmlErrorCodes.DATATYPE_MAX_LENGTH_VALID$STRING,
+                    new Object[] { "anyURI", v, new Integer(i), QNameHelper.readable(sType) });
+    }
+

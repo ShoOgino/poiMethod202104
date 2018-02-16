@@ -1,0 +1,60 @@
+        private int resize ( int cch, int i )
+        {
+            assert _free >= 0;
+            assert cch > 0;
+            assert cch >= _free;
+            assert _buf==null ||
+                (_out<_in && _free == _buf.length - ( _in - _out ) ) || // data in the middle, free on the edges
+                (_out>_in && _free == _out - _in ) ||                   // data on the edges, free in the middle
+                (_out==_in && _free == _buf.length) ||                  // no data, all buffer free
+                (_out==_in && _free == 0)                               // buffer full
+                : "_buf.length:" + _buf.length + " _in:" + _in + " _out:" + _out + " _free:" + _free;
+
+            int newLen = _buf == null ? _initialBufSize : _buf.length * 2;
+            int used = getAvailable();
+
+            while ( newLen - used < cch )
+                newLen *= 2;
+
+            char[] newBuf = new char [ newLen ];
+
+            if (used > 0)
+            {
+                if (_in > _out)
+                {
+                    assert i == -1 || (i >= _out && i < _in);
+                    System.arraycopy( _buf, _out, newBuf, 0, used );
+                    i -= _out;
+                }
+                else
+                {
+                    assert i == -1 || (i >= _out || i < _in);
+                    System.arraycopy( _buf, _out, newBuf, 0, used - _in );
+                    System.arraycopy( _buf, 0, newBuf, used - _in, _in );
+                    i = i >= _out ? i - _out : i + _out;
+                }
+
+                _out = 0;
+                _in = used;
+                _free += newBuf.length - _buf.length;
+            }
+            else
+            {
+                _free = newBuf.length;
+                assert _in == 0 && _out == 0;
+                assert i == -1;
+            }
+
+            _buf = newBuf;
+
+            assert _free >= 0;
+            assert _buf==null ||
+                (_out<_in && _free == _buf.length - ( _in - _out ) ) || // data in the middle, free on the edges
+                (_out>_in && _free == _out - _in ) ||                   // data on the edges, free in the middle
+                (_out==_in && _free == _buf.length) ||                  // no data, all buffer free
+                (_out==_in && _free == 0)                               // buffer full
+                : "_buf.length:" + _buf.length + " _in:" + _in + " _out:" + _out + " _free:" + _free;
+
+            return i;
+        }
+

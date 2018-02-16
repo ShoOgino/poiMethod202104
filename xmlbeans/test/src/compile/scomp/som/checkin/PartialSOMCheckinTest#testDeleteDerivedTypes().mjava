@@ -1,0 +1,158 @@
+    public void testDeleteDerivedTypes() throws Exception
+    {
+        System.out.println("Inside test case testDeleteDerivedTypes()");
+
+        // Step 1: read in a clean XSD derived_types_added.xsd with base and derived types to create a base schema with no unresolved components
+        String sBaseSourceName = "testsourcename";
+        SchemaTypeSystem baseSTS = createNewSTS("derived_types_added.xsd_",
+                null,
+                "BaseSchemaTS",
+                sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", baseSTS);
+
+        // there should be NO recovearble errors
+        Assert.assertFalse("Recovered Errors for Valid Schema",
+                printRecoveredErrors());
+
+        // the tests - Walk thro the valid SOM
+        inspectSOM(baseSTS, 13, 0, 14, 0);
+
+        // Recovered Errors, Test for saving of the SOM - should go thro
+        Assert.assertTrue("Valid SOM " + baseSTS.getName() + "Save failed!",
+                checkPSOMSave(baseSTS));
+
+        // instance validation - should be ok
+        Assert.assertTrue("Validation against instance failed",
+                validateInstance(getTestCaseFile("instance_derived_types_valid.xml"), baseSTS));
+
+        // check types before deletion of base types
+        Assert.assertEquals("Elem Type  should be 'ExtensionBaseType' (base)",
+                "ExtensionBaseType",
+                getElementType(baseSTS, "ExtensionBaseTypeElem"));
+        Assert.assertEquals("Elem Type  should be 'ExtensionDerivedComplexContentType' (derived)",
+                "ExtensionDerivedComplexContentType",
+                getElementType(baseSTS, "ExtensionDerivedComplexContentTypeElem"));
+
+        Assert.assertEquals("Elem Type  should be 'ExtensionBaseMixedContentType' (base)",
+                "ExtensionBaseMixedContentType",
+                getElementType(baseSTS, "ExtensionBaseMixedContentTypElem"));
+        Assert.assertEquals("Elem Type  should be 'ExtensionDerivedMixedContentType' (derived)",
+                "ExtensionDerivedMixedContentType",
+                getElementType(baseSTS, "ExtensionDerivedMixedContentTypeElem"));
+
+        Assert.assertEquals("Elem Type  should be 'RestrictionSimpleContentBaseType'",
+                "RestrictionSimpleContentBaseType", getElementType(baseSTS, "RestrictionSimpleContentBaseTypeElem"));
+        Assert.assertEquals("Elem Type  should be 'RestrictionSimpleContentDerivedType'",
+                "RestrictionSimpleContentDerivedType", getElementType(baseSTS, "RestrictionSimpleContentDerivedTypeElem"));
+
+        Assert.assertEquals("Elem Type  should be 'RestrictionBaseComplexContentType'",
+                "RestrictionBaseComplexContentType",
+                getElementType(baseSTS, "RestrictionBaseComplexContentTypeElem"));
+        Assert.assertEquals("Elem Type  should be 'RestrictionDerivedComplexContentType'",
+                "RestrictionDerivedComplexContentType",
+                getElementType(baseSTS, "RestrictionDerivedComplexContentTypeElem"));
+
+        Assert.assertEquals("Elem Type  should be 'RestrictionBaseMixedContentType'",
+                "RestrictionBaseMixedContentType", getElementType(baseSTS, "RestrictionBaseMixedContentTypeElem"));
+        Assert.assertEquals("Elem Type  should be 'RestrictionDerivedMixedContentType'",
+                "RestrictionDerivedMixedContentType", getElementType(baseSTS, "RestrictionDerivedMixedContentTypeElem"));
+
+        Assert.assertEquals("Elem Type  should be 'RestrictionBaseEmptyContentType'",
+                "RestrictionBaseEmptyContentType", getElementType(baseSTS, "RestrictionBaseEmptyContentTypeElem"));
+        Assert.assertEquals("Elem Type  should be 'RestrictionDerivedEmptyContentType'",
+                "RestrictionDerivedEmptyContentType", getElementType(baseSTS, "RestrictionDerivedEmptyContentTypeElem"));
+
+        // Step 2: create invalid PSOM with base type removed
+        SchemaTypeSystem modifiedSTS = createNewSTS("derived_types.xsd_",
+                baseSTS,
+                "ModifiedSchemaTS",
+                sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", modifiedSTS);
+
+        // recovearble errors
+        Assert.assertTrue("No Recovered Errors for Invalid PSOM",
+                printRecoveredErrors());
+
+        // the tests - Walk thro the valid SOM
+        inspectSOM(modifiedSTS, 13, 0, 9, 0);
+
+        // Recovered Errors, Test for saving of the SOM
+        Assert.assertEquals("SOM " + modifiedSTS.getName() + "Save Success - should fail!",
+                false, checkPSOMSave(modifiedSTS));
+
+        // instance validation - should fail
+        Assert.assertFalse("Validation against instance failed",
+                validateInstance(getTestCaseFile("instance_derived_types_valid.xml"), modifiedSTS));
+
+        // check types - base should be 'anyType'
+        Assert.assertEquals("Elem Type  should be 'anyType' (base)",
+                anyType,
+                getElementType(modifiedSTS, "ExtensionBaseTypeElem"));
+        Assert.assertEquals("Elem Type  should be 'ExtensionDerivedComplexContentType' (derived)",
+                "ExtensionDerivedComplexContentType",
+                getElementType(modifiedSTS, "ExtensionDerivedComplexContentTypeElem"));
+
+        Assert.assertEquals("Elem Type  should be 'anyType' (base)",
+                anyType,
+                getElementType(modifiedSTS, "ExtensionBaseMixedContentTypElem"));
+        Assert.assertEquals("Elem Type  should be 'ExtensionDerivedComplexContentType' (derived)",
+                "ExtensionDerivedMixedContentType",
+                getElementType(modifiedSTS, "ExtensionDerivedMixedContentTypeElem"));
+
+        // Restriction Simple Content Base type commented does not result in recoverable SOM
+        // moved to Detailed Test
+        //Assert.assertEquals("Elem Type  should be 'anyType'",
+        //        anyType,
+        //        getElementType(modifiedSTS, "RestrictionSimpleContentBaseTypeElem"));
+        //
+
+        Assert.assertEquals("Elem Type  should be 'RestrictionSimpleContentDerivedType'",
+                "RestrictionSimpleContentDerivedType",
+                getElementType(modifiedSTS, "RestrictionSimpleContentDerivedTypeElem"));
+
+        Assert.assertEquals("Elem Type  should be 'anyType'",
+                anyType,
+                getElementType(modifiedSTS, "RestrictionBaseComplexContentTypeElem"));
+        Assert.assertEquals("Elem Type  should be 'RestrictionDerivedComplexContentType'",
+                "RestrictionDerivedComplexContentType",
+                getElementType(modifiedSTS, "RestrictionDerivedComplexContentTypeElem"));
+
+        Assert.assertEquals("Elem Type  should be 'anyType'",
+                anyType,
+                getElementType(modifiedSTS, "RestrictionBaseMixedContentTypeElem"));
+        Assert.assertEquals("Elem Type  should be 'RestrictionDerivedMixedContentType'",
+                "RestrictionDerivedMixedContentType",
+                getElementType(modifiedSTS, "RestrictionDerivedMixedContentTypeElem"));
+
+        Assert.assertEquals("Elem Type  should be 'anyType'", anyType,
+                getElementType(modifiedSTS, "RestrictionBaseEmptyContentTypeElem"));
+        Assert.assertEquals("Elem Type  should be 'RestrictionDerivedEmptyContentType'",
+                "RestrictionDerivedEmptyContentType", getElementType(modifiedSTS, "RestrictionDerivedEmptyContentTypeElem"));
+
+
+        // step 3: reload the original STS
+        SchemaTypeSystem finalSTS = createNewSTS("derived_types_added.xsd_",
+                modifiedSTS,
+                "FinalSchemaTS",
+                sBaseSourceName);
+        Assert.assertNotNull("Schema Type System created is Null.", finalSTS);
+
+        // there should be NO recovearble errors
+        Assert.assertFalse("Recovered Errors for Valid Schema",
+                printRecoveredErrors());
+
+        // the tests - Walk thro the valid SOM
+        inspectSOM(finalSTS, 13, 0, 14, 0);
+
+        // Recovered Errors, Test for saving of the SOM - should go thro
+        Assert.assertTrue("SOM " + finalSTS.getName() + "Save failed!",
+                checkPSOMSave(finalSTS));
+
+        // instance validation - should be ok
+        Assert.assertTrue("Validation against instance failed",
+                validateInstance(getTestCaseFile("instance_derived_types_valid.xml"), finalSTS));
+
+        // compare this to the original schema here
+        Assert.assertTrue(compareSavedSOMs("BaseSchemaTS","FinalSchemaTS"));
+    }
+

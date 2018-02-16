@@ -1,0 +1,46 @@
+    private void findDetailedErrorBegin(Event event, State state, QName qName)
+    {
+        ArrayList expectedNames = new ArrayList();
+        ArrayList optionalNames = new ArrayList();
+
+        SchemaProperty[] eltProperties = state._type.getElementProperties();
+        for (int ii = 0; ii < eltProperties.length; ii++)
+        {
+            //Get the element from the schema
+            SchemaProperty sProp = eltProperties[ii];
+
+            // test if the element is valid
+            if (state.test(sProp.getName()))
+            {
+                if (0 == BigInteger.ZERO.compareTo(sProp.getMinOccurs()))
+                    optionalNames.add(sProp.getName());
+                else
+                    expectedNames.add(sProp.getName());
+            }
+        }
+
+        List names = (expectedNames.size() > 0 ? expectedNames : optionalNames);
+
+        if (names.size() > 0)
+        {
+            StringBuffer buf = new StringBuffer();
+            for (Iterator iter = names.iterator(); iter.hasNext();)
+            {
+                QName qname = (QName) iter.next();
+                buf.append(QNameHelper.pretty(qname));
+                if (iter.hasNext())
+                    buf.append(" ");
+            }
+
+            emitFieldError( event, XmlErrorCodes.ELEM_COMPLEX_TYPE_LOCALLY_VALID$EXPECTED_DIFFERENT_ELEMENT,
+                new Object[] { new Integer(names.size()), buf.toString(), QNameHelper.pretty(qName) },
+                qName, null, names, XmlValidationError.INCORRECT_ELEMENT, state._type);
+        }
+        else
+        {
+            emitFieldError( event, XmlErrorCodes.ELEM_COMPLEX_TYPE_LOCALLY_VALID$ELEMENT_NOT_ALLOWED,
+                new Object[] { QNameHelper.pretty(qName) },
+                qName, null, null, XmlValidationError.INCORRECT_ELEMENT, state._type);
+        }
+    }
+
