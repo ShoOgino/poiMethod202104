@@ -1,0 +1,20 @@
+    @Test
+    public void testMultipleEditWriteCycles() {
+        final XSSFWorkbook wb1 = new XSSFWorkbook();
+        final XSSFSheet sheet1 = wb1.createSheet("Sheet1");
+        final XSSFRow srcRow = sheet1.createRow(0);
+        srcRow.createCell(0).setCellValue("hello");
+        srcRow.createCell(3).setCellValue("world");
+        
+        // discard result
+        XSSFTestDataSamples.writeOutAndReadBack(wb1);
+        srcRow.createCell(1).setCellValue("cruel");
+        // discard result
+        XSSFTestDataSamples.writeOutAndReadBack(wb1);
+
+        srcRow.getCell(1).setCellValue((RichTextString) null);
+        
+        XSSFWorkbook wb3 = XSSFTestDataSamples.writeOutAndReadBack(wb1);
+        assertEquals("Cell not blank", CellType.BLANK, wb3.getSheet("Sheet1").getRow(0).getCell(1).getCellType());
+    }
+
