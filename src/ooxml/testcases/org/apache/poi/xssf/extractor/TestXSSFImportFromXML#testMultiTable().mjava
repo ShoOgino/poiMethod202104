@@ -1,37 +1,49 @@
-	@Test(timeout=60000)
-	public void testMultiTable() throws IOException, XPathExpressionException, SAXException{
-		try (XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("CustomXMLMappings-complex-type.xlsx")) {
-			String cellC6 = "c6";
-			String cellC7 = "c7";
-			String cellC8 = "c8";
-			String cellC9 = "c9";
+    @Test(timeout=60000)
+    public void testMultiTable() throws IOException, XPathExpressionException, SAXException{
+        try (XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("CustomXMLMappings-complex-type.xlsx")) {
+            String cellC6 = "c6";
+            String cellC7 = "c7";
+            String cellC8 = "c8";
+            String cellC9 = "c9";
 
-			StringBuilder testXML = new StringBuilder("<ns1:MapInfo xmlns:ns1=\"" + NS_SPREADSHEETML + "\" SelectionNamespaces=\"\">" +
-					"<ns1:Schema ID=\"" + cellC6 + "\" SchemaRef=\"a\" />" +
-					"<ns1:Schema ID=\"" + cellC7 + "\" SchemaRef=\"b\" />" +
-					"<ns1:Schema ID=\"" + cellC8 + "\" SchemaRef=\"c\" />" +
-					"<ns1:Schema ID=\"" + cellC9 + "\" SchemaRef=\"d\" />");
+            StringBuilder testXML = new StringBuilder("<ns1:MapInfo xmlns:ns1=\"" + NS_SPREADSHEETML + "\" SelectionNamespaces=\"\">" +
+                    "<ns1:Schema ID=\"" + cellC6 + "\" SchemaRef=\"a\" />" +
+                    "<ns1:Schema ID=\"" + cellC7 + "\" SchemaRef=\"b\" />" +
+                    "<ns1:Schema ID=\"" + cellC8 + "\" SchemaRef=\"c\" />" +
+                    "<ns1:Schema ID=\"" + cellC9 + "\" SchemaRef=\"d\" />");
 
-			for (int i = 10; i < 10010; i++) {
-				testXML.append("<ns1:Schema ID=\"c").append(i).append("\" SchemaRef=\"d\" />");
-			}
+            int cellOffset = 10; // cell C10
+            for (int i = 0; i < 10000; i++) {
+                testXML.append("<ns1:Schema ID=\"c").append(i + cellOffset).append("\" SchemaRef=\"d\" />");
+            }
 
-			testXML.append("<ns1:Map ID=\"1\" Name=\"\" RootElement=\"\" SchemaID=\"\" ShowImportExportValidationErrors=\"\" AutoFit=\"\" Append=\"\" PreserveSortAFLayout=\"\" PreserveFormat=\"\">" + "<ns1:DataBinding DataBindingLoadMode=\"\" />" + "</ns1:Map>" + "<ns1:Map ID=\"2\" Name=\"\" RootElement=\"\" SchemaID=\"\" ShowImportExportValidationErrors=\"\" AutoFit=\"\" Append=\"\" PreserveSortAFLayout=\"\" PreserveFormat=\"\">" + "<ns1:DataBinding DataBindingLoadMode=\"\" />" + "</ns1:Map>" + "<ns1:Map ID=\"3\" Name=\"\" RootElement=\"\" SchemaID=\"\" ShowImportExportValidationErrors=\"\" AutoFit=\"\" Append=\"\" PreserveSortAFLayout=\"\" PreserveFormat=\"\">" + "<ns1:DataBinding DataBindingLoadMode=\"\" />" + "</ns1:Map>" + "</ns1:MapInfo>\u0000");
+            testXML.append("<ns1:Map ID=\"1\" Name=\"\" RootElement=\"\" SchemaID=\"\" ShowImportExportValidationErrors=\"\" AutoFit=\"\" Append=\"\" PreserveSortAFLayout=\"\" PreserveFormat=\"\">" + "<ns1:DataBinding DataBindingLoadMode=\"\" />" + "</ns1:Map>" + "<ns1:Map ID=\"2\" Name=\"\" RootElement=\"\" SchemaID=\"\" ShowImportExportValidationErrors=\"\" AutoFit=\"\" Append=\"\" PreserveSortAFLayout=\"\" PreserveFormat=\"\">" + "<ns1:DataBinding DataBindingLoadMode=\"\" />" + "</ns1:Map>" + "<ns1:Map ID=\"3\" Name=\"\" RootElement=\"\" SchemaID=\"\" ShowImportExportValidationErrors=\"\" AutoFit=\"\" Append=\"\" PreserveSortAFLayout=\"\" PreserveFormat=\"\">" + "<ns1:DataBinding DataBindingLoadMode=\"\" />" + "</ns1:Map>" + "</ns1:MapInfo>\u0000");
 
-			XSSFMap map = wb.getMapInfo().getXSSFMapByName("MapInfo_mapping");
-			assertNotNull(map);
-			XSSFImportFromXML importer = new XSSFImportFromXML(map);
+            XSSFMap map = wb.getMapInfo().getXSSFMapByName("MapInfo_mapping");
+            assertNotNull(map);
+            XSSFImportFromXML importer = new XSSFImportFromXML(map);
 
-			importer.importFromXML(testXML.toString());
+            importer.importFromXML(testXML.toString());
 
-			//Check for Schema element
-			XSSFSheet sheet = wb.getSheetAt(1);
+            //Check for Schema element
+            XSSFSheet sheet = wb.getSheetAt(1);
 
-			assertEquals(cellC6, sheet.getRow(5).getCell(2).getStringCellValue());
-			assertEquals(cellC7, sheet.getRow(6).getCell(2).getStringCellValue());
-			assertEquals(cellC8, sheet.getRow(7).getCell(2).getStringCellValue());
-			assertEquals(cellC9, sheet.getRow(8).getCell(2).getStringCellValue());
-			assertEquals("c5001", sheet.getRow(5000).getCell(2).getStringCellValue());
-		}
-	}
+
+            // check table size (+1 for the header row)
+            assertEquals(3 + 1, wb.getTable("Tabella1").getRowCount());
+            assertEquals(10004 + 1, wb.getTable("Tabella2").getRowCount());
+
+            // table1 size was reduced, check that former table cells have been cleared
+            assertEquals(CellType.BLANK, wb.getSheetAt(0).getRow(8).getCell(5).getCellType());
+
+            // table2 size was increased, check that new table cells have been cleared
+            assertEquals(CellType.BLANK, sheet.getRow(10).getCell(3).getCellType());
+
+            assertEquals(cellC6, sheet.getRow(5).getCell(2).getStringCellValue());
+            assertEquals(cellC7, sheet.getRow(6).getCell(2).getStringCellValue());
+            assertEquals(cellC8, sheet.getRow(7).getCell(2).getStringCellValue());
+            assertEquals(cellC9, sheet.getRow(8).getCell(2).getStringCellValue());
+            assertEquals("c5001", sheet.getRow(5000).getCell(2).getStringCellValue());
+        }
+    }
 

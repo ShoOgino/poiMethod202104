@@ -1,0 +1,65 @@
+    /**
+     * Adds a new column to the table.
+     * 
+     * @param columnName
+     *            the unique name of the column, or {@code null} for a generated name
+     * @param columnIndex
+     *            the 0-based position of the column in the table
+     * @return the created table column
+     * @throws IllegalArgumentException
+     *             if the column name is not unique or missing or if the column
+     *             can't be created at the given index
+     * @since 4.0.0
+     */
+    public XSSFTableColumn createColumn(String columnName, int columnIndex) {
+                
+        int columnCount = getColumnCount();
+        if(columnIndex < 0 || columnIndex > columnCount) {
+            throw new IllegalArgumentException("Column index out of bounds");
+        }
+        
+        // Ensure we have Table Columns
+        CTTableColumns columns = ctTable.getTableColumns();
+        if (columns == null) {
+            columns = ctTable.addNewTableColumns();
+        }
+        
+        // check if name is unique and calculate unique column id 
+        long nextColumnId = 1; 
+        for (XSSFTableColumn tableColumn : getColumns()) {
+            if (columnName != null && columnName.equalsIgnoreCase(tableColumn.getName())) {
+                throw new IllegalArgumentException("Column '" + columnName
+                        + "' already exists. Column names must be unique per table.");
+            }
+            nextColumnId = Math.max(nextColumnId, tableColumn.getId());
+        }
+        
+        // Add the new Column
+        CTTableColumn column = columns.insertNewTableColumn(columnIndex);
+        columns.setCount(columns.sizeOfTableColumnArray());
+        
+        column.setId(nextColumnId);
+        if(columnName != null) {
+            column.setName(columnName); 
+        } else {
+            column.setName("Column " + nextColumnId);
+        }
+        
+        if (ctTable.getRef() != null) {
+            // calculate new area
+            int newColumnCount = columnCount + 1;
+            CellReference tableStart = getStartCellReference();
+            CellReference tableEnd = getEndCellReference();
+            SpreadsheetVersion version = getXSSFSheet().getWorkbook().getSpreadsheetVersion();
+            CellReference newTableEnd = new CellReference(tableEnd.getRow(),
+                    tableStart.getCol() + newColumnCount - 1);
+            AreaReference newTableArea = new AreaReference(tableStart, newTableEnd, version);
+
+            setCellRef(newTableArea);
+        }
+        
+        updateHeaders();
+        
+        return getColumns().get(columnIndex);
+    }
+

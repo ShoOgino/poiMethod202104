@@ -1,0 +1,64 @@
+    /**
+     * Set the area reference for the cells which this table covers. The area
+     * includes includes header rows and totals rows.
+     * 
+     * Updating the area with this method will create new column as necessary to
+     * the right side of the table but will not modify any cell values.
+     * 
+     * @param refs
+     *            the new area of the table
+     * @throws IllegalArgumentException
+     *             if the area is {@code null} or not
+     * @since 4.0.0
+     */
+    public void setArea(AreaReference tableArea) {
+
+        if (tableArea == null) {
+            throw new IllegalArgumentException("AreaReference must not be null");
+        }
+        
+        String areaSheetName = tableArea.getFirstCell().getSheetName();
+        if (areaSheetName != null && !areaSheetName.equals(getXSSFSheet().getSheetName())) {
+            // TODO to move a table from one sheet to another
+            // CTWorksheet.getTableParts needs to be updated on both sheets
+            throw new IllegalArgumentException(
+                    "The AreaReference must not reference a different sheet");
+        }
+        
+        int rowCount = (tableArea.getLastCell().getRow() - tableArea.getFirstCell().getRow()) + 1;
+        int minimumRowCount = 1 + getHeaderRowCount() + getTotalsRowCount();
+        if (rowCount < minimumRowCount) {
+            throw new IllegalArgumentException("AreaReference needs at least " + minimumRowCount
+                    + " rows, to cover at least one data row and all header rows and totals rows");
+        }
+
+        // Strip the sheet name,
+        // CTWorksheet.getTableParts defines in which sheet the table is
+        String ref = tableArea.formatAsString();
+        if (ref.indexOf('!') != -1) {
+            ref = ref.substring(ref.indexOf('!') + 1);
+        }
+
+        // Update
+        ctTable.setRef(ref);
+        if (ctTable.isSetAutoFilter()) {
+            ctTable.getAutoFilter().setRef(ref);
+        }
+        updateReferences();
+
+        // add or remove columns on the right side of the table
+        int columnCount = getColumnCount();
+        int newColumnCount = (tableArea.getLastCell().getCol() - tableArea.getFirstCell().getCol()) + 1;
+        if (newColumnCount > columnCount) {
+            for (int i = columnCount; i < newColumnCount; i++) {
+                createColumn(null, i);
+            }
+        } else if (newColumnCount < columnCount) {
+            for (int i = columnCount; i > newColumnCount; i--) {
+                removeColumn(i -1);
+            }
+        }
+
+        updateHeaders();
+    }
+

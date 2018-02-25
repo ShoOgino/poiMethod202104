@@ -1,40 +1,13 @@
     /**
-     * Creates a new Table, and associates it with this Sheet
+     * Creates a new Table, and associates it with this Sheet. The table does
+     * not yet have an area defined and needs to be initialized by calling
+     * {@link XSSFTable#setArea(AreaReference)}.
+     * 
+     * @deprecated Use {@link #createTable(AreaReference))} instead
      */
+    @Deprecated
+    @Removal(version = "4.2.0")
     public XSSFTable createTable() {
-        if(! worksheet.isSetTableParts()) {
-            worksheet.addNewTableParts();
-        }
-
-        CTTableParts tblParts = worksheet.getTableParts();
-        CTTablePart tbl = tblParts.addNewTablePart();
-
-        // Table numbers need to be unique in the file, not just
-        //  unique within the sheet. Find the next one
-        int tableNumber = getPackagePart().getPackage().getPartsByContentType(XSSFRelation.TABLE.getContentType()).size() + 1;
-
-        // the id could already be taken after insertion/deletion of different tables
-        outerloop:
-        while(true) {
-            for (PackagePart packagePart : getPackagePart().getPackage().getPartsByContentType(XSSFRelation.TABLE.getContentType())) {
-                String fileName = XSSFRelation.TABLE.getFileName(tableNumber);
-                if(fileName.equals(packagePart.getPartName().getName())) {
-                    // duplicate found, increase the number and start iterating again
-                    tableNumber++;
-                    continue outerloop;
-                }
-            }
-
-            break;
-        }
-
-        RelationPart rp = createRelationship(XSSFRelation.TABLE, XSSFFactory.getInstance(), tableNumber, false);
-        XSSFTable table = rp.getDocumentPart();
-        tbl.setId(rp.getRelationship().getId());
-        table.getCTTable().setId(tableNumber);
-
-        tables.put(tbl.getId(), table);
-
-        return table;
+        return createTable(null);
     }
 

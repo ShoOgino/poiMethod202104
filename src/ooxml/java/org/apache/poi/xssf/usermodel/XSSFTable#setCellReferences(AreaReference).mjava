@@ -1,37 +1,23 @@
     /**
-     * Updates the reference for the cells of the table
-     * (see Open Office XML Part 4: chapter 3.5.1.2, attribute ref)
-     * and synchronizes any changes
-     * @param refs table range
+     * Set the area reference for the cells which this table covers. The area
+     * includes includes header rows and totals rows. Automatically synchronizes
+     * any changes by calling {@link #updateHeaders()}.
      * 
+     * Note: The area's width should be identical to the amount of columns in
+     * the table or the table may be invalid. All header rows, totals rows and
+     * at least one data row must fit inside the area. Updating the area with
+     * this method does not create or remove any columns and does not change any
+     * cell values.
+     * 
+     * @deprecated Use {@link #setTableArea} instead, which will ensure that the
+     *             the amount of columns always matches table area always width.
+     * 
+     * @see "Open Office XML Part 4: chapter 3.5.1.2, attribute ref"
      * @since 3.17 beta 1
      */
+    @Deprecated
+    @Removal(version="4.2.0")
     public void setCellReferences(AreaReference refs) {
-        // Strip the Sheet name
-        String ref = refs.formatAsString();
-        if (ref.indexOf('!') != -1) {
-            ref = ref.substring(ref.indexOf('!')+1);
-        }
-        
-        // Update
-        ctTable.setRef(ref);
-        if (ctTable.isSetAutoFilter()) {
-            String filterRef;
-            int totalsRowCount = getTotalsRowCount();
-            if (totalsRowCount == 0) {
-                filterRef = ref;
-            } else {
-                final CellReference start = new CellReference(refs.getFirstCell().getRow(), refs.getFirstCell().getCol());
-                // account for footer row(s) in auto-filter range, which doesn't include footers
-                final CellReference end = new CellReference(refs.getLastCell().getRow() - totalsRowCount, refs.getLastCell().getCol());
-                // this won't have sheet references because we built the cell references without them
-                filterRef = new AreaReference(start, end, SpreadsheetVersion.EXCEL2007).formatAsString();
-            }
-            ctTable.getAutoFilter().setRef(filterRef);
-        }
-        
-        // Have everything recomputed
-        updateReferences();
-        updateHeaders();
+        setCellRef(refs);
     }
 
