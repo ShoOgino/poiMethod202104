@@ -1,0 +1,42 @@
+    public static void main(String[] args) throws Exception {
+        if(args.length < 2) {
+            usage();
+            return;
+        }
+
+        try (FileInputStream argIS = new FileInputStream(args[0]);
+                BufferedReader modelReader = new BufferedReader(new FileReader(args[1]))) {
+
+            String chartTitle = modelReader.readLine();  // first line is chart title
+
+            // Category Axis Data
+            List<String> listCategories = new ArrayList<String>(3);
+
+            // Values
+            List<Double> listValues = new ArrayList<Double>(3);
+
+            // set model
+            String ln;
+            while((ln = modelReader.readLine()) != null){
+                String[] vals = ln.split("\\s+");
+                listCategories.add(vals[0]);
+                listValues.add(Double.valueOf(vals[1]));
+            }
+            String[] categories = listCategories.toArray(new String[listCategories.size()]);
+            Double[] values = listValues.toArray(new Double[listValues.size()]);
+
+            try (XWPFDocument doc = new XWPFDocument(argIS)) {
+                XWPFChart chart = doc.getCharts().get(0);
+                setBarData(chart, chartTitle, categories, values);
+                chart = doc.getCharts().get(1);
+                setColumnData(chart, "Column variant");
+
+                // save the result
+                try (OutputStream out = new FileOutputStream("bar-chart-demo-output.docx")) {
+                    doc.write(out);
+                }
+            }
+        }
+        System.out.println("Done");
+    }
+
