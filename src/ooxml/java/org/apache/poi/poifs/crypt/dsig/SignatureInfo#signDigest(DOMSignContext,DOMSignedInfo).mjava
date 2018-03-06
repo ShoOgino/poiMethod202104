@@ -1,0 +1,41 @@
+    /**
+     * Sign (encrypt) the digest with the private key.
+     * Currently only rsa is supported.
+     *
+     * @param digest the hashed input
+     * @return the encrypted hash
+     */
+    public String signDigest(final DOMSignContext xmlSignContext, final DOMSignedInfo signedInfo) {
+        final PrivateKey key = signatureConfig.getKey();
+        final HashAlgorithm algo = signatureConfig.getDigestAlgo();
+
+        if (algo.hashSize*4/3 > Base64.BASE64DEFAULTLENGTH && !XMLUtils.ignoreLineBreaks()) {
+            throw new EncryptedDocumentException("The hash size of the choosen hash algorithm ("+algo+" = "+algo.hashSize+" bytes), "+
+                "will motivate XmlSec to add linebreaks to the generated digest, which results in an invalid signature (... at least "+
+                "for Office) - please persuade it otherwise by adding '-Dorg.apache.xml.security.ignoreLineBreaks=true' to the JVM "+
+                "system properties.");
+        }
+        
+        try {
+            final DigestOutputStream dos;
+            switch (algo) {
+                case md2: case md5: case sha1: case sha256: case sha384: case sha512:
+                    dos = new SignatureOutputStream(algo, key);
+                    break;
+                default:
+                    dos = new DigestOutputStream(algo, key);
+                    break;
+            }
+            dos.init();
+
+            final Document document = (Document)xmlSignContext.getParent();
+            final Element el = getDsigElement(document, "SignedInfo");
+            final DOMSubTreeData subTree = new DOMSubTreeData(el, true);
+            signedInfo.getCanonicalizationMethod().transform(subTree, xmlSignContext, dos);
+
+            return DatatypeConverter.printBase64Binary(dos.sign());
+        } catch (GeneralSecurityException|IOException|TransformException e) {
+            throw new EncryptedDocumentException(e);
+        }
+    }
+

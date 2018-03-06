@@ -5,24 +5,21 @@
         SignatureInfo si = new SignatureInfo();
         si.setSignatureConfig(signatureConfig);
 
-        Document document = DocumentHelper.createDocument();
+        final Document document = DocumentHelper.createDocument();
+        final DOMSignContext xmlSignContext = si.createXMLSignContext(document);
 
         // operate
-        DigestInfo digestInfo = si.preSign(document, null);
+        final DOMSignedInfo signedInfo = si.preSign(xmlSignContext);
 
         // verify
-        assertNotNull(digestInfo);
-        LOG.log(POILogger.DEBUG, "digest algo: " + digestInfo.hashAlgo);
-        LOG.log(POILogger.DEBUG, "digest description: " + digestInfo.description);
-        assertEquals("Office OpenXML Document", digestInfo.description);
-        assertNotNull(digestInfo.hashAlgo);
-        assertNotNull(digestInfo.digestValue);
+        assertNotNull(signedInfo);
+        assertEquals("Office OpenXML Document", signatureConfig.getSignatureDescription());
 
         // setup: key material, signature value
-        byte[] signatureValue = si.signDigest(digestInfo.digestValue);
+        final String signatureValue = si.signDigest(xmlSignContext, signedInfo);
         
         // operate: postSign
-        si.postSign(document, signatureValue);
+        si.postSign(xmlSignContext, signatureValue);
 
         // verify: signature
         si.getSignatureConfig().setOpcPackage(pkgCopy);

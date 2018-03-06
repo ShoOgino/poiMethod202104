@@ -2,9 +2,11 @@
      * Helper method for adding informations after the signing.
      * Normally {@link #confirmSignature()} is sufficient to be used.
      */
-    public void postSign(Document document, byte[] signatureValue)
+    public void postSign(final DOMSignContext xmlSignContext, final String signatureValue)
     throws MarshalException {
         LOG.log(POILogger.DEBUG, "postSign");
+
+        final Document document = (Document)xmlSignContext.getParent();
 
         /*
          * Check ds:Signature node.
@@ -17,11 +19,11 @@
         /*
          * Insert signature value into the ds:SignatureValue element
          */
-        NodeList sigValNl = document.getElementsByTagNameNS(XML_DIGSIG_NS, "SignatureValue");
-        if (sigValNl.getLength() != 1) {
+        final Element signatureNode = getDsigElement(document, "SignatureValue"); 
+        if (signatureNode == null) {
             throw new RuntimeException("preSign has to be called before postSign");
         }
-        sigValNl.item(0).setTextContent(Base64.encode(signatureValue));
+        signatureNode.setTextContent(signatureValue);
 
         /*
          * Allow signature facets to inject their own stuff.

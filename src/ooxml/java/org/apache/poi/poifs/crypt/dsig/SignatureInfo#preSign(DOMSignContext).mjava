@@ -3,10 +3,12 @@
      * Normally {@link #confirmSignature()} is sufficient to be used.
      */
     @SuppressWarnings("unchecked")
-    public DigestInfo preSign(Document document, List<DigestInfo> digestInfos)
+    public DOMSignedInfo preSign(final DOMSignContext xmlSignContext)
     throws XMLSignatureException, MarshalException {
         signatureConfig.init(false);
-        
+
+        final Document document = (Document)xmlSignContext.getParent();
+
         // it's necessary to explicitly set the mdssi namespace, but the sign() method has no
         // normal way to interfere with, so we need to add the namespace under the hand ...
         EventTarget target = (EventTarget)document;
@@ -17,11 +19,10 @@
             }
             SignatureMarshalListener.setListener(target, creationListener, true);
         }
-        
+
         /*
          * Signature context construction.
          */
-        XMLSignContext xmlSignContext = new DOMSignContext(signatureConfig.getKey(), document);
         URIDereferencer uriDereferencer = signatureConfig.getUriDereferencer();
         if (null != uriDereferencer) {
             xmlSignContext.setURIDereferencer(uriDereferencer);
@@ -32,23 +33,13 @@
         }
         xmlSignContext.setDefaultNamespacePrefix("");
         // signatureConfig.getNamespacePrefixes().get(XML_DIGSIG_NS));
-        
-        brokenJvmWorkaround(xmlSignContext);
-        
+
         XMLSignatureFactory signatureFactory = signatureConfig.getSignatureFactory();
 
         /*
          * Add ds:References that come from signing client local files.
          */
         List<Reference> references = new ArrayList<>();
-        for (DigestInfo digestInfo : safe(digestInfos)) {
-            byte[] documentDigestValue = digestInfo.digestValue;
-
-            String uri = new File(digestInfo.description).getName();
-            Reference reference = SignatureFacet.newReference
-                (uri, null, null, null, documentDigestValue, signatureConfig);
-            references.add(reference);
-        }
 
         /*
          * Invoke the signature facets.
@@ -96,11 +87,15 @@
             List<XMLStructure> objectContentList = object.getContent();
             for (XMLStructure objectContent : objectContentList) {
                 LOG.log(POILogger.DEBUG, "object content java type: " + objectContent.getClass().getName());
-                if (!(objectContent instanceof Manifest)) continue;
+                if (!(objectContent instanceof Manifest)) {
+                    continue;
+                }
                 Manifest manifest = (Manifest) objectContent;
                 List<Reference> manifestReferences = manifest.getReferences();
                 for (Reference manifestReference : manifestReferences) {
-                    if (manifestReference.getDigestValue() != null) continue;
+                    if (manifestReference.getDigestValue() != null) {
+                        continue;
+                    }
 
                     DOMReference manifestDOMReference = (DOMReference)manifestReference;
                     manifestDOMReference.digest(xmlSignContext);
@@ -116,29 +111,13 @@
             DOMReference domReference = (DOMReference)signedInfoReference;
 
             // ds:Reference with external digest value
-            if (domReference.getDigestValue() != null) continue;
-            
+            if (domReference.getDigestValue() != null) {
+                continue;
+            }
+
             domReference.digest(xmlSignContext);
         }
 
-        /*
-         * Calculation of XML signature digest value.
-         */
-        DOMSignedInfo domSignedInfo = (DOMSignedInfo)signedInfo;
-        ByteArrayOutputStream dataStream = new ByteArrayOutputStream();
-        domSignedInfo.canonicalize(xmlSignContext, dataStream);
-        byte[] octets = dataStream.toByteArray();
-
-        /*
-         * TODO: we could be using DigestOutputStream here to optimize memory
-         * usage.
-         */
-
-        MessageDigest md = CryptoFunctions.getMessageDigest(signatureConfig.getDigestAlgo());
-        byte[] digestValue = md.digest(octets);
-        
-        
-        String description = signatureConfig.getSignatureDescription();
-        return new DigestInfo(digestValue, signatureConfig.getDigestAlgo(), description);
+        return (DOMSignedInfo)signedInfo;
     }
 
