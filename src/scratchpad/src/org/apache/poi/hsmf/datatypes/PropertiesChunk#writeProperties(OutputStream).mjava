@@ -1,4 +1,41 @@
-    protected void writeProperties(OutputStream out) throws IOException {
-        // TODO
+    /**
+     * Writes the header of the properties.
+     * 
+     * @param out
+     *          The {@code OutputStream}.
+     * @return The variable-length properties that need to be written in another
+     *         node.
+     * @throws IOException
+     *           If an I/O error occurs.
+     */
+    protected List<PropertyValue> writeProperties(OutputStream out) throws IOException {
+        List<PropertyValue> variableLengthProperties = new ArrayList<>();
+        for (Entry<MAPIProperty, PropertyValue> entry : properties.entrySet()) {
+            MAPIProperty property = entry.getKey();
+            PropertyValue value = entry.getValue();
+            if (value == null) {
+                continue;
+            }
+            if (property.id < 0) {
+                continue;
+            }
+            // generic header
+            // page 23, point 2.4.2
+  	        // tag is the property id and its type
+            long tag = Long.parseLong(getFileName(property, value.getActualType()), 16);
+            LittleEndian.putUInt(tag, out);
+            LittleEndian.putUInt(value.getFlags(), out); // readable + writable
+
+            MAPIType type = getTypeMapping(value.getActualType());
+            if (type.isFixedLength()) {
+                // page 11, point 2.1.2
+                writeFixedLengthValueHeader(out, property, type, value);
+            } else {
+                // page 12, point 2.1.3
+                writeVariableLengthValueHeader(out, property, type, value);
+                variableLengthProperties.add(value);
+            }
+        }
+        return variableLengthProperties;
     }
 
