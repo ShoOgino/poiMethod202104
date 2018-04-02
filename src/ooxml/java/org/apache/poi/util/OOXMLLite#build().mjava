@@ -1,4 +1,4 @@
-    void build() throws IOException, ClassNotFoundException {
+    void build() throws IOException {
         List<Class<?>> lst = new ArrayList<>();
         //collect unit tests
         String exclude = StringUtil.join("|",
@@ -57,10 +57,21 @@
         System.out.println("Collecting unit tests from " + _testDir);
         collectTests(_testDir, _testDir, lst, ".+.class$", ".+(" + exclude + ").class");
         System.out.println("Found " + lst.size() + " classes");
-        
+
         //run tests
         JUnitCore jUnitCore = new JUnitCore();
-        jUnitCore.addListener(new TextListener(System.out));
+        jUnitCore.addListener(new TextListener(System.out) {
+            private int count;
+            @Override
+            public void testStarted(Description description) {
+                count++;
+                if(count % 100 == 0) {
+                    System.out.println();
+                    System.out.println(count + "/" + lst.size() + ": " + description.getDisplayName());
+                }
+                super.testStarted(description);
+            }
+        });
         Result result = jUnitCore.run(lst.toArray(new Class<?>[lst.size()]));
         if (!result.wasSuccessful()) {
             throw new RuntimeException("Tests did not succeed, cannot build ooxml-lite jar");
