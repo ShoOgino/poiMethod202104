@@ -4,7 +4,20 @@
      *  Sheets that support the notion of themes (slides, masters, layouts, etc.) should override this
      *  method and return the corresponding package part.
      */
-    XSLFTheme getTheme(){
-        return null;
+    public XSLFTheme getTheme() {
+        if (_theme != null || !isSupportTheme()) {
+            return _theme;
+        }
+
+        final Optional<XSLFTheme> t =
+                getRelations().stream().filter((p) -> p instanceof XSLFTheme).map((p) -> (XSLFTheme) p).findAny();
+        if (t.isPresent()) {
+            _theme = t.get();
+            final CTColorMapping cmap = getColorMapping();
+            if (cmap != null) {
+                _theme.initColorMap(cmap);
+            }
+        }
+        return _theme;
     }
 

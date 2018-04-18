@@ -1,0 +1,30 @@
+    @Test
+    public void testExtractGroupedShapeText() throws Exception {
+        try (final PowerPointExtractor ppe = openExtractor("bug62092.ppt")) {
+            final String text = ppe.getText();
+
+            //this tests that we're ignoring text shapes at depth=0
+            //i.e. POI has already included them in the slide's getTextParagraphs()
+            assertContains(text, "Text box1");
+            assertEquals(1, countMatches(text,"Text box1"));
+
+
+            //the WordArt and text box count tests will fail
+            //if this content is available via getTextParagraphs() of the slide in POI
+            //i.e. when POI is fixed, these tests will fail, and
+            //we'll have to remove the workaround in HSLFExtractor's extractGroupText(...)
+            assertEquals(1, countMatches(text,"WordArt1"));
+            assertEquals(1, countMatches(text,"WordArt2"));
+            assertEquals(1, countMatches(text,"Ungrouped text box"));//should only be 1
+            assertContains(text, "Text box2");
+            assertContains(text, "Text box3");
+            assertContains(text, "Text box4");
+            assertContains(text, "Text box5");
+
+            //see below -- need to extract hyperlinks
+            assertContains(text, "tika");
+            assertContains(text, "MyTitle");
+
+        }
+    }
+

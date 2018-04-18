@@ -1,0 +1,37 @@
+    private void updatePlaceholderAtom(final boolean create) {
+        final HSLFEscherClientDataRecord clientData = shape.getClientData(create);
+        if (clientData == null) {
+            oePlaceholderAtom = null;
+            roundTripHFPlaceholder12 = null;
+            if (!create) {
+                return;
+            }
+            throw new HSLFException("Placeholder aren't allowed for shape type: " + shape.getClass().getSimpleName());
+        }
+
+        for (Record r : clientData.getHSLFChildRecords()) {
+            if (r instanceof OEPlaceholderAtom) {
+                oePlaceholderAtom = (OEPlaceholderAtom)r;
+            } else if (r instanceof RoundTripHFPlaceholder12) {
+                //special case for files saved in Office 2007
+                roundTripHFPlaceholder12 = (RoundTripHFPlaceholder12)r;
+            }
+        }
+
+        if (!create) {
+            return;
+        }
+
+        if (oePlaceholderAtom == null) {
+            oePlaceholderAtom = new OEPlaceholderAtom();
+            oePlaceholderAtom.setPlaceholderSize((byte)OEPlaceholderAtom.PLACEHOLDER_FULLSIZE);
+            // TODO: placement id only "SHOULD" be unique ... check other placeholders on sheet for unique id
+            oePlaceholderAtom.setPlacementId(-1);
+            clientData.addChild(oePlaceholderAtom);
+        }
+        if (roundTripHFPlaceholder12 == null) {
+            roundTripHFPlaceholder12 = new RoundTripHFPlaceholder12();
+            clientData.addChild(roundTripHFPlaceholder12);
+        }
+    }
+

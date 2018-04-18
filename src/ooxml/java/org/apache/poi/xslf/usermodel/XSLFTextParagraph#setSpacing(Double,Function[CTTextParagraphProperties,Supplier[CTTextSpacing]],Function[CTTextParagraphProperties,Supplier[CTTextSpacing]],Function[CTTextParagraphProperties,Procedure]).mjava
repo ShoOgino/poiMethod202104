@@ -1,0 +1,39 @@
+    private void setSpacing(final Double space,
+        final Function<CTTextParagraphProperties,Supplier<CTTextSpacing>> getSpc,
+        final Function<CTTextParagraphProperties,Supplier<CTTextSpacing>> addSpc,
+        final Function<CTTextParagraphProperties,Procedure> unsetSpc
+    ) {
+        final CTTextParagraphProperties pPr = (space == null || _p.isSetPPr()) ?  _p.getPPr() : _p.addNewPPr();
+        if (pPr == null) {
+            return;
+        }
+
+        CTTextSpacing spc = getSpc.apply(pPr).get();
+
+        if (space == null) {
+            if (spc != null) {
+                // unset the space before on null input
+                unsetSpc.apply(pPr).accept();
+            }
+            return;
+        }
+
+        if (spc == null) {
+            spc = addSpc.apply(pPr).get();
+        }
+
+        if (space >= 0) {
+            if (spc.isSetSpcPts()) {
+                spc.unsetSpcPts();
+            }
+            final CTTextSpacingPercent pct = spc.isSetSpcPct() ? spc.getSpcPct() : spc.addNewSpcPct();
+            pct.setVal((int)(space*1000));
+        } else {
+            if (spc.isSetSpcPct()) {
+                spc.unsetSpcPct();
+            }
+            final CTTextSpacingPoint pts = spc.isSetSpcPts() ? spc.getSpcPts() : spc.addNewSpcPts();
+            pts.setVal((int)(-space*100));
+        }
+    }
+

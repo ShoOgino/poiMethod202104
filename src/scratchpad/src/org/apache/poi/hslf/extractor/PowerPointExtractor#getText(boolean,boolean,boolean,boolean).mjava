@@ -1,117 +1,15 @@
 	public String getText(boolean getSlideText, boolean getNoteText, boolean getCommentText, boolean getMasterText) {
-		StringBuffer ret = new StringBuffer();
-
-		if (getSlideText) {
-            if (getMasterText) {
-                for (HSLFSlideMaster master : _show.getSlideMasters()) {
-                    for(HSLFShape sh : master.getShapes()){
-                        if(sh instanceof HSLFTextShape){
-                            HSLFTextShape hsh = (HSLFTextShape)sh;
-                            final String text = hsh.getText();
-                            if (text == null || text.isEmpty() || "*".equals(text)) {
-                                continue;
-                            }
-                            
-                            if (HSLFMasterSheet.isPlaceholder(sh)) {
-                                // check for metro shape of complex placeholder
-                                boolean isMetro = new HSLFMetroShape<HSLFShape>(sh).hasMetroBlob();
-                                
-                                if (!isMetro) {
-                                    // don't bother about boiler plate text on master sheets
-                                    LOG.log(POILogger.INFO, "Ignoring boiler plate (placeholder) text on slide master:", text);
-                                    continue;
-                                }
-                            }
-                            
-                            ret.append(text);
-                            if (!text.endsWith("\n")) {
-                                ret.append("\n");
-                            }
-                        }
-                    }
-                }
-            }
-
-            for (HSLFSlide slide : _slides) {
-                String headerText = "";
-                String footerText = "";
-                HeadersFooters hf = slide.getHeadersFooters();
-                if (hf != null) {
-                    if (hf.isHeaderVisible()) {
-                        headerText = safeLine(hf.getHeaderText());
-                    }
-                    if (hf.isFooterVisible()) {
-                        footerText = safeLine(hf.getFooterText());
-                    }
-                }
-                
-                // Slide header, if set
-                ret.append(headerText);
-
-                // Slide text
-                textRunsToText(ret, slide.getTextParagraphs());
-
-                // Table text
-                for (HSLFShape shape : slide.getShapes()){
-                    if (shape instanceof HSLFTable){
-                        extractTableText(ret, (HSLFTable)shape);
-                    }
-                }
-                // Slide footer, if set
-                ret.append(footerText);
-
-				// Comments, if requested and present
-				if (getCommentText) {
-					for (Comment comment : slide.getComments()) {
-						ret.append(comment.getAuthor() + " - " + comment.getText() + "\n");
-					}
-				}
-			}
-			if (getNoteText) {
-				ret.append('\n');
-			}
+		delegate.setSlidesByDefault(getSlideText);
+		delegate.setNotesByDefault(getNoteText);
+		delegate.setCommentsByDefault(getCommentText);
+		delegate.setMasterByDefault(getMasterText);
+		try {
+			return delegate.getText();
+		} finally {
+			delegate.setSlidesByDefault(slidesByDefault);
+			delegate.setNotesByDefault(notesByDefault);
+			delegate.setCommentsByDefault(commentsByDefault);
+			delegate.setMasterByDefault(masterByDefault);
 		}
-
-		if (getNoteText) {
-			// Not currently using _notes, as that can have the notes of
-			// master sheets in. Grab Slide list, then work from there,
-			// but ensure no duplicates
-			Set<Integer> seenNotes = new HashSet<>();
-            String headerText = "";
-            String footerText = "";
-			HeadersFooters hf = _show.getNotesHeadersFooters();
-			if (hf != null) {
-			    if (hf.isHeaderVisible()) {
-			        headerText = safeLine(hf.getHeaderText());
-			    }
-			    if (hf.isFooterVisible()) {
-                    footerText = safeLine(hf.getFooterText());
-			    }
-			}
-			
-
-			for (HSLFSlide slide : _slides) {
-				HSLFNotes notes = slide.getNotes();
-				if (notes == null) {
-					continue;
-				}
-				Integer id = Integer.valueOf(notes._getSheetNumber());
-				if (seenNotes.contains(id)) {
-					continue;
-				}
-				seenNotes.add(id);
-
-				// Repeat the Notes header, if set
-				ret.append(headerText);
-
-				// Notes text
-				textRunsToText(ret, notes.getTextParagraphs());
-
-				// Repeat the notes footer, if set
-				ret.append(footerText);
-			}
-		}
-
-		return ret.toString();
 	}
 
