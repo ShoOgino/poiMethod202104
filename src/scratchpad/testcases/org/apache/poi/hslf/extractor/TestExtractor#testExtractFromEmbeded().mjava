@@ -1,12 +1,23 @@
     @Test
     public void testExtractFromEmbeded() throws IOException {
-        InputStream is = POIDataSamples.getSpreadSheetInstance().openResourceAsStream("excel_with_embeded.xls");
-        POIFSFileSystem fs = new POIFSFileSystem(is);
-        DirectoryNode root = fs.getRoot();
-        PowerPointExtractor ppe1 = assertExtractFromEmbedded(root, "MBD0000A3B6", "Sample PowerPoint file\nThis is the 1st file\nNot much too it\n");
-        PowerPointExtractor ppe2 = assertExtractFromEmbedded(root, "MBD0000A3B3", "Sample PowerPoint file\nThis is the 2nd file\nNot much too it either\n");
-        ppe2.close();
-        ppe1.close();
-        fs.close();
+        try (final InputStream is = POIDataSamples.getSpreadSheetInstance().openResourceAsStream("excel_with_embeded.xls");
+            final POIFSFileSystem fs = new POIFSFileSystem(is)) {
+            final DirectoryNode root = fs.getRoot();
+
+            final String[] TEST_SET = {
+                "MBD0000A3B6", "Sample PowerPoint file\nThis is the 1st file\nNot much too it\n",
+                "MBD0000A3B3", "Sample PowerPoint file\nThis is the 2nd file\nNot much too it either\n"
+            };
+
+            for (int i=0; i<TEST_SET.length; i+=2) {
+                DirectoryNode dir = (DirectoryNode)root.getEntry(TEST_SET[i]);
+                assertTrue(dir.hasEntry(HSLFSlideShow.POWERPOINT_DOCUMENT));
+
+                try (final SlideShow<?,?> ppt = SlideShowFactory.create(dir);
+                     final SlideShowExtractor<?,?> ppe = new SlideShowExtractor(ppt)) {
+                    assertEquals(TEST_SET[i+1], ppe.getText());
+                }
+            }
+        }
     }
 

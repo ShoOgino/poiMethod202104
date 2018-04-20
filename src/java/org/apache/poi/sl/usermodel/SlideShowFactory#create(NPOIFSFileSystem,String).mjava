@@ -10,33 +10,6 @@
      * @throws IOException if an error occurs while reading the data
      */
     public static SlideShow<?,?> create(final NPOIFSFileSystem fs, String password) throws IOException {
-        DirectoryNode root = fs.getRoot();
-
-        // Encrypted OOXML files go inside OLE2 containers, is this one?
-        if (root.hasEntry(Decryptor.DEFAULT_POIFS_ENTRY)) {
-            InputStream stream = null;
-            try {
-                stream = DocumentFactoryHelper.getDecryptedStream(fs, password);
-
-                return createXSLFSlideShow(stream);
-            } finally {
-                IOUtils.closeQuietly(stream);
-            }
-        }
-
-        // If we get here, it isn't an encrypted PPTX file
-        // So, treat it as a regular HSLF PPT one
-        boolean passwordSet = false;
-        if (password != null) {
-            Biff8EncryptionKey.setCurrentUserPassword(password);
-            passwordSet = true;
-        }
-        try {
-            return createHSLFSlideShow(fs);
-        } finally {
-            if (passwordSet) {
-                Biff8EncryptionKey.setCurrentUserPassword(null);
-            }
-        }
+        return create(fs.getRoot(), password);
     }
 

@@ -6,20 +6,22 @@
      */
     @Test
     public void testMissingCoreRecords() throws IOException {
-        PowerPointExtractor ppe = openExtractor("missing_core_records.ppt");
+        try (SlideShowExtractor<?,?> ppe = openExtractor("missing_core_records.ppt")) {
+            ppe.setSlidesByDefault(true);
+            ppe.setNotesByDefault(false);
+            String text = ppe.getText();
+            ppe.setSlidesByDefault(false);
+            ppe.setNotesByDefault(true);
+            String nText = ppe.getText();
 
-        String text = ppe.getText(true, false);
-        String nText = ppe.getNotes();
+            assertNotNull(text);
+            assertNotNull(nText);
 
-        assertNotNull(text);
-        assertNotNull(nText);
+            // Notes record were corrupt, so don't expect any
+            assertEquals(nText.length(), 0);
 
-        // Notes record were corrupt, so don't expect any
-        assertEquals(nText.length(), 0);
-
-        // Slide records were fine
-        assertContains(text, "Using Disease Surveillance and Response");
-        
-        ppe.close();
+            // Slide records were fine
+            assertContains(text, "Using Disease Surveillance and Response");
+        }
     }
 

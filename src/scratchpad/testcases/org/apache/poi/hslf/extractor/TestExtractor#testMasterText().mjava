@@ -1,28 +1,27 @@
     @Test
     public void testMasterText() throws IOException {
-        PowerPointExtractor ppe1 = openExtractor("master_text.ppt");
+        try (final SlideShowExtractor ppe = openExtractor("master_text.ppt")) {
+            // Initially not there
+            String text = ppe.getText();
+            assertFalse(text.contains("Text that I added to the master slide"));
 
-        // Initially not there
-        String text = ppe1.getText();
-        assertFalse(text.contains("Text that I added to the master slide"));
+            // Enable, shows up
+            ppe.setMasterByDefault(true);
+            text = ppe.getText();
+            assertContains(text, "Text that I added to the master slide");
 
-        // Enable, shows up
-        ppe1.setMasterByDefault(true);
-        text = ppe1.getText();
-        assertContains(text, "Text that I added to the master slide");
-
-        // Make sure placeholder text does not come out
-        assertNotContained(text, "Click to edit Master");
-        ppe1.close();
+            // Make sure placeholder text does not come out
+            assertNotContained(text, "Click to edit Master");
+        }
 
         // Now with another file only containing master text
         // Will always show up
-        PowerPointExtractor ppe2 = openExtractor("WithMaster.ppt");
-        String masterText = "Footer from the master slide";
+        try (final SlideShowExtractor ppe = openExtractor("WithMaster.ppt")) {
+            String masterText = "Footer from the master slide";
 
-        text = ppe2.getText();
-        assertContainsIgnoreCase(text, "master");
-        assertContains(text, masterText);
-        ppe2.close();
+            String text = ppe.getText();
+            assertContainsIgnoreCase(text, "master");
+            assertContains(text, masterText);
+        }
     }
 

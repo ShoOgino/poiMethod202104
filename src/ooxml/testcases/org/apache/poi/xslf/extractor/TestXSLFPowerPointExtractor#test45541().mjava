@@ -1,29 +1,36 @@
     @Test
-    public void test45541() throws Exception {
+    public void test45541() throws IOException, OpenXML4JException, XmlException {
         // extract text from a powerpoint that has a header in the notes-element
-        POITextExtractor extr = ExtractorFactory.createExtractor(
-            slTests.getFile("45541_Header.pptx"));
-        String text = extr.getText();
-        assertNotNull(text);
-        assertFalse("Had: " + text, text.contains("testdoc"));
+        final File headerFile = slTests.getFile("45541_Header.pptx");
+        try (final SlideShowExtractor extr = ExtractorFactory.createExtractor(headerFile)) {
+            String text = extr.getText();
+            assertNotNull(text);
+            assertFalse("Had: " + text, text.contains("testdoc"));
 
-        text = ((XSLFPowerPointExtractor)extr).getText(false, true);
-        assertContains(text, "testdoc");
-        extr.close();
-       assertNotNull(text);
+            extr.setSlidesByDefault(false);
+            extr.setNotesByDefault(true);
+
+            text = extr.getText();
+            assertContains(text, "testdoc");
+            assertNotNull(text);
+        }
 
         // extract text from a powerpoint that has a footer in the master-slide
-        extr = ExtractorFactory.createExtractor(
-            slTests.getFile("45541_Footer.pptx"));
-        text = extr.getText();
-        assertNotContained(text, "testdoc");
+        final File footerFile = slTests.getFile("45541_Footer.pptx");
+        try (SlideShowExtractor extr = ExtractorFactory.createExtractor(footerFile)) {
+            String text = extr.getText();
+            assertNotContained(text, "testdoc");
 
-        text = ((XSLFPowerPointExtractor)extr).getText(false, true);
-        assertNotContained(text, "testdoc");
+            extr.setSlidesByDefault(false);
+            extr.setNotesByDefault(true);
+            text = extr.getText();
+            assertNotContained(text, "testdoc");
 
-        text = ((XSLFPowerPointExtractor)extr).getText(false, false, true);
-        assertNotContained(text, "testdoc");
-
-        extr.close();
+            extr.setSlidesByDefault(false);
+            extr.setNotesByDefault(false);
+            extr.setMasterByDefault(true);
+            text = extr.getText();
+            assertNotContained(text, "testdoc");
+        }
     }
 

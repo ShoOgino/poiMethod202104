@@ -3,135 +3,42 @@
      *  does poifs embedded, but will do ooxml ones
      *  at some point.
      */
-    @SuppressWarnings("deprecation")
     @Test
     public void testEmbedded() throws Exception {
-        POIOLE2TextExtractor ext;
-        POITextExtractor[] embeds;
+        final Object[] testObj = {
+            "No embeddings", xls, "0-0-0-0-0-0",
+            "Excel", xlsEmb, "6-2-2-2-0-0",
+            "Word", docEmb, "4-1-2-1-0-0",
+            "Word which contains an OOXML file", docEmbOOXML, "3-0-1-1-0-1",
+            "Outlook", msgEmb, "1-1-0-0-0-0",
+            "Outlook with another outlook file in it", msgEmbMsg, "1-0-0-0-1-0",
+        };
 
-        // No embeddings
-        ext = (POIOLE2TextExtractor)
-                ExtractorFactory.createExtractor(xls);
-        embeds = ExtractorFactory.getEmbededDocsTextExtractors(ext);
-        assertEquals(0, embeds.length);
-        ext.close();
+        for (int i=0; i<testObj.length; i+=3) {
+            try (final POIOLE2TextExtractor ext = ExtractorFactory.createExtractor((File)testObj[i+1])) {
+                final POITextExtractor[] embeds = ExtractorFactory.getEmbeddedDocsTextExtractors(ext);
 
-        // No embeddings
-        ext = (POIOLE2TextExtractor)
-                ExtractorFactory.createExtractor(xls);
-        embeds = ExtractorFactory.getEmbeddedDocsTextExtractors(ext);
-        assertEquals(0, embeds.length);
-        ext.close();
+                int numWord = 0, numXls = 0, numPpt = 0, numMsg = 0, numWordX = 0;
+                for (POITextExtractor embed : embeds) {
+                    assertTrue(embed.getText().length() > 20);
+                    if (embed instanceof SlideShowExtractor) {
+                        numPpt++;
+                    } else if (embed instanceof ExcelExtractor) {
+                        numXls++;
+                    } else if (embed instanceof WordExtractor) {
+                        numWord++;
+                    } else if (embed instanceof OutlookTextExtactor) {
+                        numMsg++;
+                    } else if (embed instanceof XWPFWordExtractor) {
+                        numWordX++;
+                    }
+                }
 
-        // Excel
-        ext = (POIOLE2TextExtractor)
-                ExtractorFactory.createExtractor(xlsEmb);
-        embeds = ExtractorFactory.getEmbededDocsTextExtractors(ext);
-        assertNotNull(embeds);
-        ext.close();
-
-        // Excel
-        ext = (POIOLE2TextExtractor)
-                ExtractorFactory.createExtractor(xlsEmb);
-        embeds = ExtractorFactory.getEmbeddedDocsTextExtractors(ext);
-
-        assertEquals(6, embeds.length);
-        int numWord = 0, numXls = 0, numPpt = 0, numMsg = 0, numWordX;
-        for (POITextExtractor embed : embeds) {
-            assertTrue(embed.getText().length() > 20);
-
-            if (embed instanceof PowerPointExtractor) numPpt++;
-            else if (embed instanceof ExcelExtractor) numXls++;
-            else if (embed instanceof WordExtractor) numWord++;
-            else if (embed instanceof OutlookTextExtactor) numMsg++;
+                final String actual = embeds.length+"-"+numWord+"-"+numXls+"-"+numPpt+"-"+numMsg+"-"+numWordX;
+                final String expected = (String)testObj[i+2];
+                assertEquals("invalid number of embeddings - "+testObj[i], expected, actual);
+            }
         }
-        assertEquals(2, numPpt);
-        assertEquals(2, numXls);
-        assertEquals(2, numWord);
-        assertEquals(0, numMsg);
-        ext.close();
-
-        // Word
-        ext = (POIOLE2TextExtractor)
-                ExtractorFactory.createExtractor(docEmb);
-        embeds = ExtractorFactory.getEmbededDocsTextExtractors(ext);
-
-        numWord = 0; numXls = 0; numPpt = 0; numMsg = 0;
-        assertEquals(4, embeds.length);
-        for (POITextExtractor embed : embeds) {
-            assertTrue(embed.getText().length() > 20);
-            if (embed instanceof PowerPointExtractor) numPpt++;
-            else if (embed instanceof ExcelExtractor) numXls++;
-            else if (embed instanceof WordExtractor) numWord++;
-            else if (embed instanceof OutlookTextExtactor) numMsg++;
-        }
-        assertEquals(1, numPpt);
-        assertEquals(2, numXls);
-        assertEquals(1, numWord);
-        assertEquals(0, numMsg);
-        ext.close();
-
-        // Word which contains an OOXML file
-        ext = (POIOLE2TextExtractor)
-                ExtractorFactory.createExtractor(docEmbOOXML);
-        embeds = ExtractorFactory.getEmbededDocsTextExtractors(ext);
-
-        numWord = 0; numXls = 0; numPpt = 0; numMsg = 0; numWordX = 0;
-        assertEquals(3, embeds.length);
-        for (POITextExtractor embed : embeds) {
-            assertTrue(embed.getText().length() > 20);
-            if (embed instanceof PowerPointExtractor) numPpt++;
-            else if (embed instanceof ExcelExtractor) numXls++;
-            else if (embed instanceof WordExtractor) numWord++;
-            else if (embed instanceof OutlookTextExtactor) numMsg++;
-            else if (embed instanceof XWPFWordExtractor) numWordX++;
-        }
-        assertEquals(1, numPpt);
-        assertEquals(1, numXls);
-        assertEquals(0, numWord);
-        assertEquals(1, numWordX);
-        assertEquals(0, numMsg);
-        ext.close();
-
-        // Outlook
-        ext = (OutlookTextExtactor)
-                ExtractorFactory.createExtractor(msgEmb);
-        embeds = ExtractorFactory.getEmbededDocsTextExtractors(ext);
-
-        numWord = 0; numXls = 0; numPpt = 0; numMsg = 0;
-        assertEquals(1, embeds.length);
-        for (POITextExtractor embed : embeds) {
-            assertTrue(embed.getText().length() > 20);
-            if (embed instanceof PowerPointExtractor) numPpt++;
-            else if (embed instanceof ExcelExtractor) numXls++;
-            else if (embed instanceof WordExtractor) numWord++;
-            else if (embed instanceof OutlookTextExtactor) numMsg++;
-        }
-        assertEquals(0, numPpt);
-        assertEquals(0, numXls);
-        assertEquals(1, numWord);
-        assertEquals(0, numMsg);
-        ext.close();
-
-        // Outlook with another outlook file in it
-        ext = (OutlookTextExtactor)
-                ExtractorFactory.createExtractor(msgEmbMsg);
-        embeds = ExtractorFactory.getEmbededDocsTextExtractors(ext);
-
-        numWord = 0; numXls = 0; numPpt = 0; numMsg = 0;
-        assertEquals(1, embeds.length);
-        for (POITextExtractor embed : embeds) {
-            assertTrue(embed.getText().length() > 20);
-            if (embed instanceof PowerPointExtractor) numPpt++;
-            else if (embed instanceof ExcelExtractor) numXls++;
-            else if (embed instanceof WordExtractor) numWord++;
-            else if (embed instanceof OutlookTextExtactor) numMsg++;
-        }
-        assertEquals(0, numPpt);
-        assertEquals(0, numXls);
-        assertEquals(0, numWord);
-        assertEquals(1, numMsg);
-        ext.close();
 
         // TODO - PowerPoint
         // TODO - Publisher

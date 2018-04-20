@@ -8,38 +8,15 @@
      * @throws IOException If an error occurs while decrypting or if the password does not match
      */
     public static InputStream getDecryptedStream(final NPOIFSFileSystem fs, String password)
-            throws IOException {
-        EncryptionInfo info = new EncryptionInfo(fs);
-        Decryptor d = Decryptor.getInstance(info);
-
-        try {
-            boolean passwordCorrect = false;
-            if (password != null && d.verifyPassword(password)) {
-                passwordCorrect = true;
+    throws IOException {
+        // wrap the stream in a FilterInputStream to close the NPOIFSFileSystem
+        // as well when the resulting OPCPackage is closed
+        return new FilterInputStream(getDecryptedStream(fs.getRoot(), password)) {
+            @Override
+            public void close() throws IOException {
+                fs.close();
+                super.close();
             }
-            if (!passwordCorrect && d.verifyPassword(Decryptor.DEFAULT_PASSWORD)) {
-                passwordCorrect = true;
-            }
-
-            if (passwordCorrect) {
-                // wrap the stream in a FilterInputStream to close the NPOIFSFileSystem
-                // as well when the resulting OPCPackage is closed
-                return new FilterInputStream(d.getDataStream(fs.getRoot())) {
-                    @Override
-                    public void close() throws IOException {
-                        fs.close();
-
-                        super.close();
-                    }
-                };
-            } else {
-                if (password != null)
-                    throw new EncryptedDocumentException("Password incorrect");
-                else
-                    throw new EncryptedDocumentException("The supplied spreadsheet is protected, but no password was supplied");
-            }
-        } catch (GeneralSecurityException e) {
-            throw new IOException(e);
-        }
+        };
     }
 
