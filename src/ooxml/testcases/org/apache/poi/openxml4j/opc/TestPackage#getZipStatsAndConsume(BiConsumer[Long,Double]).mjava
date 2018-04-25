@@ -1,0 +1,32 @@
+	private void getZipStatsAndConsume(BiConsumer<Long,Double> ratioCon) throws IOException, InvalidFormatException {
+    	// use a test file with a xml file bigger than 100k (ZipArchiveThresholdInputStream.GRACE_ENTRY_SIZE)
+		final File file = XSSFTestDataSamples.getSampleFile("poc-shared-strings.xlsx");
+
+		double min_ratio = Double.MAX_VALUE;
+		long max_size = 0;
+		try (ZipFile zf = ZipHelper.openZipFile(file)) {
+			assertNotNull(zf);
+			Enumeration<? extends ZipEntry> entries = zf.entries();
+			while (entries.hasMoreElements()) {
+				ZipEntry ze = entries.nextElement();
+				if (ze.getSize() == 0) {
+					continue;
+				}
+				// add zip entry header ~ 30 bytes
+				long size = ze.getSize()+30;
+				double ratio = ze.getCompressedSize() / (double)size;
+				min_ratio = Math.min(min_ratio, ratio);
+				max_size = Math.max(max_size, size);
+			}
+		}
+		ratioCon.accept(max_size, min_ratio);
+
+		//noinspection EmptyTryBlock,unused
+		try (Workbook wb = WorkbookFactory.create(file, null, true)) {
+		} finally {
+			// reset otherwise a lot of ooxml tests will fail
+			ZipSecureFile.setMinInflateRatio(0.01d);
+			ZipSecureFile.setMaxEntrySize(0xFFFFFFFFL);
+		}
+	}
+

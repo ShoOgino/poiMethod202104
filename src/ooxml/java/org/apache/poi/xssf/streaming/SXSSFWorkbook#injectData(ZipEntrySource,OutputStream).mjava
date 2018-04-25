@@ -1,11 +1,15 @@
     protected void injectData(ZipEntrySource zipEntrySource, OutputStream out) throws IOException {
-        try {
-            try (ZipOutputStream zos = new ZipOutputStream(out)) {
-                Enumeration<? extends ZipEntry> en = zipEntrySource.getEntries();
-                while (en.hasMoreElements()) {
-                    ZipEntry ze = en.nextElement();
-                    zos.putNextEntry(new ZipEntry(ze.getName()));
-                    InputStream is = zipEntrySource.getInputStream(ze);
+        try (ZipOutputStream zos = new ZipOutputStream(out)) {
+            Enumeration<? extends ZipEntry> en = zipEntrySource.getEntries();
+            while (en.hasMoreElements()) {
+                ZipEntry ze = en.nextElement();
+                zos.putNextEntry(new ZipEntry(ze.getName()));
+                try (final InputStream is = zipEntrySource.getInputStream(ze)) {
+                    if (is instanceof ZipArchiveThresholdInputStream) {
+                        // #59743 - disable Threshold handling for SXSSF copy
+                        // as users tend to put too much repetitive data in when using SXSSF :)
+                        ((ZipArchiveThresholdInputStream)is).setGuardState(false);
+                    }
                     XSSFSheet xSheet = getSheetFromZipEntryName(ze.getName());
                     // See bug 56557, we should not inject data into the special ChartSheets
                     if (xSheet != null && !(xSheet instanceof XSSFChartSheet)) {
@@ -16,7 +20,6 @@
                     } else {
                         IOUtils.copy(is, zos);
                     }
-                    is.close();
                 }
             }
         } finally {

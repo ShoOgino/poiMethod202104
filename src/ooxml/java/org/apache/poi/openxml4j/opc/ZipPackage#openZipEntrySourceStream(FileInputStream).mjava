@@ -1,5 +1,5 @@
     private static ZipEntrySource openZipEntrySourceStream(FileInputStream fis) throws InvalidOperationException {
-        final ThresholdInputStream zis;
+        final ZipArchiveThresholdInputStream zis;
         // Acquire a resource that is needed to read the next level of openZipEntrySourceStream
         try {
             // open the zip input stream
@@ -13,14 +13,14 @@
         try {
             // read from the zip input stream
             return openZipEntrySourceStream(zis);
+        } catch (final InvalidOperationException|UnsupportedFileFormatException e) {
+            // abort: close the zip input stream
+            IOUtils.closeQuietly(zis);
+            throw e;
         } catch (final Exception e) {
             // abort: close the zip input stream
             IOUtils.closeQuietly(zis);
-            if (e instanceof InvalidOperationException) {
-                throw (InvalidOperationException)e;
-            } else {
-                throw new InvalidOperationException("Failed to read the zip entry source stream", e);
-            }
+            throw new InvalidOperationException("Failed to read the zip entry source stream", e);
         }
     }
 

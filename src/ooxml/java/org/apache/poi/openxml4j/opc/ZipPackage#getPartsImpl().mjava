@@ -1,126 +1,63 @@
     /**
      * Retrieves the parts from this package. We assume that the package has not
      * been yet inspect to retrieve all the parts, this method will open the
-     * archive and look for all parts contain inside it. If the package part
-     * list is not empty, it will be emptied.
+     * archive and look for all parts contain inside it.
      *
      * @return All parts contain in this package.
      * @throws InvalidFormatException if the package is not valid.
      */
     @Override
-    protected PackagePart[] getPartsImpl() throws InvalidFormatException {
-        if (this.partList == null) {
-            // The package has just been created, we create an empty part
-            // list.
-            this.partList = new PackagePartCollection();
-        }
+    protected PackagePartCollection getPartsImpl() throws InvalidFormatException {
+        final PackagePartCollection newPartList = new PackagePartCollection();
 
-        if (this.zipArchive == null) {
-            return this.partList.sortedValues().toArray(
-                    new PackagePart[this.partList.size()]);
+        if (zipArchive == null) {
+            return newPartList;
         }
 
         // First we need to parse the content type part
-        Enumeration<? extends ZipEntry> entries = this.zipArchive.getEntries();
-        while (entries.hasMoreElements()) {
-            ZipEntry entry = entries.nextElement();
-            if (entry.getName().equalsIgnoreCase(
-                    ContentTypeManager.CONTENT_TYPES_PART_NAME)) {
-                try {
-                    this.contentTypeManager = new ZipContentTypeManager(
-                            getZipArchive().getInputStream(entry), this);
-                } catch (IOException e) {
-                    throw new InvalidFormatException(e.getMessage(), e);
-                }
-                break;
+        final ZipEntry contentTypeEntry =
+                zipArchive.getEntry(CONTENT_TYPES_PART_NAME);
+        if (contentTypeEntry != null) {
+            try {
+                this.contentTypeManager = new ZipContentTypeManager(
+                        zipArchive.getInputStream(contentTypeEntry), this);
+            } catch (IOException e) {
+                throw new InvalidFormatException(e.getMessage(), e);
             }
-        }
-
-        // At this point, we should have loaded the content type part
-        if (this.contentTypeManager == null) {
+        } else {
             // Is it a different Zip-based format?
-            int numEntries = 0;
-            boolean hasMimetype = false;
-            boolean hasSettingsXML = false;
-            entries = this.zipArchive.getEntries();
-            while (entries.hasMoreElements()) {
-                final ZipEntry entry = entries.nextElement();
-                final String name = entry.getName();
-                if (MIMETYPE.equals(name)) {
-                    hasMimetype = true;
-                }
-                if (SETTINGS_XML.equals(name)) {
-                    hasSettingsXML = true;
-                }
-                numEntries++;
-            }
+            final boolean hasMimetype = zipArchive.getEntry(MIMETYPE) != null;
+            final boolean hasSettingsXML = zipArchive.getEntry(SETTINGS_XML) != null;
             if (hasMimetype && hasSettingsXML) {
                 throw new ODFNotOfficeXmlFileException(
-                   "The supplied data appears to be in ODF (Open Document) Format. " +
-                   "Formats like these (eg ODS, ODP) are not supported, try Apache ODFToolkit");
+                        "The supplied data appears to be in ODF (Open Document) Format. " +
+                                "Formats like these (eg ODS, ODP) are not supported, try Apache ODFToolkit");
             }
-            if (numEntries == 0) {
+            if (!zipArchive.getEntries().hasMoreElements()) {
                 throw new NotOfficeXmlFileException(
-                   "No valid entries or contents found, this is not a valid OOXML " +
-                   "(Office Open XML) file");
+                        "No valid entries or contents found, this is not a valid OOXML " +
+                                "(Office Open XML) file");
             }
-
             // Fallback exception
             throw new InvalidFormatException(
-                "Package should contain a content type part [M1.13]");
+                    "Package should contain a content type part [M1.13]");
         }
 
         // Now create all the relationships
         // (Need to create relationships before other
         //  parts, otherwise we might create a part before
         //  its relationship exists, and then it won't tie up)
-        entries = this.zipArchive.getEntries();
-        while (entries.hasMoreElements()) {
-            ZipEntry entry = entries.nextElement();
-            PackagePartName partName = buildPartName(entry);
-            if(partName == null) {
-                continue;
-            }
+        final List<EntryTriple> entries =
+                Collections.list(zipArchive.getEntries()).stream()
+                        .map(zae -> new EntryTriple(zae, contentTypeManager))
+                        .filter(mm -> mm.partName != null)
+                        .sorted()
+                        .collect(Collectors.toList());
 
-            // Only proceed for Relationships at this stage
-            String contentType = contentTypeManager.getContentType(partName);
-            if (contentType != null && contentType.equals(ContentTypes.RELATIONSHIPS_PART)) {
-                try {
-                    PackagePart part = new ZipPackagePart(this, entry, partName, contentType);
-                    partList.put(partName, part);
-                } catch (InvalidOperationException e) {
-                    throw new InvalidFormatException(e.getMessage(), e);
-                }
-            }
+        for (final EntryTriple et : entries) {
+            et.register(newPartList);
         }
 
-        // Then we can go through all the other parts
-        entries = this.zipArchive.getEntries();
-        while (entries.hasMoreElements()) {
-            ZipEntry entry = entries.nextElement();
-            PackagePartName partName = buildPartName(entry);
-            if(partName == null) {
-                continue;
-            }
-
-            String contentType = contentTypeManager.getContentType(partName);
-            if (contentType != null && contentType.equals(ContentTypes.RELATIONSHIPS_PART)) {
-                // Already handled
-            }
-            else if (contentType != null) {
-                try {
-                    PackagePart part = new ZipPackagePart(this, entry, partName, contentType);
-                    partList.put(partName, part);
-                } catch (InvalidOperationException e) {
-                    throw new InvalidFormatException(e.getMessage(), e);
-                }
-            } else {
-                throw new InvalidFormatException(
-                    "The part " + partName.getURI().getPath()
-                    + " does not have any content type ! Rule: Package require content types when retrieving a part from a package. [M.1.14]");
-            }
-        }
-
-        return partList.sortedValues().toArray(new PackagePart[partList.size()]);
+        return newPartList;
     }
 

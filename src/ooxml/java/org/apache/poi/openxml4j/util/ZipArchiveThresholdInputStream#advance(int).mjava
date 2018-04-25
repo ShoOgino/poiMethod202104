@@ -1,0 +1,34 @@
+    public void advance(int advance) throws IOException {
+        counter += advance;
+
+        if (!guardState) {
+            return;
+        }
+
+        final String entryName = entry == null ? "not set" : entry.getName();
+        final long cisCount = (cis == null ? 0 : cis.counter);
+
+        // check the file size first, in case we are working on uncompressed streams
+        if(counter > MAX_ENTRY_SIZE) {
+            throw new IOException(String.format(Locale.ROOT, MAX_ENTRY_SIZE_MSG, counter, cisCount, MAX_ENTRY_SIZE, entryName));
+        }
+
+        // no expanded size?
+        if (cis == null) {
+            return;
+        }
+
+        // don't alert for small expanded size
+        if (counter <= GRACE_ENTRY_SIZE) {
+            return;
+        }
+
+        double ratio = (double)cis.counter/(double)counter;
+        if (ratio >= MIN_INFLATE_RATIO) {
+            return;
+        }
+
+        // one of the limits was reached, report it
+        throw new IOException(String.format(Locale.ROOT, MIN_INFLATE_RATIO_MSG, counter, cisCount, ratio, MIN_INFLATE_RATIO, entryName));
+    }
+

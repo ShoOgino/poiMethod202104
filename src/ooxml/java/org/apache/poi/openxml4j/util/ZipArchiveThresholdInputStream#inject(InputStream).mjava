@@ -1,0 +1,17 @@
+    @SuppressForbidden
+    private static PrivilegedAction<ZipArchiveThresholdInputStream> inject(final InputStream zipIS) {
+        return () -> {
+            try {
+                final Field f = FilterInputStream.class.getDeclaredField("in");
+                f.setAccessible(true);
+                final InputStream oldInner = (InputStream)f.get(zipIS);
+                final ZipArchiveThresholdInputStream inner = new ZipArchiveThresholdInputStream(oldInner, null);
+                f.set(zipIS, inner);
+                return inner;
+            } catch (Exception ex) {
+                LOG.log(POILogger.WARN, SECURITY_BLOCKED, ex);
+            }
+            return null;
+        };
+    }
+

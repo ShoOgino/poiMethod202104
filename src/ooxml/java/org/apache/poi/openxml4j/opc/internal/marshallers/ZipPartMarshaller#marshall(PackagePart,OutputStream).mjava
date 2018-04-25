@@ -29,17 +29,11 @@
 			zos.putNextEntry(partEntry);
 
 			// Saving data in the ZIP file
-			InputStream ins = part.getInputStream();
-			byte[] buff = new byte[READ_WRITE_FILE_BUFFER_SIZE];
-			while (ins.available() > 0) {
-				int resultRead = ins.read(buff);
-				if (resultRead == -1) {
-					// End of file reached
-					break;
-				}
-				zos.write(buff, 0, resultRead);
+			try (final InputStream ins = part.getInputStream()) {
+				IOUtils.copy(ins, zos);
+			} finally {
+				zos.closeEntry();
 			}
-			zos.closeEntry();
 		} catch (IOException ioe) {
 			logger.log(POILogger.ERROR,"Cannot write: " + part.getPartName() + ": in ZIP",
 					ioe);

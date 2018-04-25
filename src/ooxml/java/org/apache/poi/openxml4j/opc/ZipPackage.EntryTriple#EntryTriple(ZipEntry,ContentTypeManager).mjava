@@ -1,0 +1,19 @@
+        EntryTriple(final ZipEntry zipArchiveEntry, final ContentTypeManager contentTypeManager) {
+            this.zipArchiveEntry = zipArchiveEntry;
+
+            final String entryName = zipArchiveEntry.getName();
+            PackagePartName ppn = null;
+            try {
+                // We get an error when we parse [Content_Types].xml
+                // because it's not a valid URI.
+                ppn = (CONTENT_TYPES_PART_NAME.equalsIgnoreCase(entryName)) ? null
+                    : PackagingURIHelper.createPartName(ZipHelper.getOPCNameFromZipItemName(entryName));
+            } catch (Exception e) {
+                // We assume we can continue, even in degraded mode ...
+                LOG.log(POILogger.WARN,"Entry " + entryName + " is not valid, so this part won't be add to the package.", e);
+            }
+
+            this.partName = ppn;
+            this.contentType = (ppn == null) ? null : contentTypeManager.getContentType(partName);
+        }
+

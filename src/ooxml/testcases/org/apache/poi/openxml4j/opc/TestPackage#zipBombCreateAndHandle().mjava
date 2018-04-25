@@ -1,57 +1,58 @@
-    @Test(expected=IOException.class)
+	/**
+	 * Zip bomb handling test
+	 *
+	 * see bug #50090 / #56865
+	 */
+    @Test
     public void zipBombCreateAndHandle()
     throws IOException, EncryptedDocumentException, InvalidFormatException {
-        // #50090 / #56865
-        ZipFile zipFile = ZipHelper.openZipFile(OpenXML4JTestDataSamples.getSampleFile("sample.xlsx"));
-		assertNotNull(zipFile);
-
 		ByteArrayOutputStream bos = new ByteArrayOutputStream(2500000);
-		ZipOutputStream append = new ZipOutputStream(bos);
-		// first, copy contents from existing war
-        Enumeration<? extends ZipEntry> entries = zipFile.entries();
-        while (entries.hasMoreElements()) {
-            ZipEntry e2 = entries.nextElement();
-            ZipEntry e = new ZipEntry(e2.getName());
-            e.setTime(e2.getTime());
-            e.setComment(e2.getComment());
-            e.setSize(e2.getSize());
-            
-            append.putNextEntry(e);
-            if (!e.isDirectory()) {
-                InputStream is = zipFile.getInputStream(e);
-                if (e.getName().equals("[Content_Types].xml")) {
-                    ByteArrayOutputStream bos2 = new ByteArrayOutputStream();
-                    IOUtils.copy(is, bos2);
-                    long size = bos2.size()-"</Types>".length();
-                    append.write(bos2.toByteArray(), 0, (int)size);
-                    byte spam[] = new byte[0x7FFF];
-                    for (int i=0; i<spam.length; i++) spam[i] = ' ';
-                    // 0x7FFF0000 is the maximum for 32-bit zips, but less still works
-                    while (size < 0x7FFF00) {
-                        append.write(spam);
-                        size += spam.length;
-                    }
-                    append.write("</Types>".getBytes("UTF-8"));
-                    size += 8;
-                    e.setSize(size);
-                } else {
-                    IOUtils.copy(is, append);
-                }
-                is.close();
-            }
-            append.closeEntry();
-        }
-        
-        append.close();
-        zipFile.close();
 
-        byte buf[] = bos.toByteArray();
-		//noinspection UnusedAssignment
-		bos = null;
-        
-        Workbook wb = WorkbookFactory.create(new ByteArrayInputStream(buf));
-        wb.getSheetAt(0);
-        wb.close();
-        zipFile.close();
+        try (ZipFile zipFile = ZipHelper.openZipFile(OpenXML4JTestDataSamples.getSampleFile("sample.xlsx"));
+			 ZipOutputStream append = new ZipOutputStream(bos)) {
+			assertNotNull(zipFile);
+
+			// first, copy contents from existing war
+			Enumeration<? extends ZipEntry> entries = zipFile.entries();
+			while (entries.hasMoreElements()) {
+				final ZipEntry eIn = entries.nextElement();
+				final ZipEntry eOut = new ZipEntry(eIn.getName());
+				eOut.setTime(eIn.getTime());
+				eOut.setComment(eIn.getComment());
+				eOut.setSize(eIn.getSize());
+
+				append.putNextEntry(eOut);
+				if (!eOut.isDirectory()) {
+					try (InputStream is = zipFile.getInputStream(eIn)) {
+						if (eOut.getName().equals("[Content_Types].xml")) {
+							ByteArrayOutputStream bos2 = new ByteArrayOutputStream();
+							IOUtils.copy(is, bos2);
+							long size = bos2.size() - "</Types>".length();
+							append.write(bos2.toByteArray(), 0, (int) size);
+							byte spam[] = new byte[0x7FFF];
+							Arrays.fill(spam, (byte) ' ');
+							// 0x7FFF0000 is the maximum for 32-bit zips, but less still works
+							while (size < 0x7FFF00) {
+								append.write(spam);
+								size += spam.length;
+							}
+							append.write("</Types>".getBytes("UTF-8"));
+							size += 8;
+							eOut.setSize(size);
+						} else {
+							IOUtils.copy(is, append);
+						}
+					}
+				}
+				append.closeEntry();
+			}
+		}
+
+		expectedEx.expect(IOException.class);
+		expectedEx.expectMessage("Zip bomb detected!");
+
+		try (Workbook wb = WorkbookFactory.create(new ByteArrayInputStream(bos.toByteArray()))) {
+			wb.getSheetAt(0);
+		}
     }
 
