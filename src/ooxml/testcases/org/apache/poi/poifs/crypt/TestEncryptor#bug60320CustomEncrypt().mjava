@@ -43,22 +43,24 @@
         //              existing = getCipher(skey, header.getCipherAlgorithm(), header.getChainingMode(), header.getKeySalt(), encryptionMode, padding);
         //          }
 
-        InputStream is = POIDataSamples.getPOIFSInstance().openResourceAsStream("60320-protected.xlsx");
-        POIFSFileSystem fsOrig = new POIFSFileSystem(is);
-        is.close();
-        EncryptionInfo infoOrig = new EncryptionInfo(fsOrig);
-        Decryptor decOrig = infoOrig.getDecryptor();
-        boolean b = decOrig.verifyPassword("Test001!!");
-        assertTrue(b);
-        InputStream decIn = decOrig.getDataStream(fsOrig);
-        byte[] zipInput = IOUtils.toByteArray(decIn);
-        decIn.close();
+        final EncryptionInfo infoOrig;
+        final byte[] zipInput, epOrigBytes;
+        try (InputStream is = POIDataSamples.getPOIFSInstance().openResourceAsStream("60320-protected.xlsx");
+            POIFSFileSystem fsOrig = new POIFSFileSystem(is)) {
+            infoOrig = new EncryptionInfo(fsOrig);
+            Decryptor decOrig = infoOrig.getDecryptor();
+            boolean b = decOrig.verifyPassword("Test001!!");
+            assertTrue(b);
+            try (InputStream decIn = decOrig.getDataStream(fsOrig)) {
+                zipInput = IOUtils.toByteArray(decIn);
+            }
 
-        InputStream epOrig = fsOrig.getRoot().createDocumentInputStream("EncryptedPackage");
-        // ignore the 16 padding bytes
-        byte[] epOrigBytes = IOUtils.toByteArray(epOrig, 9400);
-        epOrig.close();
-        
+            try (InputStream epOrig = fsOrig.getRoot().createDocumentInputStream("EncryptedPackage")) {
+                // ignore the 16 padding bytes
+                epOrigBytes = IOUtils.toByteArray(epOrig, 9400);
+            }
+        }
+
         EncryptionInfo eiNew = new EncryptionInfo(EncryptionMode.agile);
         AgileEncryptionHeader aehHeader = (AgileEncryptionHeader)eiNew.getHeader();
         aehHeader.setCipherAlgorithm(CipherAlgorithm.aes128);
@@ -78,26 +80,29 @@
             infoOrig.getVerifier().getSalt(),
             infoOrig.getDecryptor().getIntegrityHmacKey()
         );
-        NPOIFSFileSystem fsNew = new NPOIFSFileSystem();
-        OutputStream os = enc.getDataStream(fsNew);
-        os.write(zipInput);
-        os.close();
 
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        fsNew.writeFilesystem(bos);
-        fsNew.close();
-        
-        NPOIFSFileSystem fsReload = new NPOIFSFileSystem(new ByteArrayInputStream(bos.toByteArray()));
-        InputStream epReload = fsReload.getRoot().createDocumentInputStream("EncryptedPackage");
-        byte[] epNewBytes = IOUtils.toByteArray(epReload, 9400);
-        epReload.close();
-        
+        final byte[] epNewBytes;
+        final EncryptionInfo infoReload;
+        try (NPOIFSFileSystem fsNew = new NPOIFSFileSystem()) {
+            try (OutputStream os = enc.getDataStream(fsNew)) {
+                os.write(zipInput);
+            }
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            fsNew.writeFilesystem(bos);
+
+            try (NPOIFSFileSystem fsReload = new NPOIFSFileSystem(new ByteArrayInputStream(bos.toByteArray()))) {
+                infoReload = new EncryptionInfo(fsReload);
+                try (InputStream epReload = fsReload.getRoot().createDocumentInputStream("EncryptedPackage")) {
+                    epNewBytes = IOUtils.toByteArray(epReload, 9400);
+                }
+            }
+        }
+
         assertArrayEquals(epOrigBytes, epNewBytes);
         
-        EncryptionInfo infoReload = new EncryptionInfo(fsOrig);
         Decryptor decReload = infoReload.getDecryptor();
-        b = decReload.verifyPassword("Test001!!");
-        assertTrue(b);
+        assertTrue(decReload.verifyPassword("Test001!!"));
         
         AgileEncryptionHeader aehOrig = (AgileEncryptionHeader)infoOrig.getHeader();
         AgileEncryptionHeader aehReload = (AgileEncryptionHeader)infoReload.getHeader();
@@ -135,7 +140,5 @@
         // assertArrayEquals(adOrig.getIntegrityHmacValue(), adReload.getIntegrityHmacValue());
         assertArrayEquals(adOrig.getSecretKey().getEncoded(), adReload.getSecretKey().getEncoded());
         assertArrayEquals(adOrig.getVerifier(), adReload.getVerifier());
-
-        fsReload.close();
     }
 

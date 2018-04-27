@@ -4,34 +4,36 @@
         // ... at least the output can be opened in Excel Viewer 
         String password = "pass";
 
-        InputStream is = POIDataSamples.getSpreadSheetInstance().openResourceAsStream("SimpleMultiCell.xlsx");
-        ByteArrayOutputStream payloadExpected = new ByteArrayOutputStream();
-        IOUtils.copy(is, payloadExpected);
-        is.close();
-        
-        POIFSFileSystem fs = new POIFSFileSystem();
-        EncryptionInfo ei = new EncryptionInfo(EncryptionMode.binaryRC4);
-        Encryptor enc = ei.getEncryptor();
-        enc.confirmPassword(password);
-        
-        OutputStream os = enc.getDataStream(fs.getRoot());
-        payloadExpected.writeTo(os);
-        os.close();
-        
+        final byte[] payloadExpected;
+        try (InputStream is = POIDataSamples.getSpreadSheetInstance().openResourceAsStream("SimpleMultiCell.xlsx")) {
+            payloadExpected = IOUtils.toByteArray(is);
+        }
+
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        fs.writeFilesystem(bos);
+        try (POIFSFileSystem fs = new POIFSFileSystem()) {
+            EncryptionInfo ei = new EncryptionInfo(EncryptionMode.binaryRC4);
+            Encryptor enc = ei.getEncryptor();
+            enc.confirmPassword(password);
+
+            try (OutputStream os = enc.getDataStream(fs.getRoot())) {
+                os.write(payloadExpected);
+            }
+
+            fs.writeFilesystem(bos);
+        }
+
+        final byte[] payloadActual;
+        try (POIFSFileSystem fs = new POIFSFileSystem(new ByteArrayInputStream(bos.toByteArray()))) {
+            EncryptionInfo ei = new EncryptionInfo(fs);
+            Decryptor dec = ei.getDecryptor();
+            boolean b = dec.verifyPassword(password);
+            assertTrue(b);
+
+            try (InputStream is = dec.getDataStream(fs.getRoot())) {
+                payloadActual = IOUtils.toByteArray(is);
+            }
+        }
         
-        fs = new POIFSFileSystem(new ByteArrayInputStream(bos.toByteArray()));
-        ei = new EncryptionInfo(fs);
-        Decryptor dec = ei.getDecryptor();
-        boolean b = dec.verifyPassword(password);
-        assertTrue(b);
-        
-        ByteArrayOutputStream payloadActual = new ByteArrayOutputStream();
-        is = dec.getDataStream(fs.getRoot());
-        IOUtils.copy(is,payloadActual);
-        is.close();
-        
-        assertArrayEquals(payloadExpected.toByteArray(), payloadActual.toByteArray());
+        assertArrayEquals(payloadExpected, payloadActual);
     }
 

@@ -1,22 +1,21 @@
     private void zipOk(DirectoryNode root, Decryptor d) throws IOException, GeneralSecurityException {
-        ZipInputStream zin = new ZipInputStream(d.getDataStream(root));
+        try (ZipInputStream zin = new ZipInputStream(d.getDataStream(root))) {
 
-        while (true) {
-            ZipEntry entry = zin.getNextEntry();
-            if (entry==null) {
-                break;
+            while (true) {
+                ZipEntry entry = zin.getNextEntry();
+                if (entry == null) {
+                    break;
+                }
+                // crc32 is checked within zip-stream
+                if (entry.isDirectory()) {
+                    continue;
+                }
+                assertEquals(entry.getSize() - 1, zin.skip(entry.getSize() - 1));
+                byte buf[] = new byte[10];
+                int readBytes = zin.read(buf);
+                // zin.available() doesn't work for entries
+                assertEquals("size failed for " + entry.getName(), 1, readBytes);
             }
-            // crc32 is checked within zip-stream
-            if (entry.isDirectory()) {
-                continue;
-            }
-            zin.skip(entry.getSize());
-            byte buf[] = new byte[10];
-            int readBytes = zin.read(buf);
-            // zin.available() doesn't work for entries
-            assertEquals("size failed for "+entry.getName(), -1, readBytes);
         }
-        
-        zin.close();
     }
 

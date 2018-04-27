@@ -1,32 +1,33 @@
     @Test
     public void standardEncryption() throws Exception {
         File file = POIDataSamples.getDocumentInstance().getFile("bug53475-password-is-solrcell.docx");
-        String pass = "solrcell";
-        
-        NPOIFSFileSystem nfs = new NPOIFSFileSystem(file);
+        final String pass = "solrcell";
 
-        // Check the encryption details
-        EncryptionInfo infoExpected = new EncryptionInfo(nfs);
-        Decryptor d = Decryptor.getInstance(infoExpected);
-        boolean passed = d.verifyPassword(pass);
-        assertTrue("Unable to process: document is encrypted", passed);
+        final byte[] payloadExpected;
+        final EncryptionInfo infoExpected;
+        final Decryptor d;
+        try (NPOIFSFileSystem nfs = new NPOIFSFileSystem(file, true)) {
 
-        // extract the payload
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        InputStream is = d.getDataStream(nfs);
-        IOUtils.copy(is, bos);
-        is.close();
-        nfs.close();
-        byte payloadExpected[] = bos.toByteArray();
-        
+            // Check the encryption details
+            infoExpected = new EncryptionInfo(nfs);
+            d = Decryptor.getInstance(infoExpected);
+            boolean passed = d.verifyPassword(pass);
+            assertTrue("Unable to process: document is encrypted", passed);
+
+            // extract the payload
+            try (InputStream is = d.getDataStream(nfs)) {
+                payloadExpected = IOUtils.toByteArray(is);
+            }
+        }
+
         // check that same verifier/salt lead to same hashes
-        byte verifierSaltExpected[] = infoExpected.getVerifier().getSalt();
-        byte verifierExpected[] = d.getVerifier();
-        byte keySpec[] = d.getSecretKey().getEncoded();
-        byte keySalt[] = infoExpected.getHeader().getKeySalt();
+        final byte verifierSaltExpected[] = infoExpected.getVerifier().getSalt();
+        final byte verifierExpected[] = d.getVerifier();
+        final byte keySpec[] = d.getSecretKey().getEncoded();
+        final byte keySalt[] = infoExpected.getHeader().getKeySalt();
         
         
-        EncryptionInfo infoActual = new EncryptionInfo(
+        final EncryptionInfo infoActual = new EncryptionInfo(
               EncryptionMode.standard
             , infoExpected.getVerifier().getCipherAlgorithm()
             , infoExpected.getVerifier().getHashAlgorithm()
@@ -35,55 +36,50 @@
             , infoExpected.getVerifier().getChainingMode()
         );
         
-        Encryptor e = Encryptor.getInstance(infoActual);
+        final Encryptor e = Encryptor.getInstance(infoActual);
         e.confirmPassword(pass, keySpec, keySalt, verifierExpected, verifierSaltExpected, null);
-        
+
         assertArrayEquals(infoExpected.getVerifier().getEncryptedVerifier(), infoActual.getVerifier().getEncryptedVerifier());
         assertArrayEquals(infoExpected.getVerifier().getEncryptedVerifierHash(), infoActual.getVerifier().getEncryptedVerifierHash());
 
         // now we use a newly generated salt/verifier and check
-        // if the file content is still the same 
+        // if the file content is still the same
 
-        infoActual = new EncryptionInfo(
-              EncryptionMode.standard
-            , infoExpected.getVerifier().getCipherAlgorithm()
-            , infoExpected.getVerifier().getHashAlgorithm()
-            , infoExpected.getHeader().getKeySize()
-            , infoExpected.getHeader().getBlockSize()
-            , infoExpected.getVerifier().getChainingMode()
-        );
-        
-        e = Encryptor.getInstance(infoActual);
-        e.confirmPassword(pass);
+        final byte[] encBytes;
+        try (POIFSFileSystem fs = new POIFSFileSystem()) {
 
-        POIFSFileSystem fs = new POIFSFileSystem();
-        OutputStream os = e.getDataStream(fs);
-        IOUtils.copy(new ByteArrayInputStream(payloadExpected), os);
-        os.close();
-        
-        bos.reset();
-        fs.writeFilesystem(bos);
+            final EncryptionInfo infoActual2 = new EncryptionInfo(
+                    EncryptionMode.standard
+                    , infoExpected.getVerifier().getCipherAlgorithm()
+                    , infoExpected.getVerifier().getHashAlgorithm()
+                    , infoExpected.getHeader().getKeySize()
+                    , infoExpected.getHeader().getBlockSize()
+                    , infoExpected.getVerifier().getChainingMode()
+            );
 
-        ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
-        
-        // FileOutputStream fos = new FileOutputStream("encrypted.docx");
-        // IOUtils.copy(bis, fos);
-        // fos.close();
-        // bis.reset();
-        
-        nfs = new NPOIFSFileSystem(bis);
-        infoExpected = new EncryptionInfo(nfs);
-        d = Decryptor.getInstance(infoExpected);
-        passed = d.verifyPassword(pass);
-        assertTrue("Unable to process: document is encrypted", passed);
+            final Encryptor e2 = Encryptor.getInstance(infoActual2);
+            e2.confirmPassword(pass);
 
-        bos.reset();
-        is = d.getDataStream(nfs);
-        IOUtils.copy(is, bos);
-        is.close();
-        nfs.close();
-        byte payloadActual[] = bos.toByteArray();        
-        
+            try (OutputStream os = e2.getDataStream(fs)) {
+                os.write(payloadExpected);
+            }
+
+            final ByteArrayOutputStream bos = new ByteArrayOutputStream(50000);
+            fs.writeFilesystem(bos);
+            encBytes = bos.toByteArray();
+        }
+
+        final byte[] payloadActual;
+        try (NPOIFSFileSystem nfs = new NPOIFSFileSystem(new ByteArrayInputStream(encBytes))) {
+            final EncryptionInfo ei = new EncryptionInfo(nfs);
+            Decryptor d2 = Decryptor.getInstance(ei);
+            assertTrue("Unable to process: document is encrypted", d2.verifyPassword(pass));
+
+            try (InputStream is = d2.getDataStream(nfs)) {
+                payloadActual = IOUtils.toByteArray(is);
+            }
+        }
+
         assertArrayEquals(payloadExpected, payloadActual);
     }
 

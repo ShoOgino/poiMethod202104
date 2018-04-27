@@ -7,48 +7,49 @@
     @Test
     public void encryptPackageWithoutCoreProperties() throws Exception {
         // Open our file without core properties
-        File inp = POIDataSamples.getOpenXML4JInstance().getFile("OPCCompliance_NoCoreProperties.xlsx");
-        OPCPackage pkg = OPCPackage.open(inp.getPath());
-        
-        // It doesn't have any core properties yet
-        assertEquals(0, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
-        assertNotNull(pkg.getPackageProperties());
-        assertNotNull(pkg.getPackageProperties().getLanguageProperty());
-        assertNull(pkg.getPackageProperties().getLanguageProperty().getValue());
-        
-        // Encrypt it
-        EncryptionInfo info = new EncryptionInfo(EncryptionMode.agile);
-        NPOIFSFileSystem fs = new NPOIFSFileSystem();
-        
-        Encryptor enc = info.getEncryptor();
-        enc.confirmPassword("password");
-        OutputStream os = enc.getDataStream(fs);
-        pkg.save(os);
-        os.close();
-        pkg.revert();
-        
-        // Save the resulting OLE2 document, and re-open it
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        fs.writeFilesystem(baos);
-        fs.close();
-        
-        ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-        NPOIFSFileSystem inpFS = new NPOIFSFileSystem(bais);
-        
-        // Check we can decrypt it
-        info = new EncryptionInfo(inpFS);
-        Decryptor d = Decryptor.getInstance(info);
-        assertEquals(true, d.verifyPassword("password"));
-        
-        OPCPackage inpPkg = OPCPackage.open(d.getDataStream(inpFS));
-        
-        // Check it now has empty core properties
-        assertEquals(1, inpPkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
-        assertNotNull(inpPkg.getPackageProperties());
-        assertNotNull(inpPkg.getPackageProperties().getLanguageProperty());
-        assertNull(inpPkg.getPackageProperties().getLanguageProperty().getValue());
+        final byte[] encBytes;
+        try (InputStream is = POIDataSamples.getOpenXML4JInstance().openResourceAsStream("OPCCompliance_NoCoreProperties.xlsx");
+            OPCPackage pkg = OPCPackage.open(is)) {
 
-        inpPkg.close();
-        inpFS.close();
+            // It doesn't have any core properties yet
+            assertEquals(0, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
+            assertNotNull(pkg.getPackageProperties());
+            assertNotNull(pkg.getPackageProperties().getLanguageProperty());
+            assertNull(pkg.getPackageProperties().getLanguageProperty().getValue());
+
+            // Encrypt it
+            EncryptionInfo info = new EncryptionInfo(EncryptionMode.agile);
+            Encryptor enc = info.getEncryptor();
+            enc.confirmPassword("password");
+
+            try (NPOIFSFileSystem fs = new NPOIFSFileSystem()) {
+
+                try (OutputStream os = enc.getDataStream(fs)) {
+                    pkg.save(os);
+                }
+
+                // Save the resulting OLE2 document, and re-open it
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                fs.writeFilesystem(baos);
+                encBytes = baos.toByteArray();
+            }
+        }
+        
+
+        try (NPOIFSFileSystem inpFS = new NPOIFSFileSystem(new ByteArrayInputStream(encBytes))) {
+            // Check we can decrypt it
+            EncryptionInfo info = new EncryptionInfo(inpFS);
+            Decryptor d = Decryptor.getInstance(info);
+            assertEquals(true, d.verifyPassword("password"));
+
+            try (OPCPackage inpPkg = OPCPackage.open(d.getDataStream(inpFS))) {
+                // Check it now has empty core properties
+                assertEquals(1, inpPkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
+                assertNotNull(inpPkg.getPackageProperties());
+                assertNotNull(inpPkg.getPackageProperties().getLanguageProperty());
+                assertNull(inpPkg.getPackageProperties().getLanguageProperty().getValue());
+
+            }
+        }
     }
 

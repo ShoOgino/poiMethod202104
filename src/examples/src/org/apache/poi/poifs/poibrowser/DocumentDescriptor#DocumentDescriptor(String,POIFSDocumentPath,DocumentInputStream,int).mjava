@@ -13,26 +13,20 @@
     public DocumentDescriptor(final String name,
                               final POIFSDocumentPath path,
                               final DocumentInputStream stream,
-                              final int nrOfBytes)
-    {
+                              final int nrOfBytes) {
         this.name = name;
         this.path = path;
         this.stream = stream;
-        try
-        {
-            size = stream.available();
-            if (stream.markSupported())
-            {
+        try {
+            if (stream.markSupported()) {
                 stream.mark(nrOfBytes);
-                final byte[] b = IOUtils.safelyAllocate(nrOfBytes, MAX_RECORD_LENGTH);
-                final int read = stream.read(b, 0, Math.min(size, b.length));
-                bytes = new byte[read];
-                System.arraycopy(b, 0, bytes, 0, read);
+                bytes = IOUtils.toByteArray(stream, nrOfBytes, MAX_RECORD_LENGTH);
                 stream.reset();
+            } else {
+                bytes = new byte[0];
             }
-        }
-        catch (IOException ex)
-        {
+            size = bytes.length + stream.available();
+        } catch (IOException ex) {
             System.out.println(ex);
         }
     }

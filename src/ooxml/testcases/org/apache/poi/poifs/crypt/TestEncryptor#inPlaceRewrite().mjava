@@ -2,35 +2,36 @@
     @Ignore
     public void inPlaceRewrite() throws Exception {
         File f = TempFile.createTempFile("protected_agile", ".docx");
-        // File f = new File("protected_agile.docx");
-        FileOutputStream fos = new FileOutputStream(f);
-        InputStream fis = POIDataSamples.getPOIFSInstance().openResourceAsStream("protected_agile.docx");
-        IOUtils.copy(fis, fos);
-        fis.close();
-        fos.close();
+
+        try (FileOutputStream fos = new FileOutputStream(f);
+             InputStream fis = POIDataSamples.getPOIFSInstance().openResourceAsStream("protected_agile.docx")) {
+            IOUtils.copy(fis, fos);
+        }
         
-        NPOIFSFileSystem fs = new NPOIFSFileSystem(f, false);
+        try (NPOIFSFileSystem fs = new NPOIFSFileSystem(f, false)) {
 
-        // decrypt the protected file - in this case it was encrypted with the default password
-        EncryptionInfo encInfo = new EncryptionInfo(fs);
-        Decryptor d = encInfo.getDecryptor();
-        boolean b = d.verifyPassword(Decryptor.DEFAULT_PASSWORD);
-        assertTrue(b);
+            // decrypt the protected file - in this case it was encrypted with the default password
+            EncryptionInfo encInfo = new EncryptionInfo(fs);
+            Decryptor d = encInfo.getDecryptor();
+            boolean b = d.verifyPassword(Decryptor.DEFAULT_PASSWORD);
+            assertTrue(b);
 
-        // do some strange things with it ;)
-        InputStream docIS = d.getDataStream(fs);
-        XWPFDocument docx = new XWPFDocument(docIS);
-        docx.getParagraphArray(0).insertNewRun(0).setText("POI was here! All your base are belong to us!");
-        docx.getParagraphArray(0).insertNewRun(1).addBreak();
+            try (InputStream docIS = d.getDataStream(fs);
+                 XWPFDocument docx = new XWPFDocument(docIS)) {
 
-        // and encrypt it again
-        Encryptor e = encInfo.getEncryptor();
-        e.confirmPassword("AYBABTU");
-        docx.write(e.getDataStream(fs));
-        docx.close();
-        docIS.close();
-        
-        docx.close();
-        fs.close();
+                // do some strange things with it ;)
+                XWPFParagraph p = docx.getParagraphArray(0);
+                p.insertNewRun(0).setText("POI was here! All your base are belong to us!");
+                p.insertNewRun(1).addBreak();
+
+                // and encrypt it again
+                Encryptor e = encInfo.getEncryptor();
+                e.confirmPassword("AYBABTU");
+
+                try (OutputStream os = e.getDataStream(fs)) {
+                    docx.write(os);
+                }
+            }
+        }
     }
 
