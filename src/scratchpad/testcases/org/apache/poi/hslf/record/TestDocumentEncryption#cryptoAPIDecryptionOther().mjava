@@ -1,22 +1,23 @@
     @Test
     public void cryptoAPIDecryptionOther() throws Exception {
-        Biff8EncryptionKey.setCurrentUserPassword("hello");
         String encPpts[] = {
             "Password_Protected-56-hello.ppt",
             "Password_Protected-hello.ppt",
             "Password_Protected-np-hello.ppt",
         };
 
-        for (String pptFile : encPpts) {
-            try {
-                NPOIFSFileSystem fs = new NPOIFSFileSystem(slTests.getFile(pptFile), true);
-                HSLFSlideShowImpl hss = new HSLFSlideShowImpl(fs);
-                new HSLFSlideShow(hss).close();
-                fs.close();
-            } catch (EncryptedPowerPointFileException e) {
-                fail(pptFile+" can't be decrypted");
+        Biff8EncryptionKey.setCurrentUserPassword("hello");
+        try {
+            for (String pptFile : encPpts) {
+                try (NPOIFSFileSystem fs = new NPOIFSFileSystem(slTests.getFile(pptFile), true);
+                     HSLFSlideShow ppt = new HSLFSlideShow(fs)) {
+                    assertTrue(ppt.getSlides().size() > 0);
+                } catch (EncryptedPowerPointFileException e) {
+                    fail(pptFile + " can't be decrypted");
+                }
             }
+        } finally {
+            Biff8EncryptionKey.setCurrentUserPassword(null);
         }
-        // password is reset in @After
     }
 

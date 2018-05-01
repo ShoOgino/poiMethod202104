@@ -2,30 +2,32 @@
     public void cryptoAPIEncryption() throws Exception {
         /* documents with multiple edits need to be normalized for encryption */
         String pptFile = "57272_corrupted_usereditatom.ppt";
-        NPOIFSFileSystem fs = new NPOIFSFileSystem(slTests.getFile(pptFile), true);
-        HSLFSlideShowImpl hss = new HSLFSlideShowImpl(fs);
-        hss.normalizeRecords();
-        
-        // normalized ppt
-        ByteArrayOutputStream expected = new ByteArrayOutputStream();
-        hss.write(expected);
-        
-        // encrypted
-        Biff8EncryptionKey.setCurrentUserPassword("hello");
         ByteArrayOutputStream encrypted = new ByteArrayOutputStream();
-        hss.write(encrypted);
-        hss.close();
-        fs.close();
-
-        // decrypted
-        ByteArrayInputStream bis = new ByteArrayInputStream(encrypted.toByteArray());
-        fs = new NPOIFSFileSystem(bis);
-        hss = new HSLFSlideShowImpl(fs);
-        Biff8EncryptionKey.setCurrentUserPassword(null);
+        ByteArrayOutputStream expected = new ByteArrayOutputStream();
         ByteArrayOutputStream actual = new ByteArrayOutputStream();
-        hss.write(actual);
-        hss.close();
-        fs.close();
+        try {
+            try (NPOIFSFileSystem fs = new NPOIFSFileSystem(slTests.getFile(pptFile), true);
+                 HSLFSlideShowImpl hss = new HSLFSlideShowImpl(fs)) {
+                hss.normalizeRecords();
+
+                // normalized ppt
+                hss.write(expected);
+
+                // encrypted
+                Biff8EncryptionKey.setCurrentUserPassword("hello");
+                hss.write(encrypted);
+            }
+
+            // decrypted
+            ByteArrayInputStream bis = new ByteArrayInputStream(encrypted.toByteArray());
+            try (NPOIFSFileSystem fs = new NPOIFSFileSystem(bis);
+                 HSLFSlideShowImpl hss = new HSLFSlideShowImpl(fs)) {
+                Biff8EncryptionKey.setCurrentUserPassword(null);
+                hss.write(actual);
+            }
+        } finally {
+            Biff8EncryptionKey.setCurrentUserPassword(null);
+        }
         
         assertArrayEquals(expected.toByteArray(), actual.toByteArray());
     }    

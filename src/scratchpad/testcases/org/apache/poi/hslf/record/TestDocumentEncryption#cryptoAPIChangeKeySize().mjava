@@ -2,31 +2,30 @@
     public void cryptoAPIChangeKeySize() throws Exception {
         String pptFile = "cryptoapi-proc2356.ppt";
         Biff8EncryptionKey.setCurrentUserPassword("crypto");
-        NPOIFSFileSystem fs = new NPOIFSFileSystem(slTests.getFile(pptFile), true);
-        HSLFSlideShowImpl hss = new HSLFSlideShowImpl(fs);
-        // need to cache data (i.e. read all data) before changing the key size
-        List<HSLFPictureData> picsExpected = hss.getPictureData();
-        hss.getDocumentSummaryInformation();
-        DocumentEncryptionAtom documentEncryptionAtom = hss.getDocumentEncryptionAtom();
-        assertNotNull(documentEncryptionAtom);
-        EncryptionInfo ei = documentEncryptionAtom.getEncryptionInfo();
-        ((CryptoAPIEncryptionHeader) ei.getHeader()).setKeySize(0x78);
+        try (NPOIFSFileSystem fs = new NPOIFSFileSystem(slTests.getFile(pptFile), true);
+             HSLFSlideShowImpl hss = new HSLFSlideShowImpl(fs)) {
+            // need to cache data (i.e. read all data) before changing the key size
+            List<HSLFPictureData> picsExpected = hss.getPictureData();
+            hss.getDocumentSummaryInformation();
+            DocumentEncryptionAtom documentEncryptionAtom = hss.getDocumentEncryptionAtom();
+            assertNotNull(documentEncryptionAtom);
+            EncryptionInfo ei = documentEncryptionAtom.getEncryptionInfo();
+            ((CryptoAPIEncryptionHeader) ei.getHeader()).setKeySize(0x78);
 
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        hss.write(bos);
-        hss.close();
-        fs.close();
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            hss.write(bos);
 
-        fs = new NPOIFSFileSystem(new ByteArrayInputStream(bos.toByteArray()));
-        hss = new HSLFSlideShowImpl(fs);
-        List<HSLFPictureData> picsActual = hss.getPictureData();
+            try (NPOIFSFileSystem fs2 = new NPOIFSFileSystem(new ByteArrayInputStream(bos.toByteArray()));
+                 HSLFSlideShowImpl hss2 = new HSLFSlideShowImpl(fs2)) {
+                List<HSLFPictureData> picsActual = hss2.getPictureData();
 
-        assertEquals(picsExpected.size(), picsActual.size());
-        for (int i = 0; i < picsExpected.size(); i++) {
-            assertArrayEquals(picsExpected.get(i).getRawData(), picsActual.get(i).getRawData());
+                assertEquals(picsExpected.size(), picsActual.size());
+                for (int i = 0; i < picsExpected.size(); i++) {
+                    assertArrayEquals(picsExpected.get(i).getRawData(), picsActual.get(i).getRawData());
+                }
+            }
+        } finally {
+            Biff8EncryptionKey.setCurrentUserPassword(null);
         }
-        hss.close();
-        fs.close();
-        // password is reset in @After
     }
 
