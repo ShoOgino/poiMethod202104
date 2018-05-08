@@ -1,5 +1,5 @@
     /**
-     * A range is returned only for the part of the table matching this enum instance and containing the given cell.
+     * A range is returned only for the part of the table matching this enum instance and containing the given cell reference.
      * Null is returned for all other cases, such as:
      * <ul>
      * <li>Cell on a different sheet than the table
@@ -12,12 +12,18 @@
      * rest of the styling, such as font and color, could apply to all the interior cells as well.
      * 
      * @param table table to evaluate
-     * @param cell to evaluate 
+     * @param cell CellReference to evaluate 
      * @return range in the table representing this class of cells, if it contains the given cell, or null if not applicable.
      * Stripe style types return only the stripe range containing the given cell, or null.
      */
-    public CellRangeAddressBase appliesTo(Table table, Cell cell) {
-        if (cell == null) return null;
-        return appliesTo(table, new CellReference(cell.getSheet().getSheetName(), cell.getRowIndex(), cell.getColumnIndex(), true, true));
+    public CellRangeAddressBase appliesTo(Table table, CellReference cell) {
+        if (table == null || cell == null) return null;
+        if ( ! cell.getSheetName().equals(table.getSheetName())) return null;
+        if ( ! table.contains(cell)) return null;
+        
+        final CellRangeAddressBase range = getRange(table, cell);
+        if (range != null && range.isInRange(cell.getRow(), cell.getCol())) return range;
+        // else
+        return null;
     }
 
