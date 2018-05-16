@@ -1,4 +1,82 @@
     public static Rectangle2D getAnchor(Graphics2D graphics, PlaceableShape<?,?> shape) {
-        return getAnchor(graphics, shape.getAnchor());
+//        return getAnchor(graphics, shape.getAnchor());
+
+        final boolean isHSLF = isHSLF(shape);
+        AffineTransform tx = graphics == null ? null : (AffineTransform)graphics.getRenderingHint(Drawable.GROUP_TRANSFORM);
+        if (tx == null) {
+            tx = new AffineTransform();
+        }
+
+        final double rotation = ((shape.getRotation() % 360.) + 360.) % 360.;
+        final int quadrant = (((int)rotation+45)/90)%4;
+
+        final Rectangle2D normalizedShape;
+
+        // scale to bounding box (bug #53176)
+        if (quadrant == 1 || quadrant == 3) {
+            // In a rotated quadrant 1 (=45-135 degrees) and 3 (=225-315 degrees), which is basically a shape in a
+            // more or less portrait orientation, Powerpoint doesn't use the normal shape anchor,
+            // but rotate it 90 degress and apply the group transformations.
+            // We try to revert that distortion and return the normalized anchor.
+            // It's strange that you'll need to rotate the shape back and forth again, but you can
+            // think of it, as if you paint the shape on a canvas. First you rotate the canvas, which might
+            // be already (differently) scaled, so you can paint the shape in its default orientation
+            // and later on, turn it around again to compare it with its original size ...
+
+
+            final Rectangle2D shapeAnchor = shape.getAnchor();
+            final Rectangle2D anchorO = tx.createTransformedShape(shapeAnchor).getBounds2D();
+
+            final Rectangle2D anchorT;
+            {
+                final double centerX = anchorO.getCenterX();
+                final double centerY = anchorO.getCenterY();
+                final AffineTransform txs2 = new AffineTransform();
+
+                // this handling is only based on try and error ... not sure why h/xslf is handled differently.
+
+                if (!isHSLF) {
+                    txs2.translate(centerX, centerY);
+                    txs2.quadrantRotate(1);
+                    txs2.translate(-centerX, -centerY);
+                    txs2.concatenate(tx);
+                }
+
+                txs2.translate(centerX, centerY);
+                txs2.quadrantRotate(3);
+                txs2.translate(-centerX, -centerY);
+
+                if (isHSLF) {
+                    txs2.concatenate(tx);
+                }
+
+                anchorT = txs2.createTransformedShape(shapeAnchor).getBounds2D();
+            }
+
+            final double scaleX2 = safeScale(anchorO.getWidth(), anchorT.getWidth());
+            final double scaleY2 = safeScale(anchorO.getHeight(), anchorT.getHeight());
+
+            {
+                double centerX = shapeAnchor.getCenterX();
+                double centerY = shapeAnchor.getCenterY();
+                final AffineTransform txs2 = new AffineTransform();
+                txs2.translate(centerX, centerY);
+                // no need to rotate back and forth, just apply scaling inverted
+                txs2.scale(scaleY2, scaleX2);
+                txs2.translate(-centerX, -centerY);
+
+                normalizedShape = txs2.createTransformedShape(shapeAnchor).getBounds2D();
+            }
+        } else {
+            normalizedShape = shape.getAnchor();
+        }
+
+        if (tx.isIdentity()) {
+            return normalizedShape;
+        }
+
+
+        final java.awt.Shape anc = tx.createTransformedShape(normalizedShape);
+        return (anc != null) ? anc.getBounds2D() : normalizedShape;
     }
 
