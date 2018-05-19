@@ -1,60 +1,47 @@
     @Override
-    public int setPath(Path2D.Double path) {
-        CTPath2D ctPath = CTPath2D.Factory.newInstance();
+    public int setPath(final Path2D.Double path) {
+        final CTPath2D ctPath = CTPath2D.Factory.newInstance();
 
-        Rectangle2D bounds = path.getBounds2D();
-        int x0 = Units.toEMU(bounds.getX());
-        int y0 = Units.toEMU(bounds.getY());
-        PathIterator it = path.getPathIterator(new AffineTransform());
+        final Rectangle2D bounds = path.getBounds2D();
+        final int x0 = Units.toEMU(bounds.getX());
+        final int y0 = Units.toEMU(bounds.getY());
+        final PathIterator it = path.getPathIterator(new AffineTransform());
         int numPoints = 0;
         ctPath.setH(Units.toEMU(bounds.getHeight()));
         ctPath.setW(Units.toEMU(bounds.getWidth()));
+
+        final double[] vals = new double[6];
         while (!it.isDone()) {
-            double[] vals = new double[6];
-            int type = it.currentSegment(vals);
+            final int type = it.currentSegment(vals);
+            final CTAdjPoint2D[] points;
             switch (type) {
                 case PathIterator.SEG_MOVETO:
-                    CTAdjPoint2D mv = ctPath.addNewMoveTo().addNewPt();
-                    mv.setX(Units.toEMU(vals[0]) - x0);
-                    mv.setY(Units.toEMU(vals[1]) - y0);
-                    numPoints++;
+                    points = addMoveTo(ctPath);
                     break;
                 case PathIterator.SEG_LINETO:
-                    CTAdjPoint2D ln = ctPath.addNewLnTo().addNewPt();
-                    ln.setX(Units.toEMU(vals[0]) - x0);
-                    ln.setY(Units.toEMU(vals[1]) - y0);
-                    numPoints++;
+                    points = addLineTo(ctPath);
                     break;
                 case PathIterator.SEG_QUADTO:
-                    CTPath2DQuadBezierTo qbez = ctPath.addNewQuadBezTo();
-                    CTAdjPoint2D qp1 = qbez.addNewPt();
-                    qp1.setX(Units.toEMU(vals[0]) - x0);
-                    qp1.setY(Units.toEMU(vals[1]) - y0);
-                    CTAdjPoint2D qp2 = qbez.addNewPt();
-                    qp2.setX(Units.toEMU(vals[2]) - x0);
-                    qp2.setY(Units.toEMU(vals[3]) - y0);
-                    numPoints += 2;
+                    points = addQuadBezierTo(ctPath);
                     break;
                 case PathIterator.SEG_CUBICTO:
-                    CTPath2DCubicBezierTo bez = ctPath.addNewCubicBezTo();
-                    CTAdjPoint2D p1 = bez.addNewPt();
-                    p1.setX(Units.toEMU(vals[0]) - x0);
-                    p1.setY(Units.toEMU(vals[1]) - y0);
-                    CTAdjPoint2D p2 = bez.addNewPt();
-                    p2.setX(Units.toEMU(vals[2]) - x0);
-                    p2.setY(Units.toEMU(vals[3]) - y0);
-                    CTAdjPoint2D p3 = bez.addNewPt();
-                    p3.setX(Units.toEMU(vals[4]) - x0);
-                    p3.setY(Units.toEMU(vals[5]) - y0);
-                    numPoints += 3;
+                    points = addCubicBezierTo(ctPath);
                     break;
                 case PathIterator.SEG_CLOSE:
-                    numPoints++;
-                    ctPath.addNewClose();
+                    points = addClosePath(ctPath);
                     break;
-                default:
+                default: {
                     throw new IllegalStateException("Unrecognized path segment type: " + type);
+                }
             }
+
+            int i=0;
+            for (final CTAdjPoint2D point : points) {
+                point.setX(Units.toEMU(vals[i++])-x0);
+                point.setY(Units.toEMU(vals[i++])-y0);
+            }
+
+            numPoints += Math.max(points.length, 1);
             it.next();
         }
         
