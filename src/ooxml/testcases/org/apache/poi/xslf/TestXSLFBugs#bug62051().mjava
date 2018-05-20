@@ -1,0 +1,28 @@
+    @Test
+    public void bug62051() throws IOException {
+        final Function<List<XSLFShape>, int[]> ids = (shapes) ->
+            shapes.stream().mapToInt(Shape::getShapeId).toArray();
+
+        try (final XMLSlideShow ppt = new XMLSlideShow()) {
+            final XSLFSlide slide = ppt.createSlide();
+            final List<XSLFShape> shapes = new ArrayList<>();
+            shapes.add(slide.createAutoShape());
+            final XSLFGroupShape g1 = slide.createGroup();
+            shapes.add(g1);
+            final XSLFGroupShape g2 = g1.createGroup();
+            shapes.add(g2);
+            shapes.add(g2.createAutoShape());
+            shapes.add(slide.createAutoShape());
+            shapes.add(g2.createAutoShape());
+            shapes.add(g1.createAutoShape());
+            assertArrayEquals(new int[]{ 2,3,4,5,6,7,8 }, ids.apply(shapes));
+            g1.removeShape(g2);
+            shapes.remove(5);
+            shapes.remove(3);
+            shapes.remove(2);
+            shapes.add(g1.createAutoShape());
+            assertArrayEquals(new int[]{ 2,3,6,8,4 }, ids.apply(shapes));
+
+        }
+    }
+
