@@ -12,51 +12,50 @@
      */
     @Override
     public void createFreezePane(int colSplit, int rowSplit, int leftmostColumn, int topRow) {
-        CTSheetView ctView = getDefaultSheetView();
+        final boolean removeSplit = colSplit == 0 && rowSplit == 0;
+        final CTSheetView ctView = getDefaultSheetView(!removeSplit);
+
+        if (ctView != null) {
+            ctView.setSelectionArray(null);
+        }
 
         // If both colSplit and rowSplit are zero then the existing freeze pane is removed
-        if(colSplit == 0 && rowSplit == 0){
-            if(ctView.isSetPane()) {
+        if (removeSplit) {
+            if (ctView != null && ctView.isSetPane()) {
                 ctView.unsetPane();
             }
-            ctView.setSelectionArray(null);
             return;
         }
 
-        if (!ctView.isSetPane()) {
-            ctView.addNewPane();
-        }
-        CTPane pane = ctView.getPane();
+        assert(ctView != null);
+        final CTPane pane = (ctView.isSetPane()) ? ctView.getPane() : ctView.addNewPane();
+        assert(pane != null);
 
         if (colSplit > 0) {
            pane.setXSplit(colSplit);
-        } else {
-           if(pane.isSetXSplit()) {
-               pane.unsetXSplit();
-           }
+        } else if (pane.isSetXSplit()) {
+           pane.unsetXSplit();
         }
         if (rowSplit > 0) {
            pane.setYSplit(rowSplit);
-        } else {
-           if(pane.isSetYSplit()) {
-               pane.unsetYSplit();
-           }
+        } else if(pane.isSetYSplit()) {
+           pane.unsetYSplit();
+        }
+
+        STPane.Enum activePane = STPane.BOTTOM_RIGHT;
+        int pRow = topRow, pCol = leftmostColumn;
+        if (rowSplit == 0) {
+            pRow = 0;
+            activePane = STPane.TOP_RIGHT;
+        } else if (colSplit == 0) {
+            pCol = 0;
+            activePane = STPane.BOTTOM_LEFT;
         }
 
         pane.setState(STPaneState.FROZEN);
-        if (rowSplit == 0) {
-            pane.setTopLeftCell(new CellReference(0, leftmostColumn).formatAsString());
-            pane.setActivePane(STPane.TOP_RIGHT);
-        } else if (colSplit == 0) {
-            pane.setTopLeftCell(new CellReference(topRow, 0).formatAsString());
-            pane.setActivePane(STPane.BOTTOM_LEFT);
-        } else {
-            pane.setTopLeftCell(new CellReference(topRow, leftmostColumn).formatAsString());
-            pane.setActivePane(STPane.BOTTOM_RIGHT);
-        }
+        pane.setTopLeftCell(new CellReference(pRow, pCol).formatAsString());
+        pane.setActivePane(activePane);
 
-        ctView.setSelectionArray(null);
-        CTSelection sel = ctView.addNewSelection();
-        sel.setPane(pane.getActivePane());
+        ctView.addNewSelection().setPane(activePane);
     }
 

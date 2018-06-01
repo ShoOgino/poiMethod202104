@@ -5,15 +5,24 @@
      */
     @Override
     public PaneInformation getPaneInformation() {
-        CTPane pane = getDefaultSheetView().getPane();
+        final CTPane pane = getPane(false);
         // no pane configured
         if(pane == null) {
             return null;
         }
 
-        CellReference cellRef = pane.isSetTopLeftCell() ? new CellReference(pane.getTopLeftCell()) : null;
-        return new PaneInformation((short)pane.getXSplit(), (short)pane.getYSplit(),
-                (short)(cellRef == null ? 0 : cellRef.getRow()),(cellRef == null ? 0 : cellRef.getCol()),
-                (byte)(pane.getActivePane().intValue() - 1), pane.getState() == STPaneState.FROZEN);
+        short row = 0, col = 0;
+        if (pane.isSetTopLeftCell()) {
+            final CellReference cellRef = new CellReference(pane.getTopLeftCell());
+            row = (short)cellRef.getRow();
+            col = (short)cellRef.getCol();
+        }
+
+        final short x = (short)pane.getXSplit();
+        final short y = (short)pane.getYSplit();
+        final byte active = (byte)(pane.getActivePane().intValue() - 1);
+        final boolean frozen = pane.getState() == STPaneState.FROZEN;
+
+        return new PaneInformation(x, y, row, col, active, frozen);
     }
 
