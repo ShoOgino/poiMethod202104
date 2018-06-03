@@ -1,22 +1,22 @@
-    private static void copyToFile(InputStream is, File tmpFile, byte keyBytes[], byte ivBytes[]) throws IOException, GeneralSecurityException {
+    private static void copyToFile(InputStream is, File tmpFile, byte keyBytes[], byte ivBytes[]) throws IOException {
         SecretKeySpec skeySpec = new SecretKeySpec(keyBytes, CipherAlgorithm.aes128.jceId);
         Cipher ciEnc = CryptoFunctions.getCipher(skeySpec, CipherAlgorithm.aes128, ChainingMode.cbc, ivBytes, Cipher.ENCRYPT_MODE, PADDING);
         
-        ZipInputStream zis = new ZipInputStream(is);
+        ZipArchiveInputStream zis = new ZipArchiveInputStream(is);
         FileOutputStream fos = new FileOutputStream(tmpFile);
-        ZipOutputStream zos = new ZipOutputStream(fos);
+        ZipArchiveOutputStream zos = new ZipArchiveOutputStream(fos);
         
-        ZipEntry ze;
-        while ((ze = zis.getNextEntry()) != null) {
+        ZipArchiveEntry ze;
+        while ((ze = zis.getNextZipEntry()) != null) {
             // the cipher output stream pads the data, therefore we can't reuse the ZipEntry with set sizes
             // as those will be validated upon close()
-            ZipEntry zeNew = new ZipEntry(ze.getName());
+            ZipArchiveEntry zeNew = new ZipArchiveEntry(ze.getName());
             zeNew.setComment(ze.getComment());
             zeNew.setExtra(ze.getExtra());
             zeNew.setTime(ze.getTime());
             // zeNew.setMethod(ze.getMethod());
-            zos.putNextEntry(zeNew);
-            FilterOutputStream fos2 = new FilterOutputStream(zos){
+            zos.putArchiveEntry(zeNew);
+            FilterOutputStream fos2 = new FilterOutputStream(zos) {
                 // don't close underlying ZipOutputStream
                 @Override
                 public void close() {}
@@ -25,8 +25,7 @@
             IOUtils.copy(zis, cos);
             cos.close();
             fos2.close();
-            zos.closeEntry();
-            zis.closeEntry();
+            zos.closeArchiveEntry();
         }
         zos.close();
         fos.close();

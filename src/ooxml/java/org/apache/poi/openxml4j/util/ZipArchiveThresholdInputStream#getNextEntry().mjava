@@ -1,8 +1,17 @@
-    public ZipEntry getNextEntry() throws IOException {
-        if (!(in instanceof ZipInputStream)) {
-            throw new UnsupportedOperationException("underlying stream is not a ZipInputStream");
+    ZipArchiveEntry getNextEntry() throws IOException {
+        if (!(in instanceof ZipArchiveInputStream)) {
+            throw new IllegalStateException("getNextEntry() is only allowed for stream based zip processing.");
         }
-        counter = 0;
-        return ((ZipInputStream)in).getNextEntry();
+
+        try {
+            entry = ((ZipArchiveInputStream) in).getNextZipEntry();
+            return entry;
+        } catch (ZipException ze) {
+            if (ze.getMessage().startsWith("Unexpected record signature")) {
+                throw new NotOfficeXmlFileException(
+                        "No valid entries or contents found, this is not a valid OOXML (Office Open XML) file", ze);
+            }
+            throw ze;
+        }
     }
 

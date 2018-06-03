@@ -1,0 +1,29 @@
+    private void checkThreshold() throws IOException {
+        if (!guardState) {
+            return;
+        }
+
+        final InputStreamStatistics stats = (InputStreamStatistics)in;
+        final long payloadSize = stats.getUncompressedCount();
+        final long rawSize = stats.getCompressedCount();
+        final String entryName = entry == null ? "not set" : entry.getName();
+
+        // check the file size first, in case we are working on uncompressed streams
+        if(payloadSize > MAX_ENTRY_SIZE) {
+            throw new IOException(String.format(Locale.ROOT, MAX_ENTRY_SIZE_MSG, payloadSize, rawSize, MAX_ENTRY_SIZE, entryName));
+        }
+
+        // don't alert for small expanded size
+        if (payloadSize <= GRACE_ENTRY_SIZE) {
+            return;
+        }
+
+        double ratio = rawSize / (double)payloadSize;
+        if (ratio >= MIN_INFLATE_RATIO) {
+            return;
+        }
+
+        // one of the limits was reached, report it
+        throw new IOException(String.format(Locale.ROOT, MIN_INFLATE_RATIO_MSG, payloadSize, rawSize, ratio, MIN_INFLATE_RATIO, entryName));
+    }
+
