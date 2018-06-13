@@ -1,0 +1,21 @@
+    @Test
+    public void testRetrieveCertificate() throws InvalidFormatException, IOException {
+        SignatureConfig sic = new SignatureConfig();
+        final File file = testdata.getFile("PPT2016withComment.pptx");
+        try (final OPCPackage pkg = OPCPackage.open(file, PackageAccess.READ)) {
+            sic.setOpcPackage(pkg);
+            sic.setUpdateConfigOnValidate(true);
+            SignatureInfo si = new SignatureInfo();
+            si.setSignatureConfig(sic);
+            assertTrue(si.verifySignature());
+        }
+
+        final List<X509Certificate> certs = sic.getSigningCertificateChain();
+        assertEquals(1, certs.size());
+        assertEquals("CN=Test", certs.get(0).getSubjectDN().getName());
+        assertEquals("SuperDuper-Reviewer", sic.getXadesRole());
+        assertEquals("Purpose for signing", sic.getSignatureDescription());
+        assertEquals("2018-06-10T09:00:54Z", sic.formatExecutionTime());
+        assertEquals(CanonicalizationMethod.INCLUSIVE, sic.getCanonicalizationMethod());
+    }
+

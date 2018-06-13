@@ -1,0 +1,24 @@
+    private void extractConfig(final Document doc, final XMLSignature xmlSignature) throws XPathExpressionException {
+        if (!signatureConfig.isUpdateConfigOnValidate()) {
+            return;
+        }
+
+        signatureConfig.setSigningCertificateChain(certChain);
+        signatureConfig.setSignatureMethodFromUri(xmlSignature.getSignedInfo().getSignatureMethod().getAlgorithm());
+
+        final XPath xpath = XPathFactory.newInstance().newXPath();
+        xpath.setNamespaceContext(new XPathNSContext());
+
+        final Map<String,Consumer<String>> m = new HashMap();
+        m.put("//mdssi:SignatureTime/mdssi:Value", signatureConfig::setExecutionTime);
+        m.put("//xd:ClaimedRole", signatureConfig::setXadesRole);
+        m.put("//dsss:SignatureComments", signatureConfig::setSignatureDescription);
+        m.put("//xd:QualifyingProperties//xd:SignedSignatureProperties//ds:DigestMethod/@Algorithm", signatureConfig::setXadesDigestAlgo);
+        m.put("//ds:CanonicalizationMethod", signatureConfig::setCanonicalizationMethod);
+
+        for (Map.Entry<String,Consumer<String>> me : m.entrySet()) {
+            String val = (String)xpath.compile(me.getKey()).evaluate(doc, XPathConstants.STRING);
+            me.getValue().accept(val);
+        }
+    }
+
