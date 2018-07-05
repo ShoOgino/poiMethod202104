@@ -1,0 +1,25 @@
+    // the actual thread-safe temp-file strategy
+    private static TempFileCreationStrategy createTempFileCreationStrategy(File poiTempFileDirectory) {
+        return new TempFileCreationStrategy() {
+            @Override
+            public File createTempFile(String prefix, String suffix) throws IOException {
+                long threadId = Thread.currentThread().getId();
+                File threadDir = new File(poiTempFileDirectory, Long.toString(threadId));
+                if (!threadDir.exists()) {
+                    if (!threadDir.mkdirs()) {
+                        throw new IOException("mkdir of " + threadDir + " failed");
+                    }
+                }
+
+                File file = File.createTempFile(prefix, suffix, threadDir);
+                file.deleteOnExit();
+                return file;
+            }
+
+            @Override
+            public File createTempDirectory(String prefix) {
+                throw new UnsupportedOperationException("createTempDirectory");
+            }
+        };
+    }
+
