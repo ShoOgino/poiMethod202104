@@ -1,79 +1,79 @@
     private void shiftCommentsAndRows(XSSFVMLDrawing vml, int startRow, int endRow, final int n){
-         // then do the actual moving and also adjust comments/rowHeight
-         // we need to sort it in a way so the shifting does not mess up the structures, 
-         // i.e. when shifting down, start from down and go up, when shifting up, vice-versa
-         SortedMap<XSSFComment, Integer> commentsToShift = new TreeMap<>(new Comparator<XSSFComment>() {
-             @Override
-             public int compare(XSSFComment o1, XSSFComment o2) {
-                 int row1 = o1.getRow();
-                 int row2 = o2.getRow();
+        // then do the actual moving and also adjust comments/rowHeight
+        // we need to sort it in a way so the shifting does not mess up the structures,
+        // i.e. when shifting down, start from down and go up, when shifting up, vice-versa
+        SortedMap<XSSFComment, Integer> commentsToShift = new TreeMap<>(new Comparator<XSSFComment>() {
+            @Override
+            public int compare(XSSFComment o1, XSSFComment o2) {
+                int row1 = o1.getRow();
+                int row2 = o2.getRow();
 
-                 if (row1 == row2) {
-                     // ordering is not important when row is equal, but don't return zero to still 
-                     // get multiple comments per row into the map
-                     return o1.hashCode() - o2.hashCode();
-                 }
+                if (row1 == row2) {
+                    // ordering is not important when row is equal, but don't return zero to still
+                    // get multiple comments per row into the map
+                    return o1.hashCode() - o2.hashCode();
+                }
 
-                 // when shifting down, sort higher row-values first
-                 if (n > 0) {
-                     return row1 < row2 ? 1 : -1;
-                 } else {
-                     // sort lower-row values first when shifting up
-                     return row1 > row2 ? 1 : -1;
-                 }
-             }
-         });
+                // when shifting down, sort higher row-values first
+                if (n > 0) {
+                    return row1 < row2 ? 1 : -1;
+                } else {
+                    // sort lower-row values first when shifting up
+                    return row1 > row2 ? 1 : -1;
+                }
+            }
+        });
 
-         
-         for (Iterator<Row> it = rowIterator() ; it.hasNext() ; ) {
-             XSSFRow row = (XSSFRow)it.next();
-             int rownum = row.getRowNum();
 
-             if(sheetComments != null){
-                 // calculate the new rownum
-                 int newrownum = shiftedRowNum(startRow, endRow, n, rownum);
-                 
-                 // is there a change necessary for the current row?
-                 if(newrownum != rownum) {
-                     CTCommentList lst = sheetComments.getCTComments().getCommentList();
-                     for (CTComment comment : lst.getCommentArray()) {
-                         String oldRef = comment.getRef();
-                         CellReference ref = new CellReference(oldRef);
-                         
-                         // is this comment part of the current row?
-                         if(ref.getRow() == rownum) {
-                             XSSFComment xssfComment = new XSSFComment(sheetComments, comment,
-                                     vml == null ? null : vml.findCommentShape(rownum, ref.getCol()));
-                             
-                             // we should not perform the shifting right here as we would then find
-                             // already shifted comments and would shift them again...
-                             commentsToShift.put(xssfComment, newrownum);
-                         }
-                     }
-                 }
-             }
+        for (Iterator<Row> it = rowIterator() ; it.hasNext() ; ) {
+            XSSFRow row = (XSSFRow)it.next();
+            int rownum = row.getRowNum();
 
-             if(rownum < startRow || rownum > endRow) {
-                 continue;
-             }
-             row.shift(n);
-         }
-         // adjust all the affected comment-structures now
-         // the Map is sorted and thus provides them in the order that we need here, 
-         // i.e. from down to up if shifting down, vice-versa otherwise
-         for(Map.Entry<XSSFComment, Integer> entry : commentsToShift.entrySet()) {
-             entry.getKey().setRow(entry.getValue());
-         }
-         
-         //rebuild the _rows map
-         Map<Integer, XSSFRow> map = new HashMap<>();
-         for(XSSFRow r : _rows.values()) {
-             // Performance optimization: explicit boxing is slightly faster than auto-unboxing, though may use more memory
-             final Integer rownumI = Integer.valueOf(r.getRowNum()); // NOSONAR
-             map.put(rownumI, r);
-         }
-         _rows.clear();
-         _rows.putAll(map);
-         
+            if(sheetComments != null){
+                // calculate the new rownum
+                int newrownum = shiftedRowNum(startRow, endRow, n, rownum);
+
+                // is there a change necessary for the current row?
+                if(newrownum != rownum) {
+                    CTCommentList lst = sheetComments.getCTComments().getCommentList();
+                    for (CTComment comment : lst.getCommentArray()) {
+                        String oldRef = comment.getRef();
+                        CellReference ref = new CellReference(oldRef);
+
+                        // is this comment part of the current row?
+                        if(ref.getRow() == rownum) {
+                            XSSFComment xssfComment = new XSSFComment(sheetComments, comment,
+                                    vml == null ? null : vml.findCommentShape(rownum, ref.getCol()));
+
+                            // we should not perform the shifting right here as we would then find
+                            // already shifted comments and would shift them again...
+                            commentsToShift.put(xssfComment, newrownum);
+                        }
+                    }
+                }
+            }
+
+            if(rownum < startRow || rownum > endRow) {
+                continue;
+            }
+            row.shift(n);
+        }
+        // adjust all the affected comment-structures now
+        // the Map is sorted and thus provides them in the order that we need here,
+        // i.e. from down to up if shifting down, vice-versa otherwise
+        for(Map.Entry<XSSFComment, Integer> entry : commentsToShift.entrySet()) {
+            entry.getKey().setRow(entry.getValue());
+        }
+
+        //rebuild the _rows map
+        Map<Integer, XSSFRow> map = new HashMap<>();
+        for(XSSFRow r : _rows.values()) {
+            // Performance optimization: explicit boxing is slightly faster than auto-unboxing, though may use more memory
+            final Integer rownumI = Integer.valueOf(r.getRowNum()); // NOSONAR
+            map.put(rownumI, r);
+        }
+        _rows.clear();
+        _rows.putAll(map);
+
     }
 
