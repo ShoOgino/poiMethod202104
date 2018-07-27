@@ -4,29 +4,26 @@
          */
         public List<XSSFShape> getShapes() {
             PackagePart sheetPkg = getSheetPart();
-            List<XSSFShape> shapes= new LinkedList<>();
-           // Do we have a comments relationship? (Only ever one if so)
-           try {
-              PackageRelationshipCollection drawingsList = sheetPkg.getRelationshipsByType(XSSFRelation.DRAWINGS.getRelation());
-              for (int i = 0; i < drawingsList.size(); i++){
-                  PackageRelationship drawings = drawingsList.getRelationship(i);
-                  PackagePartName drawingsName = PackagingURIHelper.createPartName(drawings.getTargetURI());
-                  PackagePart drawingsPart = sheetPkg.getPackage().getPart(drawingsName);
-                  if (drawingsPart == null) {
-                      //parts can go missing; Excel ignores them silently -- TIKA-2134
-                      LOGGER.log(POILogger.WARN, "Missing drawing: "+drawingsName +". Skipping it.");
-                      continue;
-                  }
-                  XSSFDrawing drawing = new XSSFDrawing(drawingsPart);
-                  shapes.addAll(drawing.getShapes());
-              }
-           } catch (XmlException e){
-               return null;
-           } catch (InvalidFormatException e) {  
-              return null;
-           } catch (IOException e) {
-              return null;
-           }
-           return shapes;
+            List<XSSFShape> shapes = new LinkedList<>();
+            // Do we have a comments relationship? (Only ever one if so)
+            try {
+                PackageRelationshipCollection drawingsList = sheetPkg.getRelationshipsByType(XSSFRelation.DRAWINGS.getRelation());
+                for (int i = 0; i < drawingsList.size(); i++) {
+                    PackageRelationship drawings = drawingsList.getRelationship(i);
+                    PackagePartName drawingsName = PackagingURIHelper.createPartName(drawings.getTargetURI());
+                    PackagePart drawingsPart = sheetPkg.getPackage().getPart(drawingsName);
+                    if (drawingsPart == null) {
+                        //parts can go missing; Excel ignores them silently -- TIKA-2134
+                        LOGGER.log(POILogger.WARN, "Missing drawing: " + drawingsName + ". Skipping it.");
+                        continue;
+                    }
+                    XSSFDrawing drawing = new XSSFDrawing(drawingsPart);
+                    shapes.addAll(drawing.getShapes());
+                }
+            } catch (XmlException|InvalidFormatException|IOException e) {
+                LOGGER.log(POILogger.WARN, e);
+                return null;
+            }
+            return shapes;
         }
 
