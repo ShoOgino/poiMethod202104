@@ -1,0 +1,50 @@
+    @Test
+    public void bug62587() throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try (XMLSlideShow ppt = new XMLSlideShow()) {
+            Slide slide = ppt.createSlide();
+            XSLFPictureData pd = ppt.addPicture(slTests.getFile("wrench.emf"), PictureType.EMF);
+            PictureShape ps = slide.createPicture(pd);
+            ps.setAnchor(new Rectangle2D.Double(100,100,100,100));
+            ppt.write(bos);
+        }
+
+        Object[][] pics = {
+            {"santa.wmf", PictureType.WMF, XSLFRelation.IMAGE_WMF},
+            {"tomcat.png",PictureType.PNG, XSLFRelation.IMAGE_PNG},
+            {"clock.jpg", PictureType.JPEG, XSLFRelation.IMAGE_JPEG}
+        };
+
+        try (XMLSlideShow ppt = new XMLSlideShow(new ByteArrayInputStream(bos.toByteArray()))) {
+            XSLFSlide s1 = ppt.getSlides().get(0);
+
+            for (Object[] p : pics) {
+                XSLFSlide s2 = ppt.createSlide();
+                s2.importContent(s1);
+
+                XSLFPictureData pd = ppt.addPicture(slTests.getFile((String)p[0]), (PictureType)p[1]);
+                XSLFPictureShape ps = (XSLFPictureShape) s2.getShapes().get(0);
+                Rectangle2D anchor = ps.getAnchor();
+                s2.removeShape(ps);
+                ps = s2.createPicture(pd);
+                ps.setAnchor(anchor);
+            }
+
+            bos.reset();
+            ppt.write(bos);
+        }
+
+        try (XMLSlideShow ppt = new XMLSlideShow(new ByteArrayInputStream(bos.toByteArray()))) {
+            for (XSLFSlide sl : ppt.getSlides()) {
+                List<RelationPart> rels = sl.getRelationParts();
+                assertEquals(2, rels.size());
+                RelationPart rel0 = rels.get(0);
+                assertEquals("rId1", rel0.getRelationship().getId());
+                assertEquals(XSLFRelation.SLIDE_LAYOUT.getRelation(), rel0.getRelationship().getRelationshipType());
+                RelationPart rel1 = rels.get(1);
+                assertEquals("rId2", rel1.getRelationship().getId());
+                assertEquals(XSLFRelation.IMAGES.getRelation(), rel1.getRelationship().getRelationshipType());
+            }
+        }
+    }
+
