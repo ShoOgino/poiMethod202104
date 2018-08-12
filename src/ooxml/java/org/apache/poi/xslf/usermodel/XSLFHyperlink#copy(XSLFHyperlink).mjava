@@ -1,0 +1,32 @@
+    void copy(XSLFHyperlink src) {
+        switch (src.getType()) {
+            case EMAIL:
+            case URL:
+                linkToExternal(src.getAddress());
+                break;
+            case DOCUMENT:
+                final String idSrc = src._link.getId();
+                if (idSrc == null || idSrc.isEmpty()) {
+                    // link to slide - relative reference
+                    linkToRelativeSlide(src.getAddress());
+                } else {
+                    // link to slide . absolute reference
+                    // this is kind of a hack, as we might link to pages not yet imported,
+                    // but the underlying implementation is based only on package part names,
+                    // so this actually works ...
+                    POIXMLDocumentPart pp = src._sheet.getRelationById(idSrc);
+                    if (pp != null) {
+                        RelationPart rp = _sheet.addRelation(null, XSLFRelation.SLIDE, pp);
+                        _link.setId(rp.getRelationship().getId());
+                        _link.setAction(src._link.getAction());
+                    }
+                }
+                break;
+            default:
+            case FILE:
+            case NONE:
+                return;
+        }
+        setLabel(src.getLabel());
+    }
+
