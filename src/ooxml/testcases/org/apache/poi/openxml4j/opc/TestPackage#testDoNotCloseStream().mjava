@@ -1,16 +1,27 @@
 	@Test
 	public void testDoNotCloseStream() throws IOException {
-		OutputStream os = Mockito.mock(OutputStream.class);
+		// up to JDK 10 we did use Mockito here, but OutputStream is
+		// an abstract class and fails mocking with some changes in JDK 11
+		// so we use a simple empty output stream implementation instead
+		OutputStream os = new OutputStream() {
+			@Override
+			public void write(int b) {
+			}
+
+			@Override
+			public void close() {
+				throw new IllegalStateException("close should not be called here");
+			}
+		};
+
 		try (XSSFWorkbook wb = new XSSFWorkbook()) {
 			wb.createSheet();
 			wb.write(os);
 		}
-		verify(os, never()).close();
 
 		try (SXSSFWorkbook wb = new SXSSFWorkbook()) {
 			wb.createSheet();
 			wb.write(os);
 		}
-		verify(os, never()).close();
 	}
 
