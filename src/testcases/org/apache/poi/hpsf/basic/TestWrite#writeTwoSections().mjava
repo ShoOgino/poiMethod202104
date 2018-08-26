@@ -42,23 +42,17 @@
         /* Read the POIFS: */
         final PropertySet[] psa = new PropertySet[1];
         final POIFSReader r = new POIFSReader();
-        r.registerListener(new POIFSReaderListener() {
-                @Override
-                public void processPOIFSReaderEvent(final POIFSReaderEvent event) {
-                    try {
-                        psa[0] = PropertySetFactory.create(event.getStream());
-                    } catch (Exception ex) {
-                        throw new RuntimeException(ex);
-                    }
-                }
-            },
-            STREAM_NAME);
-        FileInputStream stream = new FileInputStream(filename);
-        try {
-            r.read(stream);
-        } finally {
-            stream.close();
-        }
+        final POIFSReaderListener listener = (event) -> {
+            try {
+                psa[0] = PropertySetFactory.create(event.getStream());
+            } catch (Exception ex) {
+                fail(ex.getMessage());
+            }
+        };
+
+        r.registerListener(listener,STREAM_NAME);
+        r.read(filename);
+
         assertNotNull(psa[0]);
         Section s = (psa[0].getSections().get(0));
         assertEquals(s.getFormatID(), formatID);

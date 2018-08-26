@@ -1,5 +1,5 @@
         /**
-         * <p>Writes a {@link PropertySet} to a POI filesystem.</p>
+         * Writes a {@link PropertySet} to a POI filesystem.
          *
          * @param poiFs The POI filesystem to write to.
          * @param path  The file's path in the POI filesystem.
@@ -12,7 +12,18 @@
                          final PropertySet ps)
                 throws WritingNotSupportedException, IOException {
             final DirectoryEntry de = getPath(poiFs, path);
-            final PropertySet mps = new PropertySet(ps);
+            final PropertySet mps;
+            try {
+                if (ps instanceof DocumentSummaryInformation) {
+                    mps = new DocumentSummaryInformation(ps);
+                } else if (ps instanceof SummaryInformation) {
+                    mps = new SummaryInformation(ps);
+                } else {
+                    mps = new PropertySet(ps);
+                }
+            } catch (UnexpectedPropertySetTypeException e) {
+                throw new IOException(e);
+            }
             de.createDocument(name, mps.toInputStream());
         }
 

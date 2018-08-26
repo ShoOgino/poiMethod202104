@@ -1,35 +1,27 @@
     /**
      * With heavily nested documents, ensure we still re-write the same
      */
+    @Test
     public void testHeavilyNestedReWrite() throws Exception {
-        for (DirectoryNode root : openSSSample("ex42570-20305.xls", false)) {
-            // Record the structure
-            Map<String,Integer> entries = new HashMap<>();
-            fetchSizes("/", root, entries);
-            
-            // Prepare to copy
-            DirectoryNode dest;
-            if (root.getNFileSystem() != null) {
-                dest = (new NPOIFSFileSystem()).getRoot();
-            } else {
-                dest = (new OPOIFSFileSystem()).getRoot();
-            }
-            
-            // Copy over
-            EntryUtils.copyNodes(root, dest);
-            
-            // Re-load, always as NPOIFS
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            if (root.getNFileSystem() != null) {
-                root.getNFileSystem().writeFilesystem(baos);
-            } else {
-                root.getOFileSystem().writeFilesystem(baos);
-            }
-            NPOIFSFileSystem read = new NPOIFSFileSystem(
-                    new ByteArrayInputStream(baos.toByteArray()));
-            
-            // Check the structure matches
-            checkSizes("/", read.getRoot(), entries);
-        }
+        DirectoryNode root = openSSSample("ex42570-20305.xls");
+        // Record the structure
+        Map<String,Integer> entries = new HashMap<>();
+        fetchSizes("/", root, entries);
+
+        // Prepare to copy
+        DirectoryNode dest = new NPOIFSFileSystem().getRoot();
+
+        // Copy over
+        EntryUtils.copyNodes(root, dest);
+
+        // Re-load, always as NPOIFS
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        root.getNFileSystem().writeFilesystem(baos);
+
+        NPOIFSFileSystem read = new NPOIFSFileSystem(
+                new ByteArrayInputStream(baos.toByteArray()));
+
+        // Check the structure matches
+        checkSizes("/", read.getRoot(), entries);
     }
 

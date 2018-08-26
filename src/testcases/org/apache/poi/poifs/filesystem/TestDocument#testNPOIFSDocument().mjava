@@ -1,0 +1,38 @@
+    /**
+     * Integration test -- really about all we can do
+     */
+    @Test
+    public void testNPOIFSDocument() throws IOException {
+
+        try (NPOIFSFileSystem poifs = new NPOIFSFileSystem()) {
+
+            // verify correct number of blocks get created for document
+            // that is exact multiple of block size
+            checkDocument(poifs, LARGER_BIG_BLOCK_SIZE);
+
+            // verify correct number of blocks get created for document
+            // that is not an exact multiple of block size
+            checkDocument(poifs, LARGER_BIG_BLOCK_SIZE + 1);
+
+            // verify correct number of blocks get created for document
+            // that is small
+            checkDocument(poifs, LARGER_BIG_BLOCK_SIZE - 1);
+
+            // verify correct number of blocks get created for document
+            // that is rather small
+            checkDocument(poifs, 199);
+
+
+            // verify that output is correct
+            NPOIFSDocument document = checkDocument(poifs, LARGER_BIG_BLOCK_SIZE + 1);
+            DocumentProperty property = document.getDocumentProperty();
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+
+            property.writeData(stream);
+            byte[] output = stream.toByteArray();
+            byte[] array2 = RawDataUtil.decompress("H4sIAAAAAAAAAEtlyGMoYShiqGSwYCAH8DEwMf5HAsToMQdiRgEIGwCDyzEQgAAAAA==");
+
+            assertArrayEquals(array2, output);
+        }
+    }
+

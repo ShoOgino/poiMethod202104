@@ -2,40 +2,38 @@
 	 * Most OLE2 files use 512byte blocks. However, a small number
 	 *  use 4k blocks. Check that we can open these.
 	 */
+	@Test
 	public void test4KBlocks() throws Exception {
         POIDataSamples _samples = POIDataSamples.getPOIFSInstance();
-        InputStream inp = _samples.openResourceAsStream("BlockSize4096.zvi");
-        try {
-            // First up, check that we can process the header properly
-            HeaderBlock header_block = new HeaderBlock(inp);
-            POIFSBigBlockSize bigBlockSize = header_block.getBigBlockSize();
-            assertEquals(4096, bigBlockSize.getBigBlockSize());
+		try (InputStream inp = _samples.openResourceAsStream("BlockSize4096.zvi")) {
+			// First up, check that we can process the header properly
+			HeaderBlock header_block = new HeaderBlock(inp);
+			POIFSBigBlockSize bigBlockSize = header_block.getBigBlockSize();
+			assertEquals(4096, bigBlockSize.getBigBlockSize());
 
-            // Check the fat info looks sane
-            assertEquals(1, header_block.getBATArray().length);
-            assertEquals(1, header_block.getBATCount());
-            assertEquals(0, header_block.getXBATCount());
+			// Check the fat info looks sane
+			assertEquals(1, header_block.getBATArray().length);
+			assertEquals(1, header_block.getBATCount());
+			assertEquals(0, header_block.getXBATCount());
 
-            // Now check we can get the basic fat
-            RawDataBlockList data_blocks = new RawDataBlockList(inp,
-                    bigBlockSize);
-            assertEquals(15, data_blocks.blockCount());
+			// Now check we can get the basic fat
+			RawDataBlockList data_blocks = new RawDataBlockList(inp,
+					bigBlockSize);
+			assertEquals(15, data_blocks.blockCount());
 
-            // Now try and open properly
-            OPOIFSFileSystem fs = new OPOIFSFileSystem(
-                    _samples.openResourceAsStream("BlockSize4096.zvi"));
-            assertTrue(fs.getRoot().getEntryCount() > 3);
+			// Now try and open properly
+			NPOIFSFileSystem fs = new NPOIFSFileSystem(
+					_samples.openResourceAsStream("BlockSize4096.zvi"));
+			assertTrue(fs.getRoot().getEntryCount() > 3);
 
-            // Check we can get at all the contents
-            checkAllDirectoryContents(fs.getRoot());
+			// Check we can get at all the contents
+			checkAllDirectoryContents(fs.getRoot());
 
-            // Finally, check we can do a similar 512byte one too
-            fs = new OPOIFSFileSystem(
-                    _samples.openResourceAsStream("BlockSize512.zvi"));
-            assertTrue(fs.getRoot().getEntryCount() > 3);
-            checkAllDirectoryContents(fs.getRoot());
-        } finally {
-            inp.close();
-        }
+			// Finally, check we can do a similar 512byte one too
+			fs = new NPOIFSFileSystem(
+					_samples.openResourceAsStream("BlockSize512.zvi"));
+			assertTrue(fs.getRoot().getEntryCount() > 3);
+			checkAllDirectoryContents(fs.getRoot());
+		}
 	}
 

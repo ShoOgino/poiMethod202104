@@ -17,24 +17,20 @@
      * 
      * @exception IOException if an I/O exception occurs
      */
-    public static List<POIFile> readPOIFiles(final File poiFs, final String... poiFiles)
-    throws FileNotFoundException, IOException {
+    static List<POIFile> readPOIFiles(final File poiFs, final String... poiFiles) throws IOException {
         final List<POIFile> files = new ArrayList<>();
         POIFSReader r = new POIFSReader();
-        POIFSReaderListener pfl = new POIFSReaderListener() {
-            @Override
-            public void processPOIFSReaderEvent(final POIFSReaderEvent event) {
-                try {
-                    final POIFile f = new POIFile();
-                    f.setName(event.getName());
-                    f.setPath(event.getPath());
-                    final InputStream in = event.getStream();
-                    f.setBytes(IOUtils.toByteArray(in));
-                    in.close();
-                    files.add(f);
-                } catch (IOException ex) {
-                    throw new RuntimeException(ex);
-                }
+        POIFSReaderListener pfl = event -> {
+            try {
+                final POIFile f = new POIFile();
+                f.setName(event.getName());
+                f.setPath(event.getPath());
+                final InputStream in = event.getStream();
+                f.setBytes(IOUtils.toByteArray(in));
+                in.close();
+                files.add(f);
+            } catch (IOException ex) {
+                fail(ex.getMessage());
             }
         };
         if (poiFiles.length == 0) {
@@ -47,12 +43,8 @@
         }
 
         /* Read the POI filesystem. */
-        FileInputStream stream = new FileInputStream(poiFs);
-        try {
-            r.read(stream);
-        } finally {
-            stream.close();
-        }
+        r.read(poiFs);
+
         return files;
     }
 

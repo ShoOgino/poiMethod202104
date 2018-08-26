@@ -1,32 +1,21 @@
     /**
-     * <p>Runs the example program. The application expects one or two
-     * arguments:</p>
-     * <p>
+     * Runs the example program. The application expects one or two arguments:
+     *
      * <ol>
-     * <p>
-     * <li><p>The first argument is the disk file name of the POI filesystem to
-     * copy.</p></li>
-     * <p>
-     * <li><p>The second argument is optional. If it is given, it is the name of
+     * <li>The first argument is the disk file name of the POI filesystem to copy.</li>
+     * <li>The second argument is optional. If it is given, it is the name of
      * a disk file the copy of the POI filesystem will be written to. If it is
      * not given, the copy will be written to a temporary file which will be
-     * deleted at the end of the program.</p></li>
-     * <p>
+     * deleted at the end of the program.</li>
      * </ol>
      *
      * @param args Command-line arguments.
-     * @throws MarkUnsupportedException     if a POI document stream does not
-     *                                      support the mark() operation.
-     * @throws NoPropertySetStreamException if the application tries to
-     *                                      create a property set from a POI document stream that is not a property
-     *                                      set stream.
      * @throws IOException                  if any I/O exception occurs.
      * @throws UnsupportedEncodingException if a character encoding is not
      *                                      supported.
      */
     public static void main(final String[] args)
-            throws NoPropertySetStreamException, MarkUnsupportedException,
-            UnsupportedEncodingException, IOException {
+            throws UnsupportedEncodingException, IOException {
         String originalFileName = null;
         String copyFileName = null;
 
@@ -51,10 +40,9 @@
         final CopyFile cf = new CopyFile(copyFileName);
         r.registerListener(cf);
         r.setNotifyEmptyDirectories(true);
-        try (FileInputStream fis = new FileInputStream(originalFileName)) {
-            r.read(fis);
-        }
-        
+
+        r.read(new File(originalFileName));
+
         /* Write the new POIFS to disk. */
         cf.close();
 
@@ -64,12 +52,7 @@
              POIFSFileSystem cpfs = new POIFSFileSystem(new File(copyFileName))) {
             final DirectoryEntry oRoot = opfs.getRoot();
             final DirectoryEntry cRoot = cpfs.getRoot();
-            final StringBuffer messages = new StringBuffer();
-            if (equal(oRoot, cRoot, messages)) {
-                System.out.println("Equal");
-            } else {
-                System.out.println("Not equal: " + messages);
-            }
+            System.out.println(EntryUtils.areDirectoriesIdentical(oRoot, cRoot) ? "Equal" : "Not equal");
         }
     }
 

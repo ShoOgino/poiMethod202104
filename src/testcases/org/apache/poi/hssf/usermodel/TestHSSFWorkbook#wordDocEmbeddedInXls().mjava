@@ -2,38 +2,33 @@
     public void wordDocEmbeddedInXls() throws IOException {
        // Open the two filesystems
        DirectoryNode[] files = new DirectoryNode[2];
-       POIFSFileSystem poifsFileSystem = new POIFSFileSystem(HSSFTestDataSamples.openSampleFileStream("WithEmbeddedObjects.xls"));
-       try {
-           files[0] = poifsFileSystem.getRoot();
-           NPOIFSFileSystem npoifsFileSystem = new NPOIFSFileSystem(HSSFTestDataSamples.getSampleFile("WithEmbeddedObjects.xls"));
-           try {
-               files[1] = npoifsFileSystem.getRoot();
-               
-               // Check the embedded parts
-               for(DirectoryNode root : files) {
-                  HSSFWorkbook hw = new HSSFWorkbook(root, true);
-                  List<HSSFObjectData> objects = hw.getAllEmbeddedObjects();
-                  boolean found = false;
-                   for (HSSFObjectData embeddedObject : objects) {
-                       if (embeddedObject.hasDirectoryEntry()) {
-                           DirectoryEntry dir = embeddedObject.getDirectory();
-                           if (dir instanceof DirectoryNode) {
-                               DirectoryNode dNode = (DirectoryNode) dir;
-                               if (hasEntry(dNode, "WordDocument")) {
-                                   found = true;
-                               }
-                           }
-                       }
-                   }
-                  assertTrue(found);
-                  
-                  hw.close();
-               }
-           } finally {
-               npoifsFileSystem.close();
-           }
-       } finally {
-           poifsFileSystem.close();
-       }
+        try (POIFSFileSystem poifsFileSystem = new POIFSFileSystem(HSSFTestDataSamples.openSampleFileStream("WithEmbeddedObjects.xls"))) {
+            files[0] = poifsFileSystem.getRoot();
+            try (NPOIFSFileSystem npoifsFileSystem = new NPOIFSFileSystem(HSSFTestDataSamples.getSampleFile("WithEmbeddedObjects.xls"))) {
+                files[1] = npoifsFileSystem.getRoot();
+
+                // Check the embedded parts
+                for (DirectoryNode root : files) {
+                    HSSFWorkbook hw = new HSSFWorkbook(root, true);
+                    List<HSSFObjectData> objects = hw.getAllEmbeddedObjects();
+                    boolean found = false;
+                    for (HSSFObjectData embeddedObject : objects) {
+                        if (embeddedObject.hasDirectoryEntry()) {
+                            DirectoryEntry dir = embeddedObject.getDirectory();
+                            if (dir instanceof DirectoryNode) {
+                                DirectoryNode dNode = (DirectoryNode) dir;
+                                if (dNode.hasEntry("WordDocument")) {
+                                    found = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    assertTrue(found);
+
+                    hw.close();
+                }
+            }
+        }
     }
 

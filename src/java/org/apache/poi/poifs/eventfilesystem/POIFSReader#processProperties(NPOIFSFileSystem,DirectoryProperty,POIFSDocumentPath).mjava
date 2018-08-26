@@ -1,0 +1,33 @@
+    private void processProperties(final NPOIFSFileSystem poifs, DirectoryProperty dir, final POIFSDocumentPath path) {
+        boolean hasChildren = false;
+        for (final Property property : dir) {
+            hasChildren = true;
+            String name = property.getName();
+
+            if (property.isDirectory()) {
+                POIFSDocumentPath new_path = new POIFSDocumentPath(path,new String[]{name});
+                processProperties(poifs, (DirectoryProperty) property, new_path);
+            } else {
+                NPOIFSDocument document = null;
+                for (POIFSReaderListener rl : registry.getListeners(path, name)) {
+                    if (document == null) {
+                        document = new NPOIFSDocument((DocumentProperty)property, poifs);
+                    }
+                    try (DocumentInputStream dis = new DocumentInputStream(document)) {
+                        POIFSReaderEvent pe = new POIFSReaderEvent(dis, path, name);
+                        rl.processPOIFSReaderEvent(pe);
+                    }
+                }
+            }
+        }
+
+        if (hasChildren || !notifyEmptyDirectories) {
+            return;
+        }
+
+        for (POIFSReaderListener rl : registry.getListeners(path, ".")) {
+            POIFSReaderEvent pe = new POIFSReaderEvent(null, path, null);
+            rl.processPOIFSReaderEvent(pe);
+        }
+    }
+

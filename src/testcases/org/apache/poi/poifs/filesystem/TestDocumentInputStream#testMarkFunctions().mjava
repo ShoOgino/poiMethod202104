@@ -1,147 +1,136 @@
     /**
      * test mark/reset/markSupported.
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     @Test
     public void testMarkFunctions() throws IOException {
-        byte[] buffer = new byte[ _workbook_size / 5 ];
+        byte[] buffer = new byte[_workbook_size / 5];
         byte[] small_buffer = new byte[212];
-       
-        DocumentInputStream[] streams = new DocumentInputStream[] {
-              new DocumentInputStream(_workbook_o),
-              new NDocumentInputStream(_workbook_n)
-        };
-        for(DocumentInputStream stream : streams) {
-           // Read a fifth of it, and check all's correct
-           stream.read(buffer);
-           for (int j = 0; j < buffer.length; j++) {
-              assertEquals(
-                    "checking byte " + j, 
-                    _workbook_data[ j ], buffer[ j ]
-              );
-           }
-           assertEquals(_workbook_size - buffer.length, available(stream));
-           
-           // Reset, and check the available goes back to being the
-           //  whole of the stream
-           stream.reset();
-           assertEquals(_workbook_size, available(stream));
-           
-           
-           // Read part of a block
-           stream.read(small_buffer);
-           for (int j = 0; j < small_buffer.length; j++) {
-              assertEquals(
-                    "checking byte " + j, 
-                    _workbook_data[ j ], small_buffer[ j ]
-              );
-           }
-           assertEquals(_workbook_size - small_buffer.length, available(stream));
-           stream.mark(0);
-           
-           // Read the next part
-           stream.read(small_buffer);
-           for (int j = 0; j < small_buffer.length; j++) {
-              assertEquals(
-                    "checking byte " + j, 
-                    _workbook_data[ j+small_buffer.length ], small_buffer[ j ]
-              );
-           }
-           assertEquals(_workbook_size - 2*small_buffer.length, available(stream));
-           
-           // Reset, check it goes back to where it was
-           stream.reset();
-           assertEquals(_workbook_size - small_buffer.length, available(stream));
-           
-           // Read 
-           stream.read(small_buffer);
-           for (int j = 0; j < small_buffer.length; j++) {
-              assertEquals(
-                    "checking byte " + j, 
-                    _workbook_data[ j+small_buffer.length ], small_buffer[ j ]
-              );
-           }
-           assertEquals(_workbook_size - 2*small_buffer.length, available(stream));
-           
-           
-           // Now read at various points
-           Arrays.fill(small_buffer, ( byte ) 0);
-           stream.read(small_buffer, 6, 8);
-           stream.read(small_buffer, 100, 10);
-           stream.read(small_buffer, 150, 12);
-           int pos = small_buffer.length * 2;
-           for (int j = 0; j < small_buffer.length; j++) {
-              byte exp = 0;
-              if(j>= 6 && j<6+8) {
-                 exp = _workbook_data[pos];
-                 pos++;
-              }
-              if(j>= 100 && j<100+10) {
-                 exp = _workbook_data[pos];
-                 pos++;
-              }
-              if(j>= 150 && j<150+12) {
-                 exp = _workbook_data[pos];
-                 pos++;
-              }
-              
-              assertEquals("checking byte " + j, exp, small_buffer[j]);
-           }
+
+        DocumentInputStream stream = new NDocumentInputStream(_workbook_n);
+        // Read a fifth of it, and check all's correct
+        stream.read(buffer);
+        for (int j = 0; j < buffer.length; j++) {
+            assertEquals(
+                    "checking byte " + j,
+                    _workbook_data[j], buffer[j]
+            );
         }
-           
+        assertEquals(_workbook_size - buffer.length, available(stream));
+
+        // Reset, and check the available goes back to being the
+        //  whole of the stream
+        stream.reset();
+        assertEquals(_workbook_size, available(stream));
+
+
+        // Read part of a block
+        stream.read(small_buffer);
+        for (int j = 0; j < small_buffer.length; j++) {
+            assertEquals(
+                    "checking byte " + j,
+                    _workbook_data[j], small_buffer[j]
+            );
+        }
+        assertEquals(_workbook_size - small_buffer.length, available(stream));
+        stream.mark(0);
+
+        // Read the next part
+        stream.read(small_buffer);
+        for (int j = 0; j < small_buffer.length; j++) {
+            assertEquals(
+                    "checking byte " + j,
+                    _workbook_data[j + small_buffer.length], small_buffer[j]
+            );
+        }
+        assertEquals(_workbook_size - 2 * small_buffer.length, available(stream));
+
+        // Reset, check it goes back to where it was
+        stream.reset();
+        assertEquals(_workbook_size - small_buffer.length, available(stream));
+
+        // Read
+        stream.read(small_buffer);
+        for (int j = 0; j < small_buffer.length; j++) {
+            assertEquals(
+                    "checking byte " + j,
+                    _workbook_data[j + small_buffer.length], small_buffer[j]
+            );
+        }
+        assertEquals(_workbook_size - 2 * small_buffer.length, available(stream));
+
+
+        // Now read at various points
+        Arrays.fill(small_buffer, (byte) 0);
+        stream.read(small_buffer, 6, 8);
+        stream.read(small_buffer, 100, 10);
+        stream.read(small_buffer, 150, 12);
+        int pos = small_buffer.length * 2;
+        for (int j = 0; j < small_buffer.length; j++) {
+            byte exp = 0;
+            if (j >= 6 && j < 6 + 8) {
+                exp = _workbook_data[pos];
+                pos++;
+            }
+            if (j >= 100 && j < 100 + 10) {
+                exp = _workbook_data[pos];
+                pos++;
+            }
+            if (j >= 150 && j < 150 + 12) {
+                exp = _workbook_data[pos];
+                pos++;
+            }
+
+            assertEquals("checking byte " + j, exp, small_buffer[j]);
+        }
+
         // Now repeat it with spanning multiple blocks
-        streams = new DocumentInputStream[] {
-              new DocumentInputStream(_workbook_o),
-              new NDocumentInputStream(_workbook_n)
-        };
-        for(DocumentInputStream stream : streams) {
-           // Read several blocks work
-           buffer = new byte[ _workbook_size / 5 ];
-           stream.read(buffer);
-           for (int j = 0; j < buffer.length; j++) {
-              assertEquals(
-                    "checking byte " + j, 
-                    _workbook_data[ j ], buffer[ j ]
-              );
-           }
-           assertEquals(_workbook_size - buffer.length, available(stream));
-           
-           // Read all of it again, check it began at the start again
-           stream.reset();
-           assertEquals(_workbook_size, available(stream));
-           
-           stream.read(buffer);
-           for (int j = 0; j < buffer.length; j++) {
-              assertEquals(
-                    "checking byte " + j, 
-                    _workbook_data[ j ], buffer[ j ]
-              );
-           }
-           
-           // Mark our position, and read another whole buffer
-           stream.mark(12);
-           stream.read(buffer);
-           assertEquals(_workbook_size - (2 * buffer.length),
-                 available(stream));
-           for (int j = buffer.length; j < (2 * buffer.length); j++)
-           {
-              assertEquals("checking byte " + j, _workbook_data[ j ],
-                    buffer[ j - buffer.length ]);
-           }
-           
-           // Reset, should go back to only one buffer full read
-           stream.reset();
-           assertEquals(_workbook_size - buffer.length, available(stream));
-           
-           // Read the buffer again
-           stream.read(buffer);
-           assertEquals(_workbook_size - (2 * buffer.length),
-                 available(stream));
-           for (int j = buffer.length; j < (2 * buffer.length); j++)
-           {
-              assertEquals("checking byte " + j, _workbook_data[ j ],
-                    buffer[ j - buffer.length ]);
-           }
-           assertTrue(stream.markSupported());
+        stream = new NDocumentInputStream(_workbook_n);
+        // Read several blocks work
+        buffer = new byte[_workbook_size / 5];
+        stream.read(buffer);
+        for (int j = 0; j < buffer.length; j++) {
+            assertEquals(
+                    "checking byte " + j,
+                    _workbook_data[j], buffer[j]
+            );
         }
+        assertEquals(_workbook_size - buffer.length, available(stream));
+
+        // Read all of it again, check it began at the start again
+        stream.reset();
+        assertEquals(_workbook_size, available(stream));
+
+        stream.read(buffer);
+        for (int j = 0; j < buffer.length; j++) {
+            assertEquals(
+                    "checking byte " + j,
+                    _workbook_data[j], buffer[j]
+            );
+        }
+
+        // Mark our position, and read another whole buffer
+        stream.mark(12);
+        stream.read(buffer);
+        assertEquals(_workbook_size - (2 * buffer.length),
+                available(stream));
+        for (int j = buffer.length; j < (2 * buffer.length); j++) {
+            assertEquals("checking byte " + j, _workbook_data[j],
+                    buffer[j - buffer.length]);
+        }
+
+        // Reset, should go back to only one buffer full read
+        stream.reset();
+        assertEquals(_workbook_size - buffer.length, available(stream));
+
+        // Read the buffer again
+        stream.read(buffer);
+        assertEquals(_workbook_size - (2 * buffer.length),
+                available(stream));
+        for (int j = buffer.length; j < (2 * buffer.length); j++) {
+            assertEquals("checking byte " + j, _workbook_data[j],
+                    buffer[j - buffer.length]);
+        }
+        assertTrue(stream.markSupported());
     }
 

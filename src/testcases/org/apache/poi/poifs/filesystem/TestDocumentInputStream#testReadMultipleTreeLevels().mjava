@@ -3,48 +3,38 @@
      */
     @Test
     public void testReadMultipleTreeLevels() throws Exception {
-       final POIDataSamples _samples = POIDataSamples.getPublisherInstance();
-       File sample = _samples.getFile("Sample.pub");
-       
-       DocumentInputStream stream;
-       
-       NPOIFSFileSystem npoifs = new NPOIFSFileSystem(sample);
-       try {
-           OPOIFSFileSystem  opoifs = new OPOIFSFileSystem(new FileInputStream(sample));
-           
-           // Ensure we have what we expect on the root
-           assertEquals(npoifs, npoifs.getRoot().getNFileSystem());
-           assertEquals(npoifs, npoifs.getRoot().getFileSystem());
-           assertEquals(null,   npoifs.getRoot().getOFileSystem());
-           assertEquals(null,   opoifs.getRoot().getFileSystem());
-           assertEquals(opoifs, opoifs.getRoot().getOFileSystem());
-           assertEquals(null,   opoifs.getRoot().getNFileSystem());
-           
-           // Check inside
-           for(DirectoryNode root : new DirectoryNode[] { opoifs.getRoot(), npoifs.getRoot() }) {
-              // Top Level
-              Entry top = root.getEntry("Contents");
-              assertEquals(true, top.isDocumentEntry());
-              stream = root.createDocumentInputStream(top);
-              stream.read();
-              
-              // One Level Down
-              DirectoryNode escher = (DirectoryNode)root.getEntry("Escher");
-              Entry one = escher.getEntry("EscherStm");
-              assertEquals(true, one.isDocumentEntry());
-              stream = escher.createDocumentInputStream(one);
-              stream.read();
-              
-              // Two Levels Down
-              DirectoryNode quill = (DirectoryNode)root.getEntry("Quill");
-              DirectoryNode quillSub = (DirectoryNode)quill.getEntry("QuillSub");
-              Entry two = quillSub.getEntry("CONTENTS");
-              assertEquals(true, two.isDocumentEntry());
-              stream = quillSub.createDocumentInputStream(two);
-              stream.read();
-           }
-       } finally {
-           npoifs.close();
-       }
+        final POIDataSamples _samples = POIDataSamples.getPublisherInstance();
+        File sample = _samples.getFile("Sample.pub");
+
+        DocumentInputStream stream;
+
+        try (NPOIFSFileSystem npoifs = new NPOIFSFileSystem(sample)) {
+            // Ensure we have what we expect on the root
+            assertEquals(npoifs, npoifs.getRoot().getNFileSystem());
+            assertEquals(npoifs, npoifs.getRoot().getFileSystem());
+
+            // Check inside
+            DirectoryNode root = npoifs.getRoot();
+            // Top Level
+            Entry top = root.getEntry("Contents");
+            assertTrue(top.isDocumentEntry());
+            stream = root.createDocumentInputStream(top);
+            assertNotEquals(-1, stream.read());
+
+            // One Level Down
+            DirectoryNode escher = (DirectoryNode) root.getEntry("Escher");
+            Entry one = escher.getEntry("EscherStm");
+            assertTrue(one.isDocumentEntry());
+            stream = escher.createDocumentInputStream(one);
+            assertNotEquals(-1, stream.read());
+
+            // Two Levels Down
+            DirectoryNode quill = (DirectoryNode) root.getEntry("Quill");
+            DirectoryNode quillSub = (DirectoryNode) quill.getEntry("QuillSub");
+            Entry two = quillSub.getEntry("CONTENTS");
+            assertTrue(two.isDocumentEntry());
+            stream = quillSub.createDocumentInputStream(two);
+            assertNotEquals(-1, stream.read());
+        }
     }
 

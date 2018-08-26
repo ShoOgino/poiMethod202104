@@ -9,29 +9,23 @@
      * @return The property sets. The elements are ordered in the same way
      * as the files in the POI filesystem.
      * 
-     * @exception FileNotFoundException if the file containing the POI 
-     * filesystem does not exist
-     * 
      * @exception IOException if an I/O exception occurs
      */
-    public static List<POIFile> readPropertySets(final File poiFs) throws IOException {
+    static List<POIFile> readPropertySets(final File poiFs) throws IOException {
         final List<POIFile> files = new ArrayList<>(7);
         final POIFSReader r = new POIFSReader();
-        POIFSReaderListener pfl = new POIFSReaderListener() {
-            @Override
-            public void processPOIFSReaderEvent(final POIFSReaderEvent event) {
-                try {
-                    final POIFile f = new POIFile();
-                    f.setName(event.getName());
-                    f.setPath(event.getPath());
-                    final InputStream in = event.getStream();
-                    if (PropertySet.isPropertySetStream(in)) {
-                        f.setBytes(IOUtils.toByteArray(in));
-                        files.add(f);
-                    }
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
+        final POIFSReaderListener pfl = event -> {
+            try {
+                final POIFile f = new POIFile();
+                f.setName(event.getName());
+                f.setPath(event.getPath());
+                final InputStream in = event.getStream();
+                if (PropertySet.isPropertySetStream(in)) {
+                    f.setBytes(IOUtils.toByteArray(in));
+                    files.add(f);
                 }
+            } catch (Exception ex) {
+                fail(ex.getMessage());
             }
         };
 
@@ -39,12 +33,7 @@
         r.registerListener(pfl);
 
         /* Read the POI filesystem. */
-        InputStream is = new FileInputStream(poiFs);
-        try {
-            r.read(is);
-        } finally {
-            is.close();
-        }
+        r.read(poiFs);
 
         return files;
     }

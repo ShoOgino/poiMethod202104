@@ -15,34 +15,21 @@
 
             // not an omnivorous listener (if it was, this method is a
             // no-op)
-            Set<DocumentDescriptor> descriptors = selectiveListeners.get(listener);
+            Set<DocumentDescriptor> descriptors =
+                    selectiveListeners.computeIfAbsent(listener, k -> new HashSet<>());
 
-            if (descriptors == null)
-            {
+            // this listener has not registered before
+            DocumentDescriptor descriptor = new DocumentDescriptor(path, documentName);
 
-                // this listener has not registered before
-                descriptors = new HashSet<>();
-                selectiveListeners.put(listener, descriptors);
-            }
-            DocumentDescriptor descriptor = new DocumentDescriptor(path,
-                                                documentName);
-
-            if (descriptors.add(descriptor))
-            {
+            if (descriptors.add(descriptor)) {
 
                 // this listener wasn't already listening for this
                 // document -- add the listener to the set of
                 // listeners for this document
                 Set<POIFSReaderListener> listeners =
-                    chosenDocumentDescriptors.get(descriptor);
+                        chosenDocumentDescriptors.computeIfAbsent(descriptor, k -> new HashSet<>());
 
-                if (listeners == null)
-                {
-
-                    // nobody was listening for this document before
-                    listeners = new HashSet<>();
-                    chosenDocumentDescriptors.put(descriptor, listeners);
-                }
+                // nobody was listening for this document before
                 listeners.add(listener);
             }
         }

@@ -39,24 +39,16 @@
         /* Read the POIFS: */
         final PropertySet[] psa = new PropertySet[1];
         final POIFSReader r = new POIFSReader();
-        r.registerListener(new POIFSReaderListener() {
-            @Override
-            public void processPOIFSReaderEvent(final POIFSReaderEvent event) {
-                try {
-                    psa[0] = PropertySetFactory.create(event.getStream());
-                } catch (Exception ex) {
-                    fail(ex.getMessage());
-                }
-            }},
-            SummaryInformation.DEFAULT_STREAM_NAME
-        );
-        
-        InputStream stream = new FileInputStream(filename);
-        try {
-            r.read(stream);
-        } finally {
-            stream.close();
-        }
+        final POIFSReaderListener listener = event -> {
+            try {
+                psa[0] = PropertySetFactory.create(event.getStream());
+            } catch (Exception ex) {
+                fail(ex.getMessage());
+            }
+        };
+        r.registerListener(listener, SummaryInformation.DEFAULT_STREAM_NAME);
+
+        r.read(filename);
         assertNotNull(psa[0]);
         assertTrue(psa[0].isSummaryInformation());
 
