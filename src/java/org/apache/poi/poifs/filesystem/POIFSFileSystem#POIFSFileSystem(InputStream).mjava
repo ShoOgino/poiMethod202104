@@ -27,7 +27,51 @@
      * @exception IOException on errors reading, or on invalid data
      */
 
-    public POIFSFileSystem(InputStream stream) throws IOException {
-        super(stream);
+    public POIFSFileSystem(InputStream stream)
+        throws IOException
+    {
+        this(false);
+
+        boolean success = false;
+        try (ReadableByteChannel channel = Channels.newChannel(stream)) {
+            // Turn our InputStream into something NIO based
+
+            // Get the header
+            ByteBuffer headerBuffer = ByteBuffer.allocate(POIFSConstants.SMALLER_BIG_BLOCK_SIZE);
+            IOUtils.readFully(channel, headerBuffer);
+
+            // Have the header processed
+            _header = new HeaderBlock(headerBuffer);
+
+            // Sanity check the block count
+            sanityCheckBlockCount(_header.getBATCount());
+
+            // We need to buffer the whole file into memory when
+            //  working with an InputStream.
+            // The max possible size is when each BAT block entry is used
+            long maxSize = BATBlock.calculateMaximumSize(_header);
+            if (maxSize > Integer.MAX_VALUE) {
+                throw new IllegalArgumentException("Unable read a >2gb file via an InputStream");
+            }
+            ByteBuffer data = ByteBuffer.allocate((int) maxSize);
+
+            // Copy in the header
+            headerBuffer.position(0);
+            data.put(headerBuffer);
+            data.position(headerBuffer.capacity());
+
+            // Now read the rest of the stream
+            IOUtils.readFully(channel, data);
+            success = true;
+
+            // Turn it into a DataSource
+            _data = new ByteArrayBackedDataSource(data.array(), data.position());
+        } finally {
+            // As per the constructor contract, always close the stream
+            closeInputStream(stream, success);
+        }
+        
+        // Now process the various entries
+        readCoreContents();
     }
 

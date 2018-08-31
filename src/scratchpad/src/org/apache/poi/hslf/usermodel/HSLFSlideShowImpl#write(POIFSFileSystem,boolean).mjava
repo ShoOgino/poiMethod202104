@@ -1,0 +1,61 @@
+    private void write(POIFSFileSystem outFS, boolean copyAllOtherNodes) throws IOException {
+        // read properties and pictures, with old encryption settings where appropriate 
+        if (_pictures == null) {
+            readPictures();
+        }
+        getDocumentSummaryInformation();
+
+        // set new encryption settings
+        HSLFSlideShowEncrypted encryptedSS = new HSLFSlideShowEncrypted(getDocumentEncryptionAtom());
+        _records = encryptedSS.updateEncryptionRecord(_records);
+
+        // The list of entries we've written out
+        List<String> writtenEntries = new ArrayList<>(1);
+
+        // Write out the Property Streams
+        writeProperties(outFS, writtenEntries);
+
+        BufAccessBAOS baos = new BufAccessBAOS();
+
+        // For position dependent records, hold where they were and now are
+        // As we go along, update, and hand over, to any Position Dependent
+        // records we happen across
+        updateAndWriteDependantRecords(baos, null);
+
+        // Update our cached copy of the bytes that make up the PPT stream
+        _docstream = new byte[baos.size()];
+        System.arraycopy(baos.getBuf(), 0, _docstream, 0, baos.size());
+        baos.close();
+
+        // Write the PPT stream into the POIFS layer
+        ByteArrayInputStream bais = new ByteArrayInputStream(_docstream);
+        outFS.createOrUpdateDocument(bais, HSLFSlideShow.POWERPOINT_DOCUMENT);
+        writtenEntries.add(HSLFSlideShow.POWERPOINT_DOCUMENT);
+
+        currentUser.setEncrypted(encryptedSS.getDocumentEncryptionAtom() != null);
+        currentUser.writeToFS(outFS);
+        writtenEntries.add("Current User");
+
+
+        if (_pictures.size() > 0) {
+            BufAccessBAOS pict = new BufAccessBAOS();
+            for (HSLFPictureData p : _pictures) {
+                int offset = pict.size();
+                p.write(pict);
+                encryptedSS.encryptPicture(pict.getBuf(), offset);
+            }
+            outFS.createOrUpdateDocument(
+                    new ByteArrayInputStream(pict.getBuf(), 0, pict.size()), "Pictures"
+            );
+            writtenEntries.add("Pictures");
+            pict.close();
+        }
+
+        encryptedSS.close();
+        
+        // If requested, copy over any other streams we spot, eg Macros
+        if (copyAllOtherNodes) {
+            EntryUtils.copyNodes(getDirectory().getFileSystem(), outFS, writtenEntries);
+        }
+    }
+

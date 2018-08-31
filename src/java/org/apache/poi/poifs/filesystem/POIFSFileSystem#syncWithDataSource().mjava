@@ -1,0 +1,35 @@
+    /**
+     * Has our in-memory objects write their state
+     *  to their backing blocks 
+     */
+    private void syncWithDataSource() throws IOException {
+        // Mini Stream + SBATs first, as mini-stream details have
+        //  to be stored in the Root Property
+        _mini_store.syncWithDataSource();
+        
+        // Properties
+        POIFSStream propStream = new POIFSStream(this, _header.getPropertyStart());
+        _property_table.preWrite();
+        _property_table.write(propStream);
+        // _header.setPropertyStart has been updated on write ...
+        
+        // HeaderBlock
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(
+                _header.getBigBlockSize().getBigBlockSize()
+        );
+        _header.writeData(baos);
+        getBlockAt(-1).put(baos.toByteArray());
+
+       
+       // BATs
+       for(BATBlock bat : _bat_blocks) {
+          ByteBuffer block = getBlockAt(bat.getOurBlockIndex());
+          bat.writeData(block);
+       }
+       // XBats
+       for(BATBlock bat : _xbat_blocks) {
+           ByteBuffer block = getBlockAt(bat.getOurBlockIndex());
+           bat.writeData(block);
+        }
+    }
+

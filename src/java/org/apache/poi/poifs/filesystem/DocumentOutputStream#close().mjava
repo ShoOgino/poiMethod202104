@@ -1,13 +1,18 @@
-    /**
-     * Closes this output stream and releases any system resources
-     * associated with this stream. The general contract of close is
-     * that it closes the output stream. A closed stream cannot
-     * perform output operations and cannot be reopened.
-     *
-     * @exception IOException if an I/O error occurs.
-     */
-    public void close() {
-
-        // ignore this call
+    public void close() throws IOException {
+        // Do we have a pending buffer for the mini stream?
+        if (_buffer != null) {
+            // It's not much data, so ask POIFSDocument to do it for us
+            _document.replaceContents(new ByteArrayInputStream(_buffer.toByteArray()));
+        }
+        else {
+            // We've been writing to the stream as we've gone along
+            // Update the details on the property now
+            _stream_output.close();
+            _property.updateSize(_document_size);
+            _property.setStartBlock(_stream.getStartBlock());
+        }
+        
+        // No more!
+        _closed = true;
     }
 

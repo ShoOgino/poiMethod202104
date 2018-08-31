@@ -1,0 +1,32 @@
+    private void populatePropertyTree(DirectoryProperty root) throws IOException {
+        int index = root.getChildIndex();
+
+        if (!Property.isValidIndex(index)) {
+            // property has no children
+            return;
+        }
+
+        final Stack<Property> children = new Stack<>();
+        children.push(_properties.get(index));
+        while (!children.empty()) {
+            Property property = children.pop();
+            if (property == null) {
+                // unknown / unsupported / corrupted property, skip
+                continue;
+            }
+
+            root.addChild(property);
+            if (property.isDirectory()) {
+                populatePropertyTree(( DirectoryProperty ) property);
+            }
+            index = property.getPreviousChildIndex();
+            if (isValidIndex(index)) {
+                children.push(_properties.get(index));
+            }
+            index = property.getNextChildIndex();
+            if (isValidIndex(index)) {
+                children.push(_properties.get(index));
+            }
+        }
+    }
+

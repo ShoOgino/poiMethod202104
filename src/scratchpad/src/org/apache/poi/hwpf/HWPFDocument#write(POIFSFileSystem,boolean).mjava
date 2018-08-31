@@ -1,0 +1,340 @@
+    private void write(POIFSFileSystem pfs, boolean copyOtherEntries) throws IOException {
+        // clear the offsets and sizes in our FileInformationBlock.
+        _fib.clearOffsetsSizes();
+
+        // determine the FileInformationBLock size
+        int fibSize = _fib.getSize();
+        fibSize += POIFSConstants.SMALLER_BIG_BLOCK_SIZE - (fibSize % POIFSConstants.SMALLER_BIG_BLOCK_SIZE);
+
+        // initialize our streams for writing.
+        HWPFFileSystem docSys = new HWPFFileSystem();
+        ByteArrayOutputStream wordDocumentStream = docSys.getStream(STREAM_WORD_DOCUMENT);
+        ByteArrayOutputStream tableStream = docSys.getStream(STREAM_TABLE_1);
+
+        // preserve space for the FileInformationBlock because we will be writing
+        // it after we write everything else.
+        byte[] placeHolder = IOUtils.safelyAllocate(fibSize, MAX_RECORD_LENGTH);
+        wordDocumentStream.write(placeHolder);
+        int mainOffset = wordDocumentStream.size();
+        int tableOffset = 0;
+
+        // write out EncryptionInfo
+        updateEncryptionInfo();
+        EncryptionInfo ei = getEncryptionInfo();
+        if (ei != null) {
+            byte buf[] = new byte[1000];
+            LittleEndianByteArrayOutputStream leos = new LittleEndianByteArrayOutputStream(buf, 0);
+            leos.writeShort(ei.getVersionMajor());
+            leos.writeShort(ei.getVersionMinor());
+            if (ei.getEncryptionMode() == EncryptionMode.cryptoAPI) {
+                leos.writeInt(ei.getEncryptionFlags());
+            }
+            
+            ((EncryptionRecord)ei.getHeader()).write(leos);
+            ((EncryptionRecord)ei.getVerifier()).write(leos);
+            tableStream.write(buf, 0, leos.getWriteIndex());
+            tableOffset += leos.getWriteIndex();
+            _fib.getFibBase().setLKey(tableOffset);
+        }
+        
+        // write out the StyleSheet.
+        _fib.setFcStshf(tableOffset);
+        _ss.writeTo(tableStream);
+        _fib.setLcbStshf(tableStream.size() - tableOffset);
+        tableOffset = tableStream.size();
+
+        // get fcMin and fcMac because we will be writing the actual text with the
+        // complex table.
+
+        /*
+         * clx (encoding of the sprm lists for a complex file and piece table
+         * for a any file) Written immediately after the end of the previously
+         * recorded structure. This is recorded in all Word documents
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 23 of 210
+         */
+
+        // write out the Complex table, includes text.
+        _fib.setFcClx(tableOffset);
+        _cft.writeTo(wordDocumentStream, tableStream);
+        _fib.setLcbClx(tableStream.size() - tableOffset);
+        tableOffset = tableStream.size();
+        int fcMac = wordDocumentStream.size();
+
+        /*
+         * dop (document properties record) Written immediately after the end of
+         * the previously recorded structure. This is recorded in all Word
+         * documents
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 23 of 210
+         */
+
+        // write out the DocumentProperties.
+        _fib.setFcDop(tableOffset);
+        _dop.writeTo(tableStream);
+        _fib.setLcbDop(tableStream.size() - tableOffset);
+        tableOffset = tableStream.size();
+
+        /*
+         * plcfBkmkf (table recording beginning CPs of bookmarks) Written
+         * immediately after the sttbfBkmk, if the document contains bookmarks.
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 24 of 210
+         */
+        if ( _bookmarksTables != null )
+        {
+            _bookmarksTables.writePlcfBkmkf( _fib, tableStream );
+            tableOffset = tableStream.size();
+        }
+
+        /*
+         * plcfBkmkl (table recording limit CPs of bookmarks) Written
+         * immediately after the plcfBkmkf, if the document contains bookmarks.
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 24 of 210
+         */
+        if ( _bookmarksTables != null )
+        {
+            _bookmarksTables.writePlcfBkmkl( _fib, tableStream );
+            tableOffset = tableStream.size();
+        }
+
+        /*
+         * plcfbteChpx (bin table for CHP FKPs) Written immediately after the
+         * previously recorded table. This is recorded in all Word documents.
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 24 of 210
+         */
+
+        // write out the CHPBinTable.
+        _fib.setFcPlcfbteChpx(tableOffset);
+        _cbt.writeTo(wordDocumentStream, tableStream, mainOffset, _cft.getTextPieceTable());
+        _fib.setLcbPlcfbteChpx(tableStream.size() - tableOffset);
+        tableOffset = tableStream.size();
+
+        /*
+         * plcfbtePapx (bin table for PAP FKPs) Written immediately after the
+         * plcfbteChpx. This is recorded in all Word documents.
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 24 of 210
+         */
+
+        // write out the PAPBinTable.
+        _fib.setFcPlcfbtePapx(tableOffset);
+        _pbt.writeTo(wordDocumentStream, tableStream, _cft.getTextPieceTable());
+        _fib.setLcbPlcfbtePapx(tableStream.size() - tableOffset);
+        tableOffset = tableStream.size();
+
+        /*
+         * plcfendRef (endnote reference position table) Written immediately
+         * after the previously recorded table if the document contains endnotes
+         * 
+         * plcfendTxt (endnote text position table) Written immediately after
+         * the plcfendRef if the document contains endnotes
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 24 of 210
+         */
+        _endnotesTables.writeRef( _fib, tableStream );
+        _endnotesTables.writeTxt( _fib, tableStream );
+        tableOffset = tableStream.size();
+
+        /*
+         * plcffld*** (table of field positions and statuses for annotation
+         * subdocument) Written immediately after the previously recorded table,
+         * if the ******* subdocument contains fields.
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 24 of 210
+         */
+
+        if ( _fieldsTables != null )
+        {
+            _fieldsTables.write( _fib, tableStream );
+            tableOffset = tableStream.size();
+        }
+
+        /*
+         * plcffndRef (footnote reference position table) Written immediately
+         * after the stsh if the document contains footnotes
+         * 
+         * plcffndTxt (footnote text position table) Written immediately after
+         * the plcffndRef if the document contains footnotes
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 24 of 210
+         */
+        _footnotesTables.writeRef( _fib, tableStream );
+        _footnotesTables.writeTxt( _fib, tableStream );
+        tableOffset = tableStream.size();
+
+        /*
+         * plcfsed (section table) Written immediately after the previously
+         * recorded table. Recorded in all Word documents
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 25 of 210
+         */
+
+        // write out the SectionTable.
+        _fib.setFcPlcfsed(tableOffset);
+        _st.writeTo(wordDocumentStream, tableStream);
+        _fib.setLcbPlcfsed(tableStream.size() - tableOffset);
+        tableOffset = tableStream.size();
+
+        // write out the list tables
+        if ( _lt != null )
+        {
+            /*
+             * plcflst (list formats) Written immediately after the end of the
+             * previously recorded, if there are any lists defined in the
+             * document. This begins with a short count of LSTF structures
+             * followed by those LSTF structures. This is immediately followed
+             * by the allocated data hanging off the LSTFs. This data consists
+             * of the array of LVLs for each LSTF. (Each LVL consists of an LVLF
+             * followed by two grpprls and an XST.)
+             * 
+             * Microsoft Office Word 97-2007 Binary File Format (.doc)
+             * Specification; Page 25 of 210
+             */
+            _lt.writeListDataTo( _fib, tableStream );
+            tableOffset = tableStream.size();
+
+            /*
+             * plflfo (more list formats) Written immediately after the end of
+             * the plcflst and its accompanying data, if there are any lists
+             * defined in the document. This consists first of a PL of LFO
+             * records, followed by the allocated data (if any) hanging off the
+             * LFOs. The allocated data consists of the array of LFOLVLFs for
+             * each LFO (and each LFOLVLF is immediately followed by some LVLs).
+             * 
+             * Microsoft Office Word 97-2007 Binary File Format (.doc)
+             * Specification; Page 26 of 210
+             */
+            _lt.writeListOverridesTo( _fib, tableStream );
+            tableOffset = tableStream.size();
+        }
+
+        /*
+         * sttbfBkmk (table of bookmark name strings) Written immediately after
+         * the previously recorded table, if the document contains bookmarks.
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 27 of 210
+         */
+        if ( _bookmarksTables != null )
+        {
+            _bookmarksTables.writeSttbfBkmk( _fib, tableStream );
+            tableOffset = tableStream.size();
+        }
+
+        /*
+         * sttbSavedBy (last saved by string table) Written immediately after
+         * the previously recorded table.
+         * 
+         * Microsoft Office Word 97-2007 Binary File Format (.doc)
+         * Specification; Page 27 of 210
+         */
+
+        // write out the saved-by table.
+        if (_sbt != null)
+        {
+            _fib.setFcSttbSavedBy(tableOffset);
+            _sbt.writeTo(tableStream);
+            _fib.setLcbSttbSavedBy(tableStream.size() - tableOffset);
+
+            tableOffset = tableStream.size();
+        }
+
+        // write out the revision mark authors table.
+        if (_rmat != null)
+        {
+            _fib.setFcSttbfRMark(tableOffset);
+            _rmat.writeTo(tableStream);
+            _fib.setLcbSttbfRMark(tableStream.size() - tableOffset);
+
+            tableOffset = tableStream.size();
+        }
+
+        // write out the FontTable.
+        _fib.setFcSttbfffn(tableOffset);
+        _ft.writeTo(tableStream);
+        _fib.setLcbSttbfffn(tableStream.size() - tableOffset);
+        tableOffset = tableStream.size();
+
+        // set some variables in the FileInformationBlock.
+        _fib.getFibBase().setFcMin(mainOffset);
+        _fib.getFibBase().setFcMac(fcMac);
+        _fib.setCbMac(wordDocumentStream.size());
+
+        // make sure that the table, doc and data streams use big blocks.
+        byte[] mainBuf = fillUp4096(wordDocumentStream);
+
+        // Table1 stream will be used
+        _fib.getFibBase().setFWhichTblStm( true );
+
+        // write out the FileInformationBlock.
+        //_fib.serialize(mainBuf, 0);
+        _fib.writeTo(mainBuf, tableStream);
+
+        byte[] tableBuf = fillUp4096(tableStream);
+        byte[] dataBuf = fillUp4096(_dataStream);
+        
+        // Create a new document - ignoring the order of the old entries
+        if (ei == null) {
+            write(pfs, mainBuf, STREAM_WORD_DOCUMENT);
+            write(pfs, tableBuf, STREAM_TABLE_1);
+            write(pfs, dataBuf, STREAM_DATA);
+        } else {
+            ByteArrayOutputStream bos = new ByteArrayOutputStream(100000);
+            encryptBytes(mainBuf, FIB_BASE_LEN, bos);
+            write(pfs, bos.toByteArray(), STREAM_WORD_DOCUMENT);
+            bos.reset();
+            encryptBytes(tableBuf, _fib.getFibBase().getLKey(), bos);
+            write(pfs, bos.toByteArray(), STREAM_TABLE_1);
+            bos.reset();
+            encryptBytes(dataBuf, 0, bos);
+            write(pfs, bos.toByteArray(), STREAM_DATA);
+            bos.reset();
+        }
+
+        writeProperties( pfs );
+        
+        if ( copyOtherEntries && ei == null ) {
+            // For encrypted files:
+            // The ObjectPool storage MUST NOT be present and if the file contains OLE objects, the storage
+            // objects for the OLE objects MUST be stored in the Data stream as specified in sprmCPicLocation.
+            DirectoryNode newRoot = pfs.getRoot();
+            _objectPool.writeTo( newRoot );
+        
+            for (Entry entry : getDirectory()) {
+                String entryName = entry.getName(); 
+                if ( !(
+                    STREAM_WORD_DOCUMENT.equals(entryName) ||
+                    STREAM_TABLE_0.equals(entryName) ||
+                    STREAM_TABLE_1.equals(entryName) ||
+                    STREAM_DATA.equals(entryName) ||
+                    STREAM_OBJECT_POOL.equals(entryName) ||
+                    SummaryInformation.DEFAULT_STREAM_NAME.equals(entryName) ||
+                    DocumentSummaryInformation.DEFAULT_STREAM_NAME.equals(entryName)
+                ) ) {
+                    EntryUtils.copyNodeRecursively( entry, newRoot );
+                }
+            }
+        }
+
+        /*
+         * since we updated all references in FIB and etc, using new arrays to
+         * access data
+         */
+        replaceDirectory(pfs.getRoot());
+        this._tableStream = tableStream.toByteArray();
+        this._dataStream = dataBuf;
+    }
+

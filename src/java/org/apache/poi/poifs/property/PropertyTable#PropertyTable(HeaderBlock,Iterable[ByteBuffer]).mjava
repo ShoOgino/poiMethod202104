@@ -1,0 +1,34 @@
+    /* only invoked locally and from the junit tests */
+    PropertyTable(final HeaderBlock headerBlock, final Iterable<ByteBuffer> dataSource)
+    throws IOException {
+        _header_block = headerBlock;
+        _bigBigBlockSize = headerBlock.getBigBlockSize();
+
+        for (ByteBuffer bb : dataSource) {
+            // Turn it into an array
+            byte[] data;
+            if (bb.hasArray() && bb.arrayOffset() == 0 &&
+                    bb.array().length == _bigBigBlockSize.getBigBlockSize()) {
+                data = bb.array();
+            } else {
+                data = IOUtils.safelyAllocate(_bigBigBlockSize.getBigBlockSize(), MAX_RECORD_LENGTH);
+
+                int toRead = data.length;
+                if (bb.remaining() < _bigBigBlockSize.getBigBlockSize()) {
+                    // Looks to be a truncated block
+                    // This isn't allowed, but some third party created files
+                    //  sometimes do this, and we can normally read anyway
+                    _logger.log(POILogger.WARN, "Short Property Block, ", bb.remaining(),
+                            " bytes instead of the expected " + _bigBigBlockSize.getBigBlockSize());
+                    toRead = bb.remaining();
+                }
+
+                bb.get(data, 0, toRead);
+            }
+
+            PropertyFactory.convertToProperties(data, _properties);
+        }
+
+        populatePropertyTree( (DirectoryProperty)_properties.get(0));
+    }
+

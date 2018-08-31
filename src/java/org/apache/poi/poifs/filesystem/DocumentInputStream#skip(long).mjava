@@ -1,5 +1,23 @@
-    @Override
+   @Override
 	public long skip(long n) throws IOException {
-	   return delegate.skip(n);
+		dieIfClosed();
+		if (n < 0) {
+			return 0;
+		}
+		long new_offset = _current_offset + n;
+
+		if (new_offset < _current_offset) {
+			// wrap around in converting a VERY large long to an int
+			new_offset = _document_size;
+		} else if (new_offset > _document_size) {
+			new_offset = _document_size;
+		}
+		
+		long rval = new_offset - _current_offset;
+		
+		// TODO Do this better
+		byte[] skip = IOUtils.safelyAllocate(rval, Integer.MAX_VALUE);
+		readFully(skip);
+		return rval;
 	}
 

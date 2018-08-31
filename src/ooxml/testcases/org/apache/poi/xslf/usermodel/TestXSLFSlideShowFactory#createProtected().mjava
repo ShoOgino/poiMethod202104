@@ -1,4 +1,18 @@
     private static File createProtected() throws IOException, GeneralSecurityException {
-        return createProtected(filename, password);
+        try (POIFSFileSystem fs = new POIFSFileSystem()) {
+            EncryptionInfo info = new EncryptionInfo(EncryptionMode.agile);
+            Encryptor enc = info.getEncryptor();
+            enc.confirmPassword(password);
+            try (InputStream fis = _slTests.openResourceAsStream(filename);
+                 OutputStream os = enc.getDataStream(fs)) {
+                IOUtils.copy(fis, os);
+            }
+
+            File tf = TempFile.createTempFile("test-xslf-slidefactory", ".pptx");
+            try (FileOutputStream fos = new FileOutputStream(tf)) {
+                fs.writeFilesystem(fos);
+            }
+            return tf;
+        }
     }
 

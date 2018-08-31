@@ -1,0 +1,39 @@
+   /**
+    * Stores the given data for this Document
+    */
+   private int store(InputStream stream) throws IOException {
+       final int bigBlockSize = POIFSConstants.BIG_BLOCK_MINIMUM_DOCUMENT_SIZE;
+       BufferedInputStream bis = new BufferedInputStream(stream, bigBlockSize+1);
+       bis.mark(bigBlockSize);
+
+       // Do we need to store as a mini stream or a full one?
+       long streamBlockSize = IOUtils.skipFully(bis, bigBlockSize);
+       if (streamBlockSize < bigBlockSize) {
+          _stream = new POIFSStream(_filesystem.getMiniStore());
+          _block_size = _filesystem.getMiniStore().getBlockStoreBlockSize();
+       } else {
+          _stream = new POIFSStream(_filesystem);
+          _block_size = _filesystem.getBlockStoreBlockSize();
+       }
+
+       // start from the beginning 
+       bis.reset();
+       
+       // Store it
+       final long length;
+       try (OutputStream os = _stream.getOutputStream()) {
+           length = IOUtils.copy(bis, os);
+
+           // Pad to the end of the block with -1s
+           int usedInBlock = (int) (length % _block_size);
+           if (usedInBlock != 0 && usedInBlock != _block_size) {
+               int toBlockEnd = _block_size - usedInBlock;
+               byte[] padding = IOUtils.safelyAllocate(toBlockEnd, MAX_RECORD_LENGTH);
+               Arrays.fill(padding, (byte) 0xFF);
+               os.write(padding);
+           }
+       }
+
+       return (int)length;
+   }
+

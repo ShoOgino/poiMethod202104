@@ -21,14 +21,8 @@
             }
 
             System.out.println("Dumping " + filename);
-            FileInputStream is = new FileInputStream(filename);
-            NPOIFSFileSystem fs;
-            try {
-                fs = new NPOIFSFileSystem(is);
-            } finally {
-                is.close();
-            }
-            try {
+            try (FileInputStream is = new FileInputStream(filename);
+                 POIFSFileSystem fs = new POIFSFileSystem(is)) {
                 DirectoryEntry root = fs.getRoot();
                 String filenameWithoutPath = new File(filename).getName();
                 File dumpDir = new File(filenameWithoutPath + "_dump");
@@ -44,7 +38,7 @@
                     dump(fs, header.getPropertyStart(), "properties", file);
                 }
                 if (dumpMini) {
-                    NPropertyTable props = fs.getPropertyTable();
+                    PropertyTable props = fs.getPropertyTable();
                     int startBlock = props.getRoot().getStartBlock();
                     if (startBlock == POIFSConstants.END_OF_CHAIN) {
                         System.err.println("No Mini Stream in file");
@@ -52,8 +46,6 @@
                         dump(fs, startBlock, "mini-stream", file);
                     }
                 }
-            } finally {
-                fs.close();
             }
         }
     }
