@@ -14,12 +14,22 @@
             } catch (ClassNotFoundException e) {
                 // continue without log, this is expected in some setups
             } catch (Throwable e) {     // NOSONAR - also catch things like NoClassDefError here
-                logger.log(POILogger.WARN, "SAX Security Manager could not be setup", e);
+                if(System.currentTimeMillis() > lastLog + TimeUnit.MINUTES.toMillis(5)) {
+                    logger.log(POILogger.WARN, "DocumentBuilderFactory Security Manager could not be setup [log suppressed for 5 minutes]", e);
+                    lastLog = System.currentTimeMillis();
+                }
             }
         }
 
         // separate old version of Xerces not found => use the builtin way of setting the property
         // Note: when entity_expansion_limit==0, there is no limit!
-        dbf.setAttribute(POIXMLConstants.PROPERTY_ENTITY_EXPANSION_LIMIT, 1);
+        try {
+            dbf.setAttribute(POIXMLConstants.PROPERTY_ENTITY_EXPANSION_LIMIT, 1);
+        } catch (Throwable e) {
+            if(System.currentTimeMillis() > lastLog + TimeUnit.MINUTES.toMillis(5)) {
+                logger.log(POILogger.WARN, "DocumentBuilderFactory Entity Expansion Limit could not be setup [log suppressed for 5 minutes]", e);
+                lastLog = System.currentTimeMillis();
+            }
+        }
     }
 
