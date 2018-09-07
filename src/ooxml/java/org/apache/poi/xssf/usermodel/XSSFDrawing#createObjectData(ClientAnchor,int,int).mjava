@@ -6,36 +6,40 @@
         /*
          * The shape id of the ole object seems to be a legacy shape id.
          *
-         * see 5.3.2.1 legacyDrawing (Legacy Drawing Object):
-         * Legacy Shape ID that is unique throughout the entire document.
-         * Legacy shape IDs should be assigned based on which portion of the document the
-         * drawing resides on. The assignment of these ids is broken down into clusters of
-         * 1024 values. The first cluster is 1-1024, the second 1025-2048 and so on.
+         * see 5.3.2.1 legacyDrawing (Legacy Drawing Object): Legacy Shape ID
+         * that is unique throughout the entire document. Legacy shape IDs
+         * should be assigned based on which portion of the document the drawing
+         * resides on. The assignment of these ids is broken down into clusters
+         * of 1024 values. The first cluster is 1-1024, the second 1025-2048 and
+         * so on.
          *
-         * Ole shapes seem to start with 1025 on the first sheet ...
-         * and not sure, if the ids need to be reindexed when sheets are removed
-         * or more than 1024 shapes are on a given sheet (see #51332 for a similar issue)
+         * Ole shapes seem to start with 1025 on the first sheet ... and not
+         * sure, if the ids need to be reindexed when sheets are removed or more
+         * than 1024 shapes are on a given sheet (see #51332 for a similar
+         * issue)
          */
         XSSFSheet sheet = getSheet();
         XSSFWorkbook wb = sheet.getWorkbook();
         int sheetIndex = wb.getSheetIndex(sheet);
-        long shapeId = (sheetIndex+1)*1024 + newShapeId();
+        long shapeId = (sheetIndex + 1) * 1024 + newShapeId();
 
         // add reference to OLE part
         PackagePartName olePN;
         try {
-            olePN = PackagingURIHelper.createPartName( "/xl/embeddings/oleObject"+storageId+".bin" );
+            olePN = PackagingURIHelper.createPartName("/xl/embeddings/oleObject" + storageId + ".bin");
         } catch (InvalidFormatException e) {
             throw new POIXMLException(e);
         }
-        PackageRelationship olePR = sheetPart.addRelationship( olePN, TargetMode.INTERNAL, POIXMLDocument.OLE_OBJECT_REL_TYPE );
+        PackageRelationship olePR = sheetPart.addRelationship(olePN, TargetMode.INTERNAL,
+            POIXMLDocument.OLE_OBJECT_REL_TYPE);
 
         // add reference to image part
         XSSFPictureData imgPD = sh.getWorkbook().getAllPictures().get(pictureIndex);
         PackagePartName imgPN = imgPD.getPackagePart().getPartName();
-        PackageRelationship imgSheetPR = sheetPart.addRelationship( imgPN, TargetMode.INTERNAL, PackageRelationshipTypes.IMAGE_PART );
-        PackageRelationship imgDrawPR = getPackagePart().addRelationship( imgPN, TargetMode.INTERNAL, PackageRelationshipTypes.IMAGE_PART );
-
+        PackageRelationship imgSheetPR = sheetPart.addRelationship(imgPN, TargetMode.INTERNAL,
+            PackageRelationshipTypes.IMAGE_PART);
+        PackageRelationship imgDrawPR = getPackagePart().addRelationship(imgPN, TargetMode.INTERNAL,
+            PackageRelationshipTypes.IMAGE_PART);
 
         // add OLE part metadata to sheet
         CTWorksheet cwb = sh.getCTWorksheet();
@@ -54,7 +58,7 @@
         cur1.beginElement("anchor", XSSFRelation.NS_SPREADSHEETML);
         cur1.insertAttributeWithValue("moveWithCells", "1");
 
-        CTTwoCellAnchor ctAnchor = createTwoCellAnchor((XSSFClientAnchor)anchor);
+        CTTwoCellAnchor ctAnchor = createTwoCellAnchor((XSSFClientAnchor) anchor);
 
         XmlCursor cur2 = ctAnchor.newCursor();
         cur2.copyXmlContents(cur1);
@@ -71,7 +75,7 @@
         // add a new shape and link OLE & image part
         CTShape ctShape = ctAnchor.addNewSp();
         ctShape.set(XSSFObjectData.prototype());
-        ctShape.getSpPr().setXfrm(createXfrm((XSSFClientAnchor)anchor));
+        ctShape.getSpPr().setXfrm(createXfrm((XSSFClientAnchor) anchor));
 
         // workaround for not having the vmlDrawing filled
         CTBlipFillProperties blipFill = ctShape.getSpPr().addNewBlipFill();
@@ -80,15 +84,15 @@
 
         CTNonVisualDrawingProps cNvPr = ctShape.getNvSpPr().getCNvPr();
         cNvPr.setId(shapeId);
-        cNvPr.setName("Object "+shapeId);
+        cNvPr.setName("Object " + shapeId);
 
         XmlCursor extCur = cNvPr.getExtLst().getExtArray(0).newCursor();
         extCur.toFirstChild();
-        extCur.setAttributeText(new QName("spid"), "_x0000_s"+shapeId);
+        extCur.setAttributeText(new QName("spid"), "_x0000_s" + shapeId);
         extCur.dispose();
 
         XSSFObjectData shape = new XSSFObjectData(this, ctShape);
-        shape.anchor = (XSSFClientAnchor)anchor;
+        shape.anchor = (XSSFClientAnchor) anchor;
 
         return shape;
     }
