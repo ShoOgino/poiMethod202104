@@ -1,0 +1,21 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long recordSize, long recordId) throws IOException {
+            if (recordSize < 0 || Integer.MAX_VALUE <= recordSize) {
+                throw new RecordFormatException("recordSize must be a positive integer (0-0x7FFFFFFF)");
+            }
+
+            // A WMF RectL object. It is not used and MUST be ignored on receipt.
+            long size = readRectL(leis, boundsIgnored);
+
+            // A 32-bit unsigned integer that specifies the graphics mode from the GraphicsMode enumeration
+            graphicsMode = EmfGraphicsMode.values()[leis.readInt()-1];
+            size += LittleEndianConsts.INT_SIZE;
+
+            size += readDimensionFloat(leis, scale);
+
+            // guarantee to read the rest of the EMRTextObjectRecord
+            size += textObject.init(leis, recordSize, (int)size);
+
+            return size;
+        }
+

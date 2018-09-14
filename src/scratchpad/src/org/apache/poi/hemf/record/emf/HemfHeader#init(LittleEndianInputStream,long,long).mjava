@@ -1,0 +1,48 @@
+    @Override
+    public long init(LittleEndianInputStream leis, long recordSize, long recordId) throws IOException {
+        if (recordId != HemfRecordType.header.id) {
+            throw new IOException("Not a valid EMF header. Record type:"+recordId);
+        }
+
+        //bounds
+        long size = readRectL(leis, boundsRectangle);
+        size += readRectL(leis, frameRectangle);
+
+        int recordSignature = leis.readInt();
+        if (recordSignature != 0x464D4520) {
+            throw new IOException("bad record signature: " + recordSignature);
+        }
+
+        long version = leis.readInt();
+        //According to the spec, MSOffice doesn't pay attention to this value.
+        //It _should_ be 0x00010000
+        bytes = leis.readUInt();
+        records = leis.readUInt();
+        handles = leis.readUShort();
+        //reserved
+        leis.skipFully(LittleEndianConsts.SHORT_SIZE);
+
+        nDescription = leis.readUInt();
+        offDescription = leis.readUInt();
+        nPalEntries = leis.readUInt();
+
+        size += 8*LittleEndianConsts.INT_SIZE;
+
+        size += readDimensionInt(leis, deviceDimension);
+        size += readDimensionInt(leis, milliDimension);
+
+        if (size+12 <= recordSize) {
+            hasExtension1 = true;
+            cbPixelFormat =  leis.readUInt();
+            offPixelFormat = leis.readUInt();
+            bOpenGL = leis.readUInt();
+            size += 3*LittleEndianConsts.INT_SIZE;
+        }
+
+        if (size+8 <= recordSize) {
+            hasExtension2 = true;
+            size += readDimensionInt(leis, microDimension);
+        }
+        return size;
+    }
+

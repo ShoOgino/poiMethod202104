@@ -1,0 +1,39 @@
+    @Test
+    public void testWindowsText() throws Exception {
+        try (InputStream is = samples.openResourceAsStream("SimpleEMF_windows.emf")) {
+            HemfPicture pic = new HemfPicture(is);
+            double lastY = -1;
+            double lastX = -1;
+            long fudgeFactorX = 1000;//derive this from the font or frame/bounds information
+            StringBuilder sb = new StringBuilder();
+            Set<String> expectedParts = new HashSet<>();
+            expectedParts.add("C:\\Users\\tallison\\");
+            expectedParts.add("testPDF.pdf");
+            int foundExpected = 0;
+            for (HemfRecord record : pic) {
+                if (record.getEmfRecordType().equals(HemfRecordType.exttextoutw)) {
+                    HemfText.ExtTextOutW extTextOutW = (HemfText.ExtTextOutW) record;
+                    Point2D reference = extTextOutW.getTextObject().getReference();
+                    if (lastY > -1 && lastY != reference.getY()) {
+                        sb.append("\n");
+                        lastX = -1;
+                    }
+                    if (lastX > -1 && reference.getX() - lastX > fudgeFactorX) {
+                        sb.append(" ");
+                    }
+                    String txt = extTextOutW.getText();
+                    if (expectedParts.contains(txt)) {
+                        foundExpected++;
+                    }
+                    sb.append(txt);
+                    lastY = reference.getY();
+                    lastX = reference.getX();
+                }
+            }
+            String txt = sb.toString();
+            assertContains(txt, "C:\\Users\\tallison\\\n");
+            assertContains(txt, "asf2-git-1.x\\tika-\n");
+            assertEquals(expectedParts.size(), foundExpected);
+        }
+    }
+

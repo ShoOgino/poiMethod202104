@@ -1,0 +1,72 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long recordSize, long recordId) throws IOException {
+            long size = readRectL(leis, bounds);
+
+            size += readBounds2(leis, this.dstBounds);
+
+            // A 32-bit unsigned integer that specifies the raster operation code. This code defines how the
+            // color data of the source rectangle is to be combined with the color data of the destination
+            // rectangle and optionally a brush pattern, to achieve the final color.
+            int rasterOpIndex = (int)leis.readUInt();
+
+            rasterOperation = HwmfTernaryRasterOp.valueOf(rasterOpIndex);
+
+            size += LittleEndianConsts.INT_SIZE;
+
+            final Point2D srcPnt = new Point2D.Double();
+            size += readPointL(leis, srcPnt);
+
+            leis.readFully(xformSrc);
+            size += 24;
+
+            size += bkColorSrc.init(leis);
+
+            usageSrc = (int)leis.readUInt();
+
+            // A 32-bit unsigned integer that specifies the offset, in bytes, from the
+            // start of this record to the source bitmap header in the BitmapBuffer field.
+            final int offBmiSrc = (int)leis.readUInt();
+
+            // A 32-bit unsigned integer that specifies the size, in bytes, of the source bitmap header.
+            final int cbBmiSrc = (int)leis.readUInt();
+
+            // A 32-bit unsigned integer that specifies the offset, in bytes, from the
+            // start of this record to the source bitmap bits in the BitmapBuffer field.
+            final int offBitsSrc = (int)leis.readUInt();
+
+            // A 32-bit unsigned integer that specifies the size, in bytes, of the source bitmap bits.
+            final int cbBitsSrc = (int)leis.readUInt();
+
+            size += 5*LittleEndianConsts.INT_SIZE;
+
+            if (srcEqualsDstDimension()) {
+                srcBounds.setRect(srcPnt.getX(), srcPnt.getY(), dstBounds.getWidth(), dstBounds.getHeight());
+            } else {
+                int srcWidth = leis.readInt();
+                int srcHeight = leis.readInt();
+                size += 2 * LittleEndianConsts.INT_SIZE;
+                srcBounds.setRect(srcPnt.getX(), srcPnt.getY(), srcWidth, srcHeight);
+            }
+
+            // size + type and size field
+            final int undefinedSpace1 = (int)(offBmiSrc - size - HEADER_SIZE);
+            assert(undefinedSpace1 >= 0);
+            leis.skipFully(undefinedSpace1);
+            size += undefinedSpace1;
+
+            bmiSrc = IOUtils.safelyAllocate(cbBmiSrc, MAX_RECORD_LENGTH);
+            leis.readFully(bmiSrc);
+            size += cbBmiSrc;
+
+            final int undefinedSpace2 = (int)(offBitsSrc - size - HEADER_SIZE);
+            assert(undefinedSpace2 >= 0);
+            leis.skipFully(undefinedSpace2);
+            size += undefinedSpace2;
+
+            bitsSrc = IOUtils.safelyAllocate(cbBitsSrc, MAX_RECORD_LENGTH);
+            leis.readFully(bitsSrc);
+            size += cbBitsSrc;
+
+            return size;
+        }
+

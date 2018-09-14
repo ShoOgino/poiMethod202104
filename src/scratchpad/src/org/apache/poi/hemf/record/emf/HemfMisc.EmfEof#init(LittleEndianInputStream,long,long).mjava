@@ -1,0 +1,34 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long recordSize, long recordId) throws IOException {
+
+            // A 32-bit unsigned integer that specifies the number of palette entries.
+            int nPalEntries = (int)leis.readUInt();
+            // A 32-bit unsigned integer that specifies the offset to the palette entries from the start of this record.
+            int offPalEntries = (int)leis.readUInt();
+
+            int size = 2*LittleEndianConsts.INT_SIZE;
+            int undefinedSpace1 = (int)(offPalEntries - size - HEADER_SIZE);
+            assert (undefinedSpace1 >= 0);
+            leis.skipFully(undefinedSpace1);
+            size += undefinedSpace1;
+
+            for (int i=0; i<nPalEntries; i++) {
+                PaletteEntry pe = new PaletteEntry();
+                size += pe.init(leis);
+            }
+
+            int undefinedSpace2 = (int)(recordSize - size - LittleEndianConsts.INT_SIZE);
+            assert (undefinedSpace2 >= 0);
+            leis.skipFully(undefinedSpace2);
+            size += undefinedSpace2;
+
+            // A 32-bit unsigned integer that MUST be the same as Size and MUST be the
+            // last field of the record and hence the metafile.
+            // LogPaletteEntry objects, if they exist, MUST precede this field.
+            long sizeLast = leis.readUInt();
+            size += LittleEndianConsts.INT_SIZE;
+            assert ((sizeLast-HEADER_SIZE) == recordSize && recordSize == size);
+
+            return size;
+        }
+

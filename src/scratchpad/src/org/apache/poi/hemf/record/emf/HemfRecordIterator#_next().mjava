@@ -1,0 +1,25 @@
+    private HemfRecord _next() {
+        if (currentRecord != null && HemfRecordType.eof == currentRecord.getEmfRecordType()) {
+            return null;
+        }
+        long recordId = stream.readUInt();
+        long recordSize = stream.readUInt();
+
+        HemfRecordType type = HemfRecordType.getById(recordId);
+        if (type == null) {
+            throw new RecordFormatException("Undefined record of type:"+recordId);
+        }
+        final HemfRecord record = type.constructor.get();
+
+        try {
+            long remBytes = recordSize-HEADER_SIZE;
+            long readBytes = record.init(stream, remBytes, recordId);
+            assert (readBytes <= remBytes);
+            stream.skipFully((int)(remBytes-readBytes));
+        } catch (IOException|RuntimeException e) {
+            throw new RecordFormatException(e);
+        }
+
+        return record;
+    }
+

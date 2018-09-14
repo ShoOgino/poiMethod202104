@@ -1,0 +1,32 @@
+        @Override
+        public long init(final LittleEndianInputStream leis, final long dataSize)
+                throws IOException {
+            final int startIdx = leis.getReadIndex();
+            final int commentIdentifier = (int)leis.readUInt();
+            assert(commentIdentifier == HemfCommentRecordType.emfPublic.id);
+            final int publicCommentIdentifier = (int)leis.readUInt();
+            assert(publicCommentIdentifier == HemfCommentRecordType.emfMultiFormats.id);
+            HemfDraw.readRectL(leis, bounds);
+
+            // A 32-bit unsigned integer that specifies the number of graphics formats contained in this record.
+            int countFormats = (int)leis.readUInt();
+            for (int i=0; i<countFormats; i++) {
+                EmfCommentDataFormat fmt = new EmfCommentDataFormat();
+                long readBytes = fmt.init(leis, dataSize, startIdx);
+                formats.add(fmt);
+                if (readBytes == 0) {
+                    // binary data is appended without DataFormat header
+                    break;
+                }
+            }
+
+            for (EmfCommentDataFormat fmt : formats) {
+                int skip = fmt.offData-(leis.getReadIndex()-startIdx);
+                leis.skipFully(skip);
+                fmt.rawData = new byte[fmt.sizeData];
+                leis.readFully(fmt.rawData);
+            }
+
+            return leis.getReadIndex()-startIdx;
+        }
+

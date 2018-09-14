@@ -1,0 +1,43 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long recordSize, long recordId) throws IOException {
+            long size = readRectL(leis, bounds);
+
+            // A 32-bit unsigned integer that specifies the number of polygons.
+            long numberOfPolygons = leis.readUInt();
+            // A 32-bit unsigned integer that specifies the total number of points in all polygons.
+            long count = Math.min(16384, leis.readUInt());
+
+            size += 2 * LittleEndianConsts.INT_SIZE;
+
+            // An array of 32-bit unsigned integers that specifies the point count for each polygon.
+            long[] polygonPointCount = new long[(int)numberOfPolygons];
+
+            size += numberOfPolygons * LittleEndianConsts.INT_SIZE;
+
+            for (int i=0; i<numberOfPolygons; i++) {
+                polygonPointCount[i] = leis.readUInt();
+            }
+
+            Point2D pnt = new Point2D.Double();
+            for (long nPoints : polygonPointCount) {
+                /**
+                 * An array of WMF PointL objects that specifies the points for all polygons in logical units.
+                 * The number of points is specified by the Count field value.
+                 */
+                Path2D poly = new Path2D.Double();
+                for (int i=0; i<nPoints; i++) {
+                    size += readPoint(leis, pnt);
+                    if (i == 0) {
+                        poly.moveTo(pnt.getX(), pnt.getY());
+                    } else {
+                        poly.lineTo(pnt.getX(), pnt.getY());
+                    }
+                }
+                if (isClosed()) {
+                    poly.closePath();
+                }
+                polyList.add(poly);
+            }
+            return size;
+        }
+

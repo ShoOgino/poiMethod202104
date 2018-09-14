@@ -1,0 +1,34 @@
+    static long readBitmap(final LittleEndianInputStream leis, final HwmfBitmapDib bitmap,
+            final int startIdx, final int offBmiSrc, final int cbBmiSrc, final int offBitsSrc, int cbBitsSrc)
+    throws IOException {
+        final int offCurr = leis.getReadIndex()-(startIdx-HEADER_SIZE);
+        final int undefinedSpace1 = offBmiSrc-offCurr;
+        assert(undefinedSpace1 >= 0);
+
+        final int undefinedSpace2 = offBitsSrc-offCurr-cbBmiSrc-undefinedSpace1;
+        assert(undefinedSpace2 >= 0);
+
+        leis.skipFully(undefinedSpace1);
+
+        if (cbBmiSrc == 0 || cbBitsSrc == 0) {
+            return undefinedSpace1;
+        }
+
+        final LittleEndianInputStream leisDib;
+        if (undefinedSpace2 == 0) {
+            leisDib = leis;
+        } else {
+            final ByteArrayOutputStream bos = new ByteArrayOutputStream(cbBmiSrc+cbBitsSrc);
+            final long cbBmiSrcAct = IOUtils.copy(leis, bos, cbBmiSrc);
+            assert (cbBmiSrcAct == cbBmiSrc);
+            leis.skipFully(undefinedSpace2);
+            final long cbBitsSrcAct = IOUtils.copy(leis, bos, cbBitsSrc);
+            assert (cbBitsSrcAct == cbBitsSrc);
+            leisDib = new LittleEndianInputStream(new ByteArrayInputStream(bos.toByteArray()));
+        }
+        final int dibSize = cbBmiSrc+cbBitsSrc;
+        final int dibSizeAct = bitmap.init(leisDib, dibSize);
+        assert (dibSizeAct <= dibSize);
+        return undefinedSpace1 + cbBmiSrc + undefinedSpace2 + cbBitsSrc;
+    }
+

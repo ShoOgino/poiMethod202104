@@ -1,0 +1,34 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long recordSize, long recordId) throws IOException {
+            int startIdx = leis.getReadIndex();
+
+            // A WMF RectL object that defines the destination bounding rectangle in device units.
+            long size = readRectL(leis, bounds);
+            // the logical x/y-coordinate of the upper-left corner of the destination rectangle.
+            size += readPointL(leis, dest);
+            // the source rectangle
+            size += readBounds2(leis, src);
+            // A 32-bit unsigned integer that specifies the offset, in bytes, from the
+            // start of this record to the source bitmap header in the BitmapBuffer field.
+            final int offBmiSrc = (int)leis.readUInt();
+            // A 32-bit unsigned integer that specifies the size, in bytes, of the source bitmap header.
+            final int cbBmiSrc = (int)leis.readUInt();
+            // A 32-bit unsigned integer that specifies the offset, in bytes, from the
+            // start of this record to the source bitmap bits in the BitmapBuffer field.
+            final int offBitsSrc = (int)leis.readUInt();
+            // A 32-bit unsigned integer that specifies the size, in bytes, of the source bitmap bits.
+            final int cbBitsSrc = (int)leis.readUInt();
+            // A 32-bit unsigned integer that specifies how to interpret values in the color table
+            // in the source bitmap header. This value MUST be in the DIBColors enumeration
+            usageSrc = ColorUsage.valueOf((int)leis.readUInt());
+            // A 32-bit unsigned integer that specifies the first scan line in the array.
+            final int iStartScan = (int)leis.readUInt();
+            // A 32-bit unsigned integer that specifies the number of scan lines.
+            final int cScans = (int)leis.readUInt();
+            size += 7*LittleEndianConsts.INT_SIZE;
+
+            size += readBitmap(leis, bitmap, startIdx, offBmiSrc, cbBmiSrc, offBitsSrc, cbBitsSrc);
+
+            return size;
+        }
+

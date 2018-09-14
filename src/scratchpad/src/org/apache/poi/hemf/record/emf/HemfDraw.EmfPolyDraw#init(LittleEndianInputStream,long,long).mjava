@@ -1,0 +1,62 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long recordSize, long recordId) throws IOException {
+            long size = readRectL(leis, bounds);
+            int count = (int)leis.readUInt();
+            size += LittleEndianConsts.INT_SIZE;
+            Point2D points[] = new Point2D[count];
+            for (int i=0; i<count; i++) {
+                 size += readPoint(leis, points[i]);
+            }
+
+            poly.reset();
+
+            for (int i=0; i<count; i++) {
+                int mode = leis.readUByte();
+                switch (mode & 0x06) {
+                    // PT_LINETO
+                    // Specifies that a line is to be drawn from the current position to this point, which
+                    // then becomes the new current position.
+                    case 0x02:
+                        poly.lineTo(points[i].getX(), points[i].getY());
+                        break;
+                    // PT_BEZIERTO
+                    // Specifies that this point is a control point or ending point for a Bezier curve.
+                    // PT_BEZIERTO types always occur in sets of three.
+                    // The current position defines the starting point for the Bezier curve.
+                    // The first two PT_BEZIERTO points are the control points,
+                    // and the third PT_BEZIERTO point is the ending point.
+                    // The ending point becomes the new current position.
+                    // If there are not three consecutive PT_BEZIERTO points, an error results.
+                    case 0x04:
+                        int mode2 = leis.readUByte();
+                        int mode3 = leis.readUByte();
+                        assert(mode2 == 0x04 && mode3 == 0x04);
+                        poly.curveTo(
+                            points[i].getX(), points[i].getY(),
+                            points[i+1].getX(), points[i+1].getY(),
+                            points[i+2].getX(), points[i+2].getY()
+                        );
+                        i+=2;
+                        break;
+                    // PT_MOVETO
+                    // Specifies that this point starts a disjoint figure. This point becomes the new current position.
+                    case 0x06:
+                        poly.moveTo(points[i].getX(), points[i].getY());
+                        break;
+                    default:
+                        // TODO: log error
+                        break;
+                }
+
+                // PT_CLOSEFIGURE
+                // A PT_LINETO or PT_BEZIERTO type can be combined with this value by using the bitwise operator OR
+                // to indicate that the corresponding point is the last point in a figure and the figure is closed.
+                // The current position is set to the ending point of the closing line.
+                if ((mode & 0x01) == 0x01) {
+                    this.poly.closePath();
+                }
+            }
+            size += count;
+            return size;
+        }
+

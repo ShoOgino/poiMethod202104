@@ -1,0 +1,58 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long recordSize, long recordId) throws IOException {
+            long size = readRectL(leis, bounds);
+
+            /* A 32-bit unsigned integer that specifies the number of points in the points
+             * array. This value MUST be one more than three times the number of curves to
+             * be drawn, because each Bezier curve requires two control points and an
+             * endpoint, and the initial curve requires an additional starting point.
+             *
+             * Line width | Device supports wideline | Maximum points allowed
+             *    1       |            n/a           |          16K
+             *   > 1      |            yes           |          16K
+             *   > 1      |             no           |         1360
+             *
+             * Any extra points MUST be ignored.
+             */
+            final int count = (int)leis.readUInt();
+            final int points = Math.min(count, 16384);
+            size += LittleEndianConsts.INT_SIZE;
+
+            poly.reset();
+
+            /* Cubic Bezier curves are defined using the endpoints and control points
+             * specified by the points field. The first curve is drawn from the first
+             * point to the fourth point, using the second and third points as control
+             * points. Each subsequent curve in the sequence needs exactly three more points:
+             * the ending point of the previous curve is used as the starting point,
+             * the next two points in the sequence are control points,
+             * and the third is the ending point.
+             * The cubic Bezier curves SHOULD be drawn using the current pen.
+             */
+
+            Point2D pnt[] = { new Point2D.Double(), new Point2D.Double(), new Point2D.Double() };
+
+            // points-1 because of the first point
+            final int pointCnt = hasStartPoint() ? points-1 : points;
+            for (int i=0; i+3<pointCnt; i+=3) {
+                // x (4 bytes): A 32-bit signed integer that defines the horizontal (x) coordinate of the point.
+                // y (4 bytes): A 32-bit signed integer that defines the vertical (y) coordinate of the point.
+                if (i==0 && hasStartPoint()) {
+                    size += readPoint(leis, pnt[0]);
+                    poly.moveTo(pnt[0].getX(),pnt[0].getY());
+                }
+
+                size += readPoint(leis, pnt[0]);
+                size += readPoint(leis, pnt[1]);
+                size += readPoint(leis, pnt[2]);
+
+                poly.curveTo(
+                    pnt[0].getX(),pnt[0].getY(),
+                    pnt[1].getX(),pnt[1].getY(),
+                    pnt[2].getX(),pnt[2].getY()
+                );
+            }
+
+            return size;
+        }
+

@@ -1,0 +1,50 @@
+        private EmfCommentData _next() {
+            long type, recordSize;
+            if (currentRecord == null && emfParent) {
+                type = HemfRecordType.comment.id;
+                recordSize = limit;
+            } else {
+                // A 32-bit unsigned integer from the RecordType enumeration that identifies this record
+                // as a comment record. This value MUST be 0x00000046.
+                type = leis.readUInt();
+                assert(type == HemfRecordType.comment.id);
+                // A 32-bit unsigned integer that specifies the size in bytes of this record in the
+                // metafile. This value MUST be a multiple of 4 bytes.
+                recordSize = leis.readUInt();
+            }
+
+            // A 32-bit unsigned integer that specifies the size, in bytes, of the CommentIdentifier and
+            // CommentRecordParm fields in the RecordBuffer field that follows.
+            // It MUST NOT include the size of itself or the size of the AlignmentPadding field, if present.
+            long dataSize = leis.readUInt();
+
+            try {
+                leis.mark(2*LittleEndianConsts.INT_SIZE);
+                // An optional, 32-bit unsigned integer that identifies the type of comment record.
+                // See the preceding table for descriptions of these record types.
+                // Valid comment identifier values are listed in the following table.
+                //
+                // If this field contains any other value, the comment record MUST be an EMR_COMMENT record
+                final int commentIdentifier = (int)leis.readUInt();
+                // A 32-bit unsigned integer that identifies the type of public comment record.
+                final int publicCommentIdentifier = (int)leis.readUInt();
+
+                final boolean isEmfPublic = (commentIdentifier == HemfCommentRecordType.emfPublic.id);
+                leis.reset();
+
+                final HemfCommentRecordType commentType = HemfCommentRecordType.getById
+                    (isEmfPublic ? publicCommentIdentifier : commentIdentifier, isEmfPublic);
+                assert(commentType != null);
+                final EmfCommentData record = commentType.constructor.get();
+
+                long readBytes = record.init(leis, dataSize);
+                final int skipBytes = (int)(recordSize-4-readBytes);
+                assert (skipBytes >= 0);
+                leis.skipFully(skipBytes);
+
+                return record;
+            } catch (IOException e) {
+                throw new RecordFormatException(e);
+            }
+        }
+

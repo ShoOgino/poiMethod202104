@@ -1,0 +1,28 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long recordSize, long recordId) throws IOException {
+            long size = readRectL(leis, bounds);
+
+            // see PolyBezier about limits
+            final int count = (int)leis.readUInt();
+            final int points = Math.min(count, 16384);
+            size += LittleEndianConsts.INT_SIZE;
+
+            Point2D pnt = new Point2D.Double();
+            for (int i=0; i<points; i++) {
+                size += readPoint(leis, pnt);
+                if (i==0) {
+                    poly.moveTo(pnt.getX(), pnt.getY());
+
+                    if (hasStartPoint()) {
+                        continue;
+                    }
+
+                    // if this path is connected to the current position (= has no start point)
+                    // the first entry is a dummy entry and will be skipped later
+                }
+                poly.lineTo(pnt.getX(), pnt.getY());
+            }
+
+            return size;
+        }
+
