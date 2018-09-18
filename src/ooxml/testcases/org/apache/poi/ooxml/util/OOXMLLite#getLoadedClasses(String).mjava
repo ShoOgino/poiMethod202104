@@ -1,10 +1,10 @@
     /**
      *
      * @param ptrn the pattern to filter output
-     * @return the classes loaded by the system class loader keyed by class name
+     * @return the classes loaded by the system class loader
      */
     @SuppressWarnings("unchecked")
-    private static Map<String, Class<?>> getLoadedClasses(String ptrn) {
+    private static Set<Class<?>> getLoadedClasses(String ptrn) {
         // make the field accessible, we defer this from static initialization to here to 
         // allow JDKs which do not have this field (e.g. IBM JDK) to at least load the class
         // without failing, see https://issues.apache.org/bugzilla/show_bug.cgi?id=56550
@@ -25,7 +25,7 @@
         ClassLoader appLoader = ClassLoader.getSystemClassLoader();
         try {
             Vector<Class<?>> classes = (Vector<Class<?>>) _classes.get(appLoader);
-            Map<String, Class<?>> map = new HashMap<>();
+            Set<Class<?>> set = new HashSet<>();
             for (Class<?> cls : classes) {
                 // e.g. proxy-classes, ...
                 ProtectionDomain pd = cls.getProtectionDomain();
@@ -34,13 +34,13 @@
                 if (cs == null) continue;
                 URL loc = cs.getLocation();
                 if (loc == null) continue;
-                
+
                 String jar = loc.toString();
                 if (jar.contains(ptrn)) {
-                    map.put(cls.getName(), cls);
+                    set.add(cls);
                 }
             }
-            return map;
+            return set;
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }

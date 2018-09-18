@@ -84,25 +84,36 @@
 
         //see what classes from the ooxml-schemas.jar are loaded
         System.out.println("Copying classes to " + _destDest);
-        Map<String, Class<?>> classes = getLoadedClasses(_ooxmlJar.getName());
+        Set<Class<?>> classes = getLoadedClasses(_ooxmlJar.getName());
         Set<String> packages = new HashSet<>();
-        for (Class<?> cls : classes.values()) {
+        for (Class<?> cls : classes) {
             copyFile(cls);
             packages.add(cls.getPackage().getName());
 
-            if(cls.isInterface()){
+            if (cls.isInterface()) {
                 /// Copy classes and interfaces declared as members of this class
-                for(Class<?> fc : cls.getDeclaredClasses()){
+                for (Class<?> fc : cls.getDeclaredClasses()) {
                     copyFile(fc);
                 }
             }
         }
         for (String pkg : packages) {
             Reflections reflections = new Reflections(pkg);
-            for (Class listClass : reflections.getSubTypesOf(List.class)) {
-                for (Class<?> compare : classes.values()){
+            Set<Class<? extends List>> listClasses = reflections.getSubTypesOf(List.class);
+            listClasses.removeAll(classes);
+            for (Class listClass : listClasses) {
+                for (Class<?> compare : classes) {
                     if (listClass.getName().startsWith(compare.getName())) {
                         copyFile(listClass);
+                    }
+                }
+            }
+            Set<Class<? extends StringEnumAbstractBase>> enumClasses = reflections.getSubTypesOf(StringEnumAbstractBase.class);
+            listClasses.removeAll(classes);
+            for (Class enumClass : enumClasses) {
+                for (Class<?> compare : classes) {
+                    if (enumClass.getName().startsWith(compare.getName())) {
+                        copyFile(enumClass);
                     }
                 }
             }
