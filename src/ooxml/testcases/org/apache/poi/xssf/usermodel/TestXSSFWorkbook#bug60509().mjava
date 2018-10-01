@@ -1,0 +1,18 @@
+    @Test
+    public void bug60509() throws Exception {
+        XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("60509.xlsx");
+        assertSheetOrder(wb, "Sheet1", "Sheet2", "Sheet3");
+        int sheetIndex = wb.getSheetIndex("Sheet1");
+        wb.setSheetName(sheetIndex, "Sheet1-Renamed");
+        Workbook read = XSSFTestDataSamples.writeOutAndReadBack(wb);
+        assertNotNull(read);
+        assertSheetOrder(read, "Sheet1-Renamed", "Sheet2", "Sheet3");
+        XSSFSheet sheet = (XSSFSheet) read.getSheet("Sheet1-Renamed");
+        XDDFChartData.Series series = sheet.getDrawingPatriarch().getCharts().get(0).getChartSeries().get(0).getSeries().get(0);
+        assertTrue("should be a bar chart data series", series instanceof XDDFBarChartData.Series);
+        String formula = ((XDDFBarChartData.Series) series).getCategoryData().getFormula();
+        assertTrue("should contain new sheet name", formula.startsWith("'Sheet1-Renamed'!"));
+        read.close();
+        wb.close();
+    }
+
