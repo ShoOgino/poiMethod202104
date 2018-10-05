@@ -1,0 +1,83 @@
+    public static void main(String[] args) throws Exception {
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            XSSFSheet sheet = wb.createSheet("Sheet1");
+
+            XSSFRow row = sheet.createRow(0);
+            row.createCell(0);
+            row.createCell(1).setCellValue("Bars");
+            row.createCell(2).setCellValue("Lines");
+
+            XSSFCell cell;
+            for (int r = 1; r < NUM_OF_ROWS; r++) {
+                row = sheet.createRow(r);
+                cell = row.createCell(0);
+                cell.setCellValue("C" + r);
+                cell = row.createCell(1);
+                cell.setCellValue(RNG.nextDouble());
+                cell = row.createCell(2);
+                cell.setCellValue(RNG.nextDouble() * 10);
+            }
+
+            XSSFDrawing drawing = sheet.createDrawingPatriarch();
+            XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 4, 0, 11, 15);
+
+            XSSFChart chart = drawing.createChart(anchor);
+
+            // the data sources
+            XDDFCategoryDataSource xs = XDDFDataSourcesFactory.fromStringCellRange(sheet,
+                    new CellRangeAddress(1, NUM_OF_ROWS - 1, 0, 0));
+            XDDFNumericalDataSource<Double> ys1 = XDDFDataSourcesFactory.fromNumericCellRange(sheet,
+                    new CellRangeAddress(1, NUM_OF_ROWS - 1, 1, 1));
+            XDDFNumericalDataSource<Double> ys2 = XDDFDataSourcesFactory.fromNumericCellRange(sheet,
+                    new CellRangeAddress(1, NUM_OF_ROWS - 1, 2, 2));
+
+            // cat axis 1 (bars)
+            XDDFCategoryAxis barCategories = chart.createCategoryAxis(AxisPosition.BOTTOM);
+
+            // val axis 1 (left)
+            XDDFValueAxis leftValues = chart.createValueAxis(AxisPosition.LEFT);
+            leftValues.crossAxis(barCategories);
+            barCategories.crossAxis(leftValues);
+
+            // cat axis 2 (lines)
+            XDDFCategoryAxis lineCategories = chart.createCategoryAxis(AxisPosition.BOTTOM);
+            lineCategories.setVisible(false); // this cat axis is deleted
+
+            // val axis 2 (right)
+            XDDFValueAxis rightValues = chart.createValueAxis(AxisPosition.RIGHT);
+            // this value axis crosses its category axis at max value
+            rightValues.setCrosses(AxisCrosses.MAX);
+            rightValues.crossAxis(lineCategories);
+            lineCategories.crossAxis(rightValues);
+
+            // the bar chart
+            XDDFBarChartData bar = (XDDFBarChartData) chart.createData(ChartTypes.BAR, lineCategories, rightValues);
+            XDDFBarChartData.Series series1 = (XDDFBarChartData.Series) bar.addSeries(xs, ys1);
+            series1.setTitle("Bars", new CellReference("Sheet1!$B$1"));
+            bar.setVaryColors(true);
+            bar.setBarDirection(BarDirection.COL);
+            chart.plot(bar);
+
+            // the line chart
+            XDDFLineChartData lines = (XDDFLineChartData) chart.createData(ChartTypes.LINE, lineCategories,
+                    rightValues);
+            XDDFLineChartData.Series series2 = (XDDFLineChartData.Series) lines.addSeries(xs, ys2);
+            series2.setTitle("Lines", new CellReference("Sheet1!$C$1"));
+            lines.setVaryColors(true);
+            chart.plot(lines);
+
+            // some colors
+            solidFillSeries(bar, 0, PresetColor.CHARTREUSE);
+            solidLineSeries(lines, 0, PresetColor.TURQUOISE);
+
+            // legend
+            XDDFChartLegend legend = chart.getOrAddLegend();
+            legend.setPosition(LegendPosition.BOTTOM);
+            legend.setOverlay(false);
+
+            try (FileOutputStream fileOut = new FileOutputStream("BarAndLineChart.xlsx")) {
+                wb.write(fileOut);
+            }
+        }
+    }
+
