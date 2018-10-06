@@ -1,5 +1,7 @@
         @Override
         public long init(LittleEndianInputStream leis, long recordSize, long recordId) throws IOException {
+            int startIdx = leis.getReadIndex();
+
             long size = readRectL(leis, bounds);
 
             size += readBounds2(leis, this.dstBounds);
@@ -48,24 +50,7 @@
                 srcBounds.setRect(srcPnt.getX(), srcPnt.getY(), srcWidth, srcHeight);
             }
 
-            // size + type and size field
-            final int undefinedSpace1 = (int)(offBmiSrc - size - HEADER_SIZE);
-            assert(undefinedSpace1 >= 0);
-            leis.skipFully(undefinedSpace1);
-            size += undefinedSpace1;
-
-            bmiSrc = IOUtils.safelyAllocate(cbBmiSrc, MAX_RECORD_LENGTH);
-            leis.readFully(bmiSrc);
-            size += cbBmiSrc;
-
-            final int undefinedSpace2 = (int)(offBitsSrc - size - HEADER_SIZE);
-            assert(undefinedSpace2 >= 0);
-            leis.skipFully(undefinedSpace2);
-            size += undefinedSpace2;
-
-            bitsSrc = IOUtils.safelyAllocate(cbBitsSrc, MAX_RECORD_LENGTH);
-            leis.readFully(bitsSrc);
-            size += cbBitsSrc;
+            size += readBitmap(leis, bitmap, startIdx, offBmiSrc, cbBmiSrc, offBitsSrc, cbBitsSrc);
 
             return size;
         }

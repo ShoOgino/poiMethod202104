@@ -1,0 +1,53 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long recordSize, long recordId) throws IOException {
+            final int startIdx = leis.getReadIndex();
+
+            long size = readRectL(leis, bounds);
+
+            // A 32-bit signed integer that specifies the logical x-coordinate of the upper-left
+            // corner of the destination rectangle.
+            int xDest = leis.readInt();
+            int yDest = leis.readInt();
+            size += 2*LittleEndianConsts.INT_SIZE;
+
+            size += readBounds2(leis, srcBounds);
+
+            // A 32-bit unsigned integer that specifies the offset, in bytes from the start
+            // of this record to the source bitmap header.
+            int offBmiSrc = (int)leis.readUInt();
+
+            // A 32-bit unsigned integer that specifies the size, in bytes, of the source bitmap header.
+            int cbBmiSrc = (int)leis.readUInt();
+
+            // A 32-bit unsigned integer that specifies the offset, in bytes, from the
+            // start of this record to the source bitmap bits.
+            int offBitsSrc = (int)leis.readUInt();
+
+            // A 32-bit unsigned integer that specifies the size, in bytes, of the source bitmap bits.
+            int cbBitsSrc = (int)leis.readUInt();
+
+            // A 32-bit unsigned integer that specifies how to interpret values in the color table
+            // in the source bitmap header. This value MUST be in the DIBColors enumeration
+            colorUsage = ColorUsage.valueOf(leis.readInt());
+
+            // A 32-bit unsigned integer that specifies a raster operation code.
+            // These codes define how the color data of the source rectangle is to be combined with the color data
+            // of the destination rectangle and optionally a brush pattern, to achieve the final color.
+            // The value MUST be in the WMF Ternary Raster Operation enumeration
+            rasterOperation = HwmfTernaryRasterOp.valueOf(leis.readInt());
+
+            // A 32-bit signed integer that specifies the logical width of the destination rectangle.
+            int cxDest = leis.readInt();
+
+            // A 32-bit signed integer that specifies the logical height of the destination rectangle.
+            int cyDest = leis.readInt();
+
+            dstBounds.setRect(xDest, yDest, cxDest, cyDest);
+
+            size += 8*LittleEndianConsts.INT_SIZE;
+
+            size += readBitmap(leis, dib, startIdx, offBmiSrc, cbBmiSrc, offBitsSrc, cbBitsSrc);
+
+            return size;
+        }
+
