@@ -1,5 +1,5 @@
     /**
-     * Update sheet name in all formulas and named ranges.
+     * Update sheet name in all charts, formulas and named ranges.
      * Called from {@link XSSFWorkbook#setSheetName(int, String)}
      * <p>
      * <p>
@@ -27,6 +27,20 @@
                     if (cell.getCellType() == CellType.FORMULA) {
                         updateFormula((XSSFCell) cell, oldName, newName);
                     }
+                }
+            }
+        }
+
+        // update charts
+        List<POIXMLDocumentPart> rels = _wb.getSheetAt(sheetIndex).getRelations();
+        for (POIXMLDocumentPart r : rels) {
+            if (r instanceof XSSFDrawing) {
+                XSSFDrawing dg = (XSSFDrawing) r;
+                Iterator<XSSFChart> it = dg.getCharts().iterator();
+                while (it.hasNext()) {
+                    XSSFChart chart = it.next();
+                    Node dom = chart.getCTChartSpace().getDomNode();
+                    updateDomSheetReference(dom, oldName, newName);
                 }
             }
         }

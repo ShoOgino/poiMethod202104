@@ -1,0 +1,26 @@
+    /**
+     * Parse the DOM tree recursively searching for text containing reference to the old sheet name and replacing it.
+     *
+     * @param dom the XML node in which to perform the replacement.
+     *
+     * Code extracted from: <a href="https://bz.apache.org/bugzilla/show_bug.cgi?id=54470">Bug 54470</a>
+     */
+    private void updateDomSheetReference(Node dom, final String oldName, final String newName) {
+        String value = dom.getNodeValue();
+        if (value != null) {
+            // make sure the value contains the old sheet and not a similar sheet
+            // (ex: Valid: 'Sheet1'! or Sheet1! ; NotValid: 'Sheet1Test'! or Sheet1Test!)
+            if (value.contains(oldName+"!") || value.contains(oldName+"'!")) {
+                XSSFName temporary = _wb.createName();
+                temporary.setRefersToFormula(value);
+                updateName(temporary, oldName, newName);
+                dom.setNodeValue(temporary.getRefersToFormula());
+                _wb.removeName(temporary);
+            }
+        }
+        NodeList nl = dom.getChildNodes();
+        for (int i = 0; i < nl.getLength(); i++) {
+            updateDomSheetReference(nl.item(i), oldName, newName);
+        }
+    }
+

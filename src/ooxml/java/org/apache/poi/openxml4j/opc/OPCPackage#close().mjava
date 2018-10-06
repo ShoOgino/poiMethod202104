@@ -4,6 +4,8 @@
 	 * If your package is open read only, then you should call {@link #revert()}
 	 *  when finished with the package.
 	 *
+	 * This method is not thread-safe.
+	 *
 	 * @throws IOException
 	 *             If an IO exception occur during the saving process.
 	 */
@@ -22,27 +24,20 @@
 		    return;
 		}
 
-		// Save the content
-		ReentrantReadWriteLock l = new ReentrantReadWriteLock();
-		try {
-			l.writeLock().lock();
-			if (this.originalPackagePath != null
-					&& !this.originalPackagePath.trim().isEmpty()) {
-				File targetFile = new File(this.originalPackagePath);
-				if (!targetFile.exists()
-						|| !(this.originalPackagePath
-								.equalsIgnoreCase(targetFile.getAbsolutePath()))) {
-					// Case of a package created from scratch
-					save(targetFile);
-				} else {
-					closeImpl();
-				}
-			} else if (this.output != null) {
-				save(this.output);
-				output.close();
+		if (this.originalPackagePath != null
+				&& !this.originalPackagePath.trim().isEmpty()) {
+			File targetFile = new File(this.originalPackagePath);
+			if (!targetFile.exists()
+					|| !(this.originalPackagePath
+							.equalsIgnoreCase(targetFile.getAbsolutePath()))) {
+				// Case of a package created from scratch
+				save(targetFile);
+			} else {
+				closeImpl();
 			}
-		} finally {
-			l.writeLock().unlock();
+		} else if (this.output != null) {
+			save(this.output);
+			output.close();
 		}
 
 		// Clear
