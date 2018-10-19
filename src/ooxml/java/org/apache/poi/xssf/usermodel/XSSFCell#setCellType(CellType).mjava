@@ -5,61 +5,6 @@
      */
     @Override
     public void setCellType(CellType cellType) {
-        CellType prevType = getCellType();
-
-        if(isPartOfArrayFormulaGroup()){
-            notifyArrayFormulaChanging();
-        }
-        if(prevType == CellType.FORMULA && cellType != CellType.FORMULA) {
-            if (_cell.isSetF()) {
-                _row.getSheet().onDeleteFormula(this);
-            }
-            getSheet().getWorkbook().onDeleteFormula(this);
-        }
-
-        switch (cellType) {
-            case NUMERIC:
-                _cell.setT(STCellType.N);
-                break;
-            case STRING:
-                if(prevType != CellType.STRING){
-                    String str = convertCellValueToString();
-                    XSSFRichTextString rt = new XSSFRichTextString(str);
-                    rt.setStylesTableReference(_stylesSource);
-                    int sRef = _sharedStringSource.addSharedStringItem(rt);
-                    _cell.setV(Integer.toString(sRef));
-                }
-                _cell.setT(STCellType.S);
-                break;
-            case FORMULA:
-                if(!_cell.isSetF()){
-                    CTCellFormula f =  CTCellFormula.Factory.newInstance();
-                    f.setStringValue("0");
-                    _cell.setF(f);
-                    if(_cell.isSetT()) {
-                        _cell.unsetT();
-                    }
-                }
-                break;
-            case BLANK:
-                setBlank();
-                break;
-            case BOOLEAN:
-                String newVal = convertCellValueToBoolean() ? TRUE_AS_STRING : FALSE_AS_STRING;
-                _cell.setT(STCellType.B);
-                _cell.setV(newVal);
-                break;
-
-            case ERROR:
-                _cell.setT(STCellType.E);
-                break;
-
-
-            default:
-                throw new IllegalArgumentException("Illegal cell type: " + cellType);
-        }
-        if (cellType != CellType.FORMULA && _cell.isSetF()) {
-            _cell.unsetF();
-        }
+        setCellType(cellType, null);
     }
 
