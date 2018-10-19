@@ -5,9 +5,25 @@
      */
     public Dimension2D getSize() {
         HemfHeader header = (HemfHeader)getRecords().get(0);
+        final double coeff = (double) Units.EMU_PER_CENTIMETER / Units.EMU_PER_POINT / 10.;
         Rectangle2D dim = header.getFrameRectangle();
+        double width = dim.getWidth(), height = dim.getHeight();
+        if (dim.isEmpty() || Math.rint(width*coeff) == 0 || Math.rint(height*coeff) == 0) {
+            for (HemfRecord r : getRecords()) {
+                if (r instanceof HemfWindowing.EmfSetWindowExtEx) {
+                    Dimension2D d = ((HemfWindowing.EmfSetWindowExtEx)r).getSize();
+                    width = d.getWidth();
+                    height = d.getHeight();
+                    // keep searching - sometimes there's another record
+                }
+            }
+        }
 
-        double coeff = (double)Units.EMU_PER_CENTIMETER/Units.EMU_PER_POINT/10.;
-        return new Dimension2DDouble(dim.getWidth()*coeff, dim.getHeight()*coeff);
+        if (Math.rint(width*coeff) == 0 || Math.rint(height*coeff) == 0) {
+            width = 100;
+            height = 100;
+        }
+
+        return new Dimension2DDouble(width*coeff, height*coeff);
     }
 

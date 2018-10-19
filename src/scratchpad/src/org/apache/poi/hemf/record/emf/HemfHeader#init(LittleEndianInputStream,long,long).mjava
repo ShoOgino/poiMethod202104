@@ -4,6 +4,8 @@
             throw new IOException("Not a valid EMF header. Record type:"+recordId);
         }
 
+        int startIdx = leis.getReadIndex();
+
         //bounds
         long size = readRectL(leis, boundsRectangle);
         size += readRectL(leis, frameRectangle);
@@ -22,14 +24,24 @@
         //reserved
         leis.skipFully(LittleEndianConsts.SHORT_SIZE);
 
-        nDescription = leis.readUInt();
-        offDescription = leis.readUInt();
+        int nDescription = (int)leis.readUInt();
+        int offDescription = (int)leis.readUInt();
         nPalEntries = leis.readUInt();
 
         size += 8*LittleEndianConsts.INT_SIZE;
 
         size += readDimensionInt(leis, deviceDimension);
         size += readDimensionInt(leis, milliDimension);
+
+        if (nDescription > 0 && offDescription > 0) {
+            int skip = (int)(offDescription - (size + HEADER_SIZE));
+            leis.mark(skip+nDescription*2);
+            leis.skipFully(skip);
+            byte[] buf = new byte[(nDescription-1)*2];
+            leis.readFully(buf);
+            description = new String(buf, StandardCharsets.UTF_16LE).replace((char)0, ' ').trim();
+            leis.reset();
+        }
 
         if (size+12 <= recordSize) {
             hasExtension1 = true;
@@ -43,6 +55,7 @@
             hasExtension2 = true;
             size += readDimensionInt(leis, microDimension);
         }
+
         return size;
     }
 

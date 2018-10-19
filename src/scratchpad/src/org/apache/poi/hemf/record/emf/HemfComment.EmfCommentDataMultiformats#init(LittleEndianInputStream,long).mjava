@@ -23,8 +23,12 @@
             for (EmfCommentDataFormat fmt : formats) {
                 int skip = fmt.offData-(leis.getReadIndex()-startIdx);
                 leis.skipFully(skip);
-                fmt.rawData = new byte[fmt.sizeData];
-                leis.readFully(fmt.rawData);
+                fmt.rawData = IOUtils.safelyAllocate(fmt.sizeData, MAX_RECORD_LENGTH);
+                int readBytes = leis.read(fmt.rawData);
+                if (readBytes < fmt.sizeData) {
+                    // EOF
+                    break;
+                }
             }
 
             return leis.getReadIndex()-startIdx;

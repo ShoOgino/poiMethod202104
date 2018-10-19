@@ -7,13 +7,22 @@
         introSize += readColors(leis);
         assert(introSize < 10000);
 
-        int fileSize = (headerImageSize < headerSize) ? recordSize : (int)Math.min(introSize+headerImageSize,recordSize);
-        
         leis.reset();
-        imageData = IOUtils.toByteArray(leis, fileSize);
-        
+
         assert( headerSize != 0x0C || ((((headerWidth * headerPlanes * headerBitCount.flag + 31) & ~31) / 8) * Math.abs(headerHeight)) == headerImageSize);
 
-        return fileSize;
+        if (headerImageSize < headerSize) {
+            imageData = IOUtils.safelyAllocate(recordSize, MAX_RECORD_LENGTH);
+            leis.readFully(imageData);
+            return recordSize;
+        } else {
+            int fileSize = (int)Math.min(introSize+headerImageSize,recordSize);
+            imageData = IOUtils.safelyAllocate(fileSize, MAX_RECORD_LENGTH);
+            leis.readFully(imageData, 0, introSize);
+            leis.skipFully(recordSize-fileSize);
+            // emfs are sometimes truncated, read as much as possible
+            int readBytes = leis.read(imageData, introSize, fileSize-introSize);
+            return introSize+(recordSize-fileSize)+readBytes;
+        }
     }
 
