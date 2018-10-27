@@ -1,0 +1,43 @@
+    @Internal
+    public void draw(Consumer<Path2D> pathConsumer, FillDrawStyle fillDraw) {
+        final HemfDrawProperties prop = getProperties();
+        final boolean useBracket = prop.getUsePathBracket();
+
+        final Path2D path;
+        if (useBracket) {
+            path = prop.getPath();
+        } else {
+            path = new Path2D.Double();
+            path.setWindingRule(prop.getWindingRule());
+            Point2D pnt = prop.getLocation();
+            path.moveTo(pnt.getX(),pnt.getY());
+        }
+
+        try {
+            pathConsumer.accept(path);
+        } catch (Exception e) {
+            // workaround if a path has been started and no MoveTo command
+            // has been specified before the first lineTo/splineTo
+            final Point2D loc = prop.getLocation();
+            path.moveTo(loc.getX(), loc.getY());
+            pathConsumer.accept(path);
+        }
+
+        prop.setLocation(path.getCurrentPoint());
+        if (!useBracket) {
+            switch (fillDraw) {
+                case FILL:
+                    super.fill(path);
+                    break;
+                case DRAW:
+                    super.draw(path);
+                    break;
+                case FILL_DRAW:
+                    super.fill(path);
+                    super.draw(path);
+                    break;
+            }
+        }
+
+    }
+
