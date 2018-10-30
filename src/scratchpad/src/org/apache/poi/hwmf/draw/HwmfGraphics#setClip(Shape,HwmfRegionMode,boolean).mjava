@@ -1,0 +1,54 @@
+    public void setClip(Shape clip, HwmfRegionMode regionMode, boolean useInitialAT) {
+        final AffineTransform at = graphicsCtx.getTransform();
+        if (useInitialAT) {
+            graphicsCtx.setTransform(initialAT);
+        }
+        final Shape oldClip = graphicsCtx.getClip();
+        final boolean isEmpty = clip.getBounds2D().isEmpty();
+        switch (regionMode) {
+            case RGN_AND:
+                if (!isEmpty) {
+                    graphicsCtx.clip(clip);
+                }
+                break;
+            case RGN_OR:
+                if (!isEmpty) {
+                    if (oldClip == null) {
+                        graphicsCtx.setClip(clip);
+                    } else {
+                        Area area = new Area(oldClip);
+                        area.add(new Area(clip));
+                        graphicsCtx.setClip(area);
+                    }
+                }
+                break;
+            case RGN_XOR:
+                if (!isEmpty) {
+                    if (oldClip == null) {
+                        graphicsCtx.setClip(clip);
+                    } else {
+                        Area area = new Area(oldClip);
+                        area.exclusiveOr(new Area(clip));
+                        graphicsCtx.setClip(area);
+                    }
+                }
+                break;
+            case RGN_DIFF:
+                if (!isEmpty) {
+                    if (oldClip != null) {
+                        Area area = new Area(oldClip);
+                        area.subtract(new Area(clip));
+                        graphicsCtx.setClip(area);
+                    }
+                }
+                break;
+            case RGN_COPY: {
+                graphicsCtx.setClip(isEmpty ? null : clip);
+                break;
+            }
+        }
+        if (useInitialAT) {
+            graphicsCtx.setTransform(at);
+        }
+    }
+

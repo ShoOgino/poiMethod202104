@@ -1,16 +1,56 @@
     public void drawImage(BufferedImage img, Rectangle2D srcBounds, Rectangle2D dstBounds) {
-        // prop.getRasterOp();
-        graphicsCtx.drawImage(img,
-            (int)dstBounds.getX(),
-            (int)dstBounds.getY(),
-            (int)(dstBounds.getX()+dstBounds.getWidth()),
-            (int)(dstBounds.getY()+dstBounds.getHeight()),
-            (int)srcBounds.getX(),
-            (int)srcBounds.getY(),
-            (int)(srcBounds.getX()+srcBounds.getWidth()),
-            (int)(srcBounds.getY()+srcBounds.getHeight()),
-            null, // getProperties().getBackgroundColor().getColor(),
-            null
-        );
+        HwmfDrawProperties prop = getProperties();
+
+        // handle raster op
+        // currently the raster op as described in https://docs.microsoft.com/en-us/windows/desktop/gdi/ternary-raster-operations
+        // are not supported, as we would need to extract the destination image area from the underlying buffered image
+        // and therefore would make it mandatory that the graphics context must be from a buffered image
+        // furthermore I doubt the purpose of bitwise image operations on non-black/white images
+        switch (prop.getRasterOp()) {
+            case D:
+                // keep destination, i.e. do nothing
+                break;
+            case PATCOPY:
+                graphicsCtx.setPaint(getFill());
+                graphicsCtx.fill(dstBounds);
+                break;
+            case BLACKNESS:
+                graphicsCtx.setPaint(Color.BLACK);
+                graphicsCtx.fill(dstBounds);
+                break;
+            case WHITENESS:
+                graphicsCtx.setPaint(Color.WHITE);
+                graphicsCtx.fill(dstBounds);
+                break;
+            default:
+            case SRCCOPY:
+                final Shape clip = graphicsCtx.getClip();
+
+                // add clipping in case of a source subimage, i.e. a clipped source image
+                // some dstBounds are horizontal or vertical flipped, so we need to normalize the images
+                Rectangle2D normalized = new Rectangle2D.Double(
+                    dstBounds.getWidth() >= 0 ? dstBounds.getMinX() : dstBounds.getMaxX(),
+                    dstBounds.getHeight() >= 0 ? dstBounds.getMinY() : dstBounds.getMaxY(),
+                    Math.abs(dstBounds.getWidth()),
+                    Math.abs(dstBounds.getHeight()));
+                graphicsCtx.clip(normalized);
+                final AffineTransform at = graphicsCtx.getTransform();
+
+                final Rectangle2D imgBounds = new Rectangle2D.Double(0,0,img.getWidth(),img.getHeight());
+                final boolean isImgBounds = (srcBounds.equals(new Rectangle2D.Double()));
+                final Rectangle2D srcBounds2 = isImgBounds ? imgBounds : srcBounds;
+
+                // TODO: apply emf transform
+                graphicsCtx.translate(dstBounds.getX(), dstBounds.getY());
+                graphicsCtx.scale(dstBounds.getWidth()/srcBounds2.getWidth(), dstBounds.getHeight()/srcBounds2.getHeight());
+                graphicsCtx.translate(-srcBounds2.getX(), -srcBounds2.getY());
+
+                graphicsCtx.drawImage(img, 0, 0, prop.getBackgroundColor().getColor(), null);
+
+                graphicsCtx.setTransform(at);
+                graphicsCtx.setClip(clip);
+                break;
+        }
+
     }
 

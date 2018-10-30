@@ -11,7 +11,7 @@
             // rectangle and optionally a brush pattern, to achieve the final color.
             int rasterOpIndex = (int)leis.readUInt();
 
-            rasterOperation = HwmfTernaryRasterOp.valueOf(rasterOpIndex);
+            rasterOperation = HwmfTernaryRasterOp.valueOf(rasterOpIndex >>> 16);
 
             size += LittleEndianConsts.INT_SIZE;
 
@@ -22,7 +22,7 @@
 
             size += bkColorSrc.init(leis);
 
-            usageSrc = (int)leis.readUInt();
+            colorUsage = ColorUsage.valueOf((int)leis.readUInt());
 
             // A 32-bit unsigned integer that specifies the offset, in bytes, from the
             // start of this record to the source bitmap header in the BitmapBuffer field.
@@ -31,7 +31,7 @@
             // A 32-bit unsigned integer that specifies the size, in bytes, of the source bitmap header.
             final int cbBmiSrc = (int)leis.readUInt();
             size += 3*LittleEndianConsts.INT_SIZE;
-            if (size <= recordSize) {
+            if (size >= recordSize) {
                 return size;
             }
 
@@ -41,8 +41,11 @@
 
             // A 32-bit unsigned integer that specifies the size, in bytes, of the source bitmap bits.
             final int cbBitsSrc = (int)leis.readUInt();
-
             size += 2*LittleEndianConsts.INT_SIZE;
+
+            if (size >= recordSize) {
+                return size;
+            }
 
             if (srcEqualsDstDimension()) {
                 srcBounds.setRect(srcPnt.getX(), srcPnt.getY(), dstBounds.getWidth(), dstBounds.getHeight());

@@ -1,6 +1,7 @@
-    public void drawString(byte[] text, Point2D reference, Rectangle2D clip, List<Integer> dx, boolean isUnicode) {
+    public void drawString(byte[] text, Point2D reference, Rectangle2D clip, WmfExtTextOutOptions opts, List<Integer> dx, boolean isUnicode) {
+        final HwmfDrawProperties prop = getProperties();
 
-        HwmfFont font = getProperties().getFont();
+        HwmfFont font = prop.getFont();
         if (font == null || text == null || text.length == 0) {
             return;
         }
@@ -102,21 +103,31 @@
         Point2D dst = new Point2D.Double();
         tx.transform(src, dst);
 
-        // TODO: implement clipping on bounds
+        final Shape clipShape = graphicsCtx.getClip();
         final AffineTransform at = graphicsCtx.getTransform();
         try {
+            if (clip != null) {
+                graphicsCtx.translate(-clip.getCenterX(), -clip.getCenterY());
+                graphicsCtx.rotate(angle);
+                graphicsCtx.translate(clip.getCenterX(), clip.getCenterY());
+                if (prop.getBkMode() == HwmfBkMode.OPAQUE && opts.isOpaque()) {
+                    graphicsCtx.setPaint(prop.getBackgroundColor().getColor());
+                    graphicsCtx.fill(clip);
+                }
+                if (opts.isClipped()) {
+                    graphicsCtx.setClip(clip);
+                }
+                graphicsCtx.setTransform(at);
+            }
+
             graphicsCtx.translate(reference.getX(), reference.getY());
             graphicsCtx.rotate(angle);
             graphicsCtx.translate(dst.getX(), dst.getY());
-            if (getProperties().getBkMode() == HwmfBkMode.OPAQUE && clip != null) {
-                // TODO: validate bounds
-                graphicsCtx.setBackground(getProperties().getBackgroundColor().getColor());
-                graphicsCtx.fill(new Rectangle2D.Double(0, 0, clip.getWidth(), clip.getHeight()));
-            }
-            graphicsCtx.setColor(getProperties().getTextColor().getColor());
+            graphicsCtx.setColor(prop.getTextColor().getColor());
             graphicsCtx.drawString(as.getIterator(), 0, 0);
         } finally {
             graphicsCtx.setTransform(at);
+            graphicsCtx.setClip(clipShape);
         }
     }
 
