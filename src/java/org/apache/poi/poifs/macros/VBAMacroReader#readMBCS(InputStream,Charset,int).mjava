@@ -1,21 +1,19 @@
     //returns a string if any bytes are read or null if two 0x00 are read
-    private static String readMBCS(InputStream is, Charset charset) throws IOException {
+    private static String readMBCS(InputStream is, Charset charset, int maxLength) throws IOException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         int len = 0;
-        int b = is.read();
-        while (b != 0) {
+        int b = IOUtils.readByte(is);
+        while (b > 0 && len < maxLength) {
             ++len;
-            if (b == -1) {
-                throw new EOFException();
-            }
             bos.write(b);
-            b = is.read();
+            b = IOUtils.readByte(is);
         }
+        //if b was 0 and the above while loop
+        //was never entered, check for a second 0,
+        //which would be the sign that you're at the end
+        //of the list
         if (len == 0) {
-            b = is.read();
-            if (b == -1) {
-                throw new EOFException();
-            }
+            b = IOUtils.readByte(is);
             if (b != 0) {
                 LOGGER.log(POILogger.WARN, "expected two 0x00 at end of module name map");
             }

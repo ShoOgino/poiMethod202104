@@ -1,11 +1,16 @@
-    private static void readNameMapRecords(InputStream is, Map<String, String> moduleNames, Charset charset) throws IOException {
+    private static void readNameMapRecords(InputStream is,
+                                           Map<String, String> moduleNames, Charset charset) throws IOException {
         //see 2.3.3 PROJECTwm Stream: Module Name Information
         //multibytecharstring
         String mbcs = null;
         String unicode = null;
-        do {
+        //arbitrary sanity thresholds
+        final int maxNameRecords = 10000;
+        final int maxNameLength = 20000;
+        int records = 0;
+        while (++records < maxNameRecords) {
             try {
-                mbcs = readMBCS(is, charset);
+                mbcs = readMBCS(is, charset, maxNameLength);
             } catch (EOFException e) {
                 return;
             }
@@ -13,13 +18,16 @@
                 return;
             }
             try {
-                unicode = readUnicode(is);
+                unicode = readUnicode(is, maxNameLength);
             } catch (EOFException e) {
                 return;
             }
-            if (mbcs != null && unicode != null) {
+            if (unicode != null) {
                 moduleNames.put(mbcs, unicode);
             }
-        } while (mbcs != null && unicode != null);
+        }
+        if (records >= maxNameRecords) {
+            LOGGER.log(POILogger.WARN, "Hit max name records to read ("+maxNameRecords+"). Stopped early.");
+        }
     }
 
