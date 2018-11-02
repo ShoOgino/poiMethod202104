@@ -1,0 +1,39 @@
+    protected void readNameMapRecords(InputStream is,
+                                           Map<String, String> moduleNames, Charset charset) throws IOException {
+        //see 2.3.3 PROJECTwm Stream: Module Name Information
+        //multibytecharstring
+        String mbcs = null;
+        String unicode = null;
+        //arbitrary sanity threshold
+        final int maxNameRecords = 10000;
+        int records = 0;
+        while (++records < maxNameRecords) {
+            try {
+                int b = IOUtils.readByte(is);
+                //check for two 0x00 that mark end of record
+                if (b == 0) {
+                    b = IOUtils.readByte(is);
+                    if (b == 0) {
+                        return;
+                    }
+                }
+                mbcs = readMBCS(b, is, charset, MAX_STRING_LENGTH);
+            } catch (EOFException e) {
+                return;
+            }
+
+            try {
+                unicode = readUnicode(is, MAX_STRING_LENGTH);
+            } catch (EOFException e) {
+                return;
+            }
+            if (mbcs.trim().length() > 0 && unicode.trim().length() > 0) {
+                moduleNames.put(mbcs, unicode);
+            }
+
+        }
+        if (records >= maxNameRecords) {
+            LOGGER.log(POILogger.WARN, "Hit max name records to read ("+maxNameRecords+"). Stopped early.");
+        }
+    }
+

@@ -5,10 +5,11 @@
      */
     @SuppressWarnings("unchecked")
     private static Set<Class<?>> getLoadedClasses(String ptrn) {
-        // make the field accessible, we defer this from static initialization to here to 
+        // make the field accessible, we defer this from static initialization to here to
         // allow JDKs which do not have this field (e.g. IBM JDK) to at least load the class
         // without failing, see https://issues.apache.org/bugzilla/show_bug.cgi?id=56550
         final Field _classes = AccessController.doPrivileged(new PrivilegedAction<Field>() {
+            @Override
             @SuppressForbidden("TODO: Reflection works until Java 8 on Oracle/Sun JDKs, but breaks afterwards (different classloader types, access checks)")
             public Field run() {
                 try {
@@ -29,11 +30,17 @@
             for (Class<?> cls : classes) {
                 // e.g. proxy-classes, ...
                 ProtectionDomain pd = cls.getProtectionDomain();
-                if (pd == null) continue;
+                if (pd == null) {
+                    continue;
+                }
                 CodeSource cs = pd.getCodeSource();
-                if (cs == null) continue;
+                if (cs == null) {
+                    continue;
+                }
                 URL loc = cs.getLocation();
-                if (loc == null) continue;
+                if (loc == null) {
+                    continue;
+                }
 
                 String jar = loc.toString();
                 if (jar.contains(ptrn)) {

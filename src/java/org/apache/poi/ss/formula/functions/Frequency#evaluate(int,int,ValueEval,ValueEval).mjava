@@ -1,0 +1,21 @@
+    public ValueEval evaluate(int srcRowIndex, int srcColumnIndex, ValueEval arg0, ValueEval arg1) {
+        MatrixFunction.MutableValueCollector collector = new MatrixFunction.MutableValueCollector(false, false);
+
+        double[] values;
+        double[] bins;
+        try {
+            values = collector.collectValues(arg0);
+            bins = collector.collectValues(arg1);
+        } catch (EvaluationException e) {
+            return e.getErrorEval();
+        }
+
+        // can bins be not sorted?
+        //bins = Arrays.stream(bins).sorted().distinct().toArray();
+
+        int[] histogram = histogram(values, bins);
+        NumberEval[] result = Arrays.stream(histogram).boxed().map(NumberEval::new).toArray(NumberEval[]::new);
+        return new CacheAreaEval(srcRowIndex, srcColumnIndex,
+                srcRowIndex + result.length - 1, srcColumnIndex, result);
+    }
+

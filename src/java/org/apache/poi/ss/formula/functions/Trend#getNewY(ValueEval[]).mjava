@@ -1,0 +1,163 @@
+    private static TrendResults getNewY(ValueEval[] args) throws EvaluationException {
+        double[][] xOrig;
+        double[][] x;
+        double[][] yOrig;
+        double[] y;
+        double[][] newXOrig;
+        double[][] newX;
+        double[][] resultSize;
+        boolean passThroughOrigin = false;
+        switch (args.length) {
+        case 1:
+            yOrig = evalToArray(args[0]);
+            xOrig = new double[0][0];
+            newXOrig = new double[0][0];
+            break;
+        case 2:
+            yOrig = evalToArray(args[0]);
+            xOrig = evalToArray(args[1]);
+            newXOrig = new double[0][0];
+            break;
+        case 3:
+            yOrig = evalToArray(args[0]);
+            xOrig = evalToArray(args[1]);
+            newXOrig = evalToArray(args[2]);
+            break;
+        case 4:
+            yOrig = evalToArray(args[0]);
+            xOrig = evalToArray(args[1]);
+            newXOrig = evalToArray(args[2]);
+            if (!(args[3] instanceof BoolEval)) {
+                throw new EvaluationException(ErrorEval.VALUE_INVALID);
+            }
+            // The argument in Excel is false when it *should* pass through the origin.
+            passThroughOrigin = !((BoolEval)args[3]).getBooleanValue();
+            break;
+        default:
+            throw new EvaluationException(ErrorEval.VALUE_INVALID);
+        }
+
+        if (yOrig.length < 1) {
+            throw new EvaluationException(ErrorEval.VALUE_INVALID);
+        }
+        y = flattenArray(yOrig);
+        newX = newXOrig;
+
+        if (newXOrig.length > 0) {
+            resultSize = newXOrig;
+        } else {
+            resultSize = new double[1][1];
+        }
+
+        if (y.length == 1) {
+            /* See comment at top of file
+            if (xOrig.length > 0 && !(xOrig.length == 1 || xOrig[0].length == 1)) {
+                throw new EvaluationException(ErrorEval.REF_INVALID);
+            } else if (xOrig.length < 1) {
+                x = new double[1][1];
+                x[0][0] = 1;
+            } else {
+                x = new double[1][];
+                x[0] = flattenArray(xOrig);
+                if (newXOrig.length < 1) {
+                    resultSize = xOrig;
+                }
+            }*/
+            throw new NotImplementedException("Sample size too small");
+        } else if (yOrig.length == 1 || yOrig[0].length == 1) {
+            if (xOrig.length < 1) {
+                x = getDefaultArrayOneD(y.length);
+                if (newXOrig.length < 1) {
+                    resultSize = yOrig;
+                }
+            } else {
+                x = xOrig;
+                if (xOrig[0].length > 1 && yOrig.length == 1) {
+                    x = switchRowsColumns(x);
+                }
+                if (newXOrig.length < 1) {
+                    resultSize = xOrig;
+                }
+            }
+            if (newXOrig.length > 0 && (x.length == 1 || x[0].length == 1)) {
+                newX = flattenArrayToRow(newXOrig);
+            }
+        } else {
+            if (xOrig.length < 1) {
+                x = getDefaultArrayOneD(y.length);
+                if (newXOrig.length < 1) {
+                    resultSize = yOrig;
+                }
+            } else {
+                x = flattenArrayToRow(xOrig);
+                if (newXOrig.length < 1) {
+                    resultSize = xOrig;
+                }
+            }
+            if (newXOrig.length > 0) {
+                newX = flattenArrayToRow(newXOrig);
+            }
+            if (y.length != x.length || yOrig.length != xOrig.length) {
+                throw new EvaluationException(ErrorEval.REF_INVALID);
+            }
+        }
+
+        if (newXOrig.length < 1) {
+            newX = x;
+        } else if (newXOrig.length == 1 && newXOrig[0].length > 1 && xOrig.length > 1 && xOrig[0].length == 1) {
+            newX = switchRowsColumns(newXOrig);
+        }
+        
+        if (newX[0].length != x[0].length) {
+            throw new EvaluationException(ErrorEval.REF_INVALID);
+        }
+        
+        if (x[0].length >= x.length) {
+            /* See comment at top of file */
+            throw new NotImplementedException("Sample size too small");
+        }
+
+        int resultHeight = resultSize.length;
+        int resultWidth = resultSize[0].length;
+
+        if(isAllColumnsSame(x)){
+            double[] result = new double[newX.length];
+            double avg = Arrays.stream(y).average().orElse(0);
+            for(int i = 0; i < result.length; i++) result[i] = avg;
+            return new TrendResults(result, resultWidth, resultHeight);
+        }
+
+        OLSMultipleLinearRegression reg = new OLSMultipleLinearRegression();
+        if (passThroughOrigin) {
+            reg.setNoIntercept(true);
+        }
+
+        try {
+            reg.newSampleData(y, x);
+        } catch (IllegalArgumentException e) {
+            throw new EvaluationException(ErrorEval.REF_INVALID);
+        }
+        double[] par;
+        try {
+            par = reg.estimateRegressionParameters();
+        } catch (SingularMatrixException e) {
+            throw new NotImplementedException("Singular matrix in input");
+        }
+
+        double[] result = new double[newX.length];
+        for (int i = 0; i < newX.length; i++) {
+            result[i] = 0;
+            if (passThroughOrigin) {
+                for (int j = 0; j < par.length; j++) {
+                    result[i] += par[j] * newX[i][j];
+                }
+            } else {
+                result[i] = par[0];
+                for (int j = 1; j < par.length; j++) {
+                    result[i] += par[j] * newX[i][j - 1];
+                }
+            }
+        }
+        return new TrendResults(result, resultWidth, resultHeight);
+    }
+

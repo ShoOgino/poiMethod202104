@@ -1,0 +1,48 @@
+    protected void readProjectProperties(DocumentInputStream dis,
+                                         Map<String, String> moduleNameMap, ModuleMap modules) throws IOException {
+        InputStreamReader reader = new InputStreamReader(dis, modules.charset);
+        StringBuilder builder = new StringBuilder();
+        char[] buffer = new char[512];
+        int read;
+        while ((read = reader.read(buffer)) >= 0) {
+            builder.append(buffer, 0, read);
+        }
+        String properties = builder.toString();
+        //the module name map names should be in exactly the same order
+        //as the module names here. See 2.3.3 PROJECTwm Stream.
+        //At some point, we might want to enforce that.
+        for (String line : properties.split("\r\n|\n\r")) {
+            if (!line.startsWith("[")) {
+                String[] tokens = line.split("=");
+                if (tokens.length > 1 && tokens[1].length() > 1
+                        && tokens[1].startsWith("\"") && tokens[1].endsWith("\"")) {
+                    // Remove any double quotes
+                    tokens[1] = tokens[1].substring(1, tokens[1].length() - 1);
+                }
+                if ("Document".equals(tokens[0]) && tokens.length > 1) {
+                    String mn = tokens[1].substring(0, tokens[1].indexOf("/&H"));
+                    ModuleImpl module = getModule(mn, moduleNameMap, modules);
+                    if (module != null) {
+                        module.moduleType = ModuleType.Document;
+                    } else {
+                        LOGGER.log(POILogger.WARN, "couldn't find module with name: "+mn);
+                    }
+                } else if ("Module".equals(tokens[0]) && tokens.length > 1) {
+                    ModuleImpl module = getModule(tokens[1], moduleNameMap, modules);
+                    if (module != null) {
+                        module.moduleType = ModuleType.Module;
+                    } else {
+                        LOGGER.log(POILogger.WARN, "couldn't find module with name: "+tokens[1]);
+                    }
+                } else if ("Class".equals(tokens[0]) && tokens.length > 1) {
+                    ModuleImpl module = getModule(tokens[1], moduleNameMap, modules);
+                    if (module != null) {
+                        module.moduleType = ModuleType.Class;
+                    } else {
+                        LOGGER.log(POILogger.WARN, "couldn't find module with name: "+tokens[1]);
+                    }
+                }
+            }
+        }
+    }
+

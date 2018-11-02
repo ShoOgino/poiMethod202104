@@ -1,0 +1,34 @@
+    @Test
+    public void testEvaluate() {
+        Workbook wb = new HSSFWorkbook();
+        FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
+
+        int[] data = {1, 1, 2, 3, 4, 4, 5, 7, 8, 9, 9, 11, 3, 5, 8};
+        int[] bins = {3, 6, 9};
+        Sheet sheet = wb.createSheet();
+        Row dataRow = sheet.createRow(0); // A1:O1
+        for (int i = 0; i < data.length; i++) {
+            dataRow.createCell(i).setCellValue(data[i]);
+        }
+        Row binsRow = sheet.createRow(1);
+        for (int i = 0; i < bins.length; i++) { // A2:C2
+            binsRow.createCell(i).setCellValue(bins[i]);
+        }
+        Row fmlaRow = sheet.createRow(2);
+        CellRange<? extends Cell> arrayFmla = sheet.setArrayFormula("FREQUENCY(A1:O1,A2:C2)", CellRangeAddress.valueOf("A3:A6"));
+        Cell b3 = fmlaRow.createCell(1); // B3
+        b3.setCellFormula("COUNT(FREQUENCY(A1:O1,A2:C2))"); // frequency returns a vertical array of bins+1
+
+        Cell c3 = fmlaRow.createCell(2);
+        c3.setCellFormula("SUM(FREQUENCY(A1:O1,A2:C2))"); // sum of the frequency bins should add up to the number of data values
+
+        assertEquals(5, (int) evaluator.evaluate(arrayFmla.getFlattenedCells()[0]).getNumberValue());
+        assertEquals(4, (int) evaluator.evaluate(arrayFmla.getFlattenedCells()[1]).getNumberValue());
+        assertEquals(5, (int) evaluator.evaluate(arrayFmla.getFlattenedCells()[2]).getNumberValue());
+        assertEquals(1, (int) evaluator.evaluate(arrayFmla.getFlattenedCells()[3]).getNumberValue());
+
+        assertEquals(4, (int) evaluator.evaluate(b3).getNumberValue());
+        assertEquals(15, (int) evaluator.evaluate(c3).getNumberValue());
+
+    }
+

@@ -1,0 +1,21 @@
+    private ASCIIUnicodeStringPair readStringPair(RLEDecompressingInputStream in,
+                                                  Charset charset, int reservedByte,
+                                                  boolean throwOnUnexpectedReservedByte) throws IOException {
+        int nameLength = in.readInt();
+        String ascii = readString(in, nameLength, charset);
+        int reserved = in.readShort();
+
+        if (reserved != reservedByte) {
+            if (throwOnUnexpectedReservedByte) {
+                throw new IOException("Expected " + Integer.toHexString(reservedByte) +
+                        "after name before Unicode name, but found: " +
+                        Integer.toHexString(reserved));
+            } else {
+                return new ASCIIUnicodeStringPair(ascii, reserved);
+            }
+        }
+        int unicodeNameRecordLength = in.readInt();
+        String unicode = readUnicodeString(in, unicodeNameRecordLength);
+        return new ASCIIUnicodeStringPair(ascii, unicode);
+    }
+
