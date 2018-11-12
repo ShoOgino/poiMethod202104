@@ -1,6 +1,17 @@
     public void drawString(byte[] text, int length, Point2D reference, Dimension2D scale, Rectangle2D clip, WmfExtTextOutOptions opts, List<Integer> dx, boolean isUnicode) {
         final HwmfDrawProperties prop = getProperties();
 
+        final AffineTransform at = graphicsCtx.getTransform();
+        if (at.getScaleX() == 0. || at.getScaleY() == 0.) {
+            return;
+        }
+
+        try {
+            at.createInverse();
+        } catch (NoninvertibleTransformException e) {
+            return;
+        }
+
         HwmfFont font = prop.getFont();
         if (font == null || text == null || text.length == 0) {
             return;
@@ -21,11 +32,19 @@
         }
 
         String textString = new String(text, charset).substring(0,length).trim();
+
         if (textString.isEmpty()) {
             return;
         }
+
+        DrawFontManager fontHandler = DrawFactory.getInstance(graphicsCtx).getFontManager(graphicsCtx);
+        FontInfo fontInfo = fontHandler.getMappedFont(graphicsCtx, font);
+        if (fontInfo.getCharset() == FontCharset.SYMBOL) {
+            textString = DrawFontManagerDefault.mapSymbolChars(textString);
+        }
+
         AttributedString as = new AttributedString(textString);
-        addAttributes(as, font);
+        addAttributes(as, font, fontInfo.getTypeface());
 
         // disabled for the time being, as the results aren't promising
         /*
@@ -104,7 +123,6 @@
         tx.transform(src, dst);
 
         final Shape clipShape = graphicsCtx.getClip();
-        final AffineTransform at = graphicsCtx.getTransform();
         try {
             if (clip != null) {
                 graphicsCtx.translate(-clip.getCenterX(), -clip.getCenterY());

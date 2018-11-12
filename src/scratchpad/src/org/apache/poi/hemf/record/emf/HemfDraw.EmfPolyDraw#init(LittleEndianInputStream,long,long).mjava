@@ -5,7 +5,8 @@
             size += LittleEndianConsts.INT_SIZE;
             Point2D points[] = new Point2D[count];
             for (int i=0; i<count; i++) {
-                 size += readPoint(leis, points[i]);
+                points[i] = new Point2D.Double();
+                size += readPoint(leis, points[i]);
             }
 
             poly = new Path2D.Double(Path2D.WIND_EVEN_ODD, count);
@@ -30,12 +31,14 @@
                     case 0x04:
                         int mode2 = leis.readUByte();
                         int mode3 = leis.readUByte();
-                        assert(mode2 == 0x04 && mode3 == 0x04);
+                        assert(mode2 == 0x04 && (mode3 == 0x04 || mode3 == 0x05));
                         poly.curveTo(
                             points[i].getX(), points[i].getY(),
                             points[i+1].getX(), points[i+1].getY(),
                             points[i+2].getX(), points[i+2].getY()
                         );
+                        // update mode for closePath handling below
+                        mode = mode3;
                         i+=2;
                         break;
                     // PT_MOVETO
