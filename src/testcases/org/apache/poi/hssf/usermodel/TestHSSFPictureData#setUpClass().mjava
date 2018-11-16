@@ -1,6 +1,14 @@
     @BeforeClass
     public static void setUpClass() {
-        // disable cache to avoid strange errors related to temporary directories in CI-builds
-        ImageIO.setUseCache(false);
+        final String tmpDirProperty = System.getProperty("java.io.tmpdir");
+        if(tmpDirProperty == null || "".equals(tmpDirProperty)) {
+            return;
+        }
+        // ensure that temp-dir exists because ImageIO requires it
+        final File tmpDir = new File(tmpDirProperty);
+        if(!tmpDir.exists() && !tmpDir.mkdirs()) {
+            throw new IllegalStateException("Could not create temporary directory " + tmpDirProperty + ", full path " + tmpDir.getAbsolutePath());
+        }
+        ImageIO.setCacheDirectory(tmpDir);
     }
 
