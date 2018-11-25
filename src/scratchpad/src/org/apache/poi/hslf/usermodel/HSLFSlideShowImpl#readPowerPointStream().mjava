@@ -5,13 +5,18 @@
      * @throws IOException when the powerpoint can't be read
      */
     private void readPowerPointStream() throws IOException {
+        final DirectoryNode dir = getDirectory();
+
+        if (!dir.hasEntry(POWERPOINT_DOCUMENT) && dir.hasEntry(PP95_DOCUMENT)) {
+            throw new OldPowerPointFormatException("You seem to have supplied a PowerPoint95 file, which isn't supported");
+        }
+
         // Get the main document stream
-        DocumentEntry docProps =
-                (DocumentEntry) getDirectory().getEntry(HSLFSlideShow.POWERPOINT_DOCUMENT);
+        DocumentEntry docProps = (DocumentEntry)dir.getEntry(POWERPOINT_DOCUMENT);
 
         // Grab the document stream
         int len = docProps.getSize();
-        try (InputStream is = getDirectory().createDocumentInputStream(HSLFSlideShow.POWERPOINT_DOCUMENT)) {
+        try (InputStream is = dir.createDocumentInputStream(docProps)) {
             _docstream = IOUtils.toByteArray(is, len);
         }
     }
