@@ -10,34 +10,17 @@
         }
 
         Rectangle2D anchor = DrawShape.getAnchor(graphics, shape);
-        final double h = anchor.getHeight(), w = anchor.getWidth(), x = anchor.getX(), y = anchor.getY();
 
         AffineTransform at = AffineTransform.getRotateInstance(Math.toRadians(angle), anchor.getCenterX(), anchor.getCenterY());
 
-        double diagonal = Math.sqrt(h * h + w * w);
-        Point2D p1 = new Point2D.Double(x + w / 2 - diagonal / 2, y + h / 2);
-        p1 = at.transform(p1, null);
-
-        Point2D p2 = new Point2D.Double(x + w, y + h / 2);
-        p2 = at.transform(p2, null);
+        double diagonal = Math.sqrt(Math.pow(anchor.getWidth(),2) + Math.pow(anchor.getHeight(),2));
+        final Point2D p1 = at.transform(new Point2D.Double(anchor.getCenterX() - diagonal / 2, anchor.getCenterY()), null);
+        final Point2D p2 = at.transform(new Point2D.Double(anchor.getMaxX(), anchor.getCenterY()), null);
 
 //        snapToAnchor(p1, anchor);
 //        snapToAnchor(p2, anchor);
 
-        if (p1.equals(p2)) {
-            // gradient paint on the same point throws an exception ... and doesn't make sense
-            return null;
-        }
-
-        float[] fractions = fill.getGradientFractions();
-        Color[] colors = new Color[fractions.length];
-
-        int i = 0;
-        for (ColorStyle fc : fill.getGradientColors()) {
-            // if fc is null, use transparent color to get color of background
-            colors[i++] = (fc == null) ? TRANSPARENT : applyColorTransform(fc);
-        }
-
-        return new LinearGradientPaint(p1, p2, fractions, colors);
+        // gradient paint on the same point throws an exception ... and doesn't make sense
+        return (p1.equals(p2)) ? null : safeFractions((f,c)->new LinearGradientPaint(p1,p2,f,c), fill);
     }
 
