@@ -1,0 +1,53 @@
+    public static void main(String[] args) throws Exception {
+        if(args.length < 1) {
+            usage();
+            return;
+        }
+
+        try (BufferedReader modelReader = new BufferedReader(new FileReader(args[0]))) {
+
+            String chartTitle = modelReader.readLine();  // first line is chart title
+            String[] series = modelReader.readLine().split(",");
+
+            // Category Axis Data
+            List<String> listLanguages = new ArrayList<>(10);
+
+            // Values
+            List<Double> listCountries = new ArrayList<>(10);
+            List<Double> listSpeakers = new ArrayList<>(10);
+
+            // set model
+            String ln;
+            while((ln = modelReader.readLine()) != null) {
+                String[] vals = ln.split(",");
+                listCountries.add(Double.valueOf(vals[0]));
+                listSpeakers.add(Double.valueOf(vals[1]));
+                listLanguages.add(vals[2]);
+            }
+
+            String[] categories = listLanguages.toArray(new String[listLanguages.size()]);
+            Double[] values1 = listCountries.toArray(new Double[listCountries.size()]);
+            Double[] values2 = listSpeakers.toArray(new Double[listSpeakers.size()]);
+
+            try {
+
+                XMLSlideShow ppt = new XMLSlideShow();
+                XSLFSlide slide = ppt.createSlide();
+                XSLFChart chart = ppt.createChart();
+                Rectangle2D rect2D = new java.awt.Rectangle(XDDFChart.DEFAULT_X, XDDFChart.DEFAULT_Y,
+                        XDDFChart.DEFAULT_WIDTH, XDDFChart.DEFAULT_HEIGHT);
+                slide.addChart(chart, rect2D);
+                setBarData(chart, chartTitle, series, categories, values1, values2);
+                // save the result
+                try (OutputStream out = new FileOutputStream("bar-chart-demo-output.pptx")) {
+                    ppt.write(out);
+                }
+            }
+            catch(Exception e)
+            {
+                e.printStackTrace();
+            }
+        }
+        System.out.println("Done");
+    }
+
