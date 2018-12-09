@@ -1,0 +1,119 @@
+    CustomGeometry getGeometry(Path2D path2D) {
+        final ObjectFactory of = new ObjectFactory();
+        final CTCustomGeometry2D cusGeo = of.createCTCustomGeometry2D();
+        cusGeo.setAvLst(of.createCTGeomGuideList());
+        cusGeo.setGdLst(of.createCTGeomGuideList());
+        cusGeo.setAhLst(of.createCTAdjustHandleList());
+        cusGeo.setCxnLst(of.createCTConnectionSiteList());
+
+        final AbstractEscherOptRecord opt = getEscherOptRecord();
+
+        EscherArrayProperty verticesProp = getShapeProp(opt, EscherProperties.GEOMETRY__VERTICES);
+        EscherArrayProperty segmentsProp = getShapeProp(opt, EscherProperties.GEOMETRY__SEGMENTINFO);
+
+        // return empty path if either GEOMETRY__VERTICES or GEOMETRY__SEGMENTINFO is missing, see Bugzilla 54188
+
+        //sanity check
+        if(verticesProp == null) {
+            LOG.log(POILogger.WARN, "Freeform is missing GEOMETRY__VERTICES ");
+            return super.getGeometry();
+        }
+        if(segmentsProp == null) {
+            LOG.log(POILogger.WARN, "Freeform is missing GEOMETRY__SEGMENTINFO ");
+            return super.getGeometry();
+        }
+
+        final Iterator<byte[]> vertIter = verticesProp.iterator();
+        final Iterator<byte[]> segIter = segmentsProp.iterator();
+        final int[] xyPoints = new int[2];
+        boolean isClosed = false;
+
+        final CTPath2DList pathLst = of.createCTPath2DList();
+        final CTPath2D pathCT = of.createCTPath2D();
+        final List<Object> moveLst = pathCT.getCloseOrMoveToOrLnTo();
+        pathLst.getPath().add(pathCT);
+        cusGeo.setPathLst(pathLst);
+
+        while (segIter.hasNext()) {
+            byte[] segElem = segIter.next();
+            HSLFFreeformShape.PathInfo pi = getPathInfo(segElem);
+            if (pi == null) {
+                continue;
+            }
+            switch (pi) {
+                case escape: {
+                    handleEscapeInfo(pathCT, path2D, segElem, vertIter);
+                    break;
+                }
+                case moveTo:
+                    if (vertIter.hasNext()) {
+                        final CTPath2DMoveTo m = of.createCTPath2DMoveTo();
+                        m.setPt(fillPoint(vertIter.next(), xyPoints));
+                        moveLst.add(m);
+                        path2D.moveTo(xyPoints[0], xyPoints[1]);
+                    }
+                    break;
+                case lineTo:
+                    if (vertIter.hasNext()) {
+                        final CTPath2DLineTo m = of.createCTPath2DLineTo();
+                        m.setPt(fillPoint(vertIter.next(), xyPoints));
+                        moveLst.add(m);
+                        path2D.lineTo(xyPoints[0], xyPoints[1]);
+                    }
+                    break;
+                case curveTo: {
+                    final CTPath2DCubicBezierTo m = of.createCTPath2DCubicBezierTo();
+                    List<CTAdjPoint2D> mLst = m.getPt();
+
+                    int[] pts = new int[6];
+
+                    for (int i=0; vertIter.hasNext() && i<3; i++) {
+                        mLst.add(fillPoint(vertIter.next(), xyPoints));
+                        pts[i*2] = xyPoints[0];
+                        pts[i*2+1] = xyPoints[1];
+                        if (i == 2) {
+                            moveLst.add(m);
+                            path2D.curveTo(pts[0], pts[1], pts[2], pts[3], pts[4], pts[5]);
+                        }
+                    }
+                    break;
+                }
+                case close:
+                    moveLst.add(of.createCTPath2DClose());
+                    path2D.closePath();
+                    isClosed = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        EscherSimpleProperty shapePath = getShapeProp(opt, EscherProperties.GEOMETRY__SHAPEPATH);
+        HSLFFreeformShape.ShapePath sp = HSLFFreeformShape.ShapePath.valueOf(shapePath == null ? 1 : shapePath.getPropertyValue());
+        if ((sp == HSLFFreeformShape.ShapePath.LINES_CLOSED || sp == HSLFFreeformShape.ShapePath.CURVES_CLOSED) && !isClosed) {
+            moveLst.add(of.createCTPath2DClose());
+            path2D.closePath();
+        }
+
+        EscherSimpleProperty geoLeft = getShapeProp(opt, EscherProperties.GEOMETRY__LEFT);
+        EscherSimpleProperty geoRight = getShapeProp(opt, EscherProperties.GEOMETRY__RIGHT);
+        EscherSimpleProperty geoTop = getShapeProp(opt, EscherProperties.GEOMETRY__TOP);
+        EscherSimpleProperty geoBottom = getShapeProp(opt, EscherProperties.GEOMETRY__BOTTOM);
+
+        final Rectangle2D bounds;
+        if (geoLeft != null && geoRight != null && geoTop != null && geoBottom != null) {
+            bounds = new Rectangle2D.Double();
+            bounds.setFrameFromDiagonal(
+                new Point2D.Double(geoLeft.getPropertyValue(), geoTop.getPropertyValue()),
+                new Point2D.Double(geoRight.getPropertyValue(), geoBottom.getPropertyValue())
+            );
+        } else {
+            bounds = path2D.getBounds2D();
+        }
+
+        pathCT.setW((int)Math.rint(bounds.getWidth()));
+        pathCT.setH((int)Math.rint(bounds.getHeight()));
+
+        return new CustomGeometry(cusGeo);
+    }
+
