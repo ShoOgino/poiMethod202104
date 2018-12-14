@@ -1,87 +1,20 @@
     @Override
-    public Path2D.Double getPath(){
-        AbstractEscherOptRecord opt = getEscherOptRecord();
+    public Path2D getPath(){
+        Path2D path2D = new Path2D.Double();
+        getGeometry(path2D);
 
-        EscherArrayProperty verticesProp = getShapeProp(opt, EscherProperties.GEOMETRY__VERTICES);
-        EscherArrayProperty segmentsProp = getShapeProp(opt, EscherProperties.GEOMETRY__SEGMENTINFO);
-
-        // return empty path if either GEOMETRY__VERTICES or GEOMETRY__SEGMENTINFO is missing, see Bugzilla 54188
-        Path2D.Double path = new Path2D.Double();
-
-        //sanity check
-        if(verticesProp == null) {
-            LOG.log(POILogger.WARN, "Freeform is missing GEOMETRY__VERTICES ");
-            return path;
-        }
-        if(segmentsProp == null) {
-            LOG.log(POILogger.WARN, "Freeform is missing GEOMETRY__SEGMENTINFO ");
-            return path;
-        }
-
-        Iterator<byte[]> vertIter = verticesProp.iterator();
-        Iterator<byte[]> segIter = segmentsProp.iterator();
-        double xyPoints[] = new double[2];
-        
-        while (vertIter.hasNext() && segIter.hasNext()) {
-            byte[] segElem = segIter.next();
-            PathInfo pi = getPathInfo(segElem);
-            if (pi != null) {
-                switch (pi) {
-                    case escape: {
-                        // handleEscapeInfo(path, segElem, vertIter);
-                        break;
-                    }
-                    case moveTo: {
-                        fillPoint(vertIter.next(), xyPoints);
-                        double x = xyPoints[0];
-                        double y = xyPoints[1];
-                        path.moveTo(x, y);
-                        break;
-                    }
-                    case curveTo: {
-                        fillPoint(vertIter.next(), xyPoints);
-                        double x1 = xyPoints[0];
-                        double y1 = xyPoints[1];
-                        fillPoint(vertIter.next(), xyPoints);
-                        double x2 = xyPoints[0];
-                        double y2 = xyPoints[1];
-                        fillPoint(vertIter.next(), xyPoints);
-                        double x3 = xyPoints[0];
-                        double y3 = xyPoints[1];
-                        path.curveTo(x1, y1, x2, y2, x3, y3);
-                        break;
-                    }
-                    case lineTo:
-                        if (vertIter.hasNext()) {
-                            fillPoint(vertIter.next(), xyPoints);
-                            double x = xyPoints[0];
-                            double y = xyPoints[1];
-                            path.lineTo(x, y);
-                        }
-                        break;
-                    case close:
-                        path.closePath();
-                        break;
-                    default:
-                        break;
-                }
-            }
-        }
-
-        EscherSimpleProperty shapePath = getShapeProp(opt, EscherProperties.GEOMETRY__SHAPEPATH);
-        ShapePath sp = ShapePath.valueOf(shapePath == null ? 1 : shapePath.getPropertyValue());
-        if (sp == ShapePath.LINES_CLOSED || sp == ShapePath.CURVES_CLOSED) {
-            path.closePath();
-        }
-        
+        Rectangle2D bounds = path2D.getBounds2D();
         Rectangle2D anchor = getAnchor();
-        Rectangle2D bounds = path.getBounds2D();
         AffineTransform at = new AffineTransform();
         at.translate(anchor.getX(), anchor.getY());
         at.scale(
                 anchor.getWidth()/bounds.getWidth(),
                 anchor.getHeight()/bounds.getHeight()
         );
-        return new Path2D.Double(at.createTransformedShape(path));
+
+        path2D.transform(at);
+
+
+        return path2D;
     }
 
