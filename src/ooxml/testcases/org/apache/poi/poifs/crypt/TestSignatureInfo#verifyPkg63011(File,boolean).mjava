@@ -1,0 +1,29 @@
+    private void verifyPkg63011(File tpl, boolean multi) throws InvalidFormatException, IOException {
+        try (OPCPackage pkg = OPCPackage.open(tpl, PackageAccess.READ)) {
+            SignatureConfig sic = new SignatureConfig();
+            sic.setOpcPackage(pkg);
+            SignatureInfo si = new SignatureInfo();
+            si.setSignatureConfig(sic);
+            List<X509Certificate> result = new ArrayList<>();
+            for (SignaturePart sp : si.getSignatureParts()) {
+                if (sp.validate()) {
+                    result.add(sp.getSigner());
+                }
+            }
+
+            assertNotNull(result);
+
+            if (multi) {
+                assertEquals(2, result.size());
+                assertEquals("CN=Muj Klic", result.get(0).getSubjectDN().toString());
+                assertEquals("CN=My Second key", result.get(1).getSubjectDN().toString());
+            } else {
+                assertEquals(1, result.size());
+                assertEquals("CN=My Second key", result.get(0).getSubjectDN().toString());
+            }
+
+            assertTrue(si.verifySignature());
+            pkg.revert();
+        }
+    }
+
