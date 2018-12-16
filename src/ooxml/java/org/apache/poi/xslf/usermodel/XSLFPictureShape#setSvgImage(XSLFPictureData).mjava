@@ -1,0 +1,41 @@
+    /**
+     * Add a SVG image reference
+     * @param svgPic a previously imported svg image
+     */
+    public void setSvgImage(XSLFPictureData svgPic) {
+        CTBlip blip = getBlip();
+        CTOfficeArtExtensionList extLst = blip.isSetExtLst() ? blip.getExtLst() : blip.addNewExtLst();
+
+        final int bitmapId = getExt(extLst, BITMAP_URI);
+        CTOfficeArtExtension extBitmap;
+        if (bitmapId == -1) {
+            extBitmap = extLst.addNewExt();
+            extBitmap.setUri(BITMAP_URI);
+            XmlCursor cur = extBitmap.newCursor();
+            cur.toEndToken();
+            cur.beginElement(new QName(DML_NS, "useLocalDpi", "a14"));
+            cur.insertNamespace("a14", DML_NS);
+            cur.insertAttributeWithValue("val", "0");
+            cur.dispose();
+        }
+
+        final int svgId = getExt(extLst, SVG_URI);;
+        if (svgId != -1) {
+            extLst.removeExt(svgId);
+        }
+
+        String svgRelId = getSheet().getRelationId(svgPic);
+        if (svgRelId == null) {
+            svgRelId = getSheet().addRelation(null, XSLFRelation.IMAGE_SVG, svgPic).getRelationship().getId();
+        }
+
+        CTOfficeArtExtension svgBitmap = extLst.addNewExt();
+        svgBitmap.setUri(SVG_URI);
+        XmlCursor cur = svgBitmap.newCursor();
+        cur.toEndToken();
+        cur.beginElement(new QName(SVG_NS, "svgBlip", "asvg"));
+        cur.insertNamespace("asvg", SVG_NS);
+        cur.insertAttributeWithValue(new QName(CORE_PROPERTIES_ECMA376_NS, "embed", "rel"), svgRelId);
+        cur.dispose();
+    }
+
