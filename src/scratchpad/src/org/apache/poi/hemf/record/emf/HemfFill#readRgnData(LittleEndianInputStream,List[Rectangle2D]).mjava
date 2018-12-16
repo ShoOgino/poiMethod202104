@@ -1,0 +1,24 @@
+    static long readRgnData(final LittleEndianInputStream leis, final List<Rectangle2D> rgnRects) {
+        // *** RegionDataHeader ***
+        // A 32-bit unsigned integer that specifies the size of this object in bytes. This MUST be 0x00000020.
+        long rgnHdrSize = leis.readUInt();
+        assert(rgnHdrSize == 0x20);
+        // A 32-bit unsigned integer that specifies the region type. This SHOULD be RDH_RECTANGLES (0x00000001)
+        long rgnHdrType = leis.readUInt();
+        assert(rgnHdrType == 1);
+        // A 32-bit unsigned integer that specifies the number of rectangles in this region.
+        long rgnCntRect = leis.readUInt();
+        // A 32-bit unsigned integer that specifies the size of the buffer of rectangles in bytes.
+        long rgnCntBytes = leis.readUInt();
+        long size = 4*LittleEndianConsts.INT_SIZE;
+        // A 128-bit WMF RectL object, which specifies the bounds of the region.
+        Rectangle2D rgnBounds = new Rectangle2D.Double();
+        size += readRectL(leis, rgnBounds);
+        for (int i=0; i<rgnCntRect; i++) {
+            Rectangle2D rgnRct = new Rectangle2D.Double();
+            size += readRectL(leis, rgnRct);
+            rgnRects.add(rgnRct);
+        }
+        return size;
+    }
+

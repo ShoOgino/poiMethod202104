@@ -1,0 +1,58 @@
+        @Override
+        public void draw(HemfGraphics ctx) {
+            if (modifyWorldTransformMode == null) {
+                return;
+            }
+
+            final HemfDrawProperties prop = ctx.getProperties();
+
+            final AffineTransform tx;
+            switch (modifyWorldTransformMode) {
+                case MWT_LEFTMULTIPLY:
+
+                    AffineTransform wsTrans;
+                    final Rectangle2D win = prop.getWindow();
+                    boolean noSetWindowExYet = win.getWidth() == 1 && win.getHeight() == 1;
+                    if (noSetWindowExYet) {
+                        // TODO: understand world-space transformation [MSDN-WRLDPGSPC]
+                        // experimental and horrible solved, because the world-space transformation behind it
+                        // is not understood :(
+                        // only found one example which had landscape bounds and transform of 90 degress
+
+                        try {
+                            wsTrans = xForm.createInverse();
+                        } catch (NoninvertibleTransformException e) {
+                            wsTrans = new AffineTransform();
+                        }
+
+                        Rectangle2D emfBounds = header.getBoundsRectangle();
+
+                        if (xForm.getShearX() == -1.0 && xForm.getShearY() == 1.0) {
+                            // rotate 90 deg
+                            wsTrans.translate(-emfBounds.getHeight(), emfBounds.getHeight());
+                        }
+                    } else {
+                        wsTrans = adaptXForm(ctx.getTransform());
+                    }
+
+                    tx = ctx.getTransform();
+                    tx.concatenate(wsTrans);
+                    break;
+                case MWT_RIGHTMULTIPLY:
+                    tx = ctx.getTransform();
+                    tx.preConcatenate(adaptXForm(tx));
+                    break;
+                case MWT_IDENTITY:
+                    ctx.updateWindowMapMode();
+                    tx = ctx.getTransform();
+                    break;
+                default:
+                case MWT_SET:
+                    ctx.updateWindowMapMode();
+                    tx = ctx.getTransform();
+                    tx.concatenate(adaptXForm(tx));
+                    break;
+            }
+            ctx.setTransform(tx);
+        }
+

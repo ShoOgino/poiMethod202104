@@ -2,22 +2,17 @@
         public int init(LittleEndianInputStream leis, long recordSize, int recordFunction) throws IOException {
             // -6 bytes of record function and length header
             final int remainingRecordSize = (int)(recordSize-6);
-            
-            y = leis.readShort();
-            x = leis.readShort();
+
+            int size = readPointS(leis, reference);
+
             stringLength = leis.readShort();
-            fwOpts = leis.readUShort();
-            
-            int size = 4*LittleEndianConsts.SHORT_SIZE;
-            
+            size += LittleEndianConsts.SHORT_SIZE;
+            size += options.init(leis);
+
             // Check if we have a rectangle
-            if ((ETO_OPAQUE.isSet(fwOpts) || ETO_CLIPPED.isSet(fwOpts)) && size+8<=remainingRecordSize) {
-                // the bounding rectangle is optional and only read when fwOpts are given
-                left = leis.readShort();
-                top = leis.readShort();
-                right = leis.readShort();
-                bottom = leis.readShort();
-                size += 4*LittleEndianConsts.SHORT_SIZE;
+            if ((options.isOpaque() || options.isClipped()) && size+8<=remainingRecordSize) {
+                // the bounding rectangle is optional and only read when options are given
+                size += readRectS(leis, bounds);
             }
             
             rawTextBytes = IOUtils.safelyAllocate(stringLength+(stringLength&1), MAX_RECORD_LENGTH);
@@ -34,9 +29,8 @@
                 logger.log(POILogger.WARN, "META_EXTTEXTOUT tracking info doesn't cover all characters");
             }
 
-            dx = new int[stringLength]; 
             for (int i=0; i<dxLen; i++) {
-                dx[i] = leis.readShort();
+                dx.add((int)leis.readShort());
                 size += LittleEndianConsts.SHORT_SIZE;
             }
             

@@ -1,0 +1,56 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long recordSize, long recordId) throws IOException {
+            final int startIdx = leis.getReadIndex();
+
+            long size = readRectL(leis, bounds);
+            size += readBounds2(leis, destRect);
+
+            blendOperation = leis.readByte();
+            assert (blendOperation == 0);
+            blendFlags = leis.readByte();
+            assert (blendOperation == 0);
+            srcConstantAlpha = leis.readUByte();
+            alphaFormat = leis.readByte();
+
+            // A 32-bit signed integer that specifies the logical x-coordinate of the upper-left
+            // corner of the source rectangle.
+            final int xSrc = leis.readInt();
+            // A 32-bit signed integer that specifies the logical y-coordinate of the upper-left
+            // corner of the source rectangle.
+            final int ySrc = leis.readInt();
+
+            size += 3*LittleEndianConsts.INT_SIZE;
+            size += readXForm(leis, xFormSrc);
+            size += bkColorSrc.init(leis);
+
+            usageSrc = ColorUsage.valueOf((int)leis.readUInt());
+
+
+            // A 32-bit unsigned integer that specifies the offset, in bytes, from the
+            // start of this record to the source bitmap header in the BitmapBuffer field.
+            final int offBmiSrc = (int)leis.readUInt();
+
+            // A 32-bit unsigned integer that specifies the size, in bytes, of the source bitmap header.
+            final int cbBmiSrc = (int)leis.readUInt();
+            // A 32-bit unsigned integer that specifies the offset, in bytes, from the
+            // start of this record to the source bitmap bits in the BitmapBuffer field.
+            final int offBitsSrc = (int)leis.readUInt();
+            // A 32-bit unsigned integer that specifies the size, in bytes, of the source bitmap bits.
+            final int cbBitsSrc = (int)leis.readUInt();
+
+            // A 32-bit signed integer that specifies the logical width of the source rectangle.
+            // This value MUST be greater than zero.
+            final int cxSrc = leis.readInt();
+            // A 32-bit signed integer that specifies the logical height of the source rectangle.
+            // This value MUST be greater than zero.
+            final int cySrc = leis.readInt();
+
+            srcRect.setRect(xSrc, ySrc, cxSrc, cySrc);
+
+            size += 7 * LittleEndianConsts.INT_SIZE;
+
+            size += readBitmap(leis, bitmap, startIdx, offBmiSrc, cbBmiSrc, offBitsSrc, cbBitsSrc);
+
+            return size;
+        }
+

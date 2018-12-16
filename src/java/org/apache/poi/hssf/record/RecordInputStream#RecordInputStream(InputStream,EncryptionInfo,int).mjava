@@ -1,7 +1,11 @@
 	public RecordInputStream(InputStream in, EncryptionInfo key, int initialOffset) throws RecordFormatException {
 		if (key == null) {
-			_dataInput = getLEI(in);
-			_bhi = new SimpleHeaderInput(in);
+			_dataInput = (in instanceof LittleEndianInput)
+				// accessing directly is an optimisation
+				? (LittleEndianInput)in
+				// less optimal, but should work OK just the same. Often occurs in junit tests.
+				: new LittleEndianInputStream(in);
+			_bhi = new SimpleHeaderInput(_dataInput);
 		} else {
 			Biff8DecryptingStream bds = new Biff8DecryptingStream(in, initialOffset, key);
             _dataInput = bds;

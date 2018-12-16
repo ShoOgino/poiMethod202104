@@ -1,0 +1,151 @@
+    public void drawString(byte[] text, int length, Point2D reference, Dimension2D scale, Rectangle2D clip, WmfExtTextOutOptions opts, List<Integer> dx, boolean isUnicode) {
+        final HwmfDrawProperties prop = getProperties();
+
+        final AffineTransform at = graphicsCtx.getTransform();
+
+        try {
+            at.createInverse();
+        } catch (NoninvertibleTransformException e) {
+            return;
+        }
+
+        HwmfFont font = prop.getFont();
+        if (font == null || text == null || text.length == 0) {
+            return;
+        }
+        
+        double fontH = getFontHeight(font);
+        // TODO: another approx. ...
+        double fontW = fontH/1.8;
+        
+        Charset charset;
+        if (isUnicode) {
+            charset = Charsets.UTF_16LE;
+        } else {
+            charset = font.getCharset().getCharset();
+            if (charset == null) {
+                charset = DEFAULT_CHARSET;
+            }
+        }
+
+        String textString = new String(text, charset).substring(0,length).trim();
+
+        if (textString.isEmpty()) {
+            return;
+        }
+
+        DrawFontManager fontHandler = DrawFactory.getInstance(graphicsCtx).getFontManager(graphicsCtx);
+        FontInfo fontInfo = fontHandler.getMappedFont(graphicsCtx, font);
+        if (fontInfo.getCharset() == FontCharset.SYMBOL) {
+            textString = DrawFontManagerDefault.mapSymbolChars(textString);
+        }
+
+        AttributedString as = new AttributedString(textString);
+        addAttributes(as, font, fontInfo.getTypeface());
+
+        // disabled for the time being, as the results aren't promising
+        /*
+        if (dx != null && !dx.isEmpty()) {
+            //for multi-byte encodings (e.g. Shift_JIS), the byte length
+            //might not equal the string length().
+            //The x information is stored in dx[], an array parallel to the
+            //byte array text[].  dx[] stores the x info in the
+            //first byte of a multibyte character, but dx[] stores 0
+            //for the other bytes in that character.
+            //We need to map this information to the String offsets
+            //dx[0] = 13 text[0] = -125
+            //dx[1] = 0  text[1] = 118
+            //dx[2] = 14 text[2] = -125
+            //dx[3] = 0  text[3] = -115
+            // needs to be remapped as:
+            //dxNormed[0] = 13 textString.get(0) = U+30D7
+            //dxNormed[1] = 14 textString.get(1) = U+30ED
+
+            final int cps = textString.codePointCount(0, textString.length());
+            final int unicodeSteps = Math.max(dx.size()/cps, 1);
+            int dxPosition = 0, lastDxPosition = 0;
+            int beginIndex = 0;
+            while (beginIndex < textString.length() && dxPosition < dx.size()) {
+                int endIndex = textString.offsetByCodePoints(beginIndex, 1);
+                if (beginIndex > 0) {
+                    // Tracking works as a prefix/advance space on characters whereas
+                    // dx[...] is the complete width of the current char
+                    // therefore we need to add the additional/suffix width to the next char
+
+                    as.addAttribute(TextAttribute.TRACKING, (float)((dx.get(lastDxPosition) - fontW) / fontH), beginIndex, endIndex);
+                }
+                lastDxPosition = dxPosition;
+                dxPosition += (isUnicode) ? unicodeSteps : (endIndex-beginIndex);
+                beginIndex = endIndex;
+            }
+        }
+        */
+
+        double angle = Math.toRadians(-font.getEscapement()/10.);
+
+        final HwmfText.HwmfTextAlignment align = prop.getTextAlignLatin();
+        final HwmfText.HwmfTextVerticalAlignment valign = prop.getTextVAlignLatin();
+        final FontRenderContext frc = graphicsCtx.getFontRenderContext();
+        final TextLayout layout = new TextLayout(as.getIterator(), frc);
+
+        final Rectangle2D pixelBounds = layout.getBounds();
+
+        AffineTransform tx = new AffineTransform();
+        switch (align) {
+            default:
+            case LEFT:
+                break;
+            case CENTER:
+                tx.translate(-pixelBounds.getWidth() / 2., 0);
+                break;
+            case RIGHT:
+                tx.translate(-pixelBounds.getWidth(), 0);
+                break;
+        }
+
+        // TODO: check min/max orientation
+        switch (valign) {
+            case TOP:
+                tx.translate(0, layout.getAscent());
+            default:
+            case BASELINE:
+                break;
+            case BOTTOM:
+                tx.translate(0, -(pixelBounds.getHeight()-layout.getDescent()));
+                break;
+        }
+        tx.rotate(angle);
+        Point2D src = new Point2D.Double();
+        Point2D dst = new Point2D.Double();
+        tx.transform(src, dst);
+
+        final Shape clipShape = graphicsCtx.getClip();
+        try {
+            if (clip != null) {
+                graphicsCtx.translate(-clip.getCenterX(), -clip.getCenterY());
+                graphicsCtx.rotate(angle);
+                graphicsCtx.translate(clip.getCenterX(), clip.getCenterY());
+                if (prop.getBkMode() == HwmfBkMode.OPAQUE && opts.isOpaque()) {
+                    graphicsCtx.setPaint(prop.getBackgroundColor().getColor());
+                    graphicsCtx.fill(clip);
+                }
+                if (opts.isClipped()) {
+                    graphicsCtx.setClip(clip);
+                }
+                graphicsCtx.setTransform(at);
+            }
+
+            graphicsCtx.translate(reference.getX(), reference.getY());
+            graphicsCtx.rotate(angle);
+            if (scale != null) {
+                graphicsCtx.scale(scale.getWidth() < 0 ? -1 : 1, scale.getHeight() < 0 ? -1 : 1);
+            }
+            graphicsCtx.translate(dst.getX(), dst.getY());
+            graphicsCtx.setColor(prop.getTextColor().getColor());
+            graphicsCtx.drawString(as.getIterator(), 0, 0);
+        } finally {
+            graphicsCtx.setTransform(at);
+            graphicsCtx.setClip(clipShape);
+        }
+    }
+

@@ -1,0 +1,34 @@
+    private HemfPlusRecord _next() {
+        if (currentRecord != null && HemfPlusRecordType.eof == currentRecord.getEmfPlusRecordType()) {
+            return null;
+        }
+        // A 16-bit unsigned integer that identifies this record type
+        int recordId = leis.readUShort();
+        // A 16-bit unsigned integer that provides information about how the operation is
+        // to be performed, and about the structure of the record.
+        int flags = leis.readUShort();
+        // A 32-bit unsigned integer that specifies the 32-bit-aligned size of the entire
+        // record in bytes, including the 12-byte record header and record-specific data.
+        int recordSize = (int)leis.readUInt();
+        // A 32-bit unsigned integer that specifies the 32-bit-aligned number of bytes of data
+        // in the record-specific data that follows. This number does not include the size of
+        // the invariant part of this record.
+        int dataSize = (int)leis.readUInt();
+
+        HemfPlusRecordType type = HemfPlusRecordType.getById(recordId);
+        if (type == null) {
+            throw new RecordFormatException("Undefined record of type:"+recordId);
+        }
+        final HemfPlusRecord record = type.constructor.get();
+
+        try {
+            long readBytes = record.init(leis, dataSize, recordId, flags);
+            assert (readBytes <= recordSize-12);
+            leis.skipFully((int)(recordSize-12-readBytes));
+        } catch (IOException e) {
+            throw new RecordFormatException(e);
+        }
+
+        return record;
+    }
+

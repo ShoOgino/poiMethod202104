@@ -1,0 +1,98 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long recordSize, long recordId) throws IOException {
+            if (recordSize < 0 || Integer.MAX_VALUE <= recordSize) {
+                throw new RecordFormatException("recordSize must be a positive integer (0-0x7FFFFFFF)");
+            }
+
+            // A WMF RectL object. It is not used and MUST be ignored on receipt.
+            long size = readRectL(leis, boundsIgnored);
+
+            // A 32-bit unsigned integer that specifies the graphics mode from the GraphicsMode enumeration
+            graphicsMode = EmfGraphicsMode.values()[leis.readInt()-1];
+            size += LittleEndianConsts.INT_SIZE;
+
+            size += readDimensionFloat(leis, scale);
+
+            // A WMF PointL object that specifies the coordinates of the reference point used to position the string.
+            // The reference point is defined by the last EMR_SETTEXTALIGN record.
+            // If no such record has been set, the default alignment is TA_LEFT,TA_TOP.
+            size += readPointL(leis, reference);
+            // A 32-bit unsigned integer that specifies the number of characters in the string.
+            stringLength = (int)leis.readUInt();
+            // A 32-bit unsigned integer that specifies the offset to the output string, in bytes,
+            // from the start of the record in which this object is contained.
+            // This value MUST be 8- or 16-bit aligned, according to the character format.
+            int offString = (int)leis.readUInt();
+            size += 2*LittleEndianConsts.INT_SIZE;
+
+            size += options.init(leis);
+            // An optional WMF RectL object that defines a clipping and/or opaquing rectangle in logical units.
+            // This rectangle is applied to the text output performed by the containing record.
+            if (options.isClipped() || options.isOpaque()) {
+                size += readRectL(leis, bounds);
+            }
+
+            // A 32-bit unsigned integer that specifies the offset to an intercharacter spacing array, in bytes,
+            // from the start of the record in which this object is contained. This value MUST be 32-bit aligned.
+            int offDx = (int)leis.readUInt();
+            size += LittleEndianConsts.INT_SIZE;
+
+            // handle dx before string and other way round
+            final String order = (offDx < offString) ? "ds" : "sd";
+            // the next byte index after the string ends
+            int strEnd = (int)((offDx <= HEADER_SIZE) ? recordSize : offDx-HEADER_SIZE);
+            for (char op : order.toCharArray()) {
+                switch (op) {
+                    case 'd': {
+                        dx.clear();
+                        int undefinedSpace2 = (int) (offDx - (size + HEADER_SIZE));
+                        if (offDx > 0 && undefinedSpace2 >= 0 && offDx-HEADER_SIZE < recordSize) {
+                            leis.skipFully(undefinedSpace2);
+                            size += undefinedSpace2;
+
+                            // An array of 32-bit unsigned integers that specify the output spacing between the origins of adjacent
+                            // character cells in logical units. The location of this field is specified by the value of offDx
+                            // in bytes from the start of this record. If spacing is defined, this field contains the same number
+                            // of values as characters in the output string.
+                            //
+                            // If the Options field of the EmrText object contains the ETO_PDY flag, then this buffer
+                            // contains twice as many values as there are characters in the output string, one
+                            // horizontal and one vertical offset for each, in that order.
+                            //
+                            // If ETO_RTLREADING is specified, characters are laid right to left instead of left to right.
+                            // No other options affect the interpretation of this field.
+                            final int maxSize = (int)Math.min((offDx < offString) ? (offString-HEADER_SIZE) : recordSize, recordSize);
+                            while (size <= maxSize-LittleEndianConsts.INT_SIZE) {
+                                dx.add((int) leis.readUInt());
+                                size += LittleEndianConsts.INT_SIZE;
+                            }
+                        }
+                        if (dx.size() < stringLength) {
+                            // invalid dx array
+                            dx.clear();
+                        }
+                        strEnd = (int)recordSize;
+                        break;
+                    }
+                    default:
+                    case 's': {
+                        int undefinedSpace1 = (int)(offString - (size + HEADER_SIZE));
+                        if (offString > 0 && undefinedSpace1 >= 0 && offString-HEADER_SIZE < recordSize) {
+                            leis.skipFully(undefinedSpace1);
+                            size += undefinedSpace1;
+
+                            // read all available bytes and not just "stringLength * 1(ansi)/2(unicode)"
+                            // in case we need to deal with surrogate pairs
+                            final int maxSize = (int)(Math.min(recordSize, strEnd)-size);
+                            rawTextBytes = IOUtils.safelyAllocate(maxSize, MAX_RECORD_LENGTH);
+                            leis.readFully(rawTextBytes);
+                            size += maxSize;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return size;
+        }
+

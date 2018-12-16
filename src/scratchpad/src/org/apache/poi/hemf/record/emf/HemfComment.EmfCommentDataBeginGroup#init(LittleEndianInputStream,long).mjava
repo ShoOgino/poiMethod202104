@@ -1,0 +1,20 @@
+        @Override
+        public long init(final LittleEndianInputStream leis, final long dataSize)
+        throws IOException {
+            final int startIdx = leis.getReadIndex();
+            final int commentIdentifier = (int)leis.readUInt();
+            assert(commentIdentifier == HemfCommentRecordType.emfPublic.id);
+            final int publicCommentIdentifier = (int)leis.readUInt();
+            assert(publicCommentIdentifier == HemfCommentRecordType.emfBeginGroup.id);
+            HemfDraw.readRectL(leis, bounds);
+
+            // The number of Unicode characters in the optional description string that follows.
+            int nDescription = (int)leis.readUInt();
+
+            byte[] buf = IOUtils.safelyAllocate(nDescription*2, MAX_RECORD_LENGTH);
+            leis.readFully(buf);
+            description = new String(buf, StandardCharsets.UTF_16LE);
+
+            return leis.getReadIndex()-startIdx;
+        }
+

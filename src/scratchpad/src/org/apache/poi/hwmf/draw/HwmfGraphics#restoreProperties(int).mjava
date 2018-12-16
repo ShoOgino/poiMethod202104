@@ -10,7 +10,7 @@
         }
         int stackIndex = index;
         if (stackIndex < 0) {
-            int curIdx = propStack.indexOf(prop);
+            int curIdx = propStack.indexOf(getProperties());
             if (curIdx == -1) {
                 // the current element is not pushed to the stacked, i.e. it's the last
                 curIdx = propStack.size();
@@ -21,6 +21,15 @@
             // roll to last when curIdx == 0
             stackIndex = propStack.size()-1;
         }
-        prop = propStack.get(stackIndex);
+
+        // The playback device context is restored by popping state information off a stack that was created by
+        // prior SAVEDC records
+        // ... so because being a stack, we will remove all entries having a greater index than the stackIndex
+        for (int i=propStack.size()-1; i>=stackIndex; i--) {
+            prop = propStack.remove(i);
+        }
+
+        graphicsCtx.setTransform(prop.getTransform());
+        graphicsCtx.setClip(prop.getClip());
     }
 

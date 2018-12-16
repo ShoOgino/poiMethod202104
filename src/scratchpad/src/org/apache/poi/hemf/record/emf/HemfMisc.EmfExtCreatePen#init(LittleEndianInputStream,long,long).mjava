@@ -1,0 +1,82 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long recordSize, long recordId) throws IOException {
+            final int startIdx = leis.getReadIndex();
+
+            penIndex = (int) leis.readUInt();
+
+            // A 32-bit unsigned integer that specifies the offset from the start of this
+            // record to the DIB header, if the record contains a DIB.
+            int offBmi = (int) leis.readUInt();
+
+            // A 32-bit unsigned integer that specifies the size of the DIB header, if the
+            // record contains a DIB.
+            int cbBmi = (int) leis.readUInt();
+
+            // A 32-bit unsigned integer that specifies the offset from the start of this
+            // record to the DIB bits, if the record contains a DIB.
+            int offBits = (int) leis.readUInt();
+
+            // A 32-bit unsigned integer that specifies the size of the DIB bits, if the record
+            // contains a DIB.
+            int cbBits = (int) leis.readUInt();
+
+            // A 32-bit unsigned integer that specifies the PenStyle.
+            // The value MUST be defined from the PenStyle enumeration table
+            final HemfPenStyle emfPS = HemfPenStyle.valueOf((int) leis.readUInt());
+            penStyle = emfPS;
+
+            // A 32-bit unsigned integer that specifies the width of the line drawn by the pen.
+            // If the pen type in the PenStyle field is PS_GEOMETRIC, this value is the width in logical
+            // units; otherwise, the width is specified in device units. If the pen type in the PenStyle field is
+            // PS_COSMETIC, this value MUST be 0x00000001.
+            long width = leis.readUInt();
+            dimension.setSize(width, 0);
+            int size = 7 * LittleEndianConsts.INT_SIZE;
+
+            // A 32-bit unsigned integer that specifies a brush style for the pen from the WMF BrushStyle enumeration
+            //
+            // If the pen type in the PenStyle field is PS_GEOMETRIC, this value MUST be either BS_SOLID or BS_HATCHED.
+            // The value of this field can be BS_NULL, but only if the line style specified in PenStyle is PS_NULL.
+            // The BS_NULL style SHOULD be used to specify a brush that has no effect
+            brushStyle = HwmfBrushStyle.valueOf((int) leis.readUInt());
+
+            size += LittleEndianConsts.INT_SIZE;
+
+            size += colorRef.init(leis);
+
+            hatchStyle = HwmfHatchStyle.valueOf(leis.readInt());
+            size += LittleEndianConsts.INT_SIZE;
+
+            // The number of elements in the array specified in the StyleEntry
+            // field. This value SHOULD be zero if PenStyle does not specify PS_USERSTYLE.
+            final int numStyleEntries = (int) leis.readUInt();
+            size += LittleEndianConsts.INT_SIZE;
+
+            assert (numStyleEntries == 0 || penStyle.getLineDash() == HwmfLineDash.USERSTYLE);
+
+            // An optional array of 32-bit unsigned integers that defines the lengths of
+            // dashes and gaps in the line drawn by this pen, when the value of PenStyle is
+            // PS_USERSTYLE line style for the pen. The array contains a number of entries specified by
+            // NumStyleEntries, but it is used as if it repeated indefinitely.
+            // The first entry in the array specifies the length of the first dash. The second entry specifies
+            // the length of the first gap. Thereafter, lengths of dashes and gaps alternate.
+            // If the pen type in the PenStyle field is PS_GEOMETRIC, the lengths are specified in logical
+            // units; otherwise, the lengths are specified in device units.
+
+            float[] dashPattern = new float[numStyleEntries];
+
+            for (int i = 0; i < numStyleEntries; i++) {
+                dashPattern[i] = (int) leis.readUInt();
+            }
+
+            if (penStyle.getLineDash() == HwmfLineDash.USERSTYLE) {
+                emfPS.setLineDashes(dashPattern);
+            }
+
+            size += numStyleEntries * LittleEndianConsts.INT_SIZE;
+
+            size += readBitmap(leis, bitmap, startIdx, offBmi, cbBmi, offBits, cbBits);
+
+            return size;
+        }
+
