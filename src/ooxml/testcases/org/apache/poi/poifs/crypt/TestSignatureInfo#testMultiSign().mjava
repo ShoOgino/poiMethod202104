@@ -1,16 +1,36 @@
     @Test
     public void testMultiSign() throws Exception {
-        initKeyPair("KeyA", "CN=KeyA");
-        //KeyPair keyPairA = keyPair;
-        //X509Certificate x509A = x509;
-        initKeyPair("KeyB", "CN=KeyB");
-        //KeyPair keyPairB = keyPair;
-        //X509Certificate x509B = x509;
-        
-        File tpl = copy(testdata.getFile("bug58630.xlsx"));
+        cal = LocaleUtil.getLocaleCalendar(LocaleUtil.TIMEZONE_UTC);
+        cal.clear();
+        cal.setTimeZone(LocaleUtil.TIMEZONE_UTC);
+        cal.set(2018, Calendar.DECEMBER, 14);
+
+        // test signing with separate opened packages
+        File tpl = copy(testdata.getFile("hello-world-unsigned.xlsx"));
         try (OPCPackage pkg = OPCPackage.open(tpl)) {
-            //SignatureConfig signatureConfig = new SignatureConfig();
-            assertNotNull(pkg);
+            signPkg63011(pkg, "bug63011_key1.pem", true);
         }
+
+        try (OPCPackage pkg = OPCPackage.open(tpl)) {
+            signPkg63011(pkg, "bug63011_key2.pem", true);
+        }
+
+        verifyPkg63011(tpl, true);
+
+        // test signing with single opened package
+        tpl = copy(testdata.getFile("hello-world-unsigned.xlsx"));
+        try (OPCPackage pkg = OPCPackage.open(tpl)) {
+            signPkg63011(pkg, "bug63011_key1.pem", true);
+            signPkg63011(pkg, "bug63011_key2.pem", true);
+        }
+
+        verifyPkg63011(tpl, true);
+
+        try (OPCPackage pkg = OPCPackage.open(tpl)) {
+            signPkg63011(pkg, "bug63011_key1.pem", true);
+            signPkg63011(pkg, "bug63011_key2.pem", false);
+        }
+
+        verifyPkg63011(tpl, false);
     }
 

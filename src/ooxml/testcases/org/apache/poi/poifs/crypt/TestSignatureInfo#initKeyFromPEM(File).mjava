@@ -1,0 +1,21 @@
+    private void initKeyFromPEM(File pemFile) throws IOException, CertificateException {
+        // see https://stackoverflow.com/questions/11787571/how-to-read-pem-file-to-get-private-and-public-key
+        PrivateKey key = null;
+        x509 = null;
+
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(pemFile), StandardCharsets.ISO_8859_1))) {
+            PEMParser parser = new PEMParser(br);
+            for (Object obj; (obj = parser.readObject()) != null; ) {
+                if (obj instanceof PrivateKeyInfo) {
+                    key = new JcaPEMKeyConverter().setProvider("BC").getPrivateKey((PrivateKeyInfo)obj);
+                } else if (obj instanceof X509CertificateHolder) {
+                    x509 = new JcaX509CertificateConverter().setProvider("BC").getCertificate((X509CertificateHolder)obj);
+                }
+            }
+        }
+
+        if (key != null && x509 != null) {
+            keyPair = new KeyPair(x509.getPublicKey(), key);
+        }
+    }
+

@@ -1,0 +1,37 @@
+    /**
+     * Convienence method for adding SVG images, which generates the preview image
+     * @param sheet the sheet to add
+     * @param svgPic the svg picture to add
+     * @param previewType the preview picture type or null (defaults to PNG) - currently only JPEG,GIF,PNG are allowed
+     * @param anchor the image anchor (for calculating the preview image size) or
+     *               null (the preview size is taken from the svg picture bounds)
+     */
+    public static XSLFPictureShape addSvgImage(XSLFSheet sheet, XSLFPictureData svgPic, PictureType previewType, Rectangle2D anchor) throws IOException {
+
+        SVGImageRenderer renderer = new SVGImageRenderer();
+        try (InputStream is = svgPic.getInputStream()) {
+            renderer.loadImage(is, svgPic.getType().contentType);
+        }
+
+        Dimension dim = renderer.getDimension();
+        Rectangle2D anc = (anchor != null) ? anchor
+            : new Rectangle2D.Double(0,0, Units.pixelToPoints((int)dim.getWidth()), Units.pixelToPoints((int)dim.getHeight()));
+
+        PictureType pt = (previewType != null) ? previewType : PictureType.PNG;
+        if (pt != PictureType.JPEG || pt != PictureType.GIF || pt != PictureType.PNG) {
+            pt = PictureType.PNG;
+        }
+
+        BufferedImage thmBI = renderer.getImage(dim);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(100000);
+        // use extension instead of enum name, because of "jpeg"
+        ImageIO.write(thmBI, pt.extension.substring(1), bos);
+
+        XSLFPictureData pngPic = sheet.getSlideShow().addPicture(new ByteArrayInputStream(bos.toByteArray()), pt);
+
+        XSLFPictureShape shape = sheet.createPicture(pngPic);
+        shape.setAnchor(anc);
+        shape.setSvgImage(svgPic);
+        return shape;
+    }
+
