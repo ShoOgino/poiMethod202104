@@ -1,0 +1,64 @@
+    @Test
+    public void testResize() throws Exception {
+        String[][] data = getDummyData(20);
+        final int maxHeight = 400;
+
+        XMLSlideShow ppt = new XMLSlideShow();
+        int rowIdx=1;
+        while (rowIdx<data.length) {
+            XSLFSlide slide = ppt.createSlide();
+            // a red bordered box in the background, to show/verify the table dimensions
+            XSLFAutoShape as = slide.createAutoShape();
+            as.setShapeType(ShapeType.RECT);
+            as.setStrokeStyle(Color.RED, 2., StrokeStyle.LineDash.LG_DASH);
+
+            XSLFTable tab = slide.createTable(1, data[0].length);
+            tab.setAnchor(new Rectangle2D.Double(50,50,0,0));
+            tab.setColumnWidth(0, 60);
+            tab.setColumnWidth(1, 60);
+            tab.setColumnWidth(2, 60);
+
+            int startRow = rowIdx;
+
+            XSLFTableRow row = tab.getRows().get(0);
+            for (int colIdx=0; colIdx<data[0].length; colIdx++) {
+                XSLFTextRun tr = row.getCells().get(colIdx).setText(data[0][colIdx]);
+                tr.setFontSize(20.);
+                tr.setFontFamily("Arial");
+            }
+
+
+            while (rowIdx<data.length) {
+                row = tab.addRow();
+                for (int col=0; col<data[rowIdx].length; col++) {
+                    XSLFTextRun tr = row.addCell().setText(data[rowIdx][col]);
+                    tr.setFontSize(15.);
+                    tr.setFontFamily("Arial");
+                }
+                tab.updateCellAnchor();
+                if (tab.getAnchor().getHeight() > maxHeight) {
+                    tab.removeRow(rowIdx-startRow);
+                    break;
+                }
+                rowIdx++;
+            }
+
+            tab.updateCellAnchor();
+            as.setAnchor(tab.getAnchor());
+        }
+
+        File fileOut = TempFile.createTempFile("tabtest", "pptx");
+        try (FileOutputStream fos = new FileOutputStream(fileOut)) {
+            ppt.write(fos);
+        }
+
+        String[] args = {
+            "-format", "null", // png,gif,jpg or null for test
+            "-slide", "-1", // -1 for all
+            "-outdir", fileOut.getParentFile().getCanonicalPath(),
+            "-quiet",
+            fileOut.getAbsolutePath()
+        };
+        PPTX2PNG.main(args);
+    }
+
