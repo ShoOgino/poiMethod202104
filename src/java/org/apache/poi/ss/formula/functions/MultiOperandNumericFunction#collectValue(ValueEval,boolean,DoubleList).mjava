@@ -3,9 +3,11 @@
             throw new IllegalArgumentException("ve must not be null");
         }
         if (ve instanceof BoolEval) {
-            if (!isViaReference || _isReferenceBoolCounted) {
-                BoolEval boolEval = (BoolEval) ve;
-                temp.add(boolEval.getNumberValue());
+            BoolEval boolEval = (BoolEval) ve;
+            if (isViaReference) {
+                boolByRefConsumer.accept(boolEval, temp);
+            } else {
+                boolByValueConsumer.accept(boolEval, temp);
             }
             return;
         }
@@ -31,13 +33,11 @@
             throw new EvaluationException((ErrorEval) ve);
         }
         if (ve == BlankEval.instance) {
-            if (_isBlankCounted) {
-                temp.add(0.0);
-            }
+            blankConsumer.accept((BlankEval) ve, temp);
             return;
         }
         if (ve == MissingArgEval.instance) {
-            temp.add(0.0);
+            missingArgConsumer.accept((MissingArgEval) ve, temp);
             return;
         }
         throw new RuntimeException("Invalid ValueEval type passed for conversion: ("
