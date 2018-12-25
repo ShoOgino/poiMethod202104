@@ -15,10 +15,10 @@
         int blockSize = header.getBlockSize();
         HashAlgorithm hashAlgo = header.getHashAlgorithm();
         Mac integrityMD = CryptoFunctions.getMac(hashAlgo);
-        byte hmacKey[] = getBlock0(this.integritySalt, getNextBlockSize(this.integritySalt.length, blockSize));
+        byte[] hmacKey = getBlock0(this.integritySalt, getNextBlockSize(this.integritySalt.length, blockSize));
         integrityMD.init(new SecretKeySpec(hmacKey, hashAlgo.jceHmacId));
 
-        byte buf[] = new byte[1024];
+        byte[] buf = new byte[1024];
         LittleEndian.putLong(buf, 0, oleStreamSize);
         integrityMD.update(buf, 0, LittleEndianConsts.LONG_SIZE);
         
@@ -31,13 +31,13 @@
         } finally {
         	fis.close();
         }
-        
-        byte hmacValue[] = integrityMD.doFinal();
-        byte hmacValueFilled[] = getBlock0(hmacValue, getNextBlockSize(hmacValue.length, blockSize));
-        
-        byte iv[] = CryptoFunctions.generateIv(header.getHashAlgorithm(), header.getKeySalt(), kIntegrityValueBlock, blockSize);
+
+        byte[] hmacValue = integrityMD.doFinal();
+        byte[] hmacValueFilled = getBlock0(hmacValue, getNextBlockSize(hmacValue.length, blockSize));
+
+        byte[] iv = CryptoFunctions.generateIv(header.getHashAlgorithm(), header.getKeySalt(), kIntegrityValueBlock, blockSize);
         Cipher cipher = CryptoFunctions.getCipher(getSecretKey(), header.getCipherAlgorithm(), header.getChainingMode(), iv, Cipher.ENCRYPT_MODE);
-        byte encryptedHmacValue[] = cipher.doFinal(hmacValueFilled);
+        byte[] encryptedHmacValue = cipher.doFinal(hmacValueFilled);
         
         header.setEncryptedHmacValue(encryptedHmacValue);
     }
