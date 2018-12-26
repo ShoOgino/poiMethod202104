@@ -2,16 +2,24 @@
      * Dumps the Pictures OLE stream into XML.
      *
      * @param data from the Pictures OLE data stream
-     * @param padding
-     * @throws java.io.IOException
+     * @param padding How many leading blanks to add in the output
+     * @throws java.io.IOException If writing out information fails
      */
     public void dumpPictures(byte[] data, int padding) throws IOException {
         int pos = 0;
         while (pos < data.length) {
             byte[] header = new byte[PICT_HEADER_SIZE];
 
+            if(data.length - pos < header.length) {
+                // corrupt file, cannot read header
+                return;
+            }
             System.arraycopy(data, pos, header, 0, header.length);
             int size = LittleEndian.getInt(header, 4) - 17;
+            if(size < 0) {
+                // corrupt file, negative image size
+                return;
+            }
             byte[] pictdata = IOUtils.safelyAllocate(size, MAX_RECORD_LENGTH);
             System.arraycopy(data, pos + PICT_HEADER_SIZE, pictdata, 0, pictdata.length);
             pos += PICT_HEADER_SIZE + size;
@@ -28,7 +36,6 @@
             padding--;
             write(out, "</picture>" + CR, padding);
             padding--;
-
         }
     }
 
