@@ -1,0 +1,25 @@
+    private void handle(ZipSecureFile file, ZipOutputStream out) throws IOException {
+        Enumeration<? extends ZipArchiveEntry> entries = file.getEntries();
+        while(entries.hasMoreElements()) {
+            ZipArchiveEntry entry = entries.nextElement();
+
+            String name = entry.getName();
+            out.putNextEntry(new ZipEntry(name));
+            try {
+                if(name.endsWith(".xml") || name.endsWith(".rels")) {
+                    Document document = documentBuilder.parse(new InputSource(file.getInputStream(entry)));
+                    document.setXmlStandalone(true);
+                    pretty(document, out, 2);
+                } else {
+                    System.out.println("Not pretty-printing non-XML file " + name);
+                    IOUtils.copy(file.getInputStream(entry), out);
+                }
+            } catch (Exception e) {
+                throw new IOException("While handling entry " + name, e);
+            } finally {
+                out.closeEntry();
+            }
+            System.out.print(".");
+        }
+    }
+
