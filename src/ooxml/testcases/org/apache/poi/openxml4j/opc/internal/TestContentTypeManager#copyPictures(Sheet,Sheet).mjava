@@ -1,0 +1,32 @@
+    private static void copyPictures(Sheet newSheet, Sheet sheet) {
+        Drawing drawingOld = sheet.createDrawingPatriarch();
+        Drawing drawingNew = newSheet.createDrawingPatriarch();
+        CreationHelper helper = newSheet.getWorkbook().getCreationHelper();
+        if (drawingNew instanceof XSSFDrawing) {
+            List<XSSFShape> shapes = ((XSSFDrawing) drawingOld).getShapes();
+            for (int i = 0; i < shapes.size(); i++) {
+                if (shapes.get(i) instanceof XSSFPicture) {
+                    XSSFPicture pic = (XSSFPicture) shapes.get(i);
+                    XSSFPictureData picData = pic.getPictureData();
+                    int pictureIndex = newSheet.getWorkbook().addPicture(picData.getData(), picData.getPictureType());
+                    XSSFClientAnchor anchor = null;
+                    CTTwoCellAnchor oldAnchor = ((XSSFDrawing) drawingOld).getCTDrawing().getTwoCellAnchorArray(i);
+                    if (oldAnchor != null) {
+                        anchor = (XSSFClientAnchor) helper.createClientAnchor();
+                        CTMarker markerFrom = oldAnchor.getFrom();
+                        CTMarker markerTo = oldAnchor.getTo();
+                        anchor.setDx1((int) markerFrom.getColOff());
+                        anchor.setDx2((int) markerTo.getColOff());
+                        anchor.setDy1((int) markerFrom.getRowOff());
+                        anchor.setDy2((int) markerTo.getRowOff());
+                        anchor.setCol1(markerFrom.getCol());
+                        anchor.setCol2(markerTo.getCol());
+                        anchor.setRow1(markerFrom.getRow());
+                        anchor.setRow2(markerTo.getRow());
+                    }
+                    drawingNew.createPicture(anchor, pictureIndex);
+                }
+            }
+        }
+    }
+
