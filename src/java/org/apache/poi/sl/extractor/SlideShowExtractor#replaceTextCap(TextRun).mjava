@@ -1,0 +1,28 @@
+    private static String replaceTextCap(TextRun tr) {
+        final TextParagraph tp = tr.getParagraph();
+        final TextShape sh = (tp != null) ? tp.getParentShape() : null;
+        final Placeholder ph = (sh != null) ? sh.getPlaceholder() : null;
+
+        // 0xB acts like cariage return in page titles and like blank in the others
+        final char sep = (
+            ph == Placeholder.TITLE ||
+            ph == Placeholder.CENTERED_TITLE ||
+            ph == Placeholder.SUBTITLE
+        ) ? '\n' : ' ';
+
+        // PowerPoint seems to store files with \r as the line break
+        // The messes things up on everything but a Mac, so translate them to \n
+        String txt = tr.getRawText();
+        txt = txt.replace('\r', '\n');
+        txt = txt.replace((char) 0x0B, sep);
+
+        switch (tr.getTextCap()) {
+            case ALL:
+                txt = txt.toUpperCase(LocaleUtil.getUserLocale());
+            case SMALL:
+                txt = txt.toLowerCase(LocaleUtil.getUserLocale());
+        }
+
+        return txt;
+    }
+

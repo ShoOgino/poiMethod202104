@@ -1,0 +1,25 @@
+        void setFontData(InputStream is) throws IOException {
+            final XSLFRelation fntRel = XSLFRelation.FONT;
+            final String relId = fontEntry.getId();
+            final XSLFFontData fntData;
+            if (relId == null || relId.isEmpty()) {
+                final int fntDataIdx;
+                try {
+                    fntDataIdx = ppt.getPackage().getUnusedPartIndex(fntRel.getDefaultFileName());
+                } catch (InvalidFormatException e) {
+                    throw new RuntimeException(e);
+                }
+
+                POIXMLDocumentPart.RelationPart rp = ppt.createRelationship(fntRel, XSLFFactory.getInstance(), fntDataIdx, false);
+                fntData = rp.getDocumentPart();
+                fontEntry.setId(rp.getRelationship().getId());
+            } else {
+                fntData = (XSLFFontData)ppt.getRelationById(relId);
+            }
+
+            assert (fntData != null);
+            try (OutputStream os = fntData.getOutputStream()) {
+                IOUtils.copy(is, os);
+            }
+        }
+

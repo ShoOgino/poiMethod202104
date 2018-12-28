@@ -1,0 +1,36 @@
+    public FontFacet addFacet(InputStream fontData) throws IOException {
+        FontHeader header = new FontHeader();
+        InputStream is = header.bufferInit(fontData);
+
+        final CTPresentation pres = ppt.getCTPresentation();
+        pres.setEmbedTrueTypeFonts(true);
+        pres.setSaveSubsetFonts(true);
+
+        final CTEmbeddedFontDataId dataId;
+        final int style =
+                (header.getWeight() > 400 ? Font.BOLD : Font.PLAIN) |
+                        (header.isItalic() ? Font.ITALIC : Font.PLAIN);
+        switch (style) {
+            case Font.PLAIN:
+                dataId = fontListEntry.isSetRegular()
+                    ? fontListEntry.getRegular() : fontListEntry.addNewRegular();
+                break;
+            case Font.BOLD:
+                dataId = fontListEntry.isSetBold()
+                    ? fontListEntry.getBold() : fontListEntry.addNewBold();
+                break;
+            case Font.ITALIC:
+                dataId = fontListEntry.isSetItalic()
+                    ? fontListEntry.getItalic() : fontListEntry.addNewItalic();
+                break;
+            default:
+                dataId = fontListEntry.isSetBoldItalic()
+                    ? fontListEntry.getBoldItalic() : fontListEntry.addNewBoldItalic();
+                break;
+        }
+
+        XSLFFontFacet facet = new XSLFFontFacet(dataId);
+        facet.setFontData(is);
+        return facet;
+    }
+

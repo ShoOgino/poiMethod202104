@@ -5,20 +5,16 @@
      * @return created slide
      */
     public XSLFSlide createSlide(XSLFSlideLayout layout) {
-        int slideNumber = 256, cnt = 1;
-        CTSlideIdList slideList;
-        XSLFRelation relationType = XSLFRelation.SLIDE;
-        if (!_presentation.isSetSldIdLst()) {
-            slideList = _presentation.addNewSldIdLst();
-        } else {
-            slideList = _presentation.getSldIdLst();
-            for (CTSlideIdListEntry slideId : slideList.getSldIdArray()) {
-                slideNumber = (int) Math.max(slideId.getId() + 1, slideNumber);
-                cnt++;
-            }
+        CTSlideIdList slideList = _presentation.isSetSldIdLst()
+            ? _presentation.getSldIdLst() : _presentation.addNewSldIdLst();
 
-            cnt = findNextAvailableFileNameIndex(relationType, cnt);
-        }
+        @SuppressWarnings("deprecation")
+        OptionalLong maxId = Stream.of(slideList.getSldIdArray())
+            .mapToLong(CTSlideIdListEntry::getId).max();
+
+        final XSLFRelation relationType = XSLFRelation.SLIDE;
+        final int slideNumber = (int)(Math.max(maxId.orElse(0),255)+1);
+        final int cnt = findNextAvailableFileNameIndex(relationType);
 
         RelationPart rp = createRelationship
                 (relationType, XSLFFactory.getInstance(), cnt, false);

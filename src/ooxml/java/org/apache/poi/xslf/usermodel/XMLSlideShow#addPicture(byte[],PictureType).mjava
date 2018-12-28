@@ -12,14 +12,21 @@
             return img;
         }
 
-        int imageNumber = _pictures.size();
+
         XSLFRelation relType = XSLFPictureData.getRelationForType(format);
         if (relType == null) {
             throw new IllegalArgumentException("Picture type " + format + " is not supported.");
         }
 
-        img = createRelationship(relType, XSLFFactory.getInstance(), imageNumber + 1, true).getDocumentPart();
-        img.setIndex(imageNumber);
+        int imageNumber;
+        try {
+            imageNumber = getPackage().getUnusedPartIndex("/ppt/media/image#\\..+");
+        } catch (InvalidFormatException e) {
+            imageNumber = _pictures.size() + 1;
+        }
+
+        img = createRelationship(relType, XSLFFactory.getInstance(), imageNumber, true).getDocumentPart();
+        img.setIndex(_pictures.size());
         _pictures.add(img);
 
         try (OutputStream out = img.getPackagePart().getOutputStream()) {

@@ -1,0 +1,37 @@
+    private void printHeaderFooter(final Sheet<S,P> sheet, final Consumer<String> consumer, final Consumer<String> footerCon) {
+        final Sheet<S, P> m = (sheet instanceof Slide) ? sheet.getMasterSheet() : sheet;
+        addSheetPlaceholderDatails(sheet, Placeholder.HEADER, consumer);
+        addSheetPlaceholderDatails(sheet, Placeholder.FOOTER, footerCon);
+
+        if (!masterByDefault) {
+            return;
+        }
+
+        // write header texts and determine footer text
+        for (Shape<S, P> s : m) {
+            if (!(s instanceof TextShape)) {
+                continue;
+            }
+            final TextShape<S, P> ts = (TextShape<S, P>) s;
+            final PlaceholderDetails pd = ts.getPlaceholderDetails();
+            if (pd == null || !pd.isVisible() || pd.getPlaceholder() == null) {
+                continue;
+            }
+            switch (pd.getPlaceholder()) {
+                case HEADER:
+                    printTextParagraphs(ts.getTextParagraphs(), consumer);
+                    break;
+                case FOOTER:
+                    printTextParagraphs(ts.getTextParagraphs(), footerCon);
+                    break;
+                case SLIDE_NUMBER:
+                    printTextParagraphs(ts.getTextParagraphs(), footerCon, "\n", SlideShowExtractor::replaceSlideNumber);
+                    break;
+                case DATETIME:
+                    // currently not supported
+                default:
+                    break;
+            }
+        }
+    }
+

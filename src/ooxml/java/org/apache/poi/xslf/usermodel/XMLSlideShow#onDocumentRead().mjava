@@ -28,27 +28,26 @@
                 }
             }
 
-            _charts = new ArrayList<>(chartMap.size());
-            for (XSLFChart chart : chartMap.values()) {
-                _charts.add(chart);
+            _charts.clear();
+            _charts.addAll(chartMap.values());
+
+            _masters.clear();
+            if (_presentation.isSetSldMasterIdLst()) {
+                _presentation.getSldMasterIdLst().getSldMasterIdList().forEach(
+                   id -> _masters.add(masterMap.get(id.getId2()))
+                );
             }
 
-            _masters = new ArrayList<>(masterMap.size());
-            for (CTSlideMasterIdListEntry masterId : _presentation.getSldMasterIdLst().getSldMasterIdList()) {
-                XSLFSlideMaster master = masterMap.get(masterId.getId2());
-                _masters.add(master);
-            }
-
-            _slides = new ArrayList<>(shIdMap.size());
+            _slides.clear();
             if (_presentation.isSetSldIdLst()) {
-                for (CTSlideIdListEntry slId : _presentation.getSldIdLst().getSldIdList()) {
-                    XSLFSlide sh = shIdMap.get(slId.getId2());
+                _presentation.getSldIdLst().getSldIdList().forEach(id -> {
+                    XSLFSlide sh = shIdMap.get(id.getId2());
                     if (sh == null) {
-                        LOG.log(POILogger.WARN, "Slide with r:id " + slId.getId() + " was defined, but didn't exist in package, skipping");
-                        continue;
+                        LOG.log(POILogger.WARN, "Slide with r:id " + id.getId() + " was defined, but didn't exist in package, skipping");
+                    } else {
+                        _slides.add(sh);
                     }
-                    _slides.add(sh);
-                }
+                });
             }
         } catch (XmlException e) {
             throw new POIXMLException(e);

@@ -1,4 +1,4 @@
-	protected FontCollection(byte[] source, int start, int len) {
+	/* package */ FontCollection(byte[] source, int start, int len) {
 		_header = new byte[8];
 		System.arraycopy(source,start,_header,0,8);
 
@@ -6,8 +6,13 @@
 
 		for (Record r : _children){
 			if(r instanceof FontEntityAtom) {
-			    HSLFFontInfo fi = new HSLFFontInfo((FontEntityAtom)r);
-	            fonts.put(fi.getTypeface(), fi);
+                HSLFFontInfo fi = new HSLFFontInfo((FontEntityAtom) r);
+                fonts.put(fi.getTypeface(), fi);
+            } else if (r instanceof FontEmbeddedData) {
+                FontEmbeddedData fed = (FontEmbeddedData)r;
+			    FontHeader fontHeader = fed.getFontHeader();
+			    HSLFFontInfo fi = addFont(fontHeader);
+			    fi.addFacet(fed);
 			} else {
 				logger.log(POILogger.WARN, "Warning: FontCollection child wasn't a FontEntityAtom, was " + r.getClass().getSimpleName());
 			}

@@ -1,0 +1,48 @@
+    public HSLFFontInfo addFont(InputStream fontData) throws IOException {
+        FontHeader fontHeader = new FontHeader();
+        InputStream is = fontHeader.bufferInit(fontData);
+
+        HSLFFontInfo fi = addFont(fontHeader);
+
+        // always overwrite the font info properties when a font data given
+        // as the font info properties are assigned generically when only a typeface is given
+        FontEntityAtom fea = fi.getFontEntityAtom();
+        assert (fea != null);
+        fea.setCharSet(fontHeader.getCharsetByte());
+        fea.setPitchAndFamily(FontPitch.getNativeId(fontHeader.getPitch(),fontHeader.getFamily()));
+
+        // always activate subsetting
+        fea.setFontFlags(1);
+        // true type font and no font substitution
+        fea.setFontType(12);
+
+        Record after = fea;
+
+        final int insertIdx = getFacetIndex(fontHeader.isItalic(), fontHeader.isBold());
+
+        FontEmbeddedData newChild = null;
+        for (FontEmbeddedData fed : fi.getFacets()) {
+            FontHeader fh = fed.getFontHeader();
+            final int curIdx = getFacetIndex(fh.isItalic(), fh.isBold());
+
+            if (curIdx == insertIdx) {
+                newChild = fed;
+                break;
+            } else if (curIdx > insertIdx) {
+                // the new facet needs to be inserted before the current facet
+                break;
+            }
+
+            after = fed;
+        }
+
+        if (newChild == null) {
+            newChild = new FontEmbeddedData();
+            addChildAfter(newChild, after);
+            fi.addFacet(newChild);
+        }
+
+        newChild.setFontData(IOUtils.toByteArray(is));
+        return fi;
+    }
+
