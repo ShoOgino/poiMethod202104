@@ -1,82 +1,90 @@
-	/**
-	 * Cloning one XSSFCellStyle onto Another, different XSSFWorkbooks
-	 */
-	@Test
+    /**
+     * Cloning one XSSFCellStyle onto Another, different XSSFWorkbooks
+     */
+    @Test
     public void testCloneStyleDiffWB() throws IOException {
-       XSSFWorkbook wbOrig = new XSSFWorkbook();
-       assertEquals(1, wbOrig.getNumberOfFonts());
-       assertEquals(0, wbOrig.getStylesSource().getNumberFormats().size());
-       
-       XSSFFont fnt = wbOrig.createFont();
-       fnt.setFontName("TestingFont");
-       assertEquals(2, wbOrig.getNumberOfFonts());
-       assertEquals(0, wbOrig.getStylesSource().getNumberFormats().size());
-       
-       XSSFDataFormat fmt = wbOrig.createDataFormat();
-       fmt.getFormat("MadeUpOne");
-       fmt.getFormat("MadeUpTwo");
-       
-       XSSFCellStyle orig = wbOrig.createCellStyle();
-       orig.setAlignment(HorizontalAlignment.RIGHT);
-       orig.setFont(fnt);
-       orig.setDataFormat(fmt.getFormat("Test##"));
-       
-       assertTrue(HorizontalAlignment.RIGHT == orig.getAlignment());
-       assertTrue(fnt == orig.getFont());
-       assertTrue(fmt.getFormat("Test##") == orig.getDataFormat());
-       
-       assertEquals(2, wbOrig.getNumberOfFonts());
-       assertEquals(3, wbOrig.getStylesSource().getNumberFormats().size());
-       
-       
-       // Now a style on another workbook
-       XSSFWorkbook wbClone = new XSSFWorkbook();
-       assertEquals(1, wbClone.getNumberOfFonts());
-       assertEquals(0, wbClone.getStylesSource().getNumberFormats().size());
-       assertEquals(1, wbClone.getNumCellStyles());
-       
-       XSSFDataFormat fmtClone = wbClone.createDataFormat();
-       XSSFCellStyle clone = wbClone.createCellStyle();
-       
-       assertEquals(1, wbClone.getNumberOfFonts());
-       assertEquals(0, wbClone.getStylesSource().getNumberFormats().size());
-       
-       assertFalse(HorizontalAlignment.RIGHT == clone.getAlignment());
-       assertNotEquals("TestingFont", clone.getFont().getFontName());
-       
-       clone.cloneStyleFrom(orig);
-       
-       assertEquals(2, wbClone.getNumberOfFonts());
-       assertEquals(2, wbClone.getNumCellStyles());
-       assertEquals(1, wbClone.getStylesSource().getNumberFormats().size());
-       
-       assertEquals(HorizontalAlignment.RIGHT, clone.getAlignment());
-       assertEquals("TestingFont", clone.getFont().getFontName());
-       assertEquals(fmtClone.getFormat("Test##"), clone.getDataFormat());
-       assertFalse(fmtClone.getFormat("Test##") == fmt.getFormat("Test##"));
-       
-       // Save it and re-check
-       XSSFWorkbook wbReload = XSSFTestDataSamples.writeOutAndReadBack(wbClone);
-       assertEquals(2, wbReload.getNumberOfFonts());
-       assertEquals(2, wbReload.getNumCellStyles());
-       assertEquals(1, wbReload.getStylesSource().getNumberFormats().size());
-       
-       XSSFCellStyle reload = wbReload.getCellStyleAt((short)1);
-       assertEquals(HorizontalAlignment.RIGHT, reload.getAlignment());
-       assertEquals("TestingFont", reload.getFont().getFontName());
-       assertEquals(fmtClone.getFormat("Test##"), reload.getDataFormat());
-       assertFalse(fmtClone.getFormat("Test##") == fmt.getFormat("Test##"));
+        XSSFWorkbook wbOrig = new XSSFWorkbook();
+        assertEquals(1, wbOrig.getNumberOfFonts());
+        assertEquals(0, wbOrig.getStylesSource().getNumberFormats().size());
 
-       XSSFWorkbook wbOrig2 = XSSFTestDataSamples.writeOutAndReadBack(wbOrig);
-       assertNotNull(wbOrig2);
-       wbOrig2.close();
-       
-       XSSFWorkbook wbClone2 = XSSFTestDataSamples.writeOutAndReadBack(wbClone);
-       assertNotNull(wbClone2);
-       wbClone2.close();
-       
-       wbReload.close();
-       wbClone.close();
-       wbOrig.close();
-   }
+        XSSFFont fnt = wbOrig.createFont();
+        fnt.setFontName("TestingFont");
+        assertEquals(2, wbOrig.getNumberOfFonts());
+        assertEquals(0, wbOrig.getStylesSource().getNumberFormats().size());
+
+        XSSFDataFormat fmt = wbOrig.createDataFormat();
+        fmt.getFormat("MadeUpOne");
+        fmt.getFormat("MadeUpTwo");
+
+        XSSFCellStyle orig = wbOrig.createCellStyle();
+        orig.setAlignment(HorizontalAlignment.RIGHT);
+        orig.setFont(fnt);
+        orig.setDataFormat(fmt.getFormat("Test##"));
+        orig.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        orig.setFillForegroundColor(IndexedColors.BRIGHT_GREEN.getIndex());
+
+        XSSFCellStyle origEmpty = wbOrig.createCellStyle();
+
+        assertSame(HorizontalAlignment.RIGHT, orig.getAlignment());
+        assertSame(fnt, orig.getFont());
+        assertEquals(fmt.getFormat("Test##"), orig.getDataFormat());
+
+        assertEquals(2, wbOrig.getNumberOfFonts());
+        assertEquals(3, wbOrig.getStylesSource().getNumberFormats().size());
+
+
+        // Now a style on another workbook
+        XSSFWorkbook wbClone = new XSSFWorkbook();
+        assertEquals(1, wbClone.getNumberOfFonts());
+        assertEquals(0, wbClone.getStylesSource().getNumberFormats().size());
+        assertEquals(1, wbClone.getNumCellStyles());
+
+        XSSFDataFormat fmtClone = wbClone.createDataFormat();
+        XSSFCellStyle clone = wbClone.createCellStyle();
+
+        assertEquals(1, wbClone.getNumberOfFonts());
+        assertEquals(0, wbClone.getStylesSource().getNumberFormats().size());
+
+        assertNotSame(HorizontalAlignment.RIGHT, clone.getAlignment());
+        assertNotEquals("TestingFont", clone.getFont().getFontName());
+
+        clone.cloneStyleFrom(orig);
+
+        assertEquals(2, wbClone.getNumberOfFonts());
+        assertEquals(2, wbClone.getNumCellStyles());
+        assertEquals(1, wbClone.getStylesSource().getNumberFormats().size());
+
+        assertEquals(HorizontalAlignment.RIGHT, clone.getAlignment());
+        assertEquals("TestingFont", clone.getFont().getFontName());
+        assertEquals(fmtClone.getFormat("Test##"), clone.getDataFormat());
+        assertNotEquals(fmtClone.getFormat("Test##"), fmt.getFormat("Test##"));
+        assertEquals(clone.getFillPatternEnum(), FillPatternType.SOLID_FOREGROUND);
+        assertEquals(clone.getFillForegroundColor(), IndexedColors.BRIGHT_GREEN.getIndex());
+
+        // Save it and re-check
+        XSSFWorkbook wbReload = XSSFTestDataSamples.writeOutAndReadBack(wbClone);
+        assertEquals(2, wbReload.getNumberOfFonts());
+        assertEquals(2, wbReload.getNumCellStyles());
+        assertEquals(1, wbReload.getStylesSource().getNumberFormats().size());
+
+        XSSFCellStyle reload = wbReload.getCellStyleAt((short)1);
+        assertEquals(HorizontalAlignment.RIGHT, reload.getAlignment());
+        assertEquals("TestingFont", reload.getFont().getFontName());
+        assertEquals(fmtClone.getFormat("Test##"), reload.getDataFormat());
+        assertNotEquals(fmtClone.getFormat("Test##"), fmt.getFormat("Test##"));
+        assertEquals(clone.getFillPatternEnum(), FillPatternType.SOLID_FOREGROUND);
+        assertEquals(clone.getFillForegroundColor(), IndexedColors.BRIGHT_GREEN.getIndex());
+
+        XSSFWorkbook wbOrig2 = XSSFTestDataSamples.writeOutAndReadBack(wbOrig);
+        assertNotNull(wbOrig2);
+        wbOrig2.close();
+
+        XSSFWorkbook wbClone2 = XSSFTestDataSamples.writeOutAndReadBack(wbClone);
+        assertNotNull(wbClone2);
+        wbClone2.close();
+
+        wbReload.close();
+        wbClone.close();
+        wbOrig.close();
+    }
 
