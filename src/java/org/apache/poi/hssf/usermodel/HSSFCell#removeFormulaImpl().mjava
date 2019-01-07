@@ -1,0 +1,35 @@
+    @Override
+    protected void removeFormulaImpl() {
+        assert getCellType() == CellType.FORMULA;
+
+        notifyFormulaChanging();
+
+        switch (getCachedFormulaResultType()) {
+            case NUMERIC:
+                double numericValue = ((FormulaRecordAggregate)_record).getFormulaRecord().getValue();
+                _record = new NumberRecord();
+                ((NumberRecord)_record).setValue(numericValue);
+                _cellType = CellType.NUMERIC;
+                break;
+            case STRING:
+                _record = new NumberRecord();
+                ((NumberRecord)_record).setValue(0);
+                _cellType = CellType.STRING;
+                break;
+            case BOOLEAN:
+                boolean booleanValue = ((FormulaRecordAggregate)_record).getFormulaRecord().getCachedBooleanValue();
+                _record = new BoolErrRecord();
+                ((BoolErrRecord)_record).setValue(booleanValue);
+                _cellType = CellType.BOOLEAN;
+                break;
+            case ERROR:
+                byte errorValue = (byte) ((FormulaRecordAggregate)_record).getFormulaRecord().getCachedErrorValue();
+                _record = new BoolErrRecord();
+                ((BoolErrRecord)_record).setValue(errorValue);
+                _cellType = CellType.ERROR;
+                break;
+            default:
+                throw new AssertionError();
+        }
+    }
+
