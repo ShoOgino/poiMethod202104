@@ -10,14 +10,36 @@
      * @throws FormulaParseException if the formula has incorrect syntax or is otherwise invalid
      */
     @Override
-    public void setCellFormulaImpl(String formula) throws FormulaParseException
-    {
-        if(formula == null) {
-            setType(CellType.BLANK);
-            return;
+    public void setCellFormulaImpl(String formula) throws FormulaParseException {
+        assert formula != null;
+        if (getCellType() == CellType.FORMULA) {
+            ((FormulaValue)_value).setValue(formula);
+        } else {
+            switch (getCellType()) {
+                case NUMERIC:
+                    _value = new NumericFormulaValue(formula, getNumericCellValue());
+                    break;
+                case STRING:
+                    if (_value instanceof PlainStringValue) {
+                        _value = new StringFormulaValue(formula, getStringCellValue());
+                    } else {
+                        assert(_value instanceof RichTextValue);
+                        _value = new RichTextStringFormulaValue(formula, ((RichTextValue) _value).getValue());
+                    }
+                    break;
+                case BOOLEAN:
+                    _value = new BooleanFormulaValue(formula, getBooleanCellValue());
+                    break;
+                case ERROR:
+                    _value = new ErrorFormulaValue(formula, getErrorCellValue());
+                    break;
+                case _NONE:
+                    // fall-through
+                case FORMULA:
+                    // fall-through
+                case BLANK:
+                    throw new AssertionError();
+            }
         }
-
-        ensureFormulaType(computeTypeFromFormula(formula));
-        ((FormulaValue)_value).setValue(formula);
     }
 
