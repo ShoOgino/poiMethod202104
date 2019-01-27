@@ -1,0 +1,66 @@
+	private static void extractFunctionData(FunctionDataCollector fdc, InputStream is) throws IOException {
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+
+			String id = null;
+			String name = null;
+			while (true) {
+				String line = reader.readLine();
+				if(line == null) {
+					break;
+				}
+
+				if(IGNORED_LINES.contains(line) || line.matches("\\d+ / \\d+")) {
+					continue;
+				}
+
+				Matcher idMatcher = ID_MATCH.matcher(line);
+				boolean foundID = idMatcher.matches();
+				Matcher nameMatcher = NAME_MATCH.matcher(line);
+				boolean foundName = nameMatcher.matches();
+				Matcher idAndNameMatcher = ID_NAME_MATCH.matcher(line);
+				boolean foundIDandName = idAndNameMatcher.matches();
+				if(foundID && foundName ||
+						foundName && foundIDandName ||
+						foundID && foundIDandName) {
+					throw new IllegalStateException("Should not find id and name: " +
+							foundID + "/" + foundName + "/" + foundIDandName +
+							", line: " + line);
+				}
+
+				if(foundID && id != null) {
+					throw new IllegalStateException("Found ID, but already had one: " + id + ", line: " + line);
+				}
+				if(foundName && name != null) {
+					throw new IllegalStateException("Found name, but already had one: " + name + ", line: " + line);
+				}
+				if(foundIDandName && (name != null || id != null)) {
+					throw new IllegalStateException("Found name and id, but already had one: id: " + id + ", name: " + name + ", line: " + line);
+				}
+
+				if(foundID) {
+					id = idMatcher.group(1);
+				} else if (foundName) {
+					name = nameMatcher.group(1);
+				} else if (foundIDandName) {
+					id = idAndNameMatcher.group(1);
+					name = idAndNameMatcher.group(2);
+					// manual override for one function name which contains lowercase characters
+				} else if(line.equals("VBAActivate")) {
+					name = line;
+				} else if (id == null || name == null) {
+					throw new IllegalStateException("Found params, but had empty id or name, id: " + id +
+							", name: " + name + ", line: " + line);
+				} else {
+					System.out.println("Found function " + id + " " + name + " " + line);
+					fdc.addFunction(Integer.parseInt(id, 16), false, name, 0, 0,
+							"", "", "");
+
+					id = null;
+					name = null;
+				}
+			}
+		}
+
+		fdc.endTableGroup("");
+	}
+
