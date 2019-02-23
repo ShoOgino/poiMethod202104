@@ -9,18 +9,26 @@
     public HSLFSlideShowImpl(DirectoryNode dir) throws IOException {
         super(handleDualStorage(dir));
 
-        // First up, grab the "Current User" stream
-        // We need this before we can detect Encrypted Documents
-        readCurrentUserStream();
+        try {
+            // First up, grab the "Current User" stream
+            // We need this before we can detect Encrypted Documents
+            readCurrentUserStream();
 
-        // Next up, grab the data that makes up the
-        //  PowerPoint stream
-        readPowerPointStream();
+            // Next up, grab the data that makes up the
+            //  PowerPoint stream
+            readPowerPointStream();
 
-        // Now, build records based on the PowerPoint stream
-        buildRecords();
+            // Now, build records based on the PowerPoint stream
+            buildRecords();
 
-        // Look for any other streams
-        readOtherStreams();
+            // Look for any other streams
+            readOtherStreams();
+        } catch (RuntimeException | IOException e) {
+            // clean up the filesystem when we cannot read it here to avoid
+            // leaking file handles
+            dir.getFileSystem().close();
+
+            throw e;
+        }
     }
 
