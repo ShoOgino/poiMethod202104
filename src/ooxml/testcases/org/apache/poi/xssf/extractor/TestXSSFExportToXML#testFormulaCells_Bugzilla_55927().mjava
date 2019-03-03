@@ -1,34 +1,35 @@
     @Test
     public void testFormulaCells_Bugzilla_55927() throws Exception {
-        XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("55927.xlsx");
+        try (XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("55927.xlsx")) {
 
-        boolean found = false;
-        for (POIXMLDocumentPart p : wb.getRelations()) {
+            boolean found = false;
+            for (POIXMLDocumentPart p : wb.getRelations()) {
 
-            if (!(p instanceof MapInfo)) {
-                continue;
+                if (!(p instanceof MapInfo)) {
+                    continue;
+                }
+                MapInfo mapInfo = (MapInfo) p;
+
+                XSSFMap map = mapInfo.getXSSFMapById(1);
+
+                assertNotNull("XSSFMap is null", map);
+
+                XSSFExportToXml exporter = new XSSFExportToXml(map);
+                ByteArrayOutputStream os = new ByteArrayOutputStream();
+                exporter.exportToXML(os, true);
+                String xmlData = os.toString("UTF-8");
+
+                assertNotNull(xmlData);
+                assertFalse(xmlData.isEmpty());
+
+                assertEquals("2012-01-13", xmlData.split("<DATE>")[1].split("</DATE>")[0].trim());
+                assertEquals("2012-02-16", xmlData.split("<FORMULA_DATE>")[1].split("</FORMULA_DATE>")[0].trim());
+
+                parseXML(xmlData);
+
+                found = true;
             }
-            MapInfo mapInfo = (MapInfo) p;
-
-            XSSFMap map = mapInfo.getXSSFMapById(1);
-
-            assertNotNull("XSSFMap is null", map);
-
-            XSSFExportToXml exporter = new XSSFExportToXml(map);
-            ByteArrayOutputStream os = new ByteArrayOutputStream();
-            exporter.exportToXML(os, true);
-            String xmlData = os.toString("UTF-8");
-
-            assertNotNull(xmlData);
-            assertFalse(xmlData.isEmpty());
-
-            assertEquals("2012-01-13", xmlData.split("<DATE>")[1].split("</DATE>")[0].trim());
-            assertEquals("2012-02-16", xmlData.split("<FORMULA_DATE>")[1].split("</FORMULA_DATE>")[0].trim());
-
-            parseXML(xmlData);
-
-            found = true;
+            assertTrue(found);
         }
-        assertTrue(found);
     }
 

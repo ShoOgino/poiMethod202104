@@ -1,24 +1,24 @@
     @Test
-    public void testXPathOrdering() {
+    public void testXPathOrdering() throws IOException {
+		try (XSSFWorkbook wb = XSSFTestDataSamples
+				.openSampleWorkbook("CustomXmlMappings-inverse-order.xlsx")) {
 
-		XSSFWorkbook wb = XSSFTestDataSamples
-				.openSampleWorkbook("CustomXmlMappings-inverse-order.xlsx");
+            boolean found = false;
+            for (POIXMLDocumentPart p : wb.getRelations()) {
 
-        boolean found = false;
-		for (POIXMLDocumentPart p : wb.getRelations()) {
+                if (p instanceof MapInfo) {
+                    MapInfo mapInfo = (MapInfo) p;
 
-			if (p instanceof MapInfo) {
-                MapInfo mapInfo = (MapInfo) p;
+                    XSSFMap map = mapInfo.getXSSFMapById(1);
+                    XSSFExportToXml exporter = new XSSFExportToXml(map);
 
-				XSSFMap map = mapInfo.getXSSFMapById(1);
-				XSSFExportToXml exporter = new XSSFExportToXml(map);
+                    assertEquals(1, exporter.compare("/CORSO/DOCENTE", "/CORSO/NOME"));
+                    assertEquals(-1, exporter.compare("/CORSO/NOME", "/CORSO/DOCENTE"));
+                }
 
-				assertEquals(1, exporter.compare("/CORSO/DOCENTE", "/CORSO/NOME"));
-				assertEquals(-1, exporter.compare("/CORSO/NOME", "/CORSO/DOCENTE"));
-			}
-	           
-           found = true;
-       }
-       assertTrue(found);
+                found = true;
+            }
+            assertTrue(found);
+        }
 	}
 

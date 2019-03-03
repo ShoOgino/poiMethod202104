@@ -1,30 +1,31 @@
    @Test
    public void testXmlExportCompare_Bug_55923() throws Exception {
-       XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("55923.xlsx");
+       try (XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("55923.xlsx")) {
 
-       boolean found = false;
-       for (POIXMLDocumentPart p : wb.getRelations()) {
+           boolean found = false;
+           for (POIXMLDocumentPart p : wb.getRelations()) {
 
-           if (!(p instanceof MapInfo)) {
-               continue;
+               if (!(p instanceof MapInfo)) {
+                   continue;
+               }
+               MapInfo mapInfo = (MapInfo) p;
+
+               XSSFMap map = mapInfo.getXSSFMapById(4);
+
+               assertNotNull("XSSFMap is null", map);
+
+               XSSFExportToXml exporter = new XSSFExportToXml(map);
+               assertEquals(0, exporter.compare("", ""));
+               assertEquals(0, exporter.compare("/", "/"));
+               assertEquals(0, exporter.compare("//", "//"));
+               assertEquals(0, exporter.compare("/a/", "/b/"));
+
+               assertEquals(-1, exporter.compare("/ns1:Entry/ns1:A/ns1:B/ns1:C/ns1:E/ns1:EUR",
+                       "/ns1:Entry/ns1:A/ns1:B/ns1:C/ns1:E/ns1:CHF"));
+
+               found = true;
            }
-           MapInfo mapInfo = (MapInfo) p;
-
-           XSSFMap map = mapInfo.getXSSFMapById(4);
-
-           assertNotNull("XSSFMap is null", map);
-
-           XSSFExportToXml exporter = new XSSFExportToXml(map);
-           assertEquals(0, exporter.compare("", ""));
-           assertEquals(0, exporter.compare("/", "/"));
-           assertEquals(0, exporter.compare("//", "//"));
-           assertEquals(0, exporter.compare("/a/", "/b/"));
-           
-           assertEquals(-1, exporter.compare("/ns1:Entry/ns1:A/ns1:B/ns1:C/ns1:E/ns1:EUR",
-                                           "/ns1:Entry/ns1:A/ns1:B/ns1:C/ns1:E/ns1:CHF"));
-           
-           found = true;
+           assertTrue(found);
        }
-       assertTrue(found);
    }
 

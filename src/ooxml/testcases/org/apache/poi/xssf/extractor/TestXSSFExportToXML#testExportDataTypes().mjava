@@ -1,55 +1,56 @@
    @Test
    public void testExportDataTypes() throws Exception {
-       XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("55923.xlsx");
-       
-       Sheet sheet = wb.getSheetAt(0);
-       Row row = sheet.getRow(0);
-       
-       Cell cString = row.createCell(0);
-       cString.setCellValue("somestring");
+       try (XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("55923.xlsx")) {
 
-       Cell cBoolean = row.createCell(1);
-       cBoolean.setCellValue(true);
+           Sheet sheet = wb.getSheetAt(0);
+           Row row = sheet.getRow(0);
 
-       Cell cError = row.createCell(2);
-       cError.setCellErrorValue(FormulaError.NUM.getCode());
-       
-       Cell cFormulaString = row.createCell(3);
-       cFormulaString.setCellFormula("A1");
+           Cell cString = row.createCell(0);
+           cString.setCellValue("somestring");
 
-       Cell cFormulaNumeric = row.createCell(4);
-       cFormulaNumeric.setCellFormula("F1");
+           Cell cBoolean = row.createCell(1);
+           cBoolean.setCellValue(true);
 
-       Cell cNumeric = row.createCell(5);
-       cNumeric.setCellValue(1.2);
+           Cell cError = row.createCell(2);
+           cError.setCellErrorValue(FormulaError.NUM.getCode());
 
-       Cell cDate = row.createCell(6);
-       cDate.setCellValue(new Date());
+           Cell cFormulaString = row.createCell(3);
+           cFormulaString.setCellFormula("A1");
 
-       boolean found = false;
-       for (POIXMLDocumentPart p : wb.getRelations()) {
+           Cell cFormulaNumeric = row.createCell(4);
+           cFormulaNumeric.setCellFormula("F1");
 
-           if (!(p instanceof MapInfo)) {
-               continue;
+           Cell cNumeric = row.createCell(5);
+           cNumeric.setCellValue(1.2);
+
+           Cell cDate = row.createCell(6);
+           cDate.setCellValue(new Date());
+
+           boolean found = false;
+           for (POIXMLDocumentPart p : wb.getRelations()) {
+
+               if (!(p instanceof MapInfo)) {
+                   continue;
+               }
+               MapInfo mapInfo = (MapInfo) p;
+
+               XSSFMap map = mapInfo.getXSSFMapById(4);
+
+               assertNotNull("XSSFMap is null", map);
+
+               XSSFExportToXml exporter = new XSSFExportToXml(map);
+               ByteArrayOutputStream os = new ByteArrayOutputStream();
+               exporter.exportToXML(os, true);
+               String xmlData = os.toString("UTF-8");
+
+               assertNotNull(xmlData);
+               assertFalse(xmlData.isEmpty());
+
+               parseXML(xmlData);
+
+               found = true;
            }
-           MapInfo mapInfo = (MapInfo) p;
-
-           XSSFMap map = mapInfo.getXSSFMapById(4);
-
-           assertNotNull("XSSFMap is null", map);
-
-           XSSFExportToXml exporter = new XSSFExportToXml(map);
-           ByteArrayOutputStream os = new ByteArrayOutputStream();
-           exporter.exportToXML(os, true);
-           String xmlData = os.toString("UTF-8");
-
-           assertNotNull(xmlData);
-           assertFalse(xmlData.isEmpty());
-           
-           parseXML(xmlData);
-           
-           found = true;
+           assertTrue(found);
        }
-       assertTrue(found);
    }
 

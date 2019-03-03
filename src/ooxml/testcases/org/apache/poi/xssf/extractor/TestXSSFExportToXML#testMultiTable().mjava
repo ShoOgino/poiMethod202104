@@ -1,44 +1,44 @@
     @Test
     public void testMultiTable() throws Exception {
+		try (XSSFWorkbook wb = XSSFTestDataSamples
+				.openSampleWorkbook("CustomXMLMappings-complex-type.xlsx")) {
 
-		XSSFWorkbook wb = XSSFTestDataSamples
-				.openSampleWorkbook("CustomXMLMappings-complex-type.xlsx");
+            boolean found = false;
+            for (POIXMLDocumentPart p : wb.getRelations()) {
 
-		boolean found = false;
-		for (POIXMLDocumentPart p : wb.getRelations()) {
+                if (p instanceof MapInfo) {
+                    MapInfo mapInfo = (MapInfo) p;
 
-			if (p instanceof MapInfo) {
-				MapInfo mapInfo = (MapInfo) p;
+                    XSSFMap map = mapInfo.getXSSFMapById(2);
 
-				XSSFMap map = mapInfo.getXSSFMapById(2);
+                    assertNotNull(map);
 
-				assertNotNull(map);
+                    XSSFExportToXml exporter = new XSSFExportToXml(map);
+                    ByteArrayOutputStream os = new ByteArrayOutputStream();
+                    exporter.exportToXML(os, true);
+                    String xml = os.toString("UTF-8");
 
-				XSSFExportToXml exporter = new XSSFExportToXml(map);
-				ByteArrayOutputStream os = new ByteArrayOutputStream();
-				exporter.exportToXML(os, true);
-				String xml = os.toString("UTF-8");
+                    assertNotNull(xml);
 
-				assertNotNull(xml);
+                    String[] regexConditions = {
+                            "<MapInfo", "</MapInfo>",
+                            "<Schema ID=\"1\" Namespace=\"\" SchemaRef=\"\"/>",
+                            "<Schema ID=\"4\" Namespace=\"\" SchemaRef=\"\"/>",
+                            "DataBinding",
+                            "Map Append=\"false\" AutoFit=\"false\" ID=\"1\"",
+                            "Map Append=\"false\" AutoFit=\"false\" ID=\"5\"",
+                    };
 
-				String[] regexConditions = {
-						"<MapInfo", "</MapInfo>",
-						"<Schema ID=\"1\" Namespace=\"\" SchemaRef=\"\"/>",
-						"<Schema ID=\"4\" Namespace=\"\" SchemaRef=\"\"/>",
-						"DataBinding",
-						"Map Append=\"false\" AutoFit=\"false\" ID=\"1\"",
-						"Map Append=\"false\" AutoFit=\"false\" ID=\"5\"",
-				};
+                    for (String condition : regexConditions) {
+                        Pattern pattern = Pattern.compile(condition);
+                        Matcher matcher = pattern.matcher(xml);
+                        assertTrue(matcher.find());
+                    }
+                }
 
-				for (String condition : regexConditions) {
-					Pattern pattern = Pattern.compile(condition);
-					Matcher matcher = pattern.matcher(xml);
-					assertTrue(matcher.find());
-				}
-			}
-	           
-           found = true;
-       }
-       assertTrue(found);
+                found = true;
+            }
+            assertTrue(found);
+        }
 	}
 
