@@ -1,0 +1,24 @@
+    @Test
+    public void testCreatingManyXMLReaders() throws Exception {
+        int limit = 1000;
+        ArrayList<CompletableFuture<XMLReader>> futures = new ArrayList<>();
+        for(int i = 0; i < limit; i++) {
+            futures.add(CompletableFuture.supplyAsync(() -> {
+                try {
+                    return SAXHelper.newXMLReader();
+                } catch (RuntimeException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }));
+        }
+        HashSet<XMLReader> readers = new HashSet<>();
+        for(CompletableFuture<XMLReader> future : futures) {
+            XMLReader reader = future.get(10, TimeUnit.SECONDS);
+            assertTrue(reader.getFeature(XMLConstants.FEATURE_SECURE_PROCESSING));
+            readers.add(reader);
+        }
+        assertEquals(limit, readers.size());
+    }
+
