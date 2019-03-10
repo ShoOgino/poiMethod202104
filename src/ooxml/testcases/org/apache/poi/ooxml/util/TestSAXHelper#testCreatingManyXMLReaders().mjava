@@ -16,7 +16,14 @@
         HashSet<XMLReader> readers = new HashSet<>();
         for(CompletableFuture<XMLReader> future : futures) {
             XMLReader reader = future.get(10, TimeUnit.SECONDS);
-            assertTrue(reader.getFeature(XMLConstants.FEATURE_SECURE_PROCESSING));
+            try {
+                assertTrue(reader.getFeature(XMLConstants.FEATURE_SECURE_PROCESSING));
+            } catch (SAXNotRecognizedException e) {
+                // can happen for older XML Parsers, e.g. we have a CI Job which runs with Xerces XML Parser
+                assertTrue("Had Exception about not-recognized SAX feature: " + e + " which is only expected" +
+                                " for Xerces XML Parser, but had parser: " + reader,
+                        reader.getClass().getName().contains("org.apache.xerces"));
+            }
             readers.add(reader);
         }
         assertEquals(limit, readers.size());
