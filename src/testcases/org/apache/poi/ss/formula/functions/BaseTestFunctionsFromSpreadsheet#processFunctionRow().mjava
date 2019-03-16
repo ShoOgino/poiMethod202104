@@ -3,7 +3,8 @@
         HSSFRow r = sheet.getRow(formulasRowIdx);
         HSSFCell evalCell = r.getCell(SS.COLUMN_INDEX_EVALUATION);
         HSSFCell expectedCell = r.getCell(SS.COLUMN_INDEX_EXPECTED_RESULT);
-        
+        HSSFCell precisionCell = r.getCell(precisionColumnIndex);
+
         CellReference cr = new CellReference(sheet.getSheetName(), formulasRowIdx, evalCell.getColumnIndex(), false, false);
         String msg = String.format(Locale.ROOT, "In %s %s {=%s} '%s'"
             , filename, cr.formatAsString(), evalCell.getCellFormula(), testName);
@@ -37,7 +38,9 @@
             case FORMULA: // will never be used, since we will call method after formula evaluation
                 fail("Cannot expect formula as result of formula evaluation: " + msg);
             case NUMERIC:
-                assertEquals(expectedCell.getNumericCellValue(), actualValue.getNumberValue(), 0.0);
+                double precision = precisionCell != null && precisionCell.getCellType() == CellType.NUMERIC
+                        ? precisionCell.getNumericCellValue() : 0.0;
+                assertEquals(expectedCell.getNumericCellValue(), actualValue.getNumberValue(), precision);
                 break;
             case STRING:
                 assertEquals(msg, expectedCell.getRichStringCellValue().getString(), actualValue.getStringValue());
