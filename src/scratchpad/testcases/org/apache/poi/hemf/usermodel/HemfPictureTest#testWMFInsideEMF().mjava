@@ -1,0 +1,29 @@
+    @Test
+    public void testWMFInsideEMF() throws Exception {
+
+        byte[] wmfData = null;
+        try (InputStream is = ss_samples.openResourceAsStream("63327.emf")) {
+            HemfPicture pic = new HemfPicture(is);
+            for (HemfRecord record : pic) {
+                if (record.getEmfRecordType() == HemfRecordType.comment) {
+                    HemfComment.EmfComment commentRecord = (HemfComment.EmfComment) record;
+                    HemfComment.EmfCommentData emfCommentData = commentRecord.getCommentData();
+                    if (emfCommentData instanceof HemfComment.EmfCommentDataWMF) {
+                        wmfData = ((HemfComment.EmfCommentDataWMF) emfCommentData).getWMFData();
+                    }
+                }
+            }
+        }
+        assertNotNull(wmfData);
+        assertEquals(230, wmfData.length);
+        HwmfPicture pict = new HwmfPicture(new ByteArrayInputStream(wmfData));
+        String embedded = null;
+        for (HwmfRecord r : pict.getRecords()) {
+            if (r instanceof HwmfText.WmfTextOut) {
+                embedded = ((HwmfText.WmfTextOut) r).getText(StandardCharsets.US_ASCII);
+            }
+        }
+        assertNotNull(embedded);
+        assertEquals("Hw.txt", embedded);
+    }
+
