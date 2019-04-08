@@ -1,0 +1,17 @@
+    @Test
+    public void testLengths() throws Exception {
+        //both substring and length rely on char, not codepoints.
+        //This test confirms that the substring calls in HwmfText
+        //will not truncate even beyond-bmp data.
+        //The last character (Deseret AY U+1040C) is comprised of 2 utf16 surrogates/codepoints
+        String s = "\u666E\u6797\u65AF\uD801\uDC0C";
+        Charset utf16LE = StandardCharsets.UTF_16LE;
+        byte[] bytes = s.getBytes(utf16LE);
+        String rebuilt = new String(bytes, utf16LE);
+        rebuilt = rebuilt.substring(0, Math.min(bytes.length, rebuilt.length()));
+        assertEquals(s, rebuilt);
+        assertEquals(5, rebuilt.length());
+        long cnt = rebuilt.codePoints().count();
+        assertEquals(4, cnt);
+    }
+
