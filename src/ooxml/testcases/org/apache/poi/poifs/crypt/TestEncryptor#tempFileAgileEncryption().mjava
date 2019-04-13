@@ -1,0 +1,37 @@
+    @Test
+    public void tempFileAgileEncryption() throws Exception {
+        String password = "pass";
+
+        final byte[] payloadExpected;
+        try (InputStream is = POIDataSamples.getSpreadSheetInstance().openResourceAsStream("SimpleMultiCell.xlsx")) {
+            payloadExpected = IOUtils.toByteArray(is);
+        }
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try (POIFSFileSystem fs = new TempFilePOIFSFileSystem()) {
+            EncryptionInfo ei = new EncryptionInfo(EncryptionMode.agile);
+            Encryptor enc = ei.getEncryptor();
+            enc.confirmPassword(password);
+
+            try (OutputStream os = enc.getDataStream(fs.getRoot())) {
+                os.write(payloadExpected);
+            }
+
+            fs.writeFilesystem(bos);
+        }
+
+        final byte[] payloadActual;
+        try (POIFSFileSystem fs = new POIFSFileSystem(new ByteArrayInputStream(bos.toByteArray()))) {
+            EncryptionInfo ei = new EncryptionInfo(fs);
+            Decryptor dec = ei.getDecryptor();
+            boolean b = dec.verifyPassword(password);
+            assertTrue(b);
+
+            try (InputStream is = dec.getDataStream(fs.getRoot())) {
+                payloadActual = IOUtils.toByteArray(is);
+            }
+        }
+
+        assertArrayEquals(payloadExpected, payloadActual);
+    }
+
