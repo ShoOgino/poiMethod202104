@@ -1,86 +1,86 @@
     /**
      * Finds a free block, and returns its offset.
      * This method will extend the file if needed, and if doing
-     *  so, allocate new FAT blocks to address the extra space.
+     * so, allocate new FAT blocks to address the extra space.
      */
     @Override
     protected int getFreeBlock() throws IOException {
         int numSectors = bigBlockSize.getBATEntriesPerBlock();
 
-       // First up, do we have any spare ones?
-       int offset = 0;
-       for (BATBlock bat : _bat_blocks) {
-          if(bat.hasFreeSectors()) {
-             // Claim one of them and return it
-             for(int j=0; j<numSectors; j++) {
-                int batValue = bat.getValueAt(j);
-                if(batValue == POIFSConstants.UNUSED_BLOCK) {
-                   // Bingo
-                   return offset + j;
+        // First up, do we have any spare ones?
+        int offset = 0;
+        for (BATBlock bat : _bat_blocks) {
+            if (bat.hasFreeSectors()) {
+                // Claim one of them and return it
+                for (int j = 0; j < numSectors; j++) {
+                    int batValue = bat.getValueAt(j);
+                    if (batValue == POIFSConstants.UNUSED_BLOCK) {
+                        // Bingo
+                        return offset + j;
+                    }
                 }
-             }
-          }
-          
-          // Move onto the next BAT
-          offset += numSectors;
-       }
-       
-       // If we get here, then there aren't any free sectors
-       //  in any of the BATs, so we need another BAT
-       BATBlock bat = createBAT(offset, true);
-       bat.setValueAt(0, POIFSConstants.FAT_SECTOR_BLOCK);
-       _bat_blocks.add(bat);
-       
-       // Now store a reference to the BAT in the required place 
-       if(_header.getBATCount() >= 109) {
-          // Needs to come from an XBAT
-          BATBlock xbat = null;
-          for(BATBlock x : _xbat_blocks) {
-             if(x.hasFreeSectors()) {
-                xbat = x;
-                break;
-             }
-          }
-          if(xbat == null) {
-             // Oh joy, we need a new XBAT too...
-             xbat = createBAT(offset+1, false);
-             // Allocate our new BAT as the first block in the XBAT
-             xbat.setValueAt(0, offset);
-             // And allocate the XBAT in the BAT
-             bat.setValueAt(1, POIFSConstants.DIFAT_SECTOR_BLOCK);
-             
-             // Will go one place higher as XBAT added in
-             offset++;
-             
-             // Chain it
-             if(_xbat_blocks.size() == 0) {
-                _header.setXBATStart(offset);
-             } else {
-                _xbat_blocks.get(_xbat_blocks.size()-1).setValueAt(
-                      bigBlockSize.getXBATEntriesPerBlock(), offset
-                );
-             }
-             _xbat_blocks.add(xbat);
-             _header.setXBATCount(_xbat_blocks.size());
-          } else {
-              // Allocate our BAT in the existing XBAT with space
-              for(int i=0; i<bigBlockSize.getXBATEntriesPerBlock(); i++) {
-                 if(xbat.getValueAt(i) == POIFSConstants.UNUSED_BLOCK) {
-                    xbat.setValueAt(i, offset);
+            }
+
+            // Move onto the next BAT
+            offset += numSectors;
+        }
+
+        // If we get here, then there aren't any free sectors
+        //  in any of the BATs, so we need another BAT
+        BATBlock bat = createBAT(offset, true);
+        bat.setValueAt(0, POIFSConstants.FAT_SECTOR_BLOCK);
+        _bat_blocks.add(bat);
+
+        // Now store a reference to the BAT in the required place
+        if (_header.getBATCount() >= 109) {
+            // Needs to come from an XBAT
+            BATBlock xbat = null;
+            for (BATBlock x : _xbat_blocks) {
+                if (x.hasFreeSectors()) {
+                    xbat = x;
                     break;
-                 }
-              }
-          }
-       } else {
-          // Store us in the header
-          int[] newBATs = new int[_header.getBATCount()+1];
-          System.arraycopy(_header.getBATArray(), 0, newBATs, 0, newBATs.length-1);
-          newBATs[newBATs.length-1] = offset;
-          _header.setBATArray(newBATs);
-       }
-       _header.setBATCount(_bat_blocks.size());
-       
-       // The current offset stores us, but the next one is free
-       return offset+1;
+                }
+            }
+            if (xbat == null) {
+                // Oh joy, we need a new XBAT too...
+                xbat = createBAT(offset + 1, false);
+                // Allocate our new BAT as the first block in the XBAT
+                xbat.setValueAt(0, offset);
+                // And allocate the XBAT in the BAT
+                bat.setValueAt(1, POIFSConstants.DIFAT_SECTOR_BLOCK);
+
+                // Will go one place higher as XBAT added in
+                offset++;
+
+                // Chain it
+                if (_xbat_blocks.size() == 0) {
+                    _header.setXBATStart(offset);
+                } else {
+                    _xbat_blocks.get(_xbat_blocks.size() - 1).setValueAt(
+                            bigBlockSize.getXBATEntriesPerBlock(), offset
+                    );
+                }
+                _xbat_blocks.add(xbat);
+                _header.setXBATCount(_xbat_blocks.size());
+            } else {
+                // Allocate our BAT in the existing XBAT with space
+                for (int i = 0; i < bigBlockSize.getXBATEntriesPerBlock(); i++) {
+                    if (xbat.getValueAt(i) == POIFSConstants.UNUSED_BLOCK) {
+                        xbat.setValueAt(i, offset);
+                        break;
+                    }
+                }
+            }
+        } else {
+            // Store us in the header
+            int[] newBATs = new int[_header.getBATCount() + 1];
+            System.arraycopy(_header.getBATArray(), 0, newBATs, 0, newBATs.length - 1);
+            newBATs[newBATs.length - 1] = offset;
+            _header.setBATArray(newBATs);
+        }
+        _header.setBATCount(_bat_blocks.size());
+
+        // The current offset stores us, but the next one is free
+        return offset + 1;
     }
 
