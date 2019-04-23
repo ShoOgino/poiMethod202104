@@ -1,38 +1,38 @@
     @Test
     public void bug56274() throws IOException {
         // read sample file
-        XSSFWorkbook wb1 = XSSFTestDataSamples.openSampleWorkbook("56274.xlsx");
+        try (XSSFWorkbook wb1 = XSSFTestDataSamples.openSampleWorkbook("56274.xlsx")) {
 
-        // read the original sheet header order
-        XSSFRow row = wb1.getSheetAt(0).getRow(0);
-        List<String> headers = new ArrayList<>();
-        for (Cell cell : row) {
-            headers.add(cell.getStringCellValue());
+            // read the original sheet header order
+            XSSFRow row = wb1.getSheetAt(0).getRow(0);
+            List<String> headers = new ArrayList<>();
+            for (Cell cell : row) {
+                headers.add(cell.getStringCellValue());
+            }
+
+            // save the worksheet as-is using SXSSF
+            File outputFile = TempFile.createTempFile("poi-56274", ".xlsx");
+            SXSSFWorkbook outputWorkbook = new SXSSFWorkbook(wb1);
+            FileOutputStream fos = new FileOutputStream(outputFile);
+            outputWorkbook.write(fos);
+            fos.close();
+            outputWorkbook.close();
+
+            // re-read the saved file and make sure headers in the xml are in the original order
+            FileInputStream fis = new FileInputStream(outputFile);
+            XSSFWorkbook wb2 = new XSSFWorkbook(fis);
+            fis.close();
+            CTTable ctTable = wb2.getSheetAt(0).getTables().get(0).getCTTable();
+            CTTableColumn[] ctTableColumnArray = ctTable.getTableColumns().getTableColumnArray();
+
+            assertEquals("number of headers in xml table should match number of header cells in worksheet",
+                    headers.size(), ctTableColumnArray.length);
+            for (int i = 0; i < headers.size(); i++) {
+                assertEquals("header name in xml table should match number of header cells in worksheet",
+                        headers.get(i), ctTableColumnArray[i].getName());
+            }
+            assertTrue(outputFile.delete());
+            wb2.close();
         }
-
-        // save the worksheet as-is using SXSSF
-        File outputFile = TempFile.createTempFile("poi-56274", ".xlsx");
-        SXSSFWorkbook outputWorkbook = new SXSSFWorkbook(wb1);
-        FileOutputStream fos = new FileOutputStream(outputFile);
-        outputWorkbook.write(fos);
-        fos.close();
-        outputWorkbook.close();
-
-        // re-read the saved file and make sure headers in the xml are in the original order
-        FileInputStream fis = new FileInputStream(outputFile);
-        XSSFWorkbook wb2 = new XSSFWorkbook(fis);
-        fis.close();
-        CTTable ctTable = wb2.getSheetAt(0).getTables().get(0).getCTTable();
-        CTTableColumn[] ctTableColumnArray = ctTable.getTableColumns().getTableColumnArray();
-
-        assertEquals("number of headers in xml table should match number of header cells in worksheet",
-                headers.size(), ctTableColumnArray.length);
-        for (int i = 0; i < headers.size(); i++) {
-            assertEquals("header name in xml table should match number of header cells in worksheet",
-                    headers.get(i), ctTableColumnArray[i].getName());
-        }
-        assertTrue(outputFile.delete());
-        wb2.close();
-        wb1.close();
     }
 
