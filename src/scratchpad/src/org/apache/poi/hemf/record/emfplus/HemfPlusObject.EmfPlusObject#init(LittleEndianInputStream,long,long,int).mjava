@@ -1,0 +1,29 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long dataSize, long recordId, int flags) throws IOException {
+            this.flags = flags;
+
+            objectId = getObjectId();
+            EmfPlusObjectType objectType = getObjectType();
+            assert (objectType != null);
+
+            int size = 0;
+
+            totalObjectSize = 0;
+            int dataSize2 = (int) dataSize;
+
+            if (CONTINUABLE.isSet(flags)) {
+                // If the record is continuable, when the continue bit is set, this field will be present.
+                // Continuing objects have multiple EMF+ records starting with EmfPlusContinuedObjectRecord.
+                // Each EmfPlusContinuedObjectRecord will contain a TotalObjectSize. Once TotalObjectSize number
+                // of bytes has been read, the next EMF+ record will not be treated as part of the continuing object.
+                totalObjectSize = leis.readInt();
+                size += LittleEndianConsts.INT_SIZE;
+                dataSize2 -= LittleEndianConsts.INT_SIZE;
+            }
+
+            objectData = objectType.constructor.get();
+            size += objectData.init(leis, dataSize2, objectType, flags);
+
+            return size;
+        }
+

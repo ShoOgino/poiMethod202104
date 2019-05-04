@@ -1,0 +1,34 @@
+    private HwmfEmbedded checkHwmfEscapeRecord() {
+        if (!(current instanceof HwmfEscape)) {
+            return null;
+        }
+        final HwmfEscape esc = (HwmfEscape)current;
+        assert(esc.getEscapeFunction() == EscapeFunction.META_ESCAPE_ENHANCED_METAFILE);
+
+        WmfEscapeEMF img = esc.getEscapeData();
+        assert(img.isValid());
+        current = null;
+
+        final HwmfEmbedded emb = new HwmfEmbedded();
+        emb.setEmbeddedType(HwmfEmbeddedType.EMF);
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try {
+            for (;;) {
+                bos.write(img.getEmfData());
+
+                current = null;
+                if (img.getRemainingBytes() > 0 && hasNext() && (current instanceof HwmfEscape)) {
+                    img = ((HwmfEscape)current).getEscapeData();
+                } else {
+                    return emb;
+                }
+            }
+        } catch (IOException e) {
+            // ByteArrayOutputStream doesn't throw IOException
+            return null;
+        } finally {
+            emb.setData(bos.toByteArray());
+        }
+    }
+

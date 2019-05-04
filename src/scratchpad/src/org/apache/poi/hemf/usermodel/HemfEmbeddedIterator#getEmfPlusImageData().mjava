@@ -1,0 +1,35 @@
+    private HwmfEmbedded getEmfPlusImageData() {
+        HemfPlusObject.EmfPlusObject epo = (HemfPlusObject.EmfPlusObject)current;
+        assert(epo.getObjectType() == HemfPlusObject.EmfPlusObjectType.IMAGE);
+
+        final int objectId = epo.getObjectId();
+
+        HwmfEmbedded emb = new HwmfEmbedded();
+
+        HemfPlusObject.EmfPlusImage img = (HemfPlusObject.EmfPlusImage)epo.getObjectData();
+        assert(img.getImageDataType() != null);
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        try {
+            for (;;) {
+                bos.write(img.getImageData());
+
+                current = null;
+                //noinspection ConstantConditions
+                if (hasNext() &&
+                    (current instanceof HemfPlusObject.EmfPlusObject) &&
+                    ((epo = (HemfPlusObject.EmfPlusObject) current).getObjectId() == objectId)
+                ) {
+                    img = (HemfPlusObject.EmfPlusImage)epo.getObjectData();
+                } else {
+                    return emb;
+                }
+            }
+        } catch (IOException e) {
+            // ByteArrayOutputStream doesn't throw IOException
+            return null;
+        } finally {
+            emb.setData(bos.toByteArray());
+        }
+    }
+

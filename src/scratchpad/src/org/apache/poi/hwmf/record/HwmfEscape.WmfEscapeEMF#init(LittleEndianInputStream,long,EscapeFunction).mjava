@@ -1,0 +1,57 @@
+        @Override
+        public int init(LittleEndianInputStream leis, long recordSize, EscapeFunction escapeFunction) throws IOException {
+            if (recordSize < LittleEndianConsts.INT_SIZE) {
+                return 0;
+            }
+
+            // A 32-bit unsigned integer that defines this record as a WMF Comment record.
+            int commentIdentifier = leis.readInt();
+
+            if (commentIdentifier != EMF_COMMENT_IDENTIFIER) {
+                // there are some WMF implementation using this record as a MFCOMMENT or similar
+                // if the commentIdentifier doesn't match, then return immediately
+                return LittleEndianConsts.INT_SIZE;
+            }
+
+            // A 32-bit unsigned integer that identifies the type of comment in this record.
+            // This value MUST be 0x00000001.
+            commentType = leis.readInt();
+            assert(commentType == 0x00000001);
+
+            // A 32-bit unsigned integer that specifies EMF metafile interoperability. This SHOULD be 0x00010000.
+            version = leis.readInt();
+
+            // A 16-bit unsigned integer used to validate the correctness of the embedded EMF stream.
+            // This value MUST be the one's-complement of the result of applying an XOR operation to all WORDs in the EMF stream.
+            checksum = leis.readUShort();
+
+            // This 32-bit unsigned integer is unused and MUST be set to zero.
+            flags = leis.readInt();
+            assert(flags == 0);
+
+            // A 32-bit unsigned integer that specifies the total number of consecutive META_ESCAPE_ENHANCED_METAFILE
+            // records that contain the embedded EMF metafile.
+            commentRecordCount = leis.readInt();
+
+            // A 32-bit unsigned integer that specifies the size, in bytes, of the EnhancedMetafileData field.
+            // This value MUST be less than or equal to 8,192.
+            currentRecordSize = leis.readInt();
+            assert(0 <= currentRecordSize && currentRecordSize <= 0x2000);
+
+            // A 32-bit unsigned integer that specifies the number of bytes in the EMF stream that remain to be
+            // processed after this record. Those additional EMF bytes MUST follow in the EnhancedMetafileData
+            // fields of subsequent META_ESCAPE_ENHANDED_METAFILE escape records.
+            remainingBytes = leis.readInt();
+
+            // A 32-bit unsigned integer that specifies the total size of the EMF stream embedded in this
+            // sequence of META_ESCAPE_ENHANCED_METAFILE records.
+            emfRecordSize = leis.readInt();
+
+
+            // A segment of an EMF file. The bytes in consecutive META_ESCAPE_ENHANCED_METAFILE records
+            // MUST be concatenated to represent the entire embedded EMF file.
+            emfData = IOUtils.toByteArray(leis, currentRecordSize, MAX_OBJECT_SIZE);
+
+            return LittleEndianConsts.INT_SIZE*8+ LittleEndianConsts.SHORT_SIZE+emfData.length;
+        }
+

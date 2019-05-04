@@ -1,0 +1,64 @@
+    private HwmfEmbedded checkEmfPlusObject() {
+        if (!(current instanceof HemfPlusObject.EmfPlusObject)) {
+            return null;
+        }
+
+        HemfPlusObject.EmfPlusObject epo = (HemfPlusObject.EmfPlusObject)current;
+        assert(epo.getObjectType() == HemfPlusObject.EmfPlusObjectType.IMAGE);
+        HemfPlusObject.EmfPlusImage img = epo.getObjectData();
+        assert(img.getImageDataType() != null);
+
+        HwmfEmbedded emb = getEmfPlusImageData();
+
+        HwmfEmbeddedType et;
+        switch (img.getImageDataType()) {
+            case BITMAP:
+                if (img.getBitmapType() == HemfPlusObject.EmfPlusBitmapDataType.COMPRESSED) {
+                    switch (FileMagic.valueOf(emb.getRawData())) {
+                        case JPEG:
+                            et = HwmfEmbeddedType.JPEG;
+                            break;
+                        case GIF:
+                            et = HwmfEmbeddedType.GIF;
+                            break;
+                        case PNG:
+                            et = HwmfEmbeddedType.PNG;
+                            break;
+                        case TIFF:
+                            et = HwmfEmbeddedType.TIFF;
+                            break;
+                        default:
+                            et = HwmfEmbeddedType.BITMAP;
+                            break;
+                    }
+                } else {
+                    et = HwmfEmbeddedType.PNG;
+                    compressGDIBitmap(img, emb, et);
+                }
+                break;
+            case METAFILE:
+                assert(img.getMetafileType() != null);
+                switch (img.getMetafileType()) {
+                    case Wmf:
+                    case WmfPlaceable:
+                        et = HwmfEmbeddedType.WMF;
+                        break;
+                    case Emf:
+                    case EmfPlusDual:
+                    case EmfPlusOnly:
+                        et = HwmfEmbeddedType.EMF;
+                        break;
+                    default:
+                        et = HwmfEmbeddedType.UNKNOWN;
+                        break;
+                }
+                break;
+            default:
+                et = HwmfEmbeddedType.UNKNOWN;
+                break;
+        }
+        emb.setEmbeddedType(et);
+
+        return emb;
+    }
+

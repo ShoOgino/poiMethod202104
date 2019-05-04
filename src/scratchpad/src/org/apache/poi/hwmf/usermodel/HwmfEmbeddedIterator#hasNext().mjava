@@ -1,0 +1,34 @@
+    @Override
+    public boolean hasNext() {
+        if (iterStack.isEmpty()) {
+            return false;
+        }
+
+        if (current != null) {
+            // don't search twice and potentially skip items
+            return true;
+        }
+
+        Iterator<?> iter;
+        do {
+            iter = iterStack.peek();
+            while (iter.hasNext()) {
+                Object obj = iter.next();
+                if (obj instanceof HwmfImageRecord) {
+                    current = obj;
+                    return true;
+                }
+                if (obj instanceof HwmfEscape && ((HwmfEscape)obj).getEscapeFunction() == EscapeFunction.META_ESCAPE_ENHANCED_METAFILE) {
+                    WmfEscapeEMF emfData = ((HwmfEscape)obj).getEscapeData();
+                    if (emfData.isValid()) {
+                        current = obj;
+                        return true;
+                    }
+                }
+            }
+            iterStack.pop();
+        } while (!iterStack.isEmpty());
+
+        return false;
+    }
+

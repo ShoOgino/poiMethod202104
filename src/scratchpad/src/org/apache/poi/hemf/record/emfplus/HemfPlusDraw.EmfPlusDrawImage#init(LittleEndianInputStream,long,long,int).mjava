@@ -1,0 +1,26 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long dataSize, long recordId, int flags) throws IOException {
+            this.flags = flags;
+
+            // A 32-bit unsigned integer that contains the index of the
+            // optional EmfPlusImageAttributes object in the EMF+ Object Table.
+            imageAttributesID = leis.readInt();
+
+            // A 32-bit signed integer that defines the units of the SrcRect field.
+            // It MUST be the UnitPixel value of the UnitType enumeration
+            srcUnit = UnitType.valueOf(leis.readInt());
+            assert(srcUnit == UnitType.Pixel);
+
+            int size = 2 * LittleEndianConsts.INT_SIZE;
+
+            // An EmfPlusRectF object that specifies a portion of the image to be rendered. The portion of the image
+            // specified by this rectangle is scaled to fit the destination rectangle specified by the RectData field.
+            size += readRectF(leis, srcRect);
+
+            // Either an EmfPlusRect or EmfPlusRectF object that defines the bounding box of the image. The portion of
+            // the image specified by the SrcRect field is scaled to fit this rectangle.
+            size += getReadRect().apply(leis, rectData);
+
+            return size;
+        }
+

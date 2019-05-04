@@ -1,0 +1,77 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long dataSize, long recordId, int flags) throws IOException {
+            this.flags = flags;
+
+            // A 32-bit unsigned integer that contains the index of the
+            // optional EmfPlusImageAttributes object in the EMF+ Object Table.
+            imageAttributesID = leis.readInt();
+
+            // A 32-bit signed integer that defines the units of the SrcRect field.
+            // It MUST be the UnitPixel value of the UnitType enumeration
+            srcUnit = UnitType.valueOf(leis.readInt());
+            assert(srcUnit == UnitType.Pixel);
+
+            int size = 2 * LittleEndianConsts.INT_SIZE;
+
+            // An EmfPlusRectF object that defines a portion of the image to be rendered.
+            size += readRectF(leis, srcRect);
+
+            // A 32-bit unsigned integer that specifies the number of points in the PointData array.
+            // Exactly 3 points MUST be specified.
+            int count = leis.readInt();
+            assert(count == 3);
+            size += LittleEndianConsts.INT_SIZE;
+
+            BiFunction<LittleEndianInputStream, Point2D, Integer> readPoint;
+
+            if (POSITION.isSet(flags)) {
+                // If the POSITION flag is set in the Flags, the points specify relative locations.
+                readPoint = HemfPlusDraw::readPointR;
+            } else if (isCompressed()) {
+                // If the POSITION bit is clear and the COMPRESSED bit is set in the Flags field, the points
+                // specify absolute locations with integer values.
+                readPoint = HemfPlusDraw::readPointS;
+            } else {
+                // If the POSITION bit is clear and the COMPRESSED bit is clear in the Flags field, the points
+                // specify absolute locations with floating-point values.
+                readPoint = HemfPlusDraw::readPointF;
+            }
+
+            // TODO: handle relative coordinates
+
+            // An array of Count points that specify three points of a parallelogram.
+            // The three points represent the upper-left, upper-right, and lower-left corners of the parallelogram.
+            // The fourth point of the parallelogram is extrapolated from the first three.
+            // The portion of the image specified by the SrcRect field SHOULD have scaling and shearing transforms
+            // applied if necessary to fit inside the parallelogram.
+
+
+            // size += readPoint.apply(leis, upperLeft);
+            // size += readPoint.apply(leis, upperRight);
+            // size += readPoint.apply(leis, lowerLeft);
+
+            size += readPoint.apply(leis, lowerLeft);
+            size += readPoint.apply(leis, lowerRight);
+            size += readPoint.apply(leis, upperLeft);
+
+            // https://math.stackexchange.com/questions/2772737/how-to-transform-arbitrary-rectangle-into-specific-parallelogram
+
+            RealMatrix para2normal = MatrixUtils.createRealMatrix(new double[][] {
+                { lowerLeft.getX(), lowerRight.getX(), upperLeft.getX() },
+                { lowerLeft.getY(), lowerRight.getY(), upperLeft.getY() },
+                { 1, 1, 1 }
+            });
+
+            RealMatrix rect2normal = MatrixUtils.createRealMatrix(new double[][]{
+                { srcRect.getMinX(), srcRect.getMaxX(), srcRect.getMinX() },
+                { srcRect.getMinY(), srcRect.getMinY(), srcRect.getMaxY() },
+                { 1, 1, 1 }
+            });
+
+            RealMatrix normal2rect = new LUDecomposition(rect2normal).getSolver().getInverse();
+            double[][] m = para2normal.multiply(normal2rect).getData();
+            trans.setTransform(round10(m[0][0]), round10(m[1][0]), round10(m[0][1]), round10(m[1][1]), round10(m[0][2]), round10(m[1][2]));
+
+            return size;
+        }
+

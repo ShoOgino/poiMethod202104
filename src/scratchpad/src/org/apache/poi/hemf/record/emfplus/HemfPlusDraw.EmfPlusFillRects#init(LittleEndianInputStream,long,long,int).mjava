@@ -1,0 +1,25 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long dataSize, long recordId, int flags) throws IOException {
+            this.flags = flags;
+
+            // A 32-bit unsigned integer that defines the brush, the content of which is
+            // determined by the S bit in the Flags field.
+            brushId = leis.readInt();
+
+            // A 32-bit unsigned integer that specifies the number of rectangles in the RectData field.
+            int count = leis.readInt();
+
+            BiFunction<LittleEndianInputStream, Rectangle2D, Integer> readRect = getReadRect();
+
+            rectData.ensureCapacity(count);
+
+            int size = 2 * LittleEndianConsts.INT_SIZE;
+            for (int i = 0; i<count; i++) {
+                Rectangle2D rect = new Rectangle2D.Double();
+                size += readRect.apply(leis, rect);
+                rectData.add(rect);
+            }
+
+            return size;
+        }
+

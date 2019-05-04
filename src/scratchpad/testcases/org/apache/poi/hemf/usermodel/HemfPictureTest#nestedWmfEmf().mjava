@@ -1,0 +1,22 @@
+    @Test
+    public void nestedWmfEmf() throws Exception {
+        try (InputStream is = sl_samples.openResourceAsStream("nested_wmf.emf")) {
+            HemfPicture emf1 = new HemfPicture(is);
+            List<HwmfEmbedded> embeds = new ArrayList<>();
+            emf1.getEmbeddings().forEach(embeds::add);
+            assertEquals(1, embeds.size());
+            assertEquals(HwmfEmbeddedType.WMF, embeds.get(0).getEmbeddedType());
+
+            HwmfPicture wmf = new HwmfPicture(new ByteArrayInputStream(embeds.get(0).getRawData()));
+            embeds.clear();
+            wmf.getEmbeddings().forEach(embeds::add);
+            assertEquals(3, embeds.size());
+            assertEquals(HwmfEmbeddedType.EMF, embeds.get(0).getEmbeddedType());
+
+            HemfPicture emf2 = new HemfPicture(new ByteArrayInputStream(embeds.get(0).getRawData()));
+            embeds.clear();
+            emf2.getEmbeddings().forEach(embeds::add);
+            assertTrue(embeds.isEmpty());
+        }
+    }
+

@@ -1,0 +1,52 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long dataSize, long recordId, int flags) throws IOException {
+            this.flags = flags;
+
+            // A 32-bit unsigned integer that specifies either the foreground color of the text or a graphics brush,
+            // depending on the value of the SOLID_COLOR flag in the Flags.
+            brushId = leis.readInt();
+
+            // A 32-bit unsigned integer that specifies the spacing, orientation, and quality of rendering for the
+            // string. This value MUST be composed of DriverStringOptions flags
+            optionsFlags = leis.readInt();
+
+            // A 32-bit unsigned integer that specifies whether a transform matrix is present in the
+            // TransformMatrix field.
+            boolean hasMatrix = leis.readInt() == 1;
+
+            // A 32-bit unsigned integer that specifies number of glyphs in the string.
+            int glyphCount = leis.readInt();
+
+            int size = 4 * LittleEndianConsts.INT_SIZE;
+
+            // TOOD: implement Non-Cmap-Lookup correctly
+
+            // If the CMAP_LOOKUP flag in the optionsFlags field is set, each value in this array specifies a
+            // Unicode character. Otherwise, each value specifies an index to a character glyph in the EmfPlusFont
+            // object specified by the ObjectId value in Flags field.
+            byte[] glyphBuf = IOUtils.toByteArray(leis, glyphCount*2, MAX_OBJECT_SIZE);
+            glyphs = StringUtil.getFromUnicodeLE(glyphBuf);
+
+            size += glyphBuf.length;
+
+            // An array of EmfPlusPointF objects that specify the output position of each character glyph.
+            // There MUST be GlyphCount elements, which have a one-to-one correspondence with the elements
+            // in the Glyphs array.
+            //
+            // Glyph positions are calculated from the position of the first glyph if the REALIZED_ADVANCE flag in
+            // Options flags is set. In this case, GlyphPos specifies the position of the first glyph only.
+            int glyphPosCnt = REALIZED_ADVANCE.isSet(optionsFlags) ? 1 : glyphCount;
+            for (int i=0; i<glyphCount; i++) {
+                Point2D p = new Point2D.Double();
+                size += readPointF(leis, p);
+                glpyhPos.add(p);
+            }
+
+            if (hasMatrix) {
+                size += HemfFill.readXForm(leis, transformMatrix);
+            }
+
+
+            return size;
+        }
+
