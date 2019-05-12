@@ -1,0 +1,90 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long dataSize) throws IOException {
+            // A 32-bit unsigned integer that specifies the data in the OptionalData field.
+            // This value MUST be composed of BrushData flags
+            dataFlags = leis.readInt();
+
+            // A 32-bit signed integer from the WrapMode enumeration that specifies whether to paint the area outside
+            // the boundary of the brush. When painting outside the boundary, the wrap mode specifies how the color
+            // gradient is repeated.
+            wrapMode = EmfPlusWrapMode.valueOf(leis.readInt());
+
+            // An EmfPlusARGB object that specifies the center color of the path gradient brush, which is the color
+            // that appears at the center point of the brush. The color of the brush changes gradually from the
+            // boundary color to the center color as it moves from the boundary to the center point.
+            centerColor = readARGB(leis.readInt());
+
+            int size = 3*LittleEndianConsts.INT_SIZE;
+            size += readPointF(leis, centerPoint);
+
+            // An unsigned 32-bit integer that specifies the number of colors specified in the SurroundingColor field.
+            // The surrounding colors are colors specified for discrete points on the boundary of the brush.
+            final int colorCount = leis.readInt();
+
+            // An array of SurroundingColorCount EmfPlusARGB objects that specify the colors for discrete points on the
+            // boundary of the brush.
+            surroundingColor = new Color[colorCount];
+            for (int i=0; i<colorCount; i++) {
+                surroundingColor[i] = readARGB(leis.readInt());
+            }
+            size += (colorCount+1) * LittleEndianConsts.INT_SIZE;
+
+            // The boundary of the path gradient brush, which is specified by either a path or a closed cardinal spline.
+            // If the BrushDataPath flag is set in the BrushDataFlags field, this field MUST contain an
+            // EmfPlusBoundaryPathData object; otherwise, this field MUST contain an EmfPlusBoundaryPointData object.
+            if (PATH.isSet(dataFlags)) {
+                // A 32-bit signed integer that specifies the size in bytes of the BoundaryPathData field.
+                int pathDataSize = leis.readInt();
+                size += LittleEndianConsts.INT_SIZE;
+
+                // An EmfPlusPath object that specifies the boundary of the brush.
+                size += (boundaryPath = new EmfPlusPath()).init(leis, pathDataSize, EmfPlusObjectType.PATH, 0);
+            } else {
+                // A 32-bit signed integer that specifies the number of points in the BoundaryPointData field.
+                int pointCount = leis.readInt();
+                size += LittleEndianConsts.INT_SIZE;
+
+                // An array of BoundaryPointCount EmfPlusPointF objects that specify the boundary of the brush.
+                boundaryPoints = new Point2D[pointCount];
+                for (int i=0; i<pointCount; i++) {
+                    size += readPointF(leis, boundaryPoints[i] = new Point2D.Double());
+                }
+            }
+
+            // An optional EmfPlusTransformMatrix object that specifies a world space to device space transform for
+            // the path gradient brush. This field MUST be present if the BrushDataTransform flag is set in the
+            // BrushDataFlags field of the EmfPlusPathGradientBrushData object.
+            if (TRANSFORM.isSet(dataFlags)) {
+                size += readXForm(leis, (transform = new AffineTransform()));
+            }
+
+            // An optional blend pattern for the path gradient brush. If this field is present, it MUST contain either
+            // an EmfPlusBlendColors object, or an EmfPlusBlendFactors object, but it MUST NOT contain both.
+            final boolean isPreset = PRESET_COLORS.isSet(dataFlags);
+            final boolean blendH = BLEND_FACTORS_H.isSet(dataFlags);
+            if (isPreset && blendH) {
+                throw new RuntimeException("invalid combination of preset colors and blend factors h");
+            }
+
+            size += (isPreset) ? readColors(leis, d -> positions = d, c -> blendColors = c) : 0;
+            size += (blendH) ? readFactors(leis, d -> positions = d, f -> blendFactorsH = f) : 0;
+
+            // An optional EmfPlusFocusScaleData object that specifies focus scales for the path gradient brush.
+            // This field MUST be present if the BrushDataFocusScales flag is set in the BrushDataFlags field of the
+            // EmfPlusPathGradientBrushData object.
+            if (FOCUS_SCALES.isSet(dataFlags)) {
+                // A 32-bit unsigned integer that specifies the number of focus scales. This value MUST be 2.
+                int focusScaleCount = leis.readInt();
+                if (focusScaleCount != 2) {
+                    throw new RuntimeException("invalid focus scale count");
+                }
+                // A floating-point value that defines the horizontal/vertical focus scale.
+                // The focus scale MUST be a value between 0.0 and 1.0, exclusive.
+                focusScaleX = (double)leis.readFloat();
+                focusScaleY = (double)leis.readFloat();
+                size += 3*LittleEndianConsts.INT_SIZE;
+            }
+
+            return size;
+        }
+

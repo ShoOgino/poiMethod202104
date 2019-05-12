@@ -1,0 +1,50 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long dataSize, EmfPlusObjectType objectType, int flags) throws IOException {
+            long size = version.init(leis);
+
+            // A 32-bit unsigned integer that specifies the number of points and associated point types that
+            // are defined by this object.
+            int pointCount = leis.readInt();
+
+            // A 16-bit unsigned integer that specifies how to interpret the points
+            // and associated point types that are defined by this object.
+            pointFlags = leis.readShort();
+
+            leis.skipFully(LittleEndianConsts.SHORT_SIZE);
+            size += 2* LittleEndianConsts.INT_SIZE;
+
+            BiFunction<LittleEndianInputStream,Point2D,Integer> readPoint;
+
+            if (isRelativePosition()) {
+                readPoint = HemfPlusDraw::readPointR;
+            } else if (isCompressed()) {
+                readPoint = HemfPlusDraw::readPointS;
+            } else {
+                readPoint = HemfPlusDraw::readPointF;
+            }
+
+            pathPoints = new Point2D[pointCount];
+            for (int i=0; i<pointCount; i++) {
+                pathPoints[i] = new Point2D.Double();
+                size += readPoint.apply(leis,pathPoints[i]);
+            }
+
+            pointTypes = new byte[pointCount];
+            final boolean isRLE = RLE_COMPRESSED.isSet(pointFlags);
+            if (isRLE) {
+                for (int i=0, rleCount; i<pointCount; i+=rleCount, size+=2) {
+                    rleCount = POINT_RLE_COUNT.getValue(leis.readByte());
+                    Arrays.fill(pointTypes, pointCount, pointCount+rleCount, leis.readByte());
+                }
+            } else {
+                leis.readFully(pointTypes);
+                size += pointCount;
+            }
+
+            int padding = (int)((4 - (size % 4)) % 4);
+            leis.skipFully(padding);
+            size += padding;
+
+            return size;
+        }
+

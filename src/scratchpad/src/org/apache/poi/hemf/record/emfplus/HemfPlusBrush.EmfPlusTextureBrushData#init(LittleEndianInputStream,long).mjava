@@ -1,0 +1,23 @@
+        @Override
+        public long init(LittleEndianInputStream leis, long dataSize) throws IOException {
+            // A 32-bit unsigned integer that specifies the data in the OptionalData field.
+            // This value MUST be composed of BrushData flags.
+            dataFlags = leis.readInt();
+
+            // A 32-bit signed integer from the WrapMode enumeration that specifies how to repeat the texture image
+            // across a shape, when the image is smaller than the area being filled.
+            wrapMode = EmfPlusWrapMode.valueOf(leis.readInt());
+
+            int size = 2*LittleEndianConsts.INT_SIZE;
+
+            if (TRANSFORM.isSet(dataFlags)) {
+                size += readXForm(leis, (transform = new AffineTransform()));
+            }
+
+            if (dataSize > size) {
+                size += (image = new EmfPlusImage()).init(leis, dataSize-size, EmfPlusObjectType.IMAGE, 0);
+            }
+
+            return size;
+        }
+
