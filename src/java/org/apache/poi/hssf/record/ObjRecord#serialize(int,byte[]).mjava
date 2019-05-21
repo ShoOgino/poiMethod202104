@@ -1,26 +1,30 @@
-	@Override
-	public int serialize(int offset, byte[] data) {
-		int recSize = getRecordSize();
-		int dataSize = recSize - 4;
-		LittleEndianByteArrayOutputStream out = new LittleEndianByteArrayOutputStream(data, offset, recSize); // NOSONAR
+    @Override
+    public int serialize(int offset, byte[] data) {
+        int recSize = getRecordSize();
+        int dataSize = recSize - 4;
 
-		out.writeShort(sid);
-		out.writeShort(dataSize);
+        try (LittleEndianByteArrayOutputStream out = new LittleEndianByteArrayOutputStream(data, offset, recSize)) { // NOSONAR
+            out.writeShort(sid);
+            out.writeShort(dataSize);
 
-		if (_uninterpretedData == null) {
+            if (_uninterpretedData == null) {
 
-			for (int i = 0; i < subrecords.size(); i++) {
-				SubRecord record = subrecords.get(i);
-				record.serialize(out);
-			}
-			int expectedEndIx = offset+dataSize;
-			// padding
-			while (out.getWriteIndex() < expectedEndIx) {
-				out.writeByte(0);
-			}
-		} else {
-			out.write(_uninterpretedData);
-		}
-		return recSize;
-	}
+                for (int i = 0; i < subrecords.size(); i++) {
+                    SubRecord record = subrecords.get(i);
+                    record.serialize(out);
+                }
+                int expectedEndIx = offset + dataSize;
+                // padding
+                while (out.getWriteIndex() < expectedEndIx) {
+                    out.writeByte(0);
+                }
+            } else {
+                out.write(_uninterpretedData);
+            }
+        } catch (IOException ioe) {
+            // should never happen in practice
+            throw new IllegalStateException(ioe);
+        }
+        return recSize;
+    }
 
