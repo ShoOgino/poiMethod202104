@@ -1,0 +1,117 @@
+    private static void createChart(XSSFChart chart, XSSFSheet sheet, int[] chartedCols, double target) {
+        // some colors
+        XDDFFillProperties[] fills = new XDDFFillProperties[] {
+            new XDDFSolidFillProperties(XDDFColor.from(PresetColor.TURQUOISE)),
+            new XDDFSolidFillProperties(XDDFColor.from(PresetColor.CHARTREUSE)),
+            new XDDFSolidFillProperties(XDDFColor.from(PresetColor.LAVENDER)),
+            new XDDFSolidFillProperties(XDDFColor.from(PresetColor.CHOCOLATE)),
+            new XDDFSolidFillProperties(XDDFColor.from(PresetColor.TOMATO)),
+            new XDDFSolidFillProperties(XDDFColor.from(PresetColor.PLUM))
+        };
+        XDDFLineProperties solidTurquoise = new XDDFLineProperties(fills[0]);
+        XDDFLineProperties solidTomato = new XDDFLineProperties(fills[4]);
+        XDDFLineProperties solidPlum = new XDDFLineProperties(fills[5]);
+        XDDFSolidFillProperties solidAlmond = new XDDFSolidFillProperties(XDDFColor.from(PresetColor.BLANCHED_ALMOND));
+        XDDFSolidFillProperties solidGray = new XDDFSolidFillProperties(XDDFColor.from(PresetColor.DARK_SLATE_GRAY));
+
+
+        // the bar chart
+
+        XDDFCategoryAxis barCategories = chart.createCategoryAxis(AxisPosition.BOTTOM);
+        XDDFValueAxis leftValues = chart.createValueAxis(AxisPosition.LEFT);
+        leftValues.crossAxis(barCategories);
+        barCategories.crossAxis(leftValues);
+
+        // from https://stackoverflow.com/questions/50873700/
+        // colored major grid lines
+        leftValues.getOrAddMajorGridProperties().setLineProperties(solidTomato);
+        //colored axis line
+        leftValues.getOrAddShapeProperties().setLineProperties(solidPlum);
+        // axis font
+        XDDFRunProperties props = leftValues.getOrAddTextProperties();
+        props.setFontSize(14.0);
+        props.setFillProperties(fills[5]);
+
+        XDDFBarChartData bar = (XDDFBarChartData) chart.createData(ChartTypes.BAR, barCategories, leftValues);
+        bar.setVaryColors(true);
+        bar.setBarDirection(chartedCols.length > 1 ? BarDirection.COL : BarDirection.BAR);
+
+        for (int c : chartedCols) {
+            // the data sources
+            XDDFCategoryDataSource xs = XDDFDataSourcesFactory.fromStringCellRange(sheet,
+                    new CellRangeAddress(1, NUM_OF_ROWS, 0, 0));
+            XDDFNumericalDataSource<Double> ys = XDDFDataSourcesFactory.fromNumericCellRange(sheet,
+                    new CellRangeAddress(1, NUM_OF_ROWS, c, c));
+            XDDFBarChartData.Series series = (XDDFBarChartData.Series) bar.addSeries(xs, ys);
+            series.setTitle(null, new CellReference(sheet.getSheetName(), 0, c, true, true));
+            series.setFillProperties(fills[c]);
+            series.setLineProperties(solidTurquoise); // bar border color different from fill
+        }
+        chart.plot(bar);
+
+
+        // target line
+        // line of a scatter chart from 0 (min) to 1 (max) having value of target
+
+        XDDFValueAxis scatterX = chart.createValueAxis(AxisPosition.TOP);
+        scatterX.setVisible(false);
+        scatterX.setTickLabelPosition(AxisTickLabelPosition.NONE);
+        XDDFValueAxis scatterY = chart.createValueAxis(AxisPosition.RIGHT);
+        scatterY.setVisible(false);
+        scatterY.setTickLabelPosition(AxisTickLabelPosition.NONE);
+        scatterX.crossAxis(scatterY);
+        scatterY.crossAxis(scatterX);
+        if (chartedCols.length > 1) {
+            scatterX.setMaximum(1.0);
+        } else {
+            scatterY.setMaximum(1.0);
+        }
+
+        XDDFScatterChartData scatter = (XDDFScatterChartData) chart.createData(ChartTypes.SCATTER, scatterX, scatterY);
+        scatter.setVaryColors(true);
+
+        //  This only works for Excel since OpenOffice or LibreOffice Calc does not support literal numeric data series.
+        XDDFNumericalDataSource<Double> targetDS = XDDFDataSourcesFactory.fromArray(new Double[] { target, target });
+        XDDFNumericalDataSource<Double> zeroOneDS = XDDFDataSourcesFactory.fromArray(new Double[] { 0.0, 1.0 });
+
+        if (chartedCols.length > 1) {
+            // BarDirection.COL then X axis is from 0 to 1 and Y axis is target axis
+            scatter.addSeries(zeroOneDS, targetDS).setLineProperties(solidTurquoise);
+        } else {
+            // BarDirection.BAR then X axis is target axis and Y axis is from 0 to 1
+            scatter.addSeries(targetDS, zeroOneDS).setLineProperties(solidTurquoise);
+        }
+
+        chart.plot(scatter);
+
+
+        // legend
+        if (chartedCols.length > 1) {
+            XDDFChartLegend legend = chart.getOrAddLegend();
+            legend.setPosition(LegendPosition.LEFT);
+            legend.setOverlay(false);
+
+            // delete additional target line series legend entry
+            XDDFLegendEntry entry = legend.addEntry();
+            entry.setIndex(0);
+            entry.setDelete(true);
+        }
+
+
+        // from https://stackoverflow.com/questions/51530552/
+        // customize the chart
+
+        // do not auto delete the title
+        chart.setAutoTitleDeleted(false);
+
+        // plot area background and border line
+        XDDFShapeProperties chartProps = chart.getOrAddShapeProperties();
+        chartProps.setFillProperties(solidAlmond);
+        chartProps.setLineProperties(new XDDFLineProperties(solidGray));
+
+        // line style of cat axis
+        XDDFLineProperties categoriesProps = new XDDFLineProperties(solidGray);
+        categoriesProps.setWidth(2.1);
+        barCategories.getOrAddShapeProperties().setLineProperties(categoriesProps);
+    }
+
