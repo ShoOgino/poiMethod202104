@@ -6,8 +6,21 @@
     *       returnNullOnMissingChunk is set
     */
    public String getHtmlBody() throws ChunkNotFoundException {
-      if(mainChunks.getHtmlBodyChunkBinary() != null) {
-         return mainChunks.getHtmlBodyChunkBinary().getAs7bitString();
+      ByteChunk htmlBodyBinaryChunk = mainChunks.getHtmlBodyChunkBinary();
+      if (htmlBodyBinaryChunk != null) {
+         List<PropertyValue> cpid = mainChunks.getProperties().get(MAPIProperty.INTERNET_CPID);
+         if (cpid != null && cpid.size() > 0) {
+            int codepage = ((LongPropertyValue) cpid.get(0)).getValue();
+            try {
+               String encoding = CodePageUtil.codepageToEncoding(codepage, true);
+               byte[] htmlBodyBinary = htmlBodyBinaryChunk.getValue();
+               return new String(htmlBodyBinary, encoding);
+            } catch (UnsupportedEncodingException e) {
+               logger.log(POILogger.WARN, "HTML body binary: Invalid codepage ID ", codepage, " set for the message via ",
+                  MAPIProperty.INTERNET_CPID, ", ignoring");
+            }
+         }
+         return htmlBodyBinaryChunk.getAs7bitString();
       }
       return getStringFromChunk(mainChunks.getHtmlBodyChunkString());
    }
