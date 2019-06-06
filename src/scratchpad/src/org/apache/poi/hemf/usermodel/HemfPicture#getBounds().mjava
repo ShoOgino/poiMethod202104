@@ -1,0 +1,30 @@
+    /**
+     * Returns the bounding box in device-independent units. Usually this is taken from the placeable header.
+     *
+     * @return the bounding box
+     */
+    public Rectangle2D getBounds() {
+        HemfHeader header = (HemfHeader)getRecords().get(0);
+        Rectangle2D dim = header.getFrameRectangle();
+        double x = dim.getX(), y = dim.getY();
+        double width = dim.getWidth(), height = dim.getHeight();
+        if (dim.isEmpty() || Math.rint(width) == 0 || Math.rint(height) == 0) {
+            for (HemfRecord r : getRecords()) {
+                if (r instanceof HemfWindowing.EmfSetWindowExtEx) {
+                    HemfWindowing.EmfSetWindowExtEx extEx = (HemfWindowing.EmfSetWindowExtEx)r;
+                    Dimension2D d = extEx.getSize();
+                    width = d.getWidth();
+                    height = d.getHeight();
+                    // keep searching - sometimes there's another record
+                }
+                if (r instanceof HemfWindowing.EmfSetWindowOrgEx) {
+                    HemfWindowing.EmfSetWindowOrgEx orgEx = (HemfWindowing.EmfSetWindowOrgEx)r;
+                    x = orgEx.getX();
+                    y = orgEx.getY();
+                }
+            }
+        }
+
+        return new Rectangle2D.Double(x, y, width, height);
+    }
+
