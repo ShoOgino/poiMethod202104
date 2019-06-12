@@ -1,0 +1,35 @@
+    /**
+     * Write Central directory file header
+     */
+    int writeCEN(Entry entry) throws IOException {
+        written = 0;
+        boolean useZip64 = entry.size > MAX32;
+        writeInt(PK0102);                              // "PK\001\002"
+        writeShort(VERSION_45);                        // version made by: 4.5
+        writeShort(useZip64 ? VERSION_45 : VERSION_20);// version required: 4.5
+        writeShort(DATA_DESCRIPTOR_USED);              // flags: 8 = data descriptor used
+        writeShort(ZipEntry.DEFLATED);                 // compression method: 8 = deflate
+        writeInt(0);                                // file modification time & date
+        writeInt(entry.crc);                           // CRC-32
+        writeInt(entry.compressedSize);                // compressed size
+        writeInt(useZip64 ? MAX32 : entry.size); // uncompressed size
+        writeShort(entry.filename.length());           // filename length
+        writeShort(useZip64
+                ? (2 + 2 + 8)  /* short + short + long*/
+                : 0);                                  // extra field len
+        writeShort(0);                              // comment length
+        writeShort(0);                              // disk number where file starts
+        writeShort(0);                              // internal file attributes (unused)
+        writeInt(0);                                // external file attributes (unused)
+        writeInt(entry.offset);                        // LFH offset
+        byte[] filenameBytes = entry.filename.getBytes(US_ASCII);
+        out.write(filenameBytes);                      // filename characters
+        if (useZip64) {
+            // Extra field:
+            writeShort(ZIP64_FIELD);                   // ZIP64 field signature
+            writeShort(8);                          // size of extra field (below)
+            writeLong(entry.size);                     // uncompressed size
+        }
+        return written + filenameBytes.length;
+    }
+
