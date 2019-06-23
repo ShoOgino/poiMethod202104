@@ -1,19 +1,41 @@
     public void draw(Graphics2D ctx, Rectangle2D graphicsBounds) {
-        AffineTransform at = ctx.getTransform();
+        final Shape clip = ctx.getClip();
+        final AffineTransform at = ctx.getTransform();
         try {
             Rectangle2D wmfBounds = getBounds();
+            Rectangle2D innerBounds = getInnnerBounds();
+            if (innerBounds == null) {
+                innerBounds = wmfBounds;
+            }
+
             // scale output bounds to image bounds
             ctx.translate(graphicsBounds.getX(), graphicsBounds.getY());
             ctx.scale(graphicsBounds.getWidth()/wmfBounds.getWidth(), graphicsBounds.getHeight()/wmfBounds.getHeight());
-            
-            HwmfGraphics g = new HwmfGraphics(ctx, wmfBounds);
+
+            ctx.translate(-wmfBounds.getX(), -wmfBounds.getY());
+            ctx.translate(innerBounds.getCenterX(), innerBounds.getCenterY());
+            ctx.scale(wmfBounds.getWidth()/innerBounds.getWidth(), wmfBounds.getHeight()/innerBounds.getHeight());
+            ctx.translate(-wmfBounds.getCenterX(), -wmfBounds.getCenterY());
+
+            HwmfGraphics g = new HwmfGraphics(ctx, innerBounds);
+            HwmfDrawProperties prop = g.getProperties();
+            prop.setViewportOrg(innerBounds.getX(), innerBounds.getY());
+            prop.setViewportExt(innerBounds.getWidth(), innerBounds.getHeight());
+
             int idx = 0;
             for (HwmfRecord r : records) {
+                prop = g.getProperties();
+                Shape propClip = prop.getClip();
+                Shape ctxClip = ctx.getClip();
+                if (!Objects.equals(propClip, ctxClip)) {
+                    int a = 5;
+                }
                 r.draw(g);
                 idx++;
             }
         } finally {
             ctx.setTransform(at);
+            ctx.setClip(clip);
         }
     }
 

@@ -9,23 +9,43 @@
         File file = null;
         String format = "png";
         File outdir = null;
+        String outfile = null;
         boolean quiet = false;
+        String outpattern = OUTPUT_PAT_REGEX;
 
         for (int i = 0; i < args.length; i++) {
-            if (args[i].startsWith("-")) {
-                if ("-scale".equals(args[i])) {
-                    scale = Float.parseFloat(args[++i]); // lgtm[java/index-out-of-bounds]
-                } else if ("-slide".equals(args[i])) {
-                    slidenumStr = args[++i]; // lgtm[java/index-out-of-bounds]
-                } else if ("-format".equals(args[i])) {
-                    format = args[++i]; // lgtm[java/index-out-of-bounds]
-                } else if ("-outdir".equals(args[i])) {
-                    outdir = new File(args[++i]); // lgtm[java/index-out-of-bounds]
-                } else if ("-quiet".equals(args[i])) {
+            String opt = (i+1 < args.length) ? args[i+1] : null;
+            switch (args[i]) {
+                case "-scale":
+                    scale = Float.parseFloat(opt);
+                    i++;
+                    break;
+                case "-slide":
+                    slidenumStr = opt;
+                    i++;
+                    break;
+                case "-format":
+                    format = opt;
+                    i++;
+                    break;
+                case "-outdir":
+                    outdir = new File(opt);
+                    i++;
+                    break;
+                case "-outfile":
+                    outfile = opt;
+                    i++;
+                    break;
+                case "-outpat":
+                    outpattern = opt;
+                    i++;
+                    break;
+                case "-quiet":
                     quiet = true;
-                }
-            } else {
-                file = new File(args[i]);
+                    break;
+                default:
+                    file = new File(args[i]);
+                    break;
             }
         }
 
@@ -74,7 +94,7 @@
                 Slide<?, ?> slide = slides.get(slideNo);
                 String title = slide.getTitle();
                 if (!quiet) {
-                    System.out.println("Rendering slide " + slideNo + (title == null ? "" : ": " + title));
+                    System.out.println("Rendering slide " + (slideNo+1) + (title == null ? "" : ": " + title.trim()));
                 }
 
                 BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
@@ -94,10 +114,9 @@
 
                 // save the result
                 if (!"null".equals(format)) {
-                    String outname = file.getName().replaceFirst(".pptx?", "");
-                    outname = String.format(Locale.ROOT, "%1$s-%2$04d.%3$s", outname, slideNo, format);
-                    File outfile = new File(outdir, outname);
-                    ImageIO.write(img, format, outfile);
+                    String inname = String.format(Locale.ROOT, "%04d|%s|%s", slideNo+1, format, file.getName());
+                    String outname = (outfile != null) ? outfile : INPUT_PATTERN.matcher(inname).replaceAll(outpattern);
+                    ImageIO.write(img, format, new File(outdir, outname));
                 }
 
                 graphics.dispose();

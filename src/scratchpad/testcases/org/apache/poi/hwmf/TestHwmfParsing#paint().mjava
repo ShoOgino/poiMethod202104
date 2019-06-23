@@ -2,22 +2,22 @@
     @Ignore("This is work-in-progress and not a real unit test ...")
     public void paint() throws IOException {
         boolean dumpEmbedded = true;
+        boolean dumpRecords = false;
 
-//        File f = samples.getFile("santa.wmf");
-         File f = new File("testme.wmf");
+        File f = new File("testme.wmf");
         FileInputStream fis = new FileInputStream(f);
         HwmfPicture wmf = new HwmfPicture(fis);
         fis.close();
         
-        Dimension dim = wmf.getSize();
-        int width = Units.pointsToPixel(dim.getWidth());
+        Dimension2D dim = wmf.getSize();
+        double width = Units.pointsToPixel(dim.getWidth());
         // keep aspect ratio for height
-        int height = Units.pointsToPixel(dim.getHeight());
+        double height = Units.pointsToPixel(dim.getHeight());
         double scale = (width > height) ? 1500 / width : 1500 / width;
-        width *= scale;
-        height *= scale;
+        width = Math.abs(width * scale);
+        height = Math.abs(height * scale);
 
-        BufferedImage bufImg = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage bufImg = new BufferedImage((int)width, (int)height, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g = bufImg.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
@@ -38,6 +38,17 @@
                     fos.write(emb.getRawData());
                 }
                 embIdx++;
+            }
+        }
+
+        if (dumpRecords) {
+            try (FileWriter fw = new FileWriter("wmf-records.log")) {
+                for (HwmfRecord r : wmf.getRecords()) {
+                    fw.write(r.getWmfRecordType().name());
+                    fw.write(":");
+                    fw.write(r.toString());
+                    fw.write("\n");
+                }
             }
         }
     }
