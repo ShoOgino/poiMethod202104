@@ -1,18 +1,20 @@
     public void draw(Graphics2D ctx, Rectangle2D graphicsBounds) {
-        final HemfHeader header = (HemfHeader)getRecords().get(0);
-
         final Shape clip = ctx.getClip();
         final AffineTransform at = ctx.getTransform();
         try {
-            Rectangle2D emfBounds = header.getBoundsRectangle();
+            Rectangle2D emfBounds = getHeader().getBoundsRectangle();
 
             // scale output bounds to image bounds
-            ctx.translate(minX(graphicsBounds), minY(graphicsBounds));
+            ctx.translate(graphicsBounds.getCenterX(), graphicsBounds.getCenterY());
             ctx.scale(graphicsBounds.getWidth()/emfBounds.getWidth(), graphicsBounds.getHeight()/emfBounds.getHeight());
-            ctx.translate(-minX(emfBounds), -minY(emfBounds));
+            ctx.translate(-emfBounds.getCenterX(), -emfBounds.getCenterY());
+
+            HemfGraphics g = new HemfGraphics(ctx, emfBounds);
+            HemfDrawProperties prop = g.getProperties();
+            prop.setViewportOrg(emfBounds.getX(), emfBounds.getY());
+            prop.setViewportExt(emfBounds.getWidth(), emfBounds.getHeight());
 
             int idx = 0;
-            HemfGraphics g = new HemfGraphics(ctx, emfBounds);
             for (HemfRecord r : getRecords()) {
                 try {
                     g.draw(r);
