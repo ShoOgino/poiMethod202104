@@ -4,9 +4,8 @@
             return;
         }
 
-        DrawPaint drawPaint = DrawFactory.getInstance(graphics).getPaint(getShape());
-        Paint fill = drawPaint.getPaint(graphics, getShape().getFillStyle().getPaint());
-        Paint line = drawPaint.getPaint(graphics, getShape().getStrokeStyle().getPaint());
+        Paint fill = getFillPaint(graphics);
+        Paint line = getLinePaint(graphics);
         BasicStroke stroke = getStroke(); // the stroke applies both to the shadow and the shape
         graphics.setStroke(stroke);
 
@@ -17,16 +16,28 @@
 
         // then fill the shape interior
         if (fill != null) {
+            final Path2D area = new Path2D.Double();
+            graphics.setRenderingHint(Drawable.GRADIENT_SHAPE, area);
+
+            Consumer<PaintModifier> fun = (pm) -> fillArea(graphics, pm, area);
+
+            PaintModifier pm = null;
             for (Outline o : elems) {
-                if (o.getPath().isFilled()){
-                    Paint fillMod = drawPaint.getPaint(graphics, getShape().getFillStyle().getPaint(), o.getPath().getFill());
-                    if (fillMod != null) {
-                        graphics.setPaint(fillMod);
-                        java.awt.Shape s = o.getOutline();
-                        graphics.setRenderingHint(Drawable.GRADIENT_SHAPE, s);
-                        fillPaintWorkaround(graphics, s);
+                Path path = o.getPath();
+                if (path.isFilled()) {
+                    PaintModifier pmOld = pm;
+                    pm = path.getFill();
+                    if (pmOld != null && pmOld != pm) {
+                        fun.accept(pmOld);
+                        area.reset();
+                    } else {
+                        area.append(o.getOutline(), false);
                     }
                 }
+            }
+
+            if (area.getCurrentPoint() != null) {
+                fun.accept(pm);
             }
         }
 

@@ -1,23 +1,9 @@
+    @SuppressWarnings("ConstantConditions")
     @Parameters(name="{0}")
     public static Collection<String> data() {
-        final Set<String> data = new TreeSet<>();
-        for (String f : files.split(", ?")) {
-            if (basedir == null) {
-                data.add(f);
-            } else {
-                final Pattern p = Pattern.compile(f);
-                basedir.listFiles(new FileFilter(){
-                    public boolean accept(File pathname) {
-                        String name = pathname.getName();
-                        if (p.matcher(name).matches()) {
-                            data.add(name);
-                        }
-                        return false;
-                    }
-                });
-            }
-        }
-                
-        return data;
+        Function<String, Stream<String>> fun = (basedir == null) ? Stream::of :
+            (f) -> Stream.of(basedir.listFiles(p -> p.getName().matches(f))).map(File::getName);
+
+        return Stream.of(files.split(", ?")).flatMap(fun).collect(Collectors.toList());
     }
 
