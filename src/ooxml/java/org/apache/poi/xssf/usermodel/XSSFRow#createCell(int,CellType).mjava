@@ -20,7 +20,15 @@
             ctCell = _row.addNewC();
         }
         XSSFCell xcell = new XSSFCell(this, ctCell);
-        xcell.setCellNum(columnIndex);
+        try {
+            xcell.setCellNum(columnIndex);
+        } catch (IllegalArgumentException e) {
+            // we need to undo adding the CTCell in _row if something fails here, e.g.
+            // cell-limits are exceeded
+            _row.removeC(_row.getCList().size()-1);
+
+            throw e;
+        }
         if (type != CellType.BLANK && type != CellType.FORMULA) {
             setDefaultValue(xcell, type);
         }

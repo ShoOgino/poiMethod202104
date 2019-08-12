@@ -8,6 +8,10 @@
         if (cell.getRow() != this) {
             throw new IllegalArgumentException("Specified cell does not belong to this row");
         }
+        //noinspection SuspiciousMethodCalls
+        if(!_cells.containsValue(cell)) {
+            throw new IllegalArgumentException("the row does not contain this cell");
+        }
 
         XSSFCell xcell = (XSSFCell)cell;
         if(xcell.isPartOfArrayFormulaGroup()) {
@@ -18,6 +22,17 @@
         }
         // Performance optimization for bug 57840: explicit boxing is slightly faster than auto-unboxing, though may use more memory
         final Integer colI = Integer.valueOf(cell.getColumnIndex()); // NOSONAR
-        _cells.remove(colI);
+        XSSFCell removed = _cells.remove(colI);
+
+        // also remove the corresponding CTCell from the _row.cArray,
+        // it may not be at the same position right now
+        // thus search for it
+        int i = 0;
+        for (CTCell ctCell : _row.getCArray()) {
+            if(ctCell == removed.getCTCell()) {
+                _row.removeC(i);
+            }
+            i++;
+        }
     }
 
