@@ -4,57 +4,58 @@
      */
     @Test
     public void bug49966() throws IOException {
-        XSSFWorkbook wb1 = XSSFTestDataSamples
-                .openSampleWorkbook("shared_formulas.xlsx");
-        XSSFSheet sheet = wb1.getSheetAt(0);
+        try (XSSFWorkbook wb1 = XSSFTestDataSamples
+                .openSampleWorkbook("shared_formulas.xlsx")) {
+            XSSFSheet sheet = wb1.getSheetAt(0);
 
-        XSSFTestDataSamples.writeOutAndReadBack(wb1).close();
+            XSSFTestDataSamples.writeOutAndReadBack(wb1).close();
 
-        // CalcChain has lots of entries
-        CalculationChain cc = wb1.getCalculationChain();
-        assertEquals("A2", cc.getCTCalcChain().getCArray(0).getR());
-        assertEquals("A3", cc.getCTCalcChain().getCArray(1).getR());
-        assertEquals("A4", cc.getCTCalcChain().getCArray(2).getR());
-        assertEquals("A5", cc.getCTCalcChain().getCArray(3).getR());
-        assertEquals("A6", cc.getCTCalcChain().getCArray(4).getR());
-        assertEquals("A7", cc.getCTCalcChain().getCArray(5).getR());
-        assertEquals("A8", cc.getCTCalcChain().getCArray(6).getR());
-        assertEquals(40, cc.getCTCalcChain().sizeOfCArray());
+            // CalcChain has lots of entries
+            CalculationChain cc = wb1.getCalculationChain();
+            assertEquals("A2", cc.getCTCalcChain().getCArray(0).getR());
+            assertEquals("A3", cc.getCTCalcChain().getCArray(1).getR());
+            assertEquals("A4", cc.getCTCalcChain().getCArray(2).getR());
+            assertEquals("A5", cc.getCTCalcChain().getCArray(3).getR());
+            assertEquals("A6", cc.getCTCalcChain().getCArray(4).getR());
+            assertEquals("A7", cc.getCTCalcChain().getCArray(5).getR());
+            assertEquals("A8", cc.getCTCalcChain().getCArray(6).getR());
+            assertEquals(40, cc.getCTCalcChain().sizeOfCArray());
 
-        XSSFTestDataSamples.writeOutAndReadBack(wb1).close();
+            XSSFTestDataSamples.writeOutAndReadBack(wb1).close();
 
-        // Try various ways of changing the formulas
-        // If it stays a formula, chain entry should remain
-        // Otherwise should go
-        sheet.getRow(1).getCell(0).setCellFormula("A1"); // stay
-        sheet.getRow(2).getCell(0).setCellFormula(null); // go
-        sheet.getRow(3).getCell(0).setCellFormula("14"); // stay
-        XSSFTestDataSamples.writeOutAndReadBack(wb1).close();
+            // Try various ways of changing the formulas
+            // If it stays a formula, chain entry should remain
+            // Otherwise should go
+            sheet.getRow(1).getCell(0).setCellFormula("A1"); // stay
+            sheet.getRow(2).getCell(0).setCellFormula(null); // go
+            sheet.getRow(3).getCell(0).setCellFormula("14"); // stay
+            XSSFTestDataSamples.writeOutAndReadBack(wb1).close();
 
-        sheet.getRow(4).getCell(0).setBlank(); // go
-        XSSFTestDataSamples.writeOutAndReadBack(wb1).close();
+            sheet.getRow(4).getCell(0).setBlank(); // go
+            XSSFTestDataSamples.writeOutAndReadBack(wb1).close();
 
-        validateCells(sheet);
-        sheet.getRow(5).removeCell(sheet.getRow(5).getCell(0)); // go
-        validateCells(sheet);
-        XSSFTestDataSamples.writeOutAndReadBack(wb1).close();
+            validateCells(sheet);
+            sheet.getRow(5).removeCell(sheet.getRow(5).getCell(0)); // go
+            validateCells(sheet);
+            XSSFTestDataSamples.writeOutAndReadBack(wb1).close();
 
-        sheet.getRow(6).getCell(0).setBlank(); // go
-        XSSFTestDataSamples.writeOutAndReadBack(wb1).close();
+            sheet.getRow(6).getCell(0).setBlank(); // go
+            XSSFTestDataSamples.writeOutAndReadBack(wb1).close();
 
-        sheet.getRow(7).getCell(0).setCellValue((String) null); // go
+            sheet.getRow(7).getCell(0).setCellValue((String) null); // go
 
-        XSSFTestDataSamples.writeOutAndReadBack(wb1).close();
+            XSSFTestDataSamples.writeOutAndReadBack(wb1).close();
 
-        // Save and check
-        XSSFWorkbook wb2 = XSSFTestDataSamples.writeOutAndReadBack(wb1);
-        wb1.close();
-        assertEquals(35, cc.getCTCalcChain().sizeOfCArray());
+            // Save and check
+            try (XSSFWorkbook wb2 = XSSFTestDataSamples.writeOutAndReadBack(wb1)) {
+                wb1.close();
+                assertEquals(35, cc.getCTCalcChain().sizeOfCArray());
 
-        cc = wb2.getCalculationChain();
-        assertEquals("A2", cc.getCTCalcChain().getCArray(0).getR());
-        assertEquals("A4", cc.getCTCalcChain().getCArray(1).getR());
-        assertEquals("A9", cc.getCTCalcChain().getCArray(2).getR());
-        wb2.close();
+                cc = wb2.getCalculationChain();
+                assertEquals("A2", cc.getCTCalcChain().getCArray(0).getR());
+                assertEquals("A4", cc.getCTCalcChain().getCArray(1).getR());
+                assertEquals("A9", cc.getCTCalcChain().getCArray(2).getR());
+            }
+        }
     }
 

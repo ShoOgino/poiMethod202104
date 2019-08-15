@@ -5,105 +5,110 @@
      */
     @Test
     public void testReferencesToOtherWorkbooks() throws Exception {
-        XSSFWorkbook wb = (XSSFWorkbook) _testDataProvider.openSampleWorkbook("ref2-56737.xlsx");
-        XSSFFormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
-        XSSFSheet s = wb.getSheetAt(0);
-        
-        // References to a .xlsx file
-        Row rXSLX = s.getRow(2);
-        Cell cXSLX_cell = rXSLX.getCell(4);
-        Cell cXSLX_sNR  = rXSLX.getCell(6);
-        Cell cXSLX_gNR  = rXSLX.getCell(8);
-        assertEquals("[1]Uses!$A$1",        cXSLX_cell.getCellFormula());
-        assertEquals("[1]Defines!NR_To_A1", cXSLX_sNR.getCellFormula());
-        assertEquals("[1]!NR_Global_B2",    cXSLX_gNR.getCellFormula());
-        
-        assertEquals("Hello!", cXSLX_cell.getStringCellValue());
-        assertEquals("Test A1", cXSLX_sNR.getStringCellValue());
-        assertEquals(142.0, cXSLX_gNR.getNumericCellValue(), 0);
-        
-        // References to a .xls file
-        Row rXSL = s.getRow(4);
-        Cell cXSL_cell = rXSL.getCell(4);
-        Cell cXSL_sNR  = rXSL.getCell(6);
-        Cell cXSL_gNR  = rXSL.getCell(8);
-        assertEquals("[2]Uses!$C$1",        cXSL_cell.getCellFormula());
-        assertEquals("[2]Defines!NR_To_A1", cXSL_sNR.getCellFormula());
-        assertEquals("[2]!NR_Global_B2",    cXSL_gNR.getCellFormula());
-        
-        assertEquals("Hello!", cXSL_cell.getStringCellValue());
-        assertEquals("Test A1", cXSL_sNR.getStringCellValue());
-        assertEquals(142.0, cXSL_gNR.getNumericCellValue(), 0);
-        
-        // Try to evaluate without references, won't work
-        // (At least, not unit we fix bug #56752 that is)
-        try {
-            evaluator.evaluate(cXSL_cell);
-            fail("Without a fix for #56752, shouldn't be able to evaluate a " +
-                 "reference to a non-provided linked workbook");
-        } catch(Exception e) {
-            // expected here
-        }
-        
-        // Setup the environment
-        Map<String,FormulaEvaluator> evaluators = new HashMap<>();
-        evaluators.put("ref2-56737.xlsx", evaluator);
-        evaluators.put("56737.xlsx", 
-                _testDataProvider.openSampleWorkbook("56737.xlsx").getCreationHelper().createFormulaEvaluator());
-        evaluators.put("56737.xls", 
-                HSSFTestDataSamples.openSampleWorkbook("56737.xls").getCreationHelper().createFormulaEvaluator());
-        evaluator.setupReferencedWorkbooks(evaluators);
-        
-        // Try evaluating all of them, ensure we don't blow up
-        for(Row r : s) {
-            for (Cell c : r) {
-                evaluator.evaluate(c);
-            }
-        }
-        // And evaluate the other way too
-        evaluator.evaluateAll();
-        
-        // Static evaluator won't work, as no references passed in
-        try {
-            XSSFFormulaEvaluator.evaluateAllFormulaCells(wb);
-            fail("Static method lacks references, shouldn't work");
-        } catch(Exception e) {
-            // expected here
-        }
-        
-        
-        // Evaluate specific cells and check results
-        assertEquals("\"Hello!\"",  evaluator.evaluate(cXSLX_cell).formatAsString());
-        assertEquals("\"Test A1\"", evaluator.evaluate(cXSLX_sNR).formatAsString());
-        assertEquals("142.0",   evaluator.evaluate(cXSLX_gNR).formatAsString());
+        try (XSSFWorkbook wb = (XSSFWorkbook) _testDataProvider.openSampleWorkbook("ref2-56737.xlsx")) {
+            XSSFFormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
+            XSSFSheet s = wb.getSheetAt(0);
 
-        assertEquals("\"Hello!\"",  evaluator.evaluate(cXSL_cell).formatAsString());
-        assertEquals("\"Test A1\"", evaluator.evaluate(cXSL_sNR).formatAsString());
-        assertEquals("142.0",   evaluator.evaluate(cXSL_gNR).formatAsString());
-        
-        
-        // Add another formula referencing these workbooks
-        Cell cXSL_cell2 = rXSL.createCell(40);
-        cXSL_cell2.setCellFormula("[56737.xls]Uses!$C$1");
-        // TODO Shouldn't it become [2] like the others?
-        assertEquals("[56737.xls]Uses!$C$1", cXSL_cell2.getCellFormula());
-        assertEquals("\"Hello!\"",  evaluator.evaluate(cXSL_cell2).formatAsString());
-        
-        
-        // Now add a formula that refers to yet another (different) workbook
-        // Won't work without the workbook being linked
-        Cell cXSLX_nw_cell = rXSLX.createCell(42);
-        try {
-            cXSLX_nw_cell.setCellFormula("[alt.xlsx]Sheet1!$A$1");
-            fail("New workbook not linked, shouldn't be able to add");
-        } catch (Exception e) {
-            // expected here
-        }
-        
-        // Link and re-try
-        try (Workbook alt = new XSSFWorkbook()) {
-            alt.createSheet().createRow(0).createCell(0).setCellValue("In another workbook");
-            // TODO Implement the rest of this, see bug #57184
+            // References to a .xlsx file
+            Row rXSLX = s.getRow(2);
+            Cell cXSLX_cell = rXSLX.getCell(4);
+            Cell cXSLX_sNR = rXSLX.getCell(6);
+            Cell cXSLX_gNR = rXSLX.getCell(8);
+            assertEquals("[1]Uses!$A$1", cXSLX_cell.getCellFormula());
+            assertEquals("[1]Defines!NR_To_A1", cXSLX_sNR.getCellFormula());
+            assertEquals("[1]!NR_Global_B2", cXSLX_gNR.getCellFormula());
+
+            assertEquals("Hello!", cXSLX_cell.getStringCellValue());
+            assertEquals("Test A1", cXSLX_sNR.getStringCellValue());
+            assertEquals(142.0, cXSLX_gNR.getNumericCellValue(), 0);
+
+            // References to a .xls file
+            Row rXSL = s.getRow(4);
+            Cell cXSL_cell = rXSL.getCell(4);
+            Cell cXSL_sNR = rXSL.getCell(6);
+            Cell cXSL_gNR = rXSL.getCell(8);
+            assertEquals("[2]Uses!$C$1", cXSL_cell.getCellFormula());
+            assertEquals("[2]Defines!NR_To_A1", cXSL_sNR.getCellFormula());
+            assertEquals("[2]!NR_Global_B2", cXSL_gNR.getCellFormula());
+
+            assertEquals("Hello!", cXSL_cell.getStringCellValue());
+            assertEquals("Test A1", cXSL_sNR.getStringCellValue());
+            assertEquals(142.0, cXSL_gNR.getNumericCellValue(), 0);
+
+            // Try to evaluate without references, won't work
+            // (At least, not unit we fix bug #56752 that is)
+            try {
+                evaluator.evaluate(cXSL_cell);
+                fail("Without a fix for #56752, shouldn't be able to evaluate a " +
+                        "reference to a non-provided linked workbook");
+            } catch (Exception e) {
+                // expected here
+            }
+
+            // Setup the environment
+            Map<String, FormulaEvaluator> evaluators = new HashMap<>();
+            evaluators.put("ref2-56737.xlsx", evaluator);
+            Workbook wbEval1 = _testDataProvider.openSampleWorkbook("56737.xlsx");
+            evaluators.put("56737.xlsx",
+                    wbEval1.getCreationHelper().createFormulaEvaluator());
+            Workbook wbEval2 = HSSFTestDataSamples.openSampleWorkbook("56737.xls");
+            evaluators.put("56737.xls",
+                    wbEval2.getCreationHelper().createFormulaEvaluator());
+            evaluator.setupReferencedWorkbooks(evaluators);
+
+            // Try evaluating all of them, ensure we don't blow up
+            for (Row r : s) {
+                for (Cell c : r) {
+                    evaluator.evaluate(c);
+                }
+            }
+            // And evaluate the other way too
+            evaluator.evaluateAll();
+
+            // Static evaluator won't work, as no references passed in
+            try {
+                XSSFFormulaEvaluator.evaluateAllFormulaCells(wb);
+                fail("Static method lacks references, shouldn't work");
+            } catch (Exception e) {
+                // expected here
+            }
+
+
+            // Evaluate specific cells and check results
+            assertEquals("\"Hello!\"", evaluator.evaluate(cXSLX_cell).formatAsString());
+            assertEquals("\"Test A1\"", evaluator.evaluate(cXSLX_sNR).formatAsString());
+            assertEquals("142.0", evaluator.evaluate(cXSLX_gNR).formatAsString());
+
+            assertEquals("\"Hello!\"", evaluator.evaluate(cXSL_cell).formatAsString());
+            assertEquals("\"Test A1\"", evaluator.evaluate(cXSL_sNR).formatAsString());
+            assertEquals("142.0", evaluator.evaluate(cXSL_gNR).formatAsString());
+
+
+            // Add another formula referencing these workbooks
+            Cell cXSL_cell2 = rXSL.createCell(40);
+            cXSL_cell2.setCellFormula("[56737.xls]Uses!$C$1");
+            // TODO Shouldn't it become [2] like the others?
+            assertEquals("[56737.xls]Uses!$C$1", cXSL_cell2.getCellFormula());
+            assertEquals("\"Hello!\"", evaluator.evaluate(cXSL_cell2).formatAsString());
+
+
+            // Now add a formula that refers to yet another (different) workbook
+            // Won't work without the workbook being linked
+            Cell cXSLX_nw_cell = rXSLX.createCell(42);
+            try {
+                cXSLX_nw_cell.setCellFormula("[alt.xlsx]Sheet1!$A$1");
+                fail("New workbook not linked, shouldn't be able to add");
+            } catch (Exception e) {
+                // expected here
+            }
+
+            wbEval1.close();
+            wbEval2.close();
+
+            // Link and re-try
+            try (Workbook alt = new XSSFWorkbook()) {
+                alt.createSheet().createRow(0).createCell(0).setCellValue("In another workbook");
+                // TODO Implement the rest of this, see bug #57184
 /*
             wb.linkExternalWorkbook("alt.xlsx", alt);
 
@@ -124,8 +129,7 @@
             evaluator.evaluate(cXSLX_nw_cell);
             assertEquals("In another workbook", cXSLX_nw_cell.getStringCellValue());
 */
+            }
         }
-        
-        wb.close();
     }
 

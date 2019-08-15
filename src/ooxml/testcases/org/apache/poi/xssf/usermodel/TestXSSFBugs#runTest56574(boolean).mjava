@@ -1,61 +1,61 @@
     private void runTest56574(boolean createRow) throws IOException {
-        XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("56574.xlsx");
+        try (XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("56574.xlsx")) {
 
-        Sheet sheet = wb.getSheet("Func");
-        assertNotNull(sheet);
+            Sheet sheet = wb.getSheet("Func");
+            assertNotNull(sheet);
 
-        Map<String, Object[]> data;
-        data = new TreeMap<>();
-        data.put("1", new Object[]{"ID", "NAME", "LASTNAME"});
-        data.put("2", new Object[]{2, "Amit", "Shukla"});
-        data.put("3", new Object[]{1, "Lokesh", "Gupta"});
-        data.put("4", new Object[]{4, "John", "Adwards"});
-        data.put("5", new Object[]{2, "Brian", "Schultz"});
+            Map<String, Object[]> data;
+            data = new TreeMap<>();
+            data.put("1", new Object[]{"ID", "NAME", "LASTNAME"});
+            data.put("2", new Object[]{2, "Amit", "Shukla"});
+            data.put("3", new Object[]{1, "Lokesh", "Gupta"});
+            data.put("4", new Object[]{4, "John", "Adwards"});
+            data.put("5", new Object[]{2, "Brian", "Schultz"});
 
-        int rownum = 1;
-        for (Map.Entry<String, Object[]> me : data.entrySet()) {
-            final Row row;
-            if (createRow) {
-                row = sheet.createRow(rownum++);
-            } else {
-                row = sheet.getRow(rownum++);
-            }
-            assertNotNull(row);
-
-            int cellnum = 0;
-            for (Object obj : me.getValue()) {
-                Cell cell = row.getCell(cellnum);
-                if (cell == null) {
-                    cell = row.createCell(cellnum);
+            int rownum = 1;
+            for (Map.Entry<String, Object[]> me : data.entrySet()) {
+                final Row row;
+                if (createRow) {
+                    row = sheet.createRow(rownum++);
                 } else {
-                    if (cell.getCellType() == CellType.FORMULA) {
-                        cell.setCellFormula(null);
-                        cell.getCellStyle().setDataFormat((short) 0);
+                    row = sheet.getRow(rownum++);
+                }
+                assertNotNull(row);
+
+                int cellnum = 0;
+                for (Object obj : me.getValue()) {
+                    Cell cell = row.getCell(cellnum);
+                    if (cell == null) {
+                        cell = row.createCell(cellnum);
+                    } else {
+                        if (cell.getCellType() == CellType.FORMULA) {
+                            cell.setCellFormula(null);
+                            cell.getCellStyle().setDataFormat((short) 0);
+                        }
                     }
+                    if (obj instanceof String) {
+                        cell.setCellValue((String) obj);
+                    } else if (obj instanceof Integer) {
+                        cell.setCellValue((Integer) obj);
+                    }
+                    cellnum++;
                 }
-                if (obj instanceof String) {
-                    cell.setCellValue((String) obj);
-                } else if (obj instanceof Integer) {
-                    cell.setCellValue((Integer) obj);
-                }
-                cellnum++;
             }
+
+            XSSFFormulaEvaluator.evaluateAllFormulaCells(wb);
+            wb.getCreationHelper().createFormulaEvaluator().evaluateAll();
+
+            CalculationChain chain = wb.getCalculationChain();
+            checkCellsAreGone(chain);
+
+            XSSFWorkbook wbBack = XSSFTestDataSamples.writeOutAndReadBack(wb);
+            Sheet sheetBack = wbBack.getSheet("Func");
+            assertNotNull(sheetBack);
+
+            chain = wbBack.getCalculationChain();
+            checkCellsAreGone(chain);
+
+            wbBack.close();
         }
-
-        XSSFFormulaEvaluator.evaluateAllFormulaCells(wb);
-        wb.getCreationHelper().createFormulaEvaluator().evaluateAll();
-
-        CalculationChain chain = wb.getCalculationChain();
-        checkCellsAreGone(chain);
-
-        XSSFWorkbook wbBack = XSSFTestDataSamples.writeOutAndReadBack(wb);
-        Sheet sheetBack = wbBack.getSheet("Func");
-        assertNotNull(sheetBack);
-
-        chain = wbBack.getCalculationChain();
-        checkCellsAreGone(chain);
-
-        wbBack.close();
-        wb.close();
     }
 

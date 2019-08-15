@@ -1,47 +1,45 @@
    @Test
    public void testIndexedColour() throws Exception {
-      XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("48779.xlsx");
+      try (XSSFWorkbook wb = XSSFTestDataSamples.openSampleWorkbook("48779.xlsx")) {
+         // Check the CTColor is as expected
+         XSSFColor indexed = wb.getCellStyleAt(1).getFillBackgroundXSSFColor();
+         assertTrue(indexed.getCTColor().isSetIndexed());
+         assertEquals(64, indexed.getCTColor().getIndexed());
+         assertFalse(indexed.getCTColor().isSetRgb());
+         assertNull(indexed.getCTColor().getRgb());
 
-      // Check the CTColor is as expected
-      XSSFColor indexed = wb.getCellStyleAt(1).getFillBackgroundXSSFColor();
-      assertEquals(true, indexed.getCTColor().isSetIndexed());
-      assertEquals(64, indexed.getCTColor().getIndexed());
-      assertEquals(false, indexed.getCTColor().isSetRgb());
-      assertEquals(null, indexed.getCTColor().getRgb());
+         // Now check the XSSFColor
+         // Note - 64 is a special "auto" one with no rgb equiv
+         assertEquals(64, indexed.getIndexed());
+         assertNull(indexed.getRGB());
+         assertNull(indexed.getRGBWithTint());
+         assertNull(indexed.getARGBHex());
+         assertFalse(indexed.hasAlpha());
+         assertFalse(indexed.hasTint());
 
-      // Now check the XSSFColor
-      // Note - 64 is a special "auto" one with no rgb equiv
-      assertEquals(64, indexed.getIndexed());
-      assertEquals(null, indexed.getRGB());
-      assertEquals(null, indexed.getRGBWithTint());
-      assertEquals(null, indexed.getARGBHex());
-      assertFalse(indexed.hasAlpha());
-      assertFalse(indexed.hasTint());
+         // Now move to one with indexed rgb values
+         indexed.setIndexed(59);
+         assertTrue(indexed.getCTColor().isSetIndexed());
+         assertEquals(59, indexed.getCTColor().getIndexed());
+         assertFalse(indexed.getCTColor().isSetRgb());
+         assertNull(indexed.getCTColor().getRgb());
 
-      // Now move to one with indexed rgb values
-      indexed.setIndexed(59);
-      assertEquals(true, indexed.getCTColor().isSetIndexed());
-      assertEquals(59, indexed.getCTColor().getIndexed());
-      assertEquals(false, indexed.getCTColor().isSetRgb());
-      assertEquals(null, indexed.getCTColor().getRgb());
+         assertEquals(59, indexed.getIndexed());
+         assertEquals("FF333300", indexed.getARGBHex());
 
-      assertEquals(59, indexed.getIndexed());
-      assertEquals("FF333300", indexed.getARGBHex());
+         assertEquals(3, indexed.getRGB().length);
+         assertEquals(0x33, indexed.getRGB()[0]);
+         assertEquals(0x33, indexed.getRGB()[1]);
+         assertEquals(0x00, indexed.getRGB()[2]);
 
-      assertEquals(3, indexed.getRGB().length);
-      assertEquals(0x33, indexed.getRGB()[0]);
-      assertEquals(0x33, indexed.getRGB()[1]);
-      assertEquals(0x00, indexed.getRGB()[2]);
+         assertEquals(4, indexed.getARGB().length);
+         assertEquals(-1, indexed.getARGB()[0]);
+         assertEquals(0x33, indexed.getARGB()[1]);
+         assertEquals(0x33, indexed.getARGB()[2]);
+         assertEquals(0x00, indexed.getARGB()[3]);
 
-      assertEquals(4, indexed.getARGB().length);
-      assertEquals(-1, indexed.getARGB()[0]);
-      assertEquals(0x33, indexed.getARGB()[1]);
-      assertEquals(0x33, indexed.getARGB()[2]);
-      assertEquals(0x00, indexed.getARGB()[3]);
-
-      // You don't get tinted indexed colours, sorry...
-      assertEquals(null, indexed.getRGBWithTint());
-      
-      wb.close();
+         // You don't get tinted indexed colours, sorry...
+         assertNull(indexed.getRGBWithTint());
+      }
    }
 
