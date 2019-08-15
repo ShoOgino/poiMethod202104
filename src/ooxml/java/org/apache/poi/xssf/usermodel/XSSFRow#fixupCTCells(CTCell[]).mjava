@@ -1,0 +1,31 @@
+    private void fixupCTCells(CTCell[] cArrayOrig) {
+        // copy all values to 2nd array and a map for lookup of index
+        CTCell[] cArrayCopy = new CTCell[cArrayOrig.length];
+        IdentityHashMap<CTCell, Integer> map = new IdentityHashMap<>(_cells.size());
+        int i = 0;
+        for (CTCell ctCell : cArrayOrig) {
+            cArrayCopy[i] = (CTCell) ctCell.copy();
+            map.put(ctCell, i);
+            i++;
+        }
+
+        // populate _row.cArray correctly
+        i = 0;
+        for (XSSFCell cell : _cells.values()) {
+            // no need to change anything if position is correct
+            Integer correctPosition = map.get(cell.getCTCell());
+            Objects.requireNonNull(correctPosition, "Should find CTCell in _row");
+            if(correctPosition != i) {
+                // we need to re-populate this CTCell
+                _row.setCArray(i, cArrayCopy[correctPosition]);
+                cell.setCTCell(_row.getCArray(i));
+            }
+            i++;
+        }
+
+        // remove any remaining illegal references in _rows.cArray
+        while(cArrayOrig.length > _cells.size()) {
+            _row.removeC(_cells.size());
+        }
+    }
+
