@@ -1,7 +1,7 @@
 	/**
 	 * Sets everything up, groks the escher etc
 	 */
-	protected PPDrawing(byte[] source, int start, int len) {
+	PPDrawing(byte[] source, int start, int len) {
 		// Get the header
 		_header = new byte[8];
 		System.arraycopy(source,start,_header,0,8);
@@ -19,12 +19,16 @@
 		EscherContainerRecord dgContainer = getDgContainer();
 
 		if (dgContainer != null) {
-			textboxWrappers = findInDgContainer(dgContainer);
+			textboxWrappers = Stream.of(dgContainer).
+				flatMap(findEscherContainer(EscherRecordTypes.SPGR_CONTAINER)).
+				flatMap(findEscherContainer(EscherRecordTypes.SP_CONTAINER)).
+				flatMap(PPDrawing::getTextboxHelper).
+				toArray(EscherTextboxWrapper[]::new);
 		} else {
 			// Find and EscherTextboxRecord's, and wrap them up
 			final List<EscherTextboxWrapper> textboxes = new ArrayList<>();
 			findEscherTextboxRecord(childRecords, textboxes);
-			this.textboxWrappers = textboxes.toArray(new EscherTextboxWrapper[textboxes.size()]);
+			this.textboxWrappers = textboxes.toArray(new EscherTextboxWrapper[0]);
 		}
 	}
 

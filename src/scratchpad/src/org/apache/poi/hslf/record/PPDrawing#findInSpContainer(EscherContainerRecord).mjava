@@ -1,29 +1,10 @@
-	private StyleTextProp9Atom findInSpContainer(final EscherContainerRecord spContainer) {
-        HSLFEscherClientDataRecord cldata = spContainer.getChildById(RecordTypes.EscherClientData.typeID);
-        if (cldata == null) {
-            return null;
-        }
-        DummyPositionSensitiveRecordWithChildren progTags =
-            getChildRecord(cldata.getHSLFChildRecords(), RecordTypes.ProgTags);
-        if (progTags == null) {
-            return null;
-        }
-        DummyPositionSensitiveRecordWithChildren progBinaryTag =
-            (DummyPositionSensitiveRecordWithChildren)progTags.findFirstOfType(RecordTypes.ProgBinaryTag.typeID);
-        if (progBinaryTag == null) {
-            return null;
-        }
-		int size = progBinaryTag.getChildRecords().length;
-		if (2 != size) { return null; }
-
-		final Record r0 = progBinaryTag.getChildRecords()[0];
-		final Record r1 = progBinaryTag.getChildRecords()[1];
-		
-		if (!(r0 instanceof CString)) { return null; }
-		if (!("___PPT9".equals(((CString) r0).getText()))) { return null; }
-		if (!(r1 instanceof BinaryTagDataBlob )) { return null; }
-		final BinaryTagDataBlob blob = (BinaryTagDataBlob) r1;
-		if (1 != blob.getChildRecords().length) { return null; }
-		return (StyleTextProp9Atom) blob.findFirstOfType(RecordTypes.StyleTextProp9Atom.typeID);
+	private static Optional<StyleTextProp9Atom> findInSpContainer(final EscherContainerRecord spContainer) {
+		Optional<HSLFEscherClientDataRecord> oCD = firstEscherRecord(spContainer, EscherRecordTypes.CLIENT_DATA);
+		return oCD.map(HSLFEscherClientDataRecord::getHSLFChildRecords).map(List::stream).orElseGet(Stream::empty).
+			filter(sameHSLF(RecordTypes.ProgTags)).
+			flatMap(r -> Stream.of(r.getChildRecords())).
+			filter(sameHSLF(RecordTypes.ProgBinaryTag)).
+			flatMap(PPDrawing::findInProgBinaryTag).
+			findFirst();
 	}
 

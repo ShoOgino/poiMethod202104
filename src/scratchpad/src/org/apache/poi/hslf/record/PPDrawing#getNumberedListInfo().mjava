@@ -1,14 +1,12 @@
     public StyleTextProp9Atom[] getNumberedListInfo() {
-    	final List<StyleTextProp9Atom> result = new LinkedList<>();
-    	EscherContainerRecord dgContainer = getDgContainer();
-		final EscherContainerRecord spgrContainer = findFirstEscherContainerRecordOfType(RecordTypes.EscherSpgrContainer, dgContainer);
-		final EscherContainerRecord[] spContainers = findAllEscherContainerRecordOfType(RecordTypes.EscherSpContainer, spgrContainer);
-		for (EscherContainerRecord spContainer : spContainers) {
-		    StyleTextProp9Atom prop9 = findInSpContainer(spContainer);
-		    if (prop9 != null) {
-		        result.add(prop9);
-		    }
-		}
-    	return result.toArray(new StyleTextProp9Atom[result.size()]);
-	}
+		EscherContainerRecord dgContainer = getDgContainer();
+
+		return (dgContainer == null) ? new StyleTextProp9Atom[0] : Stream.of(dgContainer).
+			flatMap(findEscherContainer(EscherRecordTypes.SPGR_CONTAINER)).
+			flatMap(findEscherContainer(EscherRecordTypes.SP_CONTAINER)).
+			map(PPDrawing::findInSpContainer).
+			filter(Optional::isPresent).
+			map(Optional::get).
+			toArray(StyleTextProp9Atom[]::new);
+    }
 
