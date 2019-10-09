@@ -1,0 +1,41 @@
+    /**
+     *  Given an Excel date with either 1900 or 1904 date windowing,
+     *  converts it to a java.time.LocalDateTime.
+     *
+     *  Excel Dates and Times are stored without any timezone
+     *  information. If you know (through other means) that your file
+     *  uses a different TimeZone to the system default, you can use
+     *  this version of the getJavaDate() method to handle it.
+     *
+     *  @param date  The Excel date.
+     *  @param use1904windowing  true if date uses 1904 windowing,
+     *   or false if using 1900 date windowing.
+     *  @param roundSeconds round to closest second
+     *  @return Java representation of the date, or null if date is not a valid Excel date
+     */
+    public static LocalDateTime getLocalDateTime(double date, boolean use1904windowing, boolean roundSeconds) {
+        if (!isValidExcelDate(date)) {
+            return null;
+        }
+        int wholeDays = (int)Math.floor(date);
+        int millisecondsInDay = (int)((date - wholeDays) * DAY_MILLISECONDS + 0.5);
+        
+        int startYear = 1900;
+        int dayAdjust = -1; // Excel thinks 2/29/1900 is a valid date, which it isn't
+        if (use1904windowing) {
+            startYear = 1904;
+            dayAdjust = 1; // 1904 date windowing uses 1/2/1904 as the first day
+        }
+        else if (wholeDays < 61) {
+            // Date is prior to 3/1/1900, so adjust because Excel thinks 2/29/1900 exists
+            // If Excel date == 2/29/1900, will become 3/1/1900 in Java representation
+            dayAdjust = 0;
+        }
+
+        LocalDateTime ldt = LocalDateTime.of(startYear, 1, 1, 0, 0);
+        ldt = ldt.plusDays(wholeDays+dayAdjust-1);
+        ldt = ldt.plusNanos(millisecondsInDay*1_000_000L);
+
+        return ldt;
+    }
+
