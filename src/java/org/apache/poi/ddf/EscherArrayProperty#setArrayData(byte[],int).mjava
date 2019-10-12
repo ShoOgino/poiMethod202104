@@ -9,8 +9,8 @@
      * @return  the number of bytes used by this complex property.
      */
     public int setArrayData(byte[] data, int offset) {
-        if (emptyComplexPart){
-            setComplexData(new byte[0]);
+        if (emptyComplexPart) {
+            resizeComplexData(0);
         } else {
             short numElements = LittleEndian.getShort(data, offset);
             // LittleEndian.getShort(data, offset + 2); // numReserved
@@ -18,13 +18,14 @@
 
             // the code here seems to depend on complexData already being
             // sized correctly via the constructor
+            int cdLen = getComplexData().length;
             int arraySize = getActualSizeOfElements(sizeOfElements) * numElements;
-            if (arraySize == getComplexData().length) {
+            if (arraySize == cdLen) {
                 // The stored data size in the simple block excludes the header size
-                setComplexData(new byte[arraySize + 6]);
+                resizeComplexData(arraySize + 6, 0);
                 sizeIncludesHeaderSize = false;
             }
-            System.arraycopy(data, offset, getComplexData(), 0, getComplexData().length );
+            setComplexData(data, offset);
         }
         return getComplexData().length;
     }
