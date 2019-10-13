@@ -2,6 +2,19 @@
         return new FillStyle() {
             @Override
             public PaintStyle getPaint() {
+                AbstractEscherOptRecord opt = shape.getEscherOptRecord();
+
+                EscherSimpleProperty hitProp = HSLFShape.getEscherProperty(opt, EscherPropertyTypes.FILL__NOFILLHITTEST);
+                int propVal = (hitProp == null) ? 0 : hitProp.getPropertyValue();
+
+                EscherSimpleProperty masterProp = HSLFShape.getEscherProperty(opt, EscherPropertyTypes.SHAPE__MASTER);
+
+                if (!FILL_USE_FILLED.isSet(propVal) && masterProp != null) {
+                    int masterId = masterProp.getPropertyValue();
+                    HSLFShape o = shape.getSheet().getMasterSheet().getShapes().stream().filter(s -> s.getShapeId() == masterId).findFirst().orElse(null);
+                    return o != null ? o.getFillStyle().getPaint() : null;
+                }
+
                 final int fillType = getFillType();
                 // TODO: fix gradient types, this mismatches with the MS-ODRAW definition ...
                 // need to handle (not only) the type (radial,rectangular,linear),
