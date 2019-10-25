@@ -1,31 +1,17 @@
-    private void writeValue(String key, Object o) {
-        assert(key != null);
-        if (o instanceof GenericRecord) {
-            printGenericRecord((GenericRecord)o, key);
-        } else if (o != null) {
-            if (key.endsWith(">")) {
+    protected void writeValue(String name, Object value) {
+        assert(name != null);
+        if (value instanceof GenericRecord) {
+            printGenericRecord(name, value);
+        } else if (value != null) {
+            if (name.endsWith(">")) {
                 fw.print("\t");
             }
 
-            fw.print(attributePhase ? " " + key + "=\"" : tabs()+"<" + key);
-            if (key.endsWith(">")) {
-                fw.println();
-            }
-
             handler.stream().
-                filter(h -> matchInstanceOrArray(h.getKey(), o)).
+                filter(h -> matchInstanceOrArray(h.getKey(), value)).
                 findFirst().
-                ifPresent(h -> h.getValue().accept(this, o));
+                ifPresent(h -> h.getValue().print(this, name, value));
 
-            if (attributePhase) {
-                fw.append("\"");
-            }
-
-            if (key.endsWith(">")) {
-                fw.println(tabs()+"\t</"+key);
-            } else if (o instanceof List || o.getClass().isArray()) {
-                fw.println(tabs()+"</"+key+">");
-            }
         }
     }
 

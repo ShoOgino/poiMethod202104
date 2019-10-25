@@ -1,0 +1,22 @@
+    protected boolean writeProperties(GenericRecord record) {
+        Map<String, Supplier<?>> prop = record.getGenericProperties();
+        if (prop == null || prop.isEmpty()) {
+            return false;
+        }
+
+        final int oldChildIndex = childIndex;
+        childIndex = 0;
+        List<Map.Entry<String,Supplier<?>>> complex = prop.entrySet().stream().flatMap(this::writeProp).collect(Collectors.toList());
+
+        attributePhase = false;
+        if (!complex.isEmpty()) {
+            fw.println(">");
+            indent++;
+            complex.forEach(this::writeProp);
+            indent--;
+        }
+        childIndex = oldChildIndex;
+
+        return !complex.isEmpty();
+    }
+
