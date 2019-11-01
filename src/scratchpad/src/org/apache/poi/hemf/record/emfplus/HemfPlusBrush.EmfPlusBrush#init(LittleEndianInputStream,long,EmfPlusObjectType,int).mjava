@@ -1,13 +1,20 @@
         @Override
         public long init(LittleEndianInputStream leis, long dataSize, EmfPlusObjectType objectType, int flags) throws IOException {
+            leis.mark(LittleEndianConsts.INT_SIZE);
             long size = graphicsVersion.init(leis);
 
-            brushType = EmfPlusBrushType.valueOf(leis.readInt());
-            size += LittleEndianConsts.INT_SIZE;
-            assert(brushType != null);
+            if (isContinuedRecord()) {
+                leis.reset();
+                size = 0;
+            } else {
+                int brushInt = leis.readInt();
+                brushType = EmfPlusBrushType.valueOf(brushInt);
+                assert(brushType != null);
+                size += LittleEndianConsts.INT_SIZE;
+            }
 
-            size += (brushData = brushType.constructor.get()).init(leis, dataSize-size);
+            brushBytes = IOUtils.toByteArray(leis, dataSize-size, MAX_OBJECT_SIZE);
 
-            return size;
+            return dataSize;
         }
 

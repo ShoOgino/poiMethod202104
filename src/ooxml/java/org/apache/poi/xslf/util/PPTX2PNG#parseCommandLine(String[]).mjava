@@ -1,0 +1,111 @@
+    private boolean parseCommandLine(String[] args) {
+        if (args.length == 0) {
+            usage(null);
+            return false;
+        }
+
+        for (int i = 0; i < args.length; i++) {
+            String opt = (i+1 < args.length) ? args[i+1] : null;
+            switch (args[i]) {
+                case "-scale":
+                    if (opt != null) {
+                        scale = Float.parseFloat(opt);
+                        i++;
+                    }
+                    break;
+                case "-slide":
+                    slidenumStr = opt;
+                    i++;
+                    break;
+                case "-format":
+                    format = opt;
+                    i++;
+                    break;
+                case "-outdir":
+                    if (opt != null) {
+                        outdir = new File(opt);
+                        i++;
+                    }
+                    break;
+                case "-outfile":
+                    outfile = opt;
+                    i++;
+                    break;
+                case "-outpat":
+                    outPattern = opt;
+                    i++;
+                    break;
+                case "-quiet":
+                    quiet = true;
+                    break;
+                case "-dump":
+                    if (opt != null) {
+                        dumpfile = new File(opt);
+                        i++;
+                    } else {
+                        dumpfile = new File("pptx2png.dump");
+                    }
+                    break;
+                case "-fixside":
+                    if (opt != null) {
+                        fixSide = opt.toLowerCase(Locale.ROOT);
+                        i++;
+                    } else {
+                        fixSide = "long";
+                    }
+                    break;
+                case "-ignoreParse":
+                    ignoreParse = true;
+                    break;
+                case "-extractEmbedded":
+                    extractEmbedded = true;
+                    break;
+                default:
+                    file = new File(args[i]);
+                    break;
+            }
+        }
+
+        final boolean isStdin = file != null && "stdin".equalsIgnoreCase(file.getName());
+
+        if (!isStdin && (file == null || !file.exists())) {
+            usage("File not specified or it doesn't exist");
+            return false;
+        }
+
+        if (format == null || !format.matches("^(png|gif|jpg|null)$")) {
+            usage("Invalid format given");
+            return false;
+        }
+
+        if (outdir == null) {
+            if (isStdin) {
+                usage("When reading from STDIN, you need to specify an outdir.");
+                return false;
+            } else {
+                outdir = file.getParentFile();
+            }
+        }
+        if (!outdir.exists()) {
+            usage("Outdir doesn't exist");
+            return false;
+        }
+
+        if (!"null".equals(format) && (outdir == null || !outdir.exists() || !outdir.isDirectory())) {
+            usage("Output directory doesn't exist");
+            return false;
+        }
+
+        if (scale < 0) {
+            usage("Invalid scale given");
+            return false;
+        }
+
+        if (!"long,short,width,height,scale".contains(fixSide)) {
+            usage("<fixside> must be one of long / short / width / height");
+            return false;
+        }
+
+        return true;
+    }
+
