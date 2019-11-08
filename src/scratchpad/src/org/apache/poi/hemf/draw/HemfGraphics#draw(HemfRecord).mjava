@@ -1,10 +1,10 @@
     public void draw(HemfRecord r) {
-        switch (renderState) {
+        switch (getRenderState()) {
             case EMF_DCONTEXT:
-                // keep the dcontext state, if the next record is an EMF+ record
-                // only reset it, when we are processing EMF records again
-                if (!(r instanceof EmfComment)) {
-                    renderState = EmfRenderState.INITIAL;
+                // This state specifies that subsequent EMF records encountered in the metafile SHOULD be processed.
+                // EMF records cease being processed when the next EMF+ record is encountered.
+                if (r instanceof EmfComment) {
+                    setRenderState(EmfRenderState.EMFPLUS_ONLY);
                 }
                 r.draw(this);
                 break;
@@ -12,8 +12,12 @@
                 r.draw(this);
                 break;
             case EMF_ONLY:
+                if (!(r instanceof EmfComment)) {
+                    r.draw(this);
+                }
+                break;
             case EMFPLUS_ONLY:
-                if ((r instanceof EmfComment) == (renderState == EmfRenderState.EMFPLUS_ONLY)) {
+                if (r instanceof EmfComment) {
                     r.draw(this);
                 }
                 break;

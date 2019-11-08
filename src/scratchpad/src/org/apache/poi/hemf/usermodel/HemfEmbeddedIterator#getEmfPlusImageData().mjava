@@ -6,10 +6,13 @@
 
         HwmfEmbedded emb = new HwmfEmbedded();
 
-        EmfPlusImage img = (EmfPlusImage)epo.getObjectData();
+        EmfPlusImage img = epo.getObjectData();
         assert(img.getImageDataType() != null);
 
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        int totalSize = epo.getTotalObjectSize();
+        IOUtils.safelyAllocateCheck(totalSize, MAX_RECORD_LENGTH);
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(epo.getTotalObjectSize());
         try {
             for (;;) {
                 bos.write(img.getImageData());
@@ -18,9 +21,10 @@
                 //noinspection ConstantConditions
                 if (hasNext() &&
                     (current instanceof EmfPlusObject) &&
-                    ((epo = (EmfPlusObject) current).getObjectId() == objectId)
+                    ((epo = (EmfPlusObject) current).getObjectId() == objectId) &&
+                    bos.size() < totalSize-16
                 ) {
-                    img = (EmfPlusImage)epo.getObjectData();
+                    img = epo.getObjectData();
                 } else {
                     return emb;
                 }

@@ -1,0 +1,68 @@
+    public void drawImage(ImageRenderer img, Rectangle2D srcBounds, Rectangle2D dstBounds) {
+        if (srcBounds.isEmpty()) {
+            return;
+        }
+        HwmfDrawProperties prop = getProperties();
+
+        // handle raster op
+        // currently the raster op as described in https://docs.microsoft.com/en-us/windows/desktop/gdi/ternary-raster-operations
+        // are not supported, as we would need to extract the destination image area from the underlying buffered image
+        // and therefore would make it mandatory that the graphics context must be from a buffered image
+        // furthermore I doubt the purpose of bitwise image operations on non-black/white images
+        switch (prop.getRasterOp()) {
+            case D:
+                // keep destination, i.e. do nothing
+                break;
+            case PATCOPY:
+                graphicsCtx.setPaint(getFill());
+                graphicsCtx.fill(dstBounds);
+                break;
+            case BLACKNESS:
+                graphicsCtx.setPaint(Color.BLACK);
+                graphicsCtx.fill(dstBounds);
+                break;
+            case WHITENESS:
+                graphicsCtx.setPaint(Color.WHITE);
+                graphicsCtx.fill(dstBounds);
+                break;
+            default:
+            case SRCCOPY:
+                if (img == null) {
+                    return;
+                }
+
+                final Shape oldClip = graphicsCtx.getClip();
+                final AffineTransform oldTrans = graphicsCtx.getTransform();
+
+                // add clipping in case of a source subimage, i.e. a clipped source image
+                // some dstBounds are horizontal or vertical flipped, so we need to normalize the images
+                Rectangle2D normBounds = normalizeRect(dstBounds);
+                // graphicsCtx.clip(normBounds);
+
+                if (prop.getBkMode() == HwmfBkMode.OPAQUE) {
+                    Paint oldPaint = graphicsCtx.getPaint();
+                    graphicsCtx.setPaint(prop.getBackgroundColor().getColor());
+                    graphicsCtx.fill(dstBounds);
+                    graphicsCtx.setPaint(oldPaint);
+                }
+
+                graphicsCtx.translate(normBounds.getCenterX(), normBounds.getCenterY());
+                graphicsCtx.scale(Math.signum(dstBounds.getWidth()), Math.signum(dstBounds.getHeight()));
+                graphicsCtx.translate(-normBounds.getCenterX(), -normBounds.getCenterY());
+
+                // this is similar to drawing bitmaps with a clipping
+                // see {@link BitmapImageRenderer#drawImage(Graphics2D,Rectangle2D,Insets)}
+                // the difference is, that clippings are 0-based, whereas the srcBounds are absolute in the user-space
+                // of the referenced image and can be also negative
+                Composite old = graphicsCtx.getComposite();
+                graphicsCtx.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER));
+                img.drawImage(graphicsCtx, normBounds, getSubImageInsets(srcBounds, img.getNativeBounds()));
+                graphicsCtx.setComposite(old);
+
+                graphicsCtx.setTransform(oldTrans);
+                graphicsCtx.setClip(oldClip);
+                break;
+        }
+
+    }
+

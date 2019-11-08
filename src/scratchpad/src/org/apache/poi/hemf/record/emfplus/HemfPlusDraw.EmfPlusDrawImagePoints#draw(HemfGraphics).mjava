@@ -5,31 +5,35 @@
             ctx.applyObjectTableEntry(imageAttributesID);
             ctx.applyObjectTableEntry(getObjectId());
 
-            AffineTransform txSaved = ctx.getTransform(), tx = new AffineTransform(txSaved);
+            final ImageRenderer ir = prop.getEmfPlusImage();
+            if (ir == null) {
+                return;
+            }
+
+
+            AffineTransform txSaved = ctx.getTransform();
+            AffineTransform tx = new AffineTransform(txSaved);
             try {
                 tx.concatenate(trans);
                 ctx.setTransform(tx);
 
-                EmfPlusObject imgObj = (EmfPlusObject)ctx.getObjectTableEntry(getObjectId());
-                EmfPlusImage img = imgObj.getObjectData();
-                Rectangle2D srcBounds = img.getBounds(imgObj.getContinuedObject());
-                BufferedImage bi = prop.getEmfPlusImage();
+                final Rectangle2D srcBounds = ir.getNativeBounds();
+                final Dimension2D dim = ir.getDimension();
 
                 prop.setRasterOp(HwmfTernaryRasterOp.SRCCOPY);
                 prop.setBkMode(HwmfBkMode.TRANSPARENT);
 
                 // the buffered image might be rescaled, so we need to calculate a new src rect to take
                 // the image data from
-                AffineTransform srcTx = new AffineTransform();
+                final AffineTransform srcTx = new AffineTransform();
                 srcTx.translate(-srcBounds.getX(), srcBounds.getY());
-                srcTx.scale(bi.getWidth()/srcBounds.getWidth(), bi.getHeight()/srcBounds.getHeight());
-                srcTx.translate(bi.getMinX(), bi.getMinY());
+                srcTx.scale(dim.getWidth()/srcBounds.getWidth(), dim.getHeight()/srcBounds.getHeight());
 
-                Rectangle2D biRect = srcTx.createTransformedShape(srcRect).getBounds2D();
+                final Rectangle2D biRect = srcTx.createTransformedShape(srcRect).getBounds2D();
 
                 // TODO: handle srcUnit
                 Rectangle2D destRect = new Rectangle2D.Double(0, 0, biRect.getWidth(), biRect.getHeight());
-                ctx.drawImage(bi, srcRect, destRect);
+                ctx.drawImage(ir, srcRect, destRect);
             } finally {
                 ctx.setTransform(txSaved);
             }

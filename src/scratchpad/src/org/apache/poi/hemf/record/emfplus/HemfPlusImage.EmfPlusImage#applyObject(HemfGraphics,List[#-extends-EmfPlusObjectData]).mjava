@@ -1,7 +1,19 @@
         @Override
         public void applyObject(HemfGraphics ctx, List<? extends EmfPlusObjectData> continuedObjectData) {
             HemfDrawProperties prop = ctx.getProperties();
-            BufferedImage bi = readImage(getRawData(continuedObjectData));
-            prop.setEmfPlusImage(bi);
+
+            byte[] data = getRawData(continuedObjectData);
+
+            String contentType = getContentType(data);
+            ImageRenderer imgr = (GDI_CONTENT.equals(contentType))
+                    ? getGDIRenderer() : ctx.getImageRenderer(contentType);
+
+            try {
+                imgr.loadImage(data, contentType);
+            } catch (IOException ignored) {
+                imgr = null;
+            }
+
+            prop.setEmfPlusImage(imgr);
         }
 
