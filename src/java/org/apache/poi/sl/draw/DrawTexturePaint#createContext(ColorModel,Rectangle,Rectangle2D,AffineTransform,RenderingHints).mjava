@@ -1,13 +1,10 @@
     @Override
     public PaintContext createContext(ColorModel cm, Rectangle deviceBounds, Rectangle2D userBounds, AffineTransform xform, RenderingHints hints) {
 
-        final double usr_w, usr_h;
-
+        final Dimension2D userDim = new Dimension2DDouble();
+        final Rectangle2D usedBounds;
         if (fill.isRotatedWithShape() || shape == null) {
-            usr_w = userBounds.getWidth();
-            usr_h = userBounds.getHeight();
-
-            xform.translate(userBounds.getX(), userBounds.getY());
+            usedBounds = userBounds;
         } else {
             AffineTransform	transform = new AffineTransform(xform);
 
@@ -25,77 +22,22 @@
 
             // TODO: check if approximation via rotating only the bounds (instead of the shape) is sufficient
             transform = AffineTransform.getRotateInstance(rad, userBounds.getCenterX(), userBounds.getCenterY());
-            Rectangle2D newBounds = transform.createTransformedShape(shape).getBounds2D();
-            usr_w = newBounds.getWidth();
-            usr_h = newBounds.getHeight();
-
-            xform.translate(newBounds.getX(), newBounds.getY());
+            usedBounds = transform.createTransformedShape(shape).getBounds2D();
         }
+        userDim.setSize(usedBounds.getWidth(), usedBounds.getHeight());
+        xform.translate(usedBounds.getX(), usedBounds.getY());
 
-        final Dimension2D scale = fill.getScale();
+        BufferedImage bi = getImage(usedBounds);
 
-        final BufferedImage bi = getImage();
-        final double img_w = bi.getWidth() * (scale == null ? 1 : scale.getWidth())/flipX;
-        final double img_h = bi.getHeight() * (scale == null ? 1 : scale.getHeight())/flipY;
-
-        // Alignment happens after the scaling but before any offset.
-        PaintStyle.TextureAlignment ta = fill.getAlignment();
-        final double alg_x, alg_y;
-        switch (ta == null ? PaintStyle.TextureAlignment.TOP_LEFT : ta) {
-            case BOTTOM:
-                alg_x = (usr_w-img_w)/2;
-                alg_y = usr_h-img_h;
-                break;
-            case BOTTOM_LEFT:
-                alg_x = 0;
-                alg_y = usr_h-img_h;
-                break;
-            case BOTTOM_RIGHT:
-                alg_x = usr_w-img_w;
-                alg_y = usr_h-img_h;
-                break;
-            case CENTER:
-                alg_x = (usr_w-img_w)/2;
-                alg_y = (usr_h-img_h)/2;
-                break;
-            case LEFT:
-                alg_x = 0;
-                alg_y = (usr_h-img_h)/2;
-                break;
-            case RIGHT:
-                alg_x = usr_w-img_w;
-                alg_y = (usr_h-img_h)/2;
-                break;
-            case TOP:
-                alg_x = (usr_w-img_w)/2;
-                alg_y = 0;
-                break;
-            default:
-            case TOP_LEFT:
-                alg_x = 0;
-                alg_y = 0;
-                break;
-            case TOP_RIGHT:
-                alg_x = usr_w-img_w;
-                alg_y = 0;
-                break;
+        if (fill.getStretch() != null) {
+            TexturePaint tp = new TexturePaint(bi, new Rectangle2D.Double(0, 0, bi.getWidth(), bi.getHeight()));
+            return tp.createContext(cm, deviceBounds, usedBounds, xform, hints);
+        } else if (fill.getScale() != null) {
+            AffineTransform newXform = getTiledInstance(usedBounds, (AffineTransform) xform.clone());
+            TexturePaint tp = new TexturePaint(bi, new Rectangle2D.Double(0, 0, bi.getWidth(), bi.getHeight()));
+            return tp.createContext(cm, deviceBounds, userBounds, newXform, hints);
+        } else {
+            return super.createContext(cm, deviceBounds, userBounds, xform, hints);
         }
-        xform.translate(alg_x, alg_y);
-
-        // Apply additional horizontal/vertical offset after alignment.
-        // Values are as percentages.
-
-        // TODO: apply scaling of drawing context to offset
-        final Point2D offset = fill.getOffset();
-
-        if (offset != null) {
-            xform.translate(offset.getX(),offset.getY());
-        }
-
-        if (scale != null) {
-            xform.scale(scale.getWidth()/(isBitmapSrc ? flipX : 1.),scale.getHeight()/(isBitmapSrc ? flipY : 1.));
-        }
-
-        return super.createContext(cm, deviceBounds, userBounds, xform, hints);
     }
 

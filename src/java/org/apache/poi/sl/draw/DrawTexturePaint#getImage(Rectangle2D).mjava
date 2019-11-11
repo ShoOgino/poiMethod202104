@@ -1,0 +1,75 @@
+    public BufferedImage getImage(Rectangle2D userBounds) {
+        BufferedImage bi = super.getImage();
+        final Insets2D insets = fill.getInsets();
+        final Insets2D stretch = fill.getStretch();
+
+        if ((insets == null || INSETS_EMPTY.equals(insets)) && (stretch == null)) {
+            return bi;
+        }
+
+        if (insets != null && !INSETS_EMPTY.equals(insets)) {
+            final int width = bi.getWidth();
+            final int height = bi.getHeight();
+
+            bi = bi.getSubimage(
+                (int)(Math.max(insets.left,0)/100_000 * width),
+                (int)(Math.max(insets.top,0)/100_000 * height),
+                (int)((100_000-Math.max(insets.left,0)-Math.max(insets.right,0))/100_000 * width),
+                (int)((100_000-Math.max(insets.top,0)-Math.max(insets.bottom,0))/100_000 * height)
+            );
+
+            int addTop = (int)(Math.max(-insets.top, 0)/100_000 * height);
+            int addLeft = (int)(Math.max(-insets.left, 0)/100_000 * width);
+            int addBottom = (int)(Math.max(-insets.bottom, 0)/100_000 * height);
+            int addRight = (int)(Math.max(-insets.right, 0)/100_000 * width);
+
+            // handle outsets
+            if (addTop > 0 || addLeft > 0 || addBottom > 0 || addRight > 0) {
+                int[] buf = new int[bi.getWidth()*bi.getHeight()];
+                bi.getRGB(0, 0, bi.getWidth(), bi.getHeight(), buf, 0, bi.getWidth());
+                BufferedImage borderBi = new BufferedImage(bi.getWidth()+addLeft+addRight, bi.getHeight()+addTop+addBottom, bi.getType());
+                borderBi.setRGB(addLeft, addTop, bi.getWidth(), bi.getHeight(), buf, 0, bi.getWidth());
+                bi = borderBi;
+            }
+        }
+
+        if (stretch != null) {
+            Rectangle2D srcBounds = new Rectangle2D.Double(
+                0, 0, bi.getWidth(), bi.getHeight()
+            );
+
+            Rectangle2D dstBounds = new Rectangle2D.Double(
+                stretch.left/100_000 * userBounds.getWidth(),
+                stretch.top/100_000 * userBounds.getHeight(),
+                (100_000-stretch.left-stretch.right)/100_000 * userBounds.getWidth(),
+                (100_000-stretch.top-stretch.bottom)/100_000 * userBounds.getHeight()
+            );
+
+            BufferedImage stretchBi = new BufferedImage((int)userBounds.getWidth(), (int)userBounds.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g = stretchBi.createGraphics();
+
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_SPEED);
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+
+            g.setComposite(AlphaComposite.Clear);
+            g.fillRect(0, 0, stretchBi.getWidth(), stretchBi.getHeight());
+            g.setComposite(AlphaComposite.SrcOver);
+
+            AffineTransform at = new AffineTransform();
+            at.translate(dstBounds.getCenterX(), dstBounds.getCenterY());
+            at.scale(dstBounds.getWidth()/srcBounds.getWidth(), dstBounds.getHeight()/srcBounds.getHeight());
+            at.translate(-srcBounds.getCenterX(), -srcBounds.getCenterY());
+
+            g.drawRenderedImage(bi, at);
+
+            g.dispose();
+
+            bi = stretchBi;
+        }
+
+        return bi;
+    }
+
