@@ -1,6 +1,6 @@
     public void draw(Graphics2D ctx, Rectangle2D graphicsBounds) {
-        final Shape clip = ctx.getClip();
-        final AffineTransform at = ctx.getTransform();
+        HwmfGraphicsState state = new HwmfGraphicsState();
+        state.backup(ctx);
         try {
             Rectangle2D wmfBounds = getBounds();
             Rectangle2D innerBounds = getInnnerBounds();
@@ -9,13 +9,10 @@
             }
 
             // scale output bounds to image bounds
-            ctx.translate(graphicsBounds.getX(), graphicsBounds.getY());
-            ctx.scale(graphicsBounds.getWidth()/wmfBounds.getWidth(), graphicsBounds.getHeight()/wmfBounds.getHeight());
+            ctx.translate(graphicsBounds.getCenterX(), graphicsBounds.getCenterY());
+            ctx.scale(graphicsBounds.getWidth()/innerBounds.getWidth(), graphicsBounds.getHeight()/innerBounds.getHeight());
+            ctx.translate(-innerBounds.getCenterX(), -innerBounds.getCenterY());
 
-            ctx.translate(-wmfBounds.getX(), -wmfBounds.getY());
-            ctx.translate(innerBounds.getCenterX(), innerBounds.getCenterY());
-            ctx.scale(wmfBounds.getWidth()/innerBounds.getWidth(), wmfBounds.getHeight()/innerBounds.getHeight());
-            ctx.translate(-wmfBounds.getCenterX(), -wmfBounds.getCenterY());
 
             HwmfGraphics g = new HwmfGraphics(ctx, innerBounds);
             HwmfDrawProperties prop = g.getProperties();
@@ -34,8 +31,7 @@
                 idx++;
             }
         } finally {
-            ctx.setTransform(at);
-            ctx.setClip(clip);
+            state.restore(ctx);
         }
     }
 

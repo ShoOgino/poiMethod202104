@@ -2,39 +2,31 @@
         public void draw(HemfGraphics ctx) {
             HemfDrawProperties prop = ctx.getProperties();
 
-            ctx.applyObjectTableEntry(imageAttributesID);
-            ctx.applyObjectTableEntry(getObjectId());
+            ctx.applyPlusObjectTableEntry(imageAttributesID);
+            ctx.applyPlusObjectTableEntry(getObjectId());
 
             final ImageRenderer ir = prop.getEmfPlusImage();
             if (ir == null) {
                 return;
             }
 
-
             AffineTransform txSaved = ctx.getTransform();
-            AffineTransform tx = new AffineTransform(txSaved);
+            AffineTransform tx = (AffineTransform)txSaved.clone();
+            HwmfTernaryRasterOp oldOp = prop.getRasterOp();
+            HwmfBkMode oldBk = prop.getBkMode();
             try {
                 tx.concatenate(trans);
                 ctx.setTransform(tx);
 
-                final Rectangle2D srcBounds = ir.getNativeBounds();
-                final Dimension2D dim = ir.getDimension();
-
                 prop.setRasterOp(HwmfTernaryRasterOp.SRCCOPY);
                 prop.setBkMode(HwmfBkMode.TRANSPARENT);
 
-                // the buffered image might be rescaled, so we need to calculate a new src rect to take
-                // the image data from
-                final AffineTransform srcTx = new AffineTransform();
-                srcTx.translate(-srcBounds.getX(), srcBounds.getY());
-                srcTx.scale(dim.getWidth()/srcBounds.getWidth(), dim.getHeight()/srcBounds.getHeight());
-
-                final Rectangle2D biRect = srcTx.createTransformedShape(srcRect).getBounds2D();
-
-                // TODO: handle srcUnit
-                Rectangle2D destRect = new Rectangle2D.Double(0, 0, biRect.getWidth(), biRect.getHeight());
-                ctx.drawImage(ir, srcRect, destRect);
+                // transformation from srcRect to destRect was already applied,
+                // therefore use srcRect as third parameter
+                ctx.drawImage(ir, srcRect, srcRect);
             } finally {
+                prop.setBkMode(oldBk);
+                prop.setRasterOp(oldOp);
                 ctx.setTransform(txSaved);
             }
         }
