@@ -63,32 +63,30 @@
             persistIds.put(oldToNewPositions.get(entry.getValue()), entry.getKey());
         }
 
-        HSLFSlideShowEncrypted encData = new HSLFSlideShowEncrypted(getDocumentEncryptionAtom());
+        try (HSLFSlideShowEncrypted encData = new HSLFSlideShowEncrypted(getDocumentEncryptionAtom())) {
+            for (Record record : _records) {
+                assert (record instanceof PositionDependentRecord);
+                // We've already figured out their new location, and
+                // told them that
+                // Tell them of the positions of the other records though
+                PositionDependentRecord pdr = (PositionDependentRecord) record;
+                Integer persistId = persistIds.get(pdr.getLastOnDiskOffset());
+                if (persistId == null) {
+                    persistId = 0;
+                }
 
-        for (Record record : _records) {
-            assert (record instanceof PositionDependentRecord);
-            // We've already figured out their new location, and
-            // told them that
-            // Tell them of the positions of the other records though
-            PositionDependentRecord pdr = (PositionDependentRecord) record;
-            Integer persistId = persistIds.get(pdr.getLastOnDiskOffset());
-            if (persistId == null) {
-                persistId = 0;
-            }
+                // For now, we're only handling PositionDependentRecord's that
+                // happen at the top level.
+                // In future, we'll need the handle them everywhere, but that's
+                // a bit trickier
+                pdr.updateOtherRecordReferences(oldToNewPositions);
 
-            // For now, we're only handling PositionDependentRecord's that
-            // happen at the top level.
-            // In future, we'll need the handle them everywhere, but that's
-            // a bit trickier
-            pdr.updateOtherRecordReferences(oldToNewPositions);
-
-            // Whatever happens, write out that record tree
-            if (os != null) {
-                record.writeOut(encData.encryptRecord(os, persistId, record));
+                // Whatever happens, write out that record tree
+                if (os != null) {
+                    record.writeOut(encData.encryptRecord(os, persistId, record));
+                }
             }
         }
-
-        encData.close();
 
         // Update and write out the Current User atom
         int oldLastUserEditAtomPos = (int) currentUser.getCurrentEditOffset();
