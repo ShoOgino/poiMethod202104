@@ -1,27 +1,29 @@
     /**
      * Check that we can decode the first 8 codes
-     * (1 flag byte + 8 codes)  
+     * (1 flag byte + 8 codes)
      */
+    @Test
     public void testFirstBlock() throws Exception {
-       HMEFMessage msg = new HMEFMessage(
-             _samples.openResourceAsStream("quick-winmail.dat")
-       );
-       
-       MAPIAttribute attr = msg.getMessageMAPIAttribute(MAPIProperty.RTF_COMPRESSED);
-       assertNotNull(attr);
-       MAPIRtfAttribute rtfAttr = (MAPIRtfAttribute)attr;
+        HMEFMessage msg;
+        try (InputStream is = _samples.openResourceAsStream("quick-winmail.dat")) {
+            msg = new HMEFMessage(is);
+        }
 
-       // Truncate to header + flag + data for flag
-       byte[] data = new byte[16+12];
-       System.arraycopy(rtfAttr.getRawData(), 0, data, 0, data.length);
-       
-       // Decompress it
-       CompressedRTF comp = new CompressedRTF();
-       byte[] decomp = comp.decompress(new ByteArrayInputStream(data));
-       String decompStr = new String(decomp, "ASCII");
-       
-       // Test
-       assertEquals(block1.length(), decomp.length);
-       assertEquals(block1, decompStr);
+        MAPIAttribute attr = msg.getMessageMAPIAttribute(MAPIProperty.RTF_COMPRESSED);
+        assertNotNull(attr);
+        MAPIRtfAttribute rtfAttr = (MAPIRtfAttribute) attr;
+
+        // Truncate to header + flag + data for flag
+        byte[] data = new byte[16 + 12];
+        System.arraycopy(rtfAttr.getRawData(), 0, data, 0, data.length);
+
+        // Decompress it
+        CompressedRTF comp = new CompressedRTF();
+        byte[] decomp = comp.decompress(new ByteArrayInputStream(data));
+        String decompStr = new String(decomp, "ASCII");
+
+        // Test
+        assertEquals(block1.length(), decomp.length);
+        assertEquals(block1, decompStr);
     }
 

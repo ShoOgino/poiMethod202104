@@ -2,46 +2,46 @@
      * Check that we can correctly decode the whole file
      * TODO Fix what looks like a padding issue
      */
+    @Test
     public void testFull() throws Exception {
-       HMEFMessage msg = new HMEFMessage(
-             _samples.openResourceAsStream("quick-winmail.dat")
-       );
-       
-       MAPIAttribute attr = msg.getMessageMAPIAttribute(MAPIProperty.RTF_COMPRESSED);
-       assertNotNull(attr);
-       MAPIRtfAttribute rtfAttr = (MAPIRtfAttribute)attr;
-       
-       InputStream stream = _samples.openResourceAsStream("quick-contents/message.rtf");
-       try {
-           byte[] expected = IOUtils.toByteArray(stream);
-           
-           CompressedRTF comp = new CompressedRTF();
-           byte[] data = rtfAttr.getRawData();
-           byte[] decomp = comp.decompress(new ByteArrayInputStream(data));
-           
-           // Check the length was as expected
-           assertEquals(data.length, comp.getCompressedSize() + 16);
-           assertEquals(expected.length, comp.getDeCompressedSize()); 
-           
-           // Will have been padded though
-           assertEquals(expected.length+2, decomp.length);
-           byte[] tmp = new byte[expected.length];
-           System.arraycopy(decomp, 0, tmp, 0, tmp.length);
-           decomp = tmp;
-           
-           // By byte
-           assertEquals(expected.length, decomp.length);
-           for(int i=0; i<expected.length; i++) {
-               assertEquals(expected[i], decomp[i]);
-           }
-           
-           // By String
-           String expString = new String(expected, "ASCII");
-           String decompStr = rtfAttr.getDataString();
-           assertEquals(expString.length(), decompStr.length());
-           assertEquals(expString, decompStr);
-       } finally {
-           stream.close();
-       }
+        final HMEFMessage msg;
+        try (InputStream is = _samples.openResourceAsStream("quick-winmail.dat")) {
+            msg = new HMEFMessage(is);
+        }
+
+        MAPIAttribute attr = msg.getMessageMAPIAttribute(MAPIProperty.RTF_COMPRESSED);
+        assertNotNull(attr);
+        MAPIRtfAttribute rtfAttr = (MAPIRtfAttribute) attr;
+
+        final byte[] expected;
+        try (InputStream stream = _samples.openResourceAsStream("quick-contents/message.rtf")) {
+            expected = IOUtils.toByteArray(stream);
+        }
+
+        CompressedRTF comp = new CompressedRTF();
+        byte[] data = rtfAttr.getRawData();
+        byte[] decomp = comp.decompress(new ByteArrayInputStream(data));
+
+        // Check the length was as expected
+        assertEquals(data.length, comp.getCompressedSize() + 16);
+        assertEquals(expected.length, comp.getDeCompressedSize());
+
+        // Will have been padded though
+        assertEquals(expected.length + 2, decomp.length);
+        byte[] tmp = new byte[expected.length];
+        System.arraycopy(decomp, 0, tmp, 0, tmp.length);
+        decomp = tmp;
+
+        // By byte
+        assertEquals(expected.length, decomp.length);
+        for (int i = 0; i < expected.length; i++) {
+            assertEquals(expected[i], decomp[i]);
+        }
+
+        // By String
+        String expString = new String(expected, "ASCII");
+        String decompStr = rtfAttr.getDataString();
+        assertEquals(expString.length(), decompStr.length());
+        assertEquals(expString, decompStr);
     }
 
