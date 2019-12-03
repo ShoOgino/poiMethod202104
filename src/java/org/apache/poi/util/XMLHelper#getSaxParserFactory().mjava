@@ -1,0 +1,21 @@
+    public static SAXParserFactory getSaxParserFactory() {
+        try {
+            SAXParserFactory factory = SAXParserFactory.newInstance();
+            factory.setValidating(false);
+            factory.setNamespaceAware(true);
+            trySet(factory::setFeature, XMLConstants.FEATURE_SECURE_PROCESSING, true);
+            trySet(factory::setFeature, FEATURE_LOAD_DTD_GRAMMAR, false);
+            trySet(factory::setFeature, FEATURE_LOAD_EXTERNAL_DTD, false);
+            return factory;
+        } catch (RuntimeException | Error re) { // NOSONAR
+            // this also catches NoClassDefFoundError, which may be due to a local class path issue
+            // This may occur if the code is run inside a web container or a restricted JVM
+            // See bug 61170: https://bz.apache.org/bugzilla/show_bug.cgi?id=61170
+            logThrowable(re, "Failed to create SAXParserFactory", "-");
+            throw re;
+        } catch (Exception e) {
+            logThrowable(e, "Failed to create SAXParserFactory", "-");
+            throw new RuntimeException("Failed to create SAXParserFactory", e);
+        }
+    }
+

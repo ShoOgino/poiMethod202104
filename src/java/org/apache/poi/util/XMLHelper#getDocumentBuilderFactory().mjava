@@ -6,16 +6,28 @@
     @SuppressWarnings({"squid:S2755"})
     public static DocumentBuilderFactory getDocumentBuilderFactory() {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        // this doesn't appear to work, and we still need to limit
+        // entity expansions to 1 in trySetXercesSecurityManager
         factory.setExpandEntityReferences(false);
-        trySet(XMLConstants.FEATURE_SECURE_PROCESSING, (n) -> factory.setFeature(n, true));
-        trySet(XMLConstants.ACCESS_EXTERNAL_SCHEMA, (n) -> factory.setAttribute(n, ""));
-        trySet(XMLConstants.ACCESS_EXTERNAL_DTD, (n) -> factory.setAttribute(n, ""));
-        trySet("http://xml.org/sax/features/external-general-entities", (n) -> factory.setFeature(n, false));
-        trySet("http://xml.org/sax/features/external-parameter-entities", (n) -> factory.setFeature(n, false));
-        trySet("http://apache.org/xml/features/nonvalidating/load-external-dtd", (n) -> factory.setFeature(n, false));
-        trySet("http://apache.org/xml/features/nonvalidating/load-dtd-grammar", (n) -> factory.setFeature(n, false));
-        trySet("http://apache.org/xml/features/disallow-doctype-decl", (n) -> factory.setFeature(n, true));
-        trySet("XIncludeAware", (n) -> factory.setXIncludeAware(false));
+        factory.setValidating(false);
+        trySet(factory::setFeature, XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        trySet(factory::setAttribute, XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+        trySet(factory::setAttribute, XMLConstants.ACCESS_EXTERNAL_DTD, "");
+        trySet(factory::setFeature, FEATURE_EXTERNAL_ENTITIES, false);
+        trySet(factory::setFeature, FEATURE_PARAMETER_ENTITIES, false);
+        trySet(factory::setFeature, FEATURE_LOAD_EXTERNAL_DTD, false);
+        trySet(factory::setFeature, FEATURE_LOAD_DTD_GRAMMAR, false);
+        trySet(factory::setFeature, FEATURE_DISALLOW_DOCTYPE_DECL, true);
+        trySet((n, b) -> factory.setXIncludeAware(b), "XIncludeAware", false);
+
+        Object manager = getXercesSecurityManager();
+        if (manager == null || !trySet(factory::setAttribute, PROPERTY_SECURITY_MANAGER, manager)) {
+            // separate old version of Xerces not found => use the builtin way of setting the property
+            // Note: when entity_expansion_limit==0, there is no limit!
+            trySet(factory::setAttribute, PROPERTY_ENTITY_EXPANSION_LIMIT, 1);
+        }
+
         return factory;
     }
 

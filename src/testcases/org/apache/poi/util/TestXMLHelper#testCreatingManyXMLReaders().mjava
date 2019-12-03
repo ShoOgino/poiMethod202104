@@ -2,10 +2,10 @@
     public void testCreatingManyXMLReaders() throws Exception {
         int limit = 1000;
         ArrayList<CompletableFuture<XMLReader>> futures = new ArrayList<>();
-        for(int i = 0; i < limit; i++) {
+        for (int i = 0; i < limit; i++) {
             futures.add(CompletableFuture.supplyAsync(() -> {
                 try {
-                    return SAXHelper.newXMLReader();
+                    return XMLHelper.newXMLReader();
                 } catch (RuntimeException e) {
                     throw e;
                 } catch (Exception e) {
@@ -14,15 +14,15 @@
             }));
         }
         HashSet<XMLReader> readers = new HashSet<>();
-        for(CompletableFuture<XMLReader> future : futures) {
+        for (CompletableFuture<XMLReader> future : futures) {
             XMLReader reader = future.get(10, TimeUnit.SECONDS);
             try {
                 assertTrue(reader.getFeature(XMLConstants.FEATURE_SECURE_PROCESSING));
             } catch (SAXNotRecognizedException e) {
                 // can happen for older XML Parsers, e.g. we have a CI Job which runs with Xerces XML Parser
                 assertTrue("Had Exception about not-recognized SAX feature: " + e + " which is only expected" +
-                                " for Xerces XML Parser, but had parser: " + reader,
-                        reader.getClass().getName().contains("org.apache.xerces"));
+                                   " for Xerces XML Parser, but had parser: " + reader,
+                           reader.getClass().getName().contains("org.apache.xerces"));
             }
             readers.add(reader);
         }
