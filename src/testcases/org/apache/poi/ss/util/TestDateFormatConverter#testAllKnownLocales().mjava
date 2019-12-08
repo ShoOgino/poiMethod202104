@@ -1,0 +1,41 @@
+    @Test
+    public void testAllKnownLocales() {
+        Pattern p = Pattern.compile("\\[\\$-(\\p{XDigit}+)]");
+
+        Set<String> blacklist = Stream.of(
+            "sd-Deva", "tzm-Arab", "fuv", "plt", "yue", "tdd-Tale", "tdd",
+            "khb-Talu", "khb", "qps", "ja-Ploc", "dz", "tmz", "ar-Ploc"
+        ).collect(Collectors.toSet());
+
+        for (LocaleID lid : LocaleID.values()) {
+            final String langTag = lid.getLanguageTag();
+
+            if (langTag.isEmpty() || lid.getWindowsId().startsWith("invalid")) {
+                continue;
+            }
+
+            // test all from variant to parent locales
+            String cmpTag = (langTag.indexOf('_') > 0) ? langTag.replace('_','-') : langTag;
+            for (int idx = langTag.length(); idx > 0; idx = cmpTag.lastIndexOf('-', idx-1)) {
+                final String partTag = langTag.substring(0, idx);
+
+                Locale loc = Locale.forLanguageTag(partTag);
+                assertNotNull("Invalid language tag: "+partTag, loc);
+
+                if (blacklist.contains(partTag)) {
+                    continue;
+                }
+
+                String prefix = DateFormatConverter.getPrefixForLocale(loc);
+                assertNotNull("Prefix not found - language tag: "+partTag, prefix);
+                assertNotEquals("Prefix not found - language tag: "+partTag,"", prefix);
+                Matcher m = p.matcher(prefix);
+                assertTrue("Invalid prefix: "+prefix, m.matches());
+
+                LocaleID partLid = LocaleID.lookupByLanguageTag(partTag);
+                assertNotNull("LocaleID not found for part: "+partTag, partLid);
+                assertEquals(partLid.getLcid(), Integer.parseInt(m.group(1), 16));
+            }
+        }
+    }
+
