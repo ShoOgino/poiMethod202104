@@ -2,10 +2,10 @@
      * This method generates the xor verifier for word documents &lt; 2007 (method 2).
      * Its output will be used as password input for the newer word generations which
      * utilize a real hashing algorithm like sha1.
-     * 
+     *
      * @param password the password
      * @return the hashed password
-     * 
+     *
      * @see <a href="http://msdn.microsoft.com/en-us/library/dd905229.aspx">2.3.7.4 Binary Document Password Verifier Derivation Method 2</a>
      * @see <a href="http://blogs.msdn.com/b/vsod/archive/2010/04/05/how-to-set-the-editing-restrictions-in-word-using-open-xml-sdk-2-0.aspx">How to set the editing restrictions in Word using Open XML SDK 2.0</a>
      * @see <a href="http://www.aspose.com/blogs/aspose-blogs/vladimir-averkin/archive/2007/08/20/funny-how-the-new-powerful-cryptography-implemented-in-word-2007-turns-it-into-a-perfect-tool-for-document-password-removal.html">Funny: How the new powerful cryptography implemented in Word 2007 turns it into a perfect tool for document password removal.</a>
@@ -19,42 +19,43 @@
         byte[] generatedKey = new byte[4];
 
         //Maximum length of the password is 15 chars.
-        final int maxPasswordLength = 15; 
-        
+        final int maxPasswordLength = 15;
+
         if (!password.isEmpty()) {
             // Truncate the password to 15 characters
             password = password.substring(0, Math.min(password.length(), maxPasswordLength));
 
             byte[] arrByteChars = toAnsiPassword(password);
-            
+
             // Compute the high-order word of the new key:
 
-            // --> Initialize from the initial code array (see below), depending on the passwords length. 
+            // --> Initialize from the initial code array (see below), depending on the passwords length.
             int highOrderWord = INITIAL_CODE_ARRAY[arrByteChars.length - 1];
 
             // --> For each character in the password:
-            //      --> For every bit in the character, starting with the least significant and progressing to (but excluding) 
-            //          the most significant, if the bit is set, XOR the keys high-order word with the corresponding word from 
+            //      --> For every bit in the character, starting with the least significant and progressing to (but excluding)
+            //          the most significant, if the bit is set, XOR the keys high-order word with the corresponding word from
             //          the Encryption Matrix
-            for (int i = 0; i < arrByteChars.length; i++) {
-                int tmp = maxPasswordLength - arrByteChars.length + i;
-                for (int intBit = 0; intBit < 7; intBit++) {
-                    if ((arrByteChars[i] & (0x0001 << intBit)) != 0) {
-                        highOrderWord ^= ENCRYPTION_MATRIX[tmp][intBit];
+            int line = maxPasswordLength - arrByteChars.length;
+            for (byte ch : arrByteChars) {
+                for (int xor : ENCRYPTION_MATRIX[line++]) {
+                    if ((ch & 1) == 1) {
+                        highOrderWord ^= xor;
                     }
+                    ch >>>= 1;
                 }
             }
-            
+
             // Compute the low-order word of the new key:
             int verifier = createXorVerifier1(password);
 
             // The byte order of the result shall be reversed [password "Example": 0x64CEED7E becomes 7EEDCE64],
             // and that value shall be hashed as defined by the attribute values.
-            
+
             LittleEndian.putShort(generatedKey, 0, (short)verifier);
             LittleEndian.putShort(generatedKey, 2, (short)highOrderWord);
         }
-        
+
         return LittleEndian.getInt(generatedKey);
     }
 
