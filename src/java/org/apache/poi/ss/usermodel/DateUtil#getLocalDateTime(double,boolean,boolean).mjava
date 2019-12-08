@@ -13,13 +13,16 @@
      *  @param roundSeconds round to closest second
      *  @return Java representation of the date, or null if date is not a valid Excel date
      */
+    @SuppressWarnings("squid:S2111")
     public static LocalDateTime getLocalDateTime(double date, boolean use1904windowing, boolean roundSeconds) {
         if (!isValidExcelDate(date)) {
             return null;
         }
-        int wholeDays = (int)Math.floor(date);
-        int millisecondsInDay = (int)((date - wholeDays) * DAY_MILLISECONDS + 0.5);
-        
+
+        BigDecimal bd = new BigDecimal(date);
+
+        int wholeDays = bd.intValue();
+
         int startYear = 1900;
         int dayAdjust = -1; // Excel thinks 2/29/1900 is a valid date, which it isn't
         if (use1904windowing) {
@@ -34,7 +37,15 @@
 
         LocalDateTime ldt = LocalDateTime.of(startYear, 1, 1, 0, 0);
         ldt = ldt.plusDays(wholeDays+dayAdjust-1);
-        ldt = ldt.plusNanos(millisecondsInDay*1_000_000L);
+
+        long nanosTime =
+            bd.subtract(BigDecimal.valueOf(wholeDays))
+            .multiply(BD_NANOSEC_DAY)
+            .add(roundSeconds ? BD_SECOND_RND : BD_MILISEC_RND)
+            .longValue();
+
+        ldt = ldt.plusNanos(nanosTime);
+        ldt = ldt.truncatedTo(roundSeconds ? ChronoUnit.SECONDS : ChronoUnit.MILLIS);
 
         return ldt;
     }
