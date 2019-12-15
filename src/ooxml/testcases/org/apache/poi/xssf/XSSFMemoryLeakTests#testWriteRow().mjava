@@ -1,0 +1,25 @@
+    @Test
+    public void testWriteRow() throws IOException {
+        final XSSFWorkbook wb = new XSSFWorkbook();
+        final XSSFSheet sheet1 = wb.createSheet("Sheet1");
+        final XSSFRow row = sheet1.createRow(0);
+        final XSSFCell cell = row.createCell(0);
+        cell.setCellValue("hello");
+
+        // Cannot check the CTCell here as it is reused now and thus
+        // not freed until we free up the Cell itself
+        //verifier.addObject(ctCell);
+
+        try (OutputStream out = new ByteArrayOutputStream(8192)) {
+            wb.write(out);
+        }
+
+        CTCell ctCell = cell.getCTCell();
+        assertSame("The CTCell should not be replaced",
+                cell.getCTCell(), ctCell);
+        assertSame("The CTCell in the row should not be replaced",
+                row.getCTRow().getCArray(0), ctCell);
+
+        wb.close();
+    }
+
