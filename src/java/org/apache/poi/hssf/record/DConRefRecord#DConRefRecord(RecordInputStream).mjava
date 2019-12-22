@@ -3,10 +3,10 @@
      *
      * @param inStream RecordInputStream containing a DConRefRecord structure.
      */
-    public DConRefRecord(RecordInputStream inStream)
-    {
-        if (inStream.getSid() != sid)
+    public DConRefRecord(RecordInputStream inStream) {
+        if (inStream.getSid() != sid) {
             throw new RecordFormatException("Wrong sid: " + inStream.getSid());
+        }
 
         firstRow = inStream.readUShort();
         lastRow = inStream.readUShort();
@@ -14,16 +14,22 @@
         lastCol = inStream.readUByte();
 
         charCount = inStream.readUShort();
-        charType = inStream.readUByte() & 0x01; //first bit only.
 
-        // byteLength depends on whether we are using single- or double-byte chars.
-        int byteLength = charCount * (charType + 1);
+        // 7 bits reserved + 1 bit type - first bit only
+        charType = inStream.readUByte() & 0x01;
+
+        // bytelength is the length of the string in bytes, which depends on whether the string is
+        // made of single- or double-byte chars. This is given by charType, which equals 0 if
+        // single-byte, 1 if double-byte.
+        final int byteLength = charCount * (charType + 1);
 
         path = IOUtils.safelyAllocate(byteLength, MAX_RECORD_LENGTH);
         inStream.readFully(path);
 
-        if (path[0] == 0x02)
+        // If it's a self reference, the last one or two bytes (depending on char type) are the
+        // unused field. Not sure If i need to bother with this...
+        if (path[0] == 0x02) {
             _unused = inStream.readRemainder();
-
+        }
     }
 

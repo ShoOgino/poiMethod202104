@@ -1,10 +1,10 @@
     protected EncryptionDocument createEncryptionDocument() {
         AgileEncryptionVerifier ver = (AgileEncryptionVerifier)getEncryptionInfo().getVerifier();
-        AgileEncryptionHeader header = (AgileEncryptionHeader)getEncryptionInfo().getHeader(); 
-        
+        AgileEncryptionHeader header = (AgileEncryptionHeader)getEncryptionInfo().getHeader();
+
         EncryptionDocument ed = EncryptionDocument.Factory.newInstance();
         CTEncryption edRoot = ed.addNewEncryption();
-        
+
         CTKeyData keyData = edRoot.addNewKeyData();
         CTKeyEncryptors keyEncList = edRoot.addNewKeyEncryptors();
         CTKeyEncryptor keyEnc = keyEncList.addNewKeyEncryptor();
@@ -12,10 +12,10 @@
         CTPasswordKeyEncryptor keyPass = keyEnc.addNewEncryptedPasswordKey();
 
         keyPass.setSpinCount(ver.getSpinCount());
-        
+
         keyData.setSaltSize(header.getBlockSize());
         keyPass.setSaltSize(ver.getBlockSize());
-        
+
         keyData.setBlockSize(header.getBlockSize());
         keyPass.setBlockSize(ver.getBlockSize());
 
@@ -35,9 +35,9 @@
         }
         keyData.setCipherAlgorithm(xmlCipherAlgo);
         keyPass.setCipherAlgorithm(xmlCipherAlgo);
-        
+
         switch (header.getChainingMode()) {
-        case cbc: 
+        case cbc:
             keyData.setCipherChaining(STCipherChaining.CHAINING_MODE_CBC);
             keyPass.setCipherChaining(STCipherChaining.CHAINING_MODE_CBC);
             break;
@@ -48,7 +48,7 @@
         default:
             throw new EncryptedDocumentException("ChainingMode "+header.getChainingMode()+" not supported.");
         }
-        
+
         keyData.setHashAlgorithm(mapHashAlgorithm(header.getHashAlgorithm()));
         keyPass.setHashAlgorithm(mapHashAlgorithm(ver.getHashAlgorithm()));
 
@@ -57,11 +57,11 @@
         keyPass.setEncryptedVerifierHashInput(ver.getEncryptedVerifier());
         keyPass.setEncryptedVerifierHashValue(ver.getEncryptedVerifierHash());
         keyPass.setEncryptedKeyValue(ver.getEncryptedKey());
-        
+
         CTDataIntegrity hmacData = edRoot.addNewDataIntegrity();
         hmacData.setEncryptedHmacKey(header.getEncryptedHmacKey());
         hmacData.setEncryptedHmacValue(header.getEncryptedHmacValue());
-        
+
         for (AgileCertificateEntry ace : ver.getCertificates()) {
             keyEnc = keyEncList.addNewKeyEncryptor();
             keyEnc.setUri(certificateUri);
@@ -74,7 +74,7 @@
             certData.setEncryptedKeyValue(ace.encryptedKey);
             certData.setCertVerifier(ace.certVerifier);
         }
-        
+
         return ed;
     }
 

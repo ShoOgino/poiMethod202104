@@ -14,7 +14,9 @@
             // Serialize a block of cells for those rows
             final int startRowNumber = getStartRowNumberForBlock(blockIndex);
             final int endRowNumber = getEndRowNumberForBlock(blockIndex);
-            DBCellRecord.Builder dbcrBuilder = new DBCellRecord.Builder();
+
+            final List<Short> cellOffsets = new ArrayList<>();
+
             // Note: Cell references start from the second row...
             int cellRefOffset = (rowBlockSize - RowRecord.ENCODED_SIZE);
             for (int row = startRowNumber; row <= endRowNumber; row++) {
@@ -25,16 +27,15 @@
                     pos += rowCellSize;
                     // Add the offset to the first cell for the row into the
                     // DBCellRecord.
-                    dbcrBuilder.addCellOffset(cellRefOffset);
+                    cellOffsets.add((short)cellRefOffset);
                     cellRefOffset = rowCellSize;
                 }
             }
             // Calculate Offset from the start of a DBCellRecord to the first Row
-            rv.visitRecord(dbcrBuilder.build(pos));
+            rv.visitRecord(new DBCellRecord(pos, shortListToArray(cellOffsets)));
         }
-        for (Record _unknownRecord : _unknownRecords) {
-            // Potentially breaking the file here since we don't know exactly where to write these records
-            rv.visitRecord(_unknownRecord);
-        }
+
+        // Potentially breaking the file here since we don't know exactly where to write these records
+        _unknownRecords.forEach(rv::visitRecord);
     }
 
