@@ -3,6 +3,7 @@
 	 * This is not critical functionality but it has been decided to keep POI consistent with
 	 * Excel in this regard.
 	 */
+	@Test
 	public void testMissingHeaderFooter() {
 		// initialise PSB with some records, but not the header / footer
 		Record[] recs = {
@@ -13,23 +14,19 @@
 		PageSettingsBlock psb = new PageSettingsBlock(rs);
 
 		// serialize the PSB to see what records come out
-		RecordCollector rc = new RecordCollector();
-		psb.visitContainedRecords(rc);
-		Record[] outRecs = rc.getRecords();
+		List<Record> outRecs = new ArrayList<>();
+		psb.visitContainedRecords(outRecs::add);
 
-		if (outRecs.length == 2) {
-			throw new AssertionFailedError("PageSettingsBlock didn't add missing header/footer records");
-		}
-		assertEquals(4, outRecs.length);
-		assertEquals(HeaderRecord.class, outRecs[0].getClass());
-		assertEquals(FooterRecord.class, outRecs[1].getClass());
-		assertEquals(HCenterRecord.class, outRecs[2].getClass());
-		assertEquals(VCenterRecord.class, outRecs[3].getClass());
+		assertNotEquals("PageSettingsBlock didn't add missing header/footer records", 2, outRecs.size());
+
+		Class<?>[] act = outRecs.stream().map(Object::getClass).toArray(Class[]::new);
+		Class<?>[] exp = { HeaderRecord.class, FooterRecord.class, HCenterRecord.class, VCenterRecord.class};
+		assertArrayEquals(exp, act);
 
 		// make sure the added header / footer records are empty
-		HeaderRecord hr = (HeaderRecord) outRecs[0];
+		HeaderRecord hr = (HeaderRecord) outRecs.get(0);
 		assertEquals("", hr.getText());
-		FooterRecord fr = (FooterRecord) outRecs[1];
+		FooterRecord fr = (FooterRecord) outRecs.get(1);
 		assertEquals("", fr.getText());
 	}
 

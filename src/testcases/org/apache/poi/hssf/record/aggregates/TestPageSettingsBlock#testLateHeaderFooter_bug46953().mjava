@@ -1,6 +1,7 @@
 	/**
 	 * Bug 46953 occurred because POI didn't handle late PSB records properly.
 	 */
+	@Test
 	public void testLateHeaderFooter_bug46953() {
 
 		int rowIx = 5;
@@ -22,21 +23,15 @@
 		RecordStream rs = new RecordStream(Arrays.asList(recs), 0);
 		InternalSheet sheet = InternalSheet.createSheet(rs);
 
-		RecordCollector rv = new RecordCollector();
-		sheet.visitContainedRecords(rv, 0);
-		Record[] outRecs = rv.getRecords();
-		if (outRecs[4] == EOFRecord.instance) {
-			throw new AssertionFailedError("Identified bug 46953 - EOF incorrectly appended to PSB");
-		}
-		assertEquals(recs.length+1, outRecs.length); // +1 for index record
+		List<Record> outRecs = new ArrayList<>();
+		sheet.visitContainedRecords(outRecs::add, 0);
+		// Identified bug 46953 - EOF incorrectly appended to PSB
+		assertNotEquals(EOFRecord.instance, outRecs.get(4));
+		assertEquals(recs.length+1, outRecs.size()); // +1 for index record
 
-		assertEquals(BOFRecord.class, outRecs[0].getClass());
-		assertEquals(IndexRecord.class, outRecs[1].getClass());
-		assertEquals(HeaderRecord.class, outRecs[2].getClass());
-		assertEquals(FooterRecord.class, outRecs[3].getClass());
-		assertEquals(HeaderFooterRecord.class, outRecs[4].getClass());
-		assertEquals(DimensionsRecord.class, outRecs[5].getClass());
-		assertEquals(WindowTwoRecord.class, outRecs[6].getClass());
-		assertEquals(EOFRecord.instance, outRecs[7]);
+		Class<?>[] act = outRecs.stream().map(Object::getClass).toArray(Class[]::new);
+		Class<?>[] exp = { BOFRecord.class, IndexRecord.class, HeaderRecord.class, FooterRecord.class,
+				HeaderFooterRecord.class, DimensionsRecord.class, WindowTwoRecord.class, EOFRecord.class };
+		assertArrayEquals(exp, act);
 	}
 

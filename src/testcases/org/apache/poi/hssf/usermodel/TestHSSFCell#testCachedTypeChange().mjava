@@ -6,31 +6,30 @@
 	 */
 	@Test
 	public void testCachedTypeChange() throws IOException {
-		HSSFWorkbook wb = new HSSFWorkbook();
-        HSSFSheet sheet = wb.createSheet("Sheet1");
-		Cell cell = sheet.createRow(0).createCell(0);
-		cell.setCellFormula("A1");
-		cell.setCellValue("abc");
-		confirmStringRecord(sheet, true);
-		cell.setCellValue(123);
-		Record[] recs = RecordInspector.getRecords(sheet, 0);
-		if (recs.length == 28 && recs[23] instanceof StringRecord) {
-		    wb.close();
-			fail("Identified bug - leftover StringRecord");
+		try (HSSFWorkbook wb = new HSSFWorkbook()) {
+			HSSFSheet sheet = wb.createSheet("Sheet1");
+			Cell cell = sheet.createRow(0).createCell(0);
+			cell.setCellFormula("A1");
+			cell.setCellValue("abc");
+			confirmStringRecord(sheet, true);
+			cell.setCellValue(123);
+
+			final List<Record> recs = new ArrayList<>();
+			sheet.getSheet().visitContainedRecords(recs::add, 0);
+			assertFalse("Identified bug - leftover StringRecord", recs.size() == 28 && recs.get(23) instanceof StringRecord);
+			confirmStringRecord(sheet, false);
+
+			// string to error code
+			cell.setCellValue("abc");
+			confirmStringRecord(sheet, true);
+			cell.setCellErrorValue(FormulaError.REF.getCode());
+			confirmStringRecord(sheet, false);
+
+			// string to boolean
+			cell.setCellValue("abc");
+			confirmStringRecord(sheet, true);
+			cell.setCellValue(false);
+			confirmStringRecord(sheet, false);
 		}
-		confirmStringRecord(sheet, false);
-
-		// string to error code
-		cell.setCellValue("abc");
-		confirmStringRecord(sheet, true);
-		cell.setCellErrorValue(FormulaError.REF.getCode());
-		confirmStringRecord(sheet, false);
-
-		// string to boolean
-		cell.setCellValue("abc");
-		confirmStringRecord(sheet, true);
-		cell.setCellValue(false);
-		confirmStringRecord(sheet, false);
-		wb.close();
 	}
 

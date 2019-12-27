@@ -10,40 +10,33 @@
 	 * <li>BottomMargin(0x0029)</li>
 	 * </ul>
 	 */
+	@Test
 	public void testLateMargins_bug47199() {
+
+		BottomMarginRecord bottomMargin = new BottomMarginRecord();
+		bottomMargin.setMargin(0.787F);
 
 		Record[] recs = {
 				BOFRecord.createSheetBOF(),
 				new HeaderRecord("&LSales Figures"),
 				new FooterRecord("&LJanuary"),
 				new DimensionsRecord(),
-				createBottomMargin(0.787F),
+				bottomMargin,
 				new WindowTwoRecord(),
 				EOFRecord.instance,
 		};
 		RecordStream rs = new RecordStream(Arrays.asList(recs), 0);
 
-		InternalSheet sheet;
-		try {
-			sheet = InternalSheet.createSheet(rs);
-		} catch (RuntimeException e) {
-			if (e.getMessage().equals("two Page Settings Blocks found in the same sheet")) {
-				throw new AssertionFailedError("Identified bug 47199a - failed to process late margings records");
-			}
-			throw e;
-		}
+		// bug 47199a - failed to process late margins records
+		InternalSheet sheet = InternalSheet.createSheet(rs);
 
-		RecordCollector rv = new RecordCollector();
-		sheet.visitContainedRecords(rv, 0);
-		Record[] outRecs = rv.getRecords();
-		assertEquals(recs.length+1, outRecs.length); // +1 for index record
+		List<Record> outRecs = new ArrayList<>();
+		sheet.visitContainedRecords(outRecs::add, 0);
+		assertEquals(recs.length+1, outRecs.size()); // +1 for index record
 
-		assertEquals(BOFRecord.class, outRecs[0].getClass());
-		assertEquals(IndexRecord.class, outRecs[1].getClass());
-		assertEquals(HeaderRecord.class, outRecs[2].getClass());
-		assertEquals(FooterRecord.class, outRecs[3].getClass());
-		assertEquals(DimensionsRecord.class, outRecs[5].getClass());
-		assertEquals(WindowTwoRecord.class, outRecs[6].getClass());
-		assertEquals(EOFRecord.instance, outRecs[7]);
+		Class<?>[] act = outRecs.stream().map(Object::getClass).toArray(Class[]::new);
+		Class<?>[] exp = { BOFRecord.class, IndexRecord.class, HeaderRecord.class, FooterRecord.class,
+				BottomMarginRecord.class, DimensionsRecord.class, WindowTwoRecord.class, EOFRecord.class };
+		assertArrayEquals(exp, act);
 	}
 

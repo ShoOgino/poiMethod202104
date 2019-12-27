@@ -2,42 +2,45 @@
      * Cloning one HSSFCellStyle onto Another, across
      *  two different HSSFWorkbooks
      */
-    public void testCloneStyleDiffWB() {
-        HSSFWorkbook wbOrig = new HSSFWorkbook();
-        
-        HSSFFont fnt = wbOrig.createFont();
-        fnt.setFontName("TestingFont");
-        assertEquals(5, wbOrig.getNumberOfFonts());
-        
-        HSSFDataFormat fmt = wbOrig.createDataFormat();
-        fmt.getFormat("MadeUpOne");
-        fmt.getFormat("MadeUpTwo");
-        
-        HSSFCellStyle orig = wbOrig.createCellStyle();
-        orig.setAlignment(HorizontalAlignment.RIGHT);
-        orig.setFont(fnt);
-        orig.setDataFormat(fmt.getFormat("Test##"));
-        
-        assertEquals(HorizontalAlignment.RIGHT, orig.getAlignment());
-        assertEquals(fnt, orig.getFont(wbOrig));
-        assertEquals(fmt.getFormat("Test##"), orig.getDataFormat());
-        
-        // Now a style on another workbook
-        HSSFWorkbook wbClone = new HSSFWorkbook();
-        assertEquals(4, wbClone.getNumberOfFonts());
-        HSSFDataFormat fmtClone = wbClone.createDataFormat();
-        
-        HSSFCellStyle clone = wbClone.createCellStyle();
-        assertEquals(4, wbClone.getNumberOfFonts());
+    @Test
+    public void testCloneStyleDiffWB() throws IOException {
+        try (HSSFWorkbook wbOrig = new HSSFWorkbook()) {
 
-        assertNotSame(HorizontalAlignment.RIGHT, clone.getAlignment());
-        assertNotSame("TestingFont", clone.getFont(wbClone).getFontName());
-        
-        clone.cloneStyleFrom(orig);
-        assertEquals(HorizontalAlignment.RIGHT, clone.getAlignment());
-        assertEquals("TestingFont", clone.getFont(wbClone).getFontName());
-        assertEquals(fmtClone.getFormat("Test##"), clone.getDataFormat());
-        assertFalse(fmtClone.getFormat("Test##") == fmt.getFormat("Test##"));
-        assertEquals(5, wbClone.getNumberOfFonts());
+            HSSFFont fnt = wbOrig.createFont();
+            fnt.setFontName("TestingFont");
+            assertEquals(5, wbOrig.getNumberOfFonts());
+
+            HSSFDataFormat fmt = wbOrig.createDataFormat();
+            fmt.getFormat("MadeUpOne");
+            fmt.getFormat("MadeUpTwo");
+
+            HSSFCellStyle orig = wbOrig.createCellStyle();
+            orig.setAlignment(HorizontalAlignment.RIGHT);
+            orig.setFont(fnt);
+            orig.setDataFormat(fmt.getFormat("Test##"));
+
+            assertEquals(HorizontalAlignment.RIGHT, orig.getAlignment());
+            assertEquals(fnt, orig.getFont(wbOrig));
+            assertEquals(fmt.getFormat("Test##"), orig.getDataFormat());
+
+            // Now a style on another workbook
+            try (HSSFWorkbook wbClone = new HSSFWorkbook()) {
+                assertEquals(4, wbClone.getNumberOfFonts());
+                HSSFDataFormat fmtClone = wbClone.createDataFormat();
+
+                HSSFCellStyle clone = wbClone.createCellStyle();
+                assertEquals(4, wbClone.getNumberOfFonts());
+
+                assertNotSame(HorizontalAlignment.RIGHT, clone.getAlignment());
+                assertNotSame("TestingFont", clone.getFont(wbClone).getFontName());
+
+                clone.cloneStyleFrom(orig);
+                assertEquals(HorizontalAlignment.RIGHT, clone.getAlignment());
+                assertEquals("TestingFont", clone.getFont(wbClone).getFontName());
+                assertEquals(fmtClone.getFormat("Test##"), clone.getDataFormat());
+                assertNotEquals(fmtClone.getFormat("Test##"), fmt.getFormat("Test##"));
+                assertEquals(5, wbClone.getNumberOfFonts());
+            }
+        }
     }
 

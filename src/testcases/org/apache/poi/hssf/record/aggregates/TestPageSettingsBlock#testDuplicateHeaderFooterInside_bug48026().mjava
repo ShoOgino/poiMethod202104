@@ -1,3 +1,4 @@
+	@Test
     public void testDuplicateHeaderFooterInside_bug48026() {
 
         Record[] recs = {
@@ -25,21 +26,13 @@
                 EOFRecord.instance,
         };
         RecordStream rs = new RecordStream(Arrays.asList(recs), 0);
-        InternalSheet sheet;
-        try {
-            sheet = InternalSheet.createSheet(rs);
-        } catch (RuntimeException e) {
-            if (e.getMessage().equals("Duplicate PageSettingsBlock record (sid=0x89c)")) {
-                throw new AssertionFailedError("Identified bug 48026");
-            }
-            throw e;
-        }
+        // Bug 48026 : Duplicate PageSettingsBlock record (sid=0x89c)
+        InternalSheet sheet = InternalSheet.createSheet(rs);
 
-        RecordCollector rv = new RecordCollector();
-        sheet.visitContainedRecords(rv, 0);
-        Record[] outRecs = rv.getRecords();
+		List<Record> outRecs = new ArrayList<>();
+        sheet.visitContainedRecords(outRecs::add, 0);
 
-        assertEquals(recs.length+1, outRecs.length);
+        assertEquals(recs.length+1, outRecs.size());
         //expected order of records:
         Record[] expectedRecs = {
                 recs[0],  //BOFRecord
@@ -62,9 +55,12 @@
 
                 recs[11],  //EOFRecord
         };
-        for(int i=0; i < expectedRecs.length; i++){
-            assertEquals("Record mismatch at index " + i,  expectedRecs[i].getClass(), outRecs[i].getClass());
-        }
+
+		assertArrayEquals(
+			Stream.of(expectedRecs).map(Object::getClass).toArray(Class[]::new),
+			outRecs.stream().map(Object::getClass).toArray(Class[]::new)
+		);
+
         HeaderFooterRecord hd1 = (HeaderFooterRecord)expectedRecs[10];
         //GUID is zero
         assertArrayEquals(new byte[16], hd1.getGuid());

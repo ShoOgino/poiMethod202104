@@ -4,27 +4,27 @@
      */
     @Test
     public void testIndexFormula() throws IOException {
-        Workbook wb = _testDataProvider.createWorkbook();
-        Sheet sheet = wb.createSheet("Sheet1");
+        try (Workbook wb = _testDataProvider.createWorkbook()) {
+            Sheet sheet = wb.createSheet("Sheet1");
 
-        int colB = 1;
-        sheet.createRow(0).createCell(colB).setCellValue(1);
-        sheet.createRow(1).createCell(colB).setCellValue(2);
-        sheet.createRow(2).createCell(colB).setCellValue(3);
-        Row row4 = sheet.createRow(3);
-        Cell testCell = row4.createCell(0);
-        // This formula should evaluate to the contents of B2,
-        testCell.setCellFormula("INDEX(A1:B4,2,2)");
-        // However the range A1:B4 also includes the current cell A4.  If the other parameters
-        // were 4 and 1, this would represent a circular reference.  Prior to v3.2 POI would
-        // 'fully' evaluate ref arguments before invoking operators, which raised the possibility of
-        // cycles / StackOverflowErrors.
+            int colB = 1;
+            sheet.createRow(0).createCell(colB).setCellValue(1);
+            sheet.createRow(1).createCell(colB).setCellValue(2);
+            sheet.createRow(2).createCell(colB).setCellValue(3);
+            Row row4 = sheet.createRow(3);
+            Cell testCell = row4.createCell(0);
+            // This formula should evaluate to the contents of B2,
+            testCell.setCellFormula("INDEX(A1:B4,2,2)");
+            // However the range A1:B4 also includes the current cell A4.  If the other parameters
+            // were 4 and 1, this would represent a circular reference.  Prior to v3.2 POI would
+            // 'fully' evaluate ref arguments before invoking operators, which raised the possibility of
+            // cycles / StackOverflowErrors.
 
 
-        CellValue cellValue = evaluateWithCycles(wb, testCell);
-
-        assertSame(cellValue.getCellType(), CellType.NUMERIC);
-        assertEquals(2, cellValue.getNumberValue(), 0);
-        wb.close();
+            CellValue cellValue = evaluateWithCycles(wb, testCell);
+            assertNotNull(cellValue);
+            assertSame(cellValue.getCellType(), CellType.NUMERIC);
+            assertEquals(2, cellValue.getNumberValue(), 0);
+        }
     }
 

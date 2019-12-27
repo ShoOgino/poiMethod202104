@@ -1,23 +1,18 @@
-	public void testInSpreadSheet() {
-		HSSFWorkbook wb = new HSSFWorkbook();
-		HSSFSheet sheet = wb.createSheet("Sheet1");
-		HSSFRow row = sheet.createRow(0);
-		HSSFCell cell = row.createCell(0);
-		cell.setCellFormula("B1%");
-		row.createCell(1).setCellValue(50.0);
+	@Test
+	public void testInSpreadSheet() throws IOException {
+		try (HSSFWorkbook wb = new HSSFWorkbook()) {
+			HSSFSheet sheet = wb.createSheet("Sheet1");
+			HSSFRow row = sheet.createRow(0);
+			HSSFCell cell = row.createCell(0);
+			cell.setCellFormula("B1%");
+			row.createCell(1).setCellValue(50.0);
 
-		HSSFFormulaEvaluator fe = new HSSFFormulaEvaluator(wb);
-		CellValue cv;
-		try {
-			cv = fe.evaluate(cell);
-		} catch (RuntimeException e) {
-			if(e.getCause() instanceof NullPointerException) {
-				throw new AssertionFailedError("Identified bug 44608");
-			}
-			// else some other unexpected error
-			throw e;
+			HSSFFormulaEvaluator fe = new HSSFFormulaEvaluator(wb);
+
+			// bug 44608 - NullPointerException
+			CellValue cv = fe.evaluate(cell);
+			assertEquals(CellType.NUMERIC, cv.getCellType());
+			assertEquals(0.5, cv.getNumberValue(), 0.0);
 		}
-		assertEquals(CellType.NUMERIC, cv.getCellType());
-		assertEquals(0.5, cv.getNumberValue(), 0.0);
 	}
 

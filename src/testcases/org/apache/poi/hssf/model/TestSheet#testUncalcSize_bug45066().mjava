@@ -16,8 +16,15 @@
 		// The original bug was due to different logic for collecting records for sizing and
 		// serialization. The code has since been refactored into a single method for visiting
 		// all contained records.  Now this test is much less interesting
-		SizeCheckingRecordVisitor scrv = new SizeCheckingRecordVisitor();
-		sheet.visitContainedRecords(scrv, 0);
-		assertEquals(90, scrv.getTotalSize());
+		int[] totalSize = { 0 };
+		byte[] buf = new byte[100];
+
+		sheet.visitContainedRecords(r -> {
+			int estimatedSize = r.getRecordSize();
+			int serializedSize = r.serialize(0, buf);
+			assertEquals("serialized size mismatch for record (" + r.getClass().getName() + ")", estimatedSize, serializedSize);
+			totalSize[0] += estimatedSize;
+		}, 0);
+		assertEquals(90, totalSize[0]);
 	}
 

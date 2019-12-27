@@ -1,24 +1,31 @@
+	@Test
 	public void testDummyToSource() throws IOException {
-		boolean changed = mainWorkbook.changeExternalReference("DOESNOTEXIST", SOURCE_WORKBOOK_FILENAME);
-		assertFalse(changed);
-		
-		changed = mainWorkbook.changeExternalReference(SOURCE_DUMMY_WORKBOOK_FILENAME, SOURCE_WORKBOOK_FILENAME);
-		assertTrue(changed);
+		try (HSSFWorkbook mainWorkbook = HSSFTestDataSamples.openSampleWorkbook(MAIN_WORKBOOK_FILENAME);
+			 HSSFWorkbook sourceWorkbook = HSSFTestDataSamples.openSampleWorkbook(SOURCE_WORKBOOK_FILENAME)) {
 
-		HSSFSheet lSheet = mainWorkbook.getSheetAt(0);
-		HSSFCell lA1Cell = lSheet.getRow(0).getCell(0);
-		
-		assertEquals(CellType.FORMULA, lA1Cell.getCellType());
-		
-		HSSFFormulaEvaluator lMainWorkbookEvaluator = new HSSFFormulaEvaluator(mainWorkbook);
-		HSSFFormulaEvaluator lSourceEvaluator = new HSSFFormulaEvaluator(sourceWorkbook);
-		HSSFFormulaEvaluator.setupEnvironment(
-				new String[]{MAIN_WORKBOOK_FILENAME, SOURCE_WORKBOOK_FILENAME}, 
-				new HSSFFormulaEvaluator[] {lMainWorkbookEvaluator, lSourceEvaluator});
-		
-		assertEquals(CellType.NUMERIC, lMainWorkbookEvaluator.evaluateFormulaCell(lA1Cell));
+			assertNotNull(mainWorkbook);
+			assertNotNull(sourceWorkbook);
 
-		assertEquals(20.0d, lA1Cell.getNumericCellValue(), 0.00001d);
+			boolean changed = mainWorkbook.changeExternalReference("DOESNOTEXIST", SOURCE_WORKBOOK_FILENAME);
+			assertFalse(changed);
 
+			changed = mainWorkbook.changeExternalReference(SOURCE_DUMMY_WORKBOOK_FILENAME, SOURCE_WORKBOOK_FILENAME);
+			assertTrue(changed);
+
+			HSSFSheet lSheet = mainWorkbook.getSheetAt(0);
+			HSSFCell lA1Cell = lSheet.getRow(0).getCell(0);
+
+			assertEquals(CellType.FORMULA, lA1Cell.getCellType());
+
+			HSSFFormulaEvaluator lMainWorkbookEvaluator = new HSSFFormulaEvaluator(mainWorkbook);
+			HSSFFormulaEvaluator lSourceEvaluator = new HSSFFormulaEvaluator(sourceWorkbook);
+			HSSFFormulaEvaluator.setupEnvironment(
+					new String[]{MAIN_WORKBOOK_FILENAME, SOURCE_WORKBOOK_FILENAME},
+					new HSSFFormulaEvaluator[]{lMainWorkbookEvaluator, lSourceEvaluator});
+
+			assertEquals(CellType.NUMERIC, lMainWorkbookEvaluator.evaluateFormulaCell(lA1Cell));
+
+			assertEquals(20.0d, lA1Cell.getNumericCellValue(), 0.00001d);
+		}
 	}
 

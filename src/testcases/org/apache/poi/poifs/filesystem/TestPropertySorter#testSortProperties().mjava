@@ -1,6 +1,7 @@
     /**
      * Test sorting of properties in <code>DirectoryProperty</code>
      */
+    @Test
     public void testSortProperties() throws IOException {
         POIFSFileSystem fs = openSampleFS();
         Property[] props = getVBAProperties(fs);
@@ -8,21 +9,17 @@
         assertEquals(_entries.length, props.length);
 
         // (1). See that there is a problem with the old case-sensitive property comparator
-        Arrays.sort(props, OldCaseSensitivePropertyComparator);
-        try {
-            for (int i = 0; i < props.length; i++) {
-                assertEquals(_entries[i], props[i].getName());
-            }
-            fail("expected old case-sensitive property comparator to return properties in wrong order");
-        } catch (ComparisonFailure e){
-            // expected during successful test
-            assertNotNull(e.getMessage());
-        }
+        Arrays.sort(props, TestPropertySorter::oldCaseSensitivePropertyCompareTo);
+
+        String exp = String.join("", _entries);
+        String actOld = Stream.of(props).map(Property::getName).collect(Collectors.joining());
+
+        assertNotEquals("expected old case-sensitive property comparator to return properties in wrong order", exp, actOld);
 
         // (2) Verify that the fixed property comparator works right
         Arrays.sort(props, new DirectoryProperty.PropertyComparator());
-        for (int i = 0; i < props.length; i++) {
-            assertEquals(_entries[i], props[i].getName());
-        }
+        String[] actNew = Stream.of(props).map(Property::getName).toArray(String[]::new);
+
+        assertArrayEquals(_entries, actNew);
     }
 

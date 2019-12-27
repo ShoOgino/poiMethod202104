@@ -1,47 +1,47 @@
     @Test
     public void testIntermediateCircularReferenceResults_bug46898() throws IOException {
-        Workbook wb = _testDataProvider.createWorkbook();
-        Sheet sheet = wb.createSheet("Sheet1");
+        try (Workbook wb = _testDataProvider.createWorkbook()) {
+            Sheet sheet = wb.createSheet("Sheet1");
 
-        Row row = sheet.createRow(0);
+            Row row = sheet.createRow(0);
 
-        Cell cellA1 = row.createCell(0);
-        Cell cellB1 = row.createCell(1);
-        Cell cellC1 = row.createCell(2);
-        Cell cellD1 = row.createCell(3);
-        Cell cellE1 = row.createCell(4);
+            Cell cellA1 = row.createCell(0);
+            Cell cellB1 = row.createCell(1);
+            Cell cellC1 = row.createCell(2);
+            Cell cellD1 = row.createCell(3);
+            Cell cellE1 = row.createCell(4);
 
-        cellA1.setCellFormula("IF(FALSE, 1+B1, 42)");
-        cellB1.setCellFormula("1+C1");
-        cellC1.setCellFormula("1+D1");
-        cellD1.setCellFormula("1+E1");
-        cellE1.setCellFormula("1+A1");
+            cellA1.setCellFormula("IF(FALSE, 1+B1, 42)");
+            cellB1.setCellFormula("1+C1");
+            cellC1.setCellFormula("1+D1");
+            cellD1.setCellFormula("1+E1");
+            cellE1.setCellFormula("1+A1");
 
-        FormulaEvaluator fe = _testDataProvider.createFormulaEvaluator(wb);
-        CellValue cv;
+            FormulaEvaluator fe = _testDataProvider.createFormulaEvaluator(wb);
+            CellValue cv;
 
-        // Happy day flow - evaluate A1 first
-        cv = fe.evaluate(cellA1);
-        assertEquals(CellType.NUMERIC, cv.getCellType());
-        assertEquals(42.0, cv.getNumberValue(), 0.0);
-        cv = fe.evaluate(cellB1); // no circ-ref-error because A1 result is cached
-        assertEquals(CellType.NUMERIC, cv.getCellType());
-        assertEquals(46.0, cv.getNumberValue(), 0.0);
+            // Happy day flow - evaluate A1 first
+            cv = fe.evaluate(cellA1);
+            assertEquals(CellType.NUMERIC, cv.getCellType());
+            assertEquals(42.0, cv.getNumberValue(), 0.0);
+            cv = fe.evaluate(cellB1); // no circ-ref-error because A1 result is cached
+            assertEquals(CellType.NUMERIC, cv.getCellType());
+            assertEquals(46.0, cv.getNumberValue(), 0.0);
 
-        // Show the bug - evaluate another cell from the loop first
-        fe.clearAllCachedResultValues();
-        cv = fe.evaluate(cellB1);
-        // Identified bug 46898
-        assertNotEquals(cv.getCellType(), ErrorEval.CIRCULAR_REF_ERROR.getErrorCode());
-        assertEquals(CellType.NUMERIC, cv.getCellType());
-        assertEquals(46.0, cv.getNumberValue(), 0.0);
+            // Show the bug - evaluate another cell from the loop first
+            fe.clearAllCachedResultValues();
+            cv = fe.evaluate(cellB1);
+            // Identified bug 46898
+            assertNotEquals(cv.getCellType(), ErrorEval.CIRCULAR_REF_ERROR.getErrorCode());
+            assertEquals(CellType.NUMERIC, cv.getCellType());
+            assertEquals(46.0, cv.getNumberValue(), 0.0);
 
-        // start evaluation on another cell
-        fe.clearAllCachedResultValues();
-        cv = fe.evaluate(cellE1);
-        assertEquals(CellType.NUMERIC, cv.getCellType());
-        assertEquals(43.0, cv.getNumberValue(), 0.0);
-        
-        wb.close();
+            // start evaluation on another cell
+            fe.clearAllCachedResultValues();
+            cv = fe.evaluate(cellE1);
+            assertEquals(CellType.NUMERIC, cv.getCellType());
+            assertEquals(43.0, cv.getNumberValue(), 0.0);
+
+        }
     }
 

@@ -1,50 +1,31 @@
-	public void testMissingRowRecords() {
-		openNormal();
-		
+	@Test
+	public void testMissingRowRecords() throws IOException {
+		readRecords("MissingBits.xls");
+
 		// We have rows 0, 1, 2, 20 and 21
-		int row0 = -1;
-		for(int i=0; i<r.length; i++) {
-			if(r[i] instanceof RowRecord) {
-				RowRecord rr = (RowRecord)r[i];
-				if(rr.getRowNumber() == 0) { row0 = i; }
-			}
-		}
+		int row0 = lastIndexOf(r -> r instanceof RowRecord && ((RowRecord)r).getRowNumber() == 0);
 		assertTrue(row0 > -1);
-		
-		// Following row 0, we should have 1, 2, then dummy, then 20+21+22
-		assertTrue(r[row0] instanceof RowRecord);
-		assertTrue(r[row0+1] instanceof RowRecord);
-		assertTrue(r[row0+2] instanceof RowRecord);
-		assertTrue(r[row0+3] instanceof MissingRowDummyRecord);
-		assertTrue(r[row0+4] instanceof MissingRowDummyRecord);
-		assertTrue(r[row0+5] instanceof MissingRowDummyRecord);
-		assertTrue(r[row0+6] instanceof MissingRowDummyRecord);
-		// ...
-		assertTrue(r[row0+18] instanceof MissingRowDummyRecord);
-		assertTrue(r[row0+19] instanceof MissingRowDummyRecord);
-		assertTrue(r[row0+20] instanceof RowRecord);
-		assertTrue(r[row0+21] instanceof RowRecord);
-		assertTrue(r[row0+22] instanceof RowRecord);
-		
-		// Check things had the right row numbers
-		RowRecord rr;
-		rr = (RowRecord)r[row0+2];
-		assertEquals(2, rr.getRowNumber());
-		rr = (RowRecord)r[row0+20];
-		assertEquals(20, rr.getRowNumber());
-		rr = (RowRecord)r[row0+21];
-		assertEquals(21, rr.getRowNumber());
-		
-		MissingRowDummyRecord mr;
-		mr = (MissingRowDummyRecord)r[row0+3];
-		assertEquals(3, mr.getRowNumber());
-		mr = (MissingRowDummyRecord)r[row0+4];
-		assertEquals(4, mr.getRowNumber());
-		mr = (MissingRowDummyRecord)r[row0+5];
-		assertEquals(5, mr.getRowNumber());
-		mr = (MissingRowDummyRecord)r[row0+18];
-		assertEquals(18, mr.getRowNumber());
-		mr = (MissingRowDummyRecord)r[row0+19];
-		assertEquals(19, mr.getRowNumber());
+
+		// Records: row 0: column 1, 2), then missing rows, rows 20,21,22 each 1 column
+		String exp1 =
+			"0:rr,1:rr,2:rr,3:mr,4:mr,5:mr,6:mr,7:mr,8:mr,9:mr,10:mr,11:mr,12:mr,13:mr,14:mr," +
+			"15:mr,16:mr,17:mr,18:mr,19:mr,20:rr,21:rr,22:rr";
+		String act1 = digest(row0, 22);
+		assertEquals(exp1, act1);
+
+
+		// Find the cell at 0,0
+		int cell00 = lastIndexOf(r -> r instanceof LabelSSTRecord && ((LabelSSTRecord)r).getRow() == 0 && ((LabelSSTRecord)r).getColumn() == 0);
+
+		String exp2 =
+			"0:ls0lc0," +
+			"1:nr0/11mc1mc2nr3/23lc3," +
+			"2:nr0/45mc1mc2mc3mc4nr5/22lc5," +
+			"3:lc,4:lc,5:lc,6:lc,7:lc,8:lc,9:lc,10:lc,11:lc,12:lc,13:lc,14:lc,15:lc,16:lc,17:lc,18:lc,19:lc," +
+			"20:nr0/50nr1/51nr2/52nr3/53nr4/54lc4," +
+			"21:ls0ls1mc2nr3/12mc4nr5/23nr6/42lc6," +
+			"22:ls0mc1mc2ls3ls4mc5mc6mc7mc8mc9mc10ls11lc11";
+		String act2 = digest(cell00, 57);
+		assertEquals(exp2, act2);
 	}
 

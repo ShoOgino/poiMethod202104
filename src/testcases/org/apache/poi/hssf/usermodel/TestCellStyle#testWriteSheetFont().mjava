@@ -7,39 +7,39 @@
      *             HSSFSheet last row or first row is incorrect.             <P>
      *
      */
+    @Test
     public void testWriteSheetFont() throws IOException{
-        File             file = TempFile.createTempFile("testWriteSheetFont",
-                                                    ".xls");
-        FileOutputStream out  = new FileOutputStream(file);
-        HSSFWorkbook     wb   = new HSSFWorkbook();
-        HSSFSheet        s    = wb.createSheet();
-        HSSFRow          r    = null;
-        HSSFCell         c    = null;
-        HSSFFont         fnt  = wb.createFont();
-        HSSFCellStyle    cs   = wb.createCellStyle();
+        File file = TempFile.createTempFile("testWriteSheetFont", ".xls");
+        try (HSSFWorkbook wb = new HSSFWorkbook()) {
+            HSSFSheet s = wb.createSheet();
+            HSSFFont fnt = wb.createFont();
+            HSSFCellStyle cs = wb.createCellStyle();
 
-        fnt.setColor(HSSFFont.COLOR_RED);
-        fnt.setBold(true);
-        cs.setFont(fnt);
-        for (int rownum = 0; rownum < 100; rownum++) {
-            r = s.createRow(rownum);
+            fnt.setColor(HSSFFont.COLOR_RED);
+            fnt.setBold(true);
+            cs.setFont(fnt);
+            for (int rownum = 0; rownum < 100; rownum++) {
+                HSSFRow r = s.createRow(rownum);
 
-            for (int cellnum = 0; cellnum < 50; cellnum += 2) {
-                c = r.createCell(cellnum);
-                c.setCellValue(rownum * 10000 + cellnum
-                               + ((( double ) rownum / 1000)
-                                  + (( double ) cellnum / 10000)));
-                c = r.createCell(cellnum + 1);
-                c.setCellValue("TEST");
-                c.setCellStyle(cs);
+                for (int cellnum = 0; cellnum < 50; cellnum += 2) {
+                    HSSFCell c = r.createCell(cellnum);
+                    c.setCellValue(rownum * 10000 + cellnum
+                                           + (((double) rownum / 1000)
+                            + ((double) cellnum / 10000)));
+                    c = r.createCell(cellnum + 1);
+                    c.setCellValue("TEST");
+                    c.setCellStyle(cs);
+                }
             }
+            try (FileOutputStream out = new FileOutputStream(file)) {
+                wb.write(out);
+            }
+
+            SanityChecker sanityChecker = new SanityChecker();
+            sanityChecker.checkHSSFWorkbook(wb);
+            assertEquals("LAST ROW == 99", 99, s.getLastRowNum());
+            assertEquals("FIRST ROW == 0", 0, s.getFirstRowNum());
         }
-        wb.write(out);
-        out.close();
-        SanityChecker sanityChecker = new SanityChecker();
-        sanityChecker.checkHSSFWorkbook(wb);
-        assertEquals("LAST ROW == 99", 99, s.getLastRowNum());
-        assertEquals("FIRST ROW == 0", 0, s.getFirstRowNum());
 
         // assert((s.getLastRowNum() == 99));
     }

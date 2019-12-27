@@ -2,14 +2,21 @@
      * Test for Bugzilla 48936
      *
      * A specific sequence of strings can result in broken CDATA section in sharedStrings.xml file.
-     *
-     * @author Philippe Laflamme
      */
+    @Test
     public void testBug48936() throws IOException {
         Workbook w1 = new XSSFWorkbook();
         Sheet s = w1.createSheet();
         int i = 0;
-        List<String> lst = readStrings("48936-strings.txt");
+
+        Path path = XSSFTestDataSamples.getSampleFile("48936-strings.txt").toPath();
+
+        List<String> lst = Files
+            .lines(path, StandardCharsets.UTF_8)
+            .map(String::trim)
+            .filter(((Predicate<String>)String::isEmpty).negate())
+            .collect(Collectors.toList());
+
         for (String str : lst) {
             s.createRow(i++).createCell(0).setCellValue(str);
         }
@@ -22,7 +29,7 @@
             String val = s.getRow(i++).getCell(0).getStringCellValue();
             assertEquals(str, val);
         }
-        
+
         Workbook w3 = XSSFTestDataSamples.writeOutAndReadBack(w2);
         w2.close();
         assertNotNull(w3);

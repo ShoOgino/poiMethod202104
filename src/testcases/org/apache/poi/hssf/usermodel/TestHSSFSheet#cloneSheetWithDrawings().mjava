@@ -6,33 +6,31 @@
      */
     @Test
     public void cloneSheetWithDrawings() throws IOException {
-        HSSFWorkbook wb1 = HSSFTestDataSamples.openSampleWorkbook("45720.xls");
+        try (HSSFWorkbook wb1 = HSSFTestDataSamples.openSampleWorkbook("45720.xls")) {
+            HSSFSheet sheet1 = wb1.getSheetAt(0);
 
-        HSSFSheet sheet1 = wb1.getSheetAt(0);
+            DrawingManager2 dm1 = wb1.getWorkbook().findDrawingGroup();
+            int maxDrawingGroupId1 = dm1.getDgg().getMaxDrawingGroupId();
+            wb1.cloneSheet(0);
 
-        DrawingManager2 dm1 = wb1.getWorkbook().findDrawingGroup();
-        int maxDrawingGroupId1 = dm1.getDgg().getMaxDrawingGroupId();
-        wb1.cloneSheet(0);
+            //check EscherDggRecord - a workbook-level registry of drawing objects
+            assertEquals(maxDrawingGroupId1 + 1, dm1.getDgg().getMaxDrawingGroupId());
 
-        //check EscherDggRecord - a workbook-level registry of drawing objects
-        assertEquals(maxDrawingGroupId1 + 1, dm1.getDgg().getMaxDrawingGroupId());
+            try (HSSFWorkbook wb2 = writeOutAndReadBack(wb1)) {
+                DrawingManager2 dm2 = wb2.getWorkbook().findDrawingGroup();
+                assertEquals(maxDrawingGroupId1 + 1, dm2.getDgg().getMaxDrawingGroupId());
 
-        HSSFWorkbook wb2 = HSSFTestDataSamples.writeOutAndReadBack(wb1);
-        wb1.close();
-        
-        DrawingManager2 dm2 = wb2.getWorkbook().findDrawingGroup();
-        assertEquals(maxDrawingGroupId1 + 1, dm2.getDgg().getMaxDrawingGroupId());
+                HSSFSheet sheet2 = wb2.getSheetAt(1);
 
-        HSSFSheet sheet2 = wb2.getSheetAt(1);
+                //check that id of the drawing group was updated
+                EscherDgRecord dg1 = (EscherDgRecord) sheet1.getDrawingPatriarch().getBoundAggregate().findFirstWithId(EscherDgRecord.RECORD_ID);
+                EscherDgRecord dg2 = (EscherDgRecord) sheet2.getDrawingPatriarch().getBoundAggregate().findFirstWithId(EscherDgRecord.RECORD_ID);
+                int dg_id_1 = dg1.getOptions() >> 4;
+                int dg_id_2 = dg2.getOptions() >> 4;
+                assertEquals(dg_id_1 + 1, dg_id_2);
 
-        //check that id of the drawing group was updated
-        EscherDgRecord dg1 = (EscherDgRecord)sheet1.getDrawingPatriarch().getBoundAggregate().findFirstWithId(EscherDgRecord.RECORD_ID);
-        EscherDgRecord dg2 = (EscherDgRecord)sheet2.getDrawingPatriarch().getBoundAggregate().findFirstWithId(EscherDgRecord.RECORD_ID);
-        int dg_id_1 = dg1.getOptions() >> 4;
-        int dg_id_2 = dg2.getOptions() >> 4;
-        assertEquals(dg_id_1 + 1, dg_id_2);
-
-        //TODO: check shapeId in the cloned sheet
-        wb2.close();
+                //TODO: check shapeId in the cloned sheet
+            }
+        }
     }
 

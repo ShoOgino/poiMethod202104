@@ -3,36 +3,26 @@
      */
     @Test
     public void dvProtectionOrder_bug47363b() throws IOException {
-        HSSFWorkbook workbook = new HSSFWorkbook();
-        HSSFSheet sheet = workbook.createSheet("Sheet1");
-        sheet.protectSheet("secret");
+        try (HSSFWorkbook workbook = new HSSFWorkbook()) {
+            HSSFSheet sheet = workbook.createSheet("Sheet1");
+            sheet.protectSheet("secret");
 
-        DataValidationHelper dataValidationHelper = sheet.getDataValidationHelper();
-        DataValidationConstraint dvc = dataValidationHelper.createIntegerConstraint(DataValidationConstraint.OperatorType.BETWEEN, "10", "100");
-        CellRangeAddressList numericCellAddressList = new CellRangeAddressList(0, 0, 1, 1);
-        DataValidation dv = dataValidationHelper.createValidation(dvc,numericCellAddressList);
-        try {
+            DataValidationHelper dataValidationHelper = sheet.getDataValidationHelper();
+            DataValidationConstraint dvc = dataValidationHelper.createIntegerConstraint(DataValidationConstraint.OperatorType.BETWEEN, "10", "100");
+            CellRangeAddressList numericCellAddressList = new CellRangeAddressList(0, 0, 1, 1);
+            DataValidation dv = dataValidationHelper.createValidation(dvc, numericCellAddressList);
+
+            // bug 47363b: Unexpected (org.apache.poi.hssf.record.PasswordRecord) while looking for DV Table insert pos
             sheet.addValidationData(dv);
-        } catch (IllegalStateException e) {
-            String expMsg = "Unexpected (org.apache.poi.hssf.record.PasswordRecord) while looking for DV Table insert pos";
-            if (expMsg.equals(e.getMessage())) {
-                fail("Identified bug 47363b");
-            }
-            workbook.close();
-            throw e;
+
+            int[] nRecsWithProtection = { 0 };
+            sheet.getSheet().visitContainedRecords(r -> nRecsWithProtection[0]++, 0);
+
+            sheet.protectSheet(null);
+            int[] nRecsWithoutProtection = { 0 };
+            sheet.getSheet().visitContainedRecords(r -> nRecsWithoutProtection[0]++, 0);
+
+            assertEquals(4, nRecsWithProtection[0] - nRecsWithoutProtection[0]);
         }
-        RecordCollector rc;
-        rc = new RecordCollector();
-        sheet.getSheet().visitContainedRecords(rc, 0);
-        int nRecsWithProtection = rc.getRecords().length;
-
-        sheet.protectSheet(null);
-        rc = new RecordCollector();
-        sheet.getSheet().visitContainedRecords(rc, 0);
-        int nRecsWithoutProtection = rc.getRecords().length;
-
-        assertEquals(4, nRecsWithProtection - nRecsWithoutProtection);
-        
-        workbook.close();
     }
 

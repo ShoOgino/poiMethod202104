@@ -1,30 +1,21 @@
+    @Test
     public void testWithCrazyContinueRecords() throws Exception {
         // Some files have crazy ordering of their continue records
         // Check that we don't break on them (bug #42844)
 
-        HSSFRequest req = new HSSFRequest();
-        MockHSSFListener mockListen = new MockHSSFListener();
-        req.addListenerForAllRecords(mockListen);
+        openSample("ContinueRecordProblem.xls");
 
-        POIFSFileSystem fs = new POIFSFileSystem(openSample("ContinueRecordProblem.xls"));
-        HSSFEventFactory factory = new HSSFEventFactory();
-        factory.processWorkbookEvents(req, fs);
-
-        Record[] recs = mockListen.getRecords();
+        int numRec = records.size();
         // Check we got the records
-        assertTrue( recs.length > 100 );
+        assertTrue( numRec > 100 );
 
         // And none of them are continue ones
-        for (Record rec : recs) {
-            assertFalse( rec instanceof ContinueRecord );
-        }
+        assertFalse(records.stream().anyMatch(r -> r instanceof ContinueRecord));
 
         // Check that the last few records are as we expect
-        // (Makes sure we don't accidently skip the end ones)
-        int numRec = recs.length;
-        assertEquals(DVALRecord.class,    recs[numRec-4].getClass());
-        assertEquals(DVRecord.class,      recs[numRec-3].getClass());
-        assertEquals(FeatHdrRecord.class, recs[numRec-2].getClass());
-        assertEquals(EOFRecord.class,     recs[numRec-1].getClass());
+        // (Makes sure we don't accidentally skip the end ones)
+        Class<?>[] exp = { DVALRecord.class, DVRecord.class, FeatHdrRecord.class, EOFRecord.class };
+        Class<?>[] act = records.subList(numRec-4, numRec).stream().map(Object::getClass).toArray(Class[]::new);
+        assertArrayEquals(exp, act);
     }
 

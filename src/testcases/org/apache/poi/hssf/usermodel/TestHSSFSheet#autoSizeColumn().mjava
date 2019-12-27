@@ -1,47 +1,46 @@
     @Test
     public void autoSizeColumn() throws IOException {
-        HSSFWorkbook wb1 = HSSFTestDataSamples.openSampleWorkbook("43902.xls");
-        String sheetName = "my sheet";
-        HSSFSheet sheet = wb1.getSheet(sheetName);
+        try (HSSFWorkbook wb1 = HSSFTestDataSamples.openSampleWorkbook("43902.xls")) {
+            String sheetName = "my sheet";
+            HSSFSheet sheet = wb1.getSheet(sheetName);
 
-        // Can't use literal numbers for column sizes, as
-        //  will come out with different values on different
-        //  machines based on the fonts available.
-        // So, we use ranges, which are pretty large, but
-        //  thankfully don't overlap!
-        int minWithRow1And2 = 6400;
-        int maxWithRow1And2 = 7800;
-        int minWithRow1Only = 2750;
-        int maxWithRow1Only = 3400;
+            // Can't use literal numbers for column sizes, as
+            //  will come out with different values on different
+            //  machines based on the fonts available.
+            // So, we use ranges, which are pretty large, but
+            //  thankfully don't overlap!
+            int minWithRow1And2 = 6400;
+            int maxWithRow1And2 = 7800;
+            int minWithRow1Only = 2750;
+            int maxWithRow1Only = 3400;
 
-        // autoSize the first column and check its size before the merged region (1,0,1,1) is set:
-        // it has to be based on the 2nd row width
-        sheet.autoSizeColumn((short)0);
-        assertTrue("Column autosized with only one row: wrong width", sheet.getColumnWidth(0) >= minWithRow1And2);
-        assertTrue("Column autosized with only one row: wrong width", sheet.getColumnWidth(0) <= maxWithRow1And2);
+            // autoSize the first column and check its size before the merged region (1,0,1,1) is set:
+            // it has to be based on the 2nd row width
+            sheet.autoSizeColumn((short) 0);
+            assertTrue("Column autosized with only one row: wrong width", sheet.getColumnWidth(0) >= minWithRow1And2);
+            assertTrue("Column autosized with only one row: wrong width", sheet.getColumnWidth(0) <= maxWithRow1And2);
 
-        //create a region over the 2nd row and auto size the first column
-        assertEquals(1, sheet.addMergedRegion(new CellRangeAddress(1,1,0,1)));
-        assertNotNull(sheet.getMergedRegion(0));
-        sheet.autoSizeColumn((short)0);
-        HSSFWorkbook wb2 = HSSFTestDataSamples.writeOutAndReadBack(wb1);
+            //create a region over the 2nd row and auto size the first column
+            assertEquals(1, sheet.addMergedRegion(new CellRangeAddress(1, 1, 0, 1)));
+            assertNotNull(sheet.getMergedRegion(0));
+            sheet.autoSizeColumn((short) 0);
+            try (HSSFWorkbook wb2 = writeOutAndReadBack(wb1)) {
 
-        // check that the autoSized column width has ignored the 2nd row
-        // because it is included in a merged region (Excel like behavior)
-        HSSFSheet sheet2 = wb2.getSheet(sheetName);
-        assertTrue(sheet2.getColumnWidth(0) >= minWithRow1Only);
-        assertTrue(sheet2.getColumnWidth(0) <= maxWithRow1Only);
+                // check that the autoSized column width has ignored the 2nd row
+                // because it is included in a merged region (Excel like behavior)
+                HSSFSheet sheet2 = wb2.getSheet(sheetName);
+                assertTrue(sheet2.getColumnWidth(0) >= minWithRow1Only);
+                assertTrue(sheet2.getColumnWidth(0) <= maxWithRow1Only);
 
-        // remove the 2nd row merged region and check that the 2nd row value is used to the autoSizeColumn width
-        sheet2.removeMergedRegion(1);
-        sheet2.autoSizeColumn((short)0);
-        HSSFWorkbook wb3 = HSSFTestDataSamples.writeOutAndReadBack(wb2);
-        HSSFSheet sheet3 = wb3.getSheet(sheetName);
-        assertTrue(sheet3.getColumnWidth(0) >= minWithRow1And2);
-        assertTrue(sheet3.getColumnWidth(0) <= maxWithRow1And2);
-        
-        wb3.close();
-        wb2.close();
-        wb1.close();
+                // remove the 2nd row merged region and check that the 2nd row value is used to the autoSizeColumn width
+                sheet2.removeMergedRegion(1);
+                sheet2.autoSizeColumn((short) 0);
+                try (HSSFWorkbook wb3 = writeOutAndReadBack(wb2)) {
+                    HSSFSheet sheet3 = wb3.getSheet(sheetName);
+                    assertTrue(sheet3.getColumnWidth(0) >= minWithRow1And2);
+                    assertTrue(sheet3.getColumnWidth(0) <= maxWithRow1And2);
+                }
+            }
+        }
     }
 

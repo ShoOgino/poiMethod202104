@@ -1,3 +1,4 @@
+	@Test
 	public void testReserializeLongTitle() {
 		// Hex dump from bug 45784 attachment 22560 streamOffset=0x0CD1
 		byte[] data = HexRead.readFromString(
@@ -23,28 +24,14 @@
 				+ "62 00 63 00");
 
 		RecordInputStream in = TestcaseRecordInputStream.create(SeriesTextRecord.sid, data);
-		SeriesTextRecord str;
-		try {
-			str = new SeriesTextRecord(in);
-		} catch (RecordFormatException e) {
-			if (e.getCause() instanceof IllegalArgumentException) {
-				// 'would be' error msg changed at svn r703620
-				// "Illegal length - asked for -126 but only 130 left!"
-				// "Bad requested string length (-126)"
-				throw new AssertionFailedError("Identified bug 45784a");
-			}
-			throw e;
-		}
+		// Identified bug 45784a
+		// 'would be' error msg changed at svn r703620
+		// "Illegal length - asked for -126 but only 130 left!"
+		// "Bad requested string length (-126)"
+		SeriesTextRecord str = new SeriesTextRecord(in);
 
-		if (str.getRecordSize() < 0) {
-			throw new AssertionFailedError("Identified bug 45784b");
-		}
-		byte[] ser;
-		try {
-			ser = str.serialize();
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+		assertTrue("Identified bug 45784b", str.getRecordSize() >= 0);
+		byte[] ser = str.serialize();
 		TestcaseRecordInputStream.confirmRecordEncoding(SeriesTextRecord.sid, data, ser);
 	}
 

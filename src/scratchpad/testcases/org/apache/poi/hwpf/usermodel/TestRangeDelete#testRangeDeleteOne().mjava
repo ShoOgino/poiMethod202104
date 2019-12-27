@@ -1,49 +1,50 @@
 	/**
 	 * Test that we can delete text (one instance) from our Range with Unicode text.
 	 */
-	public void testRangeDeleteOne() {
+	@Test
+	public void testRangeDeleteOne() throws IOException {
+		try (HWPFDocument daDoc = openSampleFile(illustrativeDocFile)) {
 
-		HWPFDocument daDoc = HWPFTestDataSamples.openSampleFile(illustrativeDocFile);
+			Range range = daDoc.getOverallRange();
+			assertEquals(1, range.numSections());
 
-		Range range = daDoc.getOverallRange();
-		assertEquals(1, range.numSections());
+			Section section = range.getSection(0);
+			assertEquals(5, section.numParagraphs());
 
-		Section section = range.getSection(0);
-		assertEquals(5, section.numParagraphs());
+			Paragraph para = section.getParagraph(2);
 
-		Paragraph para = section.getParagraph(2);
+			String text = para.text();
+			assertEquals(originalText, text);
 
-		String text = para.text();
-		assertEquals(originalText, text);
+			int offset = text.indexOf(searchText);
+			assertEquals(192, offset);
 
-		int offset = text.indexOf(searchText);
-		assertEquals(192, offset);
+			int absOffset = para.getStartOffset() + offset;
+			Range subRange = new Range(absOffset, (absOffset + searchText.length()), para.getDocument());
 
-		int absOffset = para.getStartOffset() + offset;
-		Range subRange = new Range(absOffset, (absOffset + searchText.length()), para.getDocument());
+			assertEquals(searchText, subRange.text());
 
-		assertEquals(searchText, subRange.text());
+			subRange.delete();
+			daDoc.getOverallRange().sanityCheck();
+			daDoc.getRange().sanityCheck();
 
-		subRange.delete();
-		daDoc.getOverallRange().sanityCheck();
-		daDoc.getRange().sanityCheck();
+			// we need to let the model re-calculate the Range before we evaluate it
+			range = daDoc.getRange();
 
-		// we need to let the model re-calculate the Range before we evaluate it
-		range = daDoc.getRange();
+			assertEquals(1, range.numSections());
+			section = range.getSection(0);
 
-		assertEquals(1, range.numSections());
-		section = range.getSection(0);
+			assertEquals(5, section.numParagraphs());
+			para = section.getParagraph(2);
 
-		assertEquals(5, section.numParagraphs());
-		para = section.getParagraph(2);
+			text = para.text();
+			assertEquals(expectedText2, text);
 
-		text = para.text();
-		assertEquals(expectedText2, text);
-
-		// this can lead to a StringBufferOutOfBoundsException, so we will add it
-		// even though we don't have an assertion for it
-		Range daRange = daDoc.getRange();
-		daRange.sanityCheck();
-		daRange.text();
+			// this can lead to a StringBufferOutOfBoundsException, so we will add it
+			// even though we don't have an assertion for it
+			Range daRange = daDoc.getRange();
+			daRange.sanityCheck();
+			daRange.text();
+		}
 	}
 

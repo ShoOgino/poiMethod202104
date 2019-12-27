@@ -1,22 +1,17 @@
+    @Test
     public void testWithMissingRecords() throws Exception {
 
-        HSSFRequest req = new HSSFRequest();
-        MockHSSFListener mockListen = new MockHSSFListener();
-        req.addListenerForAllRecords(mockListen);
+        openSample("SimpleWithSkip.xls");
 
-        POIFSFileSystem fs = new POIFSFileSystem(openSample("SimpleWithSkip.xls"));
-        HSSFEventFactory factory = new HSSFEventFactory();
-        factory.processWorkbookEvents(req, fs);
+        int numRec = records.size();
 
-        Record[] recs = mockListen.getRecords();
         // Check we got the records
-        assertTrue( recs.length > 100 );
+        assertTrue( numRec > 100 );
 
         // Check that the last few records are as we expect
         // (Makes sure we don't accidently skip the end ones)
-        int numRec = recs.length;
-        assertEquals(WindowTwoRecord.class, recs[numRec-3].getClass());
-        assertEquals(SelectionRecord.class, recs[numRec-2].getClass());
-        assertEquals(EOFRecord.class,	   recs[numRec-1].getClass());
+        Class<?>[] exp = { WindowTwoRecord.class, SelectionRecord.class, EOFRecord.class };
+        Class<?>[] act = records.subList(numRec - 3, numRec).stream().map(Object::getClass).toArray(Class[]::new);
+        assertArrayEquals(exp, act);
     }
 

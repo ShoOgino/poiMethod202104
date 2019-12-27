@@ -1,0 +1,15 @@
+    private void continueHelper(InputStream data) {
+        Iterator<Class<? extends StandardRecord>> expectedType =
+                Stream.of(UnknownRecord.class, ContinueRecord.class, ContinueRecord.class).iterator();
+        Iterator<byte[]> expectedData = Stream.of(CONTINUE_DATA).iterator();
+
+        ERFListener listener = rec -> {
+            assertEquals(expectedType.next(), rec.getClass());
+            assertArrayEquals(expectedData.next(), rec.serialize());
+            return true;
+        };
+        EventRecordFactory factory = new EventRecordFactory(listener, new short[] {-256, 0x3C});
+        factory.processRecords(data);
+        assertFalse("left over input data", expectedData.hasNext());
+    }
+

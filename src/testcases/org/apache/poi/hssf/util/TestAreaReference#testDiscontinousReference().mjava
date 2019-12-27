@@ -1,56 +1,58 @@
+    @Test
     public void testDiscontinousReference() throws Exception {
-        InputStream is = HSSFTestDataSamples.openSampleFileStream("44167.xls");
-        HSSFWorkbook wb = new HSSFWorkbook(is);
-        InternalWorkbook workbook = TestHSSFWorkbook.getInternalWorkbook(wb);
-        HSSFEvaluationWorkbook eb = HSSFEvaluationWorkbook.create(wb);
+        try (InputStream is = HSSFTestDataSamples.openSampleFileStream("44167.xls");
+            HSSFWorkbook wb = new HSSFWorkbook(is)) {
+            InternalWorkbook workbook = TestHSSFWorkbook.getInternalWorkbook(wb);
+            HSSFEvaluationWorkbook eb = HSSFEvaluationWorkbook.create(wb);
 
-        assertEquals(1, wb.getNumberOfNames());
-        String sheetName = "Tabelle1";
-        String rawRefA = "$C$10:$C$14";
-        String rawRefB = "$C$16:$C$18";
-        String refA = sheetName + "!" + rawRefA;
-        String refB = sheetName + "!" + rawRefB;
-        String ref = refA + "," + refB;
+            assertEquals(1, wb.getNumberOfNames());
+            String sheetName = "Tabelle1";
+            String rawRefA = "$C$10:$C$14";
+            String rawRefB = "$C$16:$C$18";
+            String refA = sheetName + "!" + rawRefA;
+            String refB = sheetName + "!" + rawRefB;
+            String ref = refA + "," + refB;
 
-        // Check the low level record
-        NameRecord nr = workbook.getNameRecord(0);
-        assertNotNull(nr);
-        assertEquals("test", nr.getNameText());
+            // Check the low level record
+            NameRecord nr = workbook.getNameRecord(0);
+            assertNotNull(nr);
+            assertEquals("test", nr.getNameText());
 
-        Ptg[] def =nr.getNameDefinition();
-        assertEquals(4, def.length);
+            Ptg[] def = nr.getNameDefinition();
+            assertEquals(4, def.length);
 
-        MemFuncPtg ptgA = (MemFuncPtg)def[0];
-        Area3DPtg ptgB = (Area3DPtg)def[1];
-        Area3DPtg ptgC = (Area3DPtg)def[2];
-        UnionPtg ptgD = (UnionPtg)def[3];
-        assertEquals("", ptgA.toFormulaString());
-        assertEquals(refA, ptgB.toFormulaString(eb));
-        assertEquals(refB, ptgC.toFormulaString(eb));
-        assertEquals(",", ptgD.toFormulaString());
+            MemFuncPtg ptgA = (MemFuncPtg) def[0];
+            Area3DPtg ptgB = (Area3DPtg) def[1];
+            Area3DPtg ptgC = (Area3DPtg) def[2];
+            UnionPtg ptgD = (UnionPtg) def[3];
+            assertEquals("", ptgA.toFormulaString());
+            assertEquals(refA, ptgB.toFormulaString(eb));
+            assertEquals(refB, ptgC.toFormulaString(eb));
+            assertEquals(",", ptgD.toFormulaString());
 
-        assertEquals(ref, HSSFFormulaParser.toFormulaString(wb, nr.getNameDefinition()));
+            assertEquals(ref, HSSFFormulaParser.toFormulaString(wb, nr.getNameDefinition()));
 
-        // Check the high level definition
-        int idx = wb.getNameIndex("test");
-        assertEquals(0, idx);
-        HSSFName aNamedCell = wb.getNameAt(idx);
+            // Check the high level definition
+            int idx = wb.getNameIndex("test");
+            assertEquals(0, idx);
+            HSSFName aNamedCell = wb.getNameAt(idx);
 
-        // Should have 2 references
-        String formulaRefs = aNamedCell.getRefersToFormula();
-        assertNotNull(formulaRefs);
-        assertEquals(ref, formulaRefs);
+            // Should have 2 references
+            String formulaRefs = aNamedCell.getRefersToFormula();
+            assertNotNull(formulaRefs);
+            assertEquals(ref, formulaRefs);
 
-        // Check the parsing of the reference into cells
-        assertFalse(AreaReference.isContiguous(formulaRefs));
-        AreaReference[] arefs = AreaReference.generateContiguous(SpreadsheetVersion.EXCEL97, formulaRefs);
-        assertEquals(2, arefs.length);
-        assertEquals(refA, arefs[0].formatAsString());
-        assertEquals(refB, arefs[1].formatAsString());
+            // Check the parsing of the reference into cells
+            assertFalse(AreaReference.isContiguous(formulaRefs));
+            AreaReference[] arefs = AreaReference.generateContiguous(SpreadsheetVersion.EXCEL97, formulaRefs);
+            assertEquals(2, arefs.length);
+            assertEquals(refA, arefs[0].formatAsString());
+            assertEquals(refB, arefs[1].formatAsString());
 
-        for (AreaReference ar : arefs) {
-            confirmResolveCellRef(wb, ar.getFirstCell());
-            confirmResolveCellRef(wb, ar.getLastCell());
+            for (AreaReference ar : arefs) {
+                confirmResolveCellRef(wb, ar.getFirstCell());
+                confirmResolveCellRef(wb, ar.getLastCell());
+            }
         }
     }
 

@@ -5,23 +5,21 @@
      */
     @Test
     public void testConvertStringFormulaCell() throws IOException {
-        Workbook wb = _testDataProvider.createWorkbook();
+        try (Workbook wb = _testDataProvider.createWorkbook()) {
+            Cell cellA1 = createACell(wb);
+            cellA1.setCellFormula("\"abc\"");
 
-        Cell cellA1 = createACell(wb);
-        cellA1.setCellFormula("\"abc\"");
+            // default cached formula result is numeric zero
+            assertEquals(0.0, cellA1.getNumericCellValue(), 0.0);
 
-        // default cached formula result is numeric zero
-        assertEquals(0.0, cellA1.getNumericCellValue(), 0.0);
+            FormulaEvaluator fe = cellA1.getSheet().getWorkbook().getCreationHelper().createFormulaEvaluator();
 
-        FormulaEvaluator fe = cellA1.getSheet().getWorkbook().getCreationHelper().createFormulaEvaluator();
+            fe.evaluateFormulaCell(cellA1);
+            assertEquals("abc", cellA1.getStringCellValue());
 
-        fe.evaluateFormulaCell(cellA1);
-        assertEquals("abc", cellA1.getStringCellValue());
-
-        fe.evaluateInCell(cellA1);
-        assertFalse("Identified bug with writing back formula result of type string", cellA1.getStringCellValue().isEmpty());
-        assertEquals("abc", cellA1.getStringCellValue());
-        
-        wb.close();
+            fe.evaluateInCell(cellA1);
+            assertFalse("Identified bug with writing back formula result of type string", cellA1.getStringCellValue().isEmpty());
+            assertEquals("abc", cellA1.getStringCellValue());
+        }
     }
 

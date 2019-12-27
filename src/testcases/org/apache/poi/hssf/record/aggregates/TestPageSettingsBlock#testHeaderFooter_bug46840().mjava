@@ -2,6 +2,7 @@
 	 * Bug 46840 occurred because POI failed to recognise HEADERFOOTER as part of the
 	 * {@link PageSettingsBlock}.
 	 */
+	@Test
 	public void testHeaderFooter_bug46840() {
 
 		int rowIx = 5;
@@ -27,19 +28,11 @@
 				EOFRecord.instance,
 		};
 		RecordStream rs = new RecordStream(Arrays.asList(recs), 0);
-		InternalSheet sheet;
-		try {
-			sheet = InternalSheet.createSheet(rs);
-		} catch (RuntimeException e) {
-			if (e.getMessage().equals("two Page Settings Blocks found in the same sheet")) {
-				throw new AssertionFailedError("Identified bug 46480");
-			}
-			throw e;
-		}
+		// bug 46480- two Page Settings Blocks found in the same sheet
+		InternalSheet sheet = InternalSheet.createSheet(rs);
 
-		RecordCollector rv = new RecordCollector();
-		sheet.visitContainedRecords(rv, rowIx);
-		Record[] outRecs = rv.getRecords();
-		assertEquals(13, outRecs.length);
+		List<Record> outRecs = new ArrayList<>();
+		sheet.visitContainedRecords(outRecs::add, rowIx);
+		assertEquals(13, outRecs.size());
 	}
 

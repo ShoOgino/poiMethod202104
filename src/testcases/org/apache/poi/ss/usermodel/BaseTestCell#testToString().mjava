@@ -1,54 +1,53 @@
     /**tests the toString() method of HSSFCell*/
     @Test
     public void testToString() throws Exception {
-        Workbook wb1 = _testDataProvider.createWorkbook();
-        Row r = wb1.createSheet("Sheet1").createRow(0);
-        CreationHelper factory = wb1.getCreationHelper();
+        try (Workbook wb1 = _testDataProvider.createWorkbook()) {
+            Row r = wb1.createSheet("Sheet1").createRow(0);
+            CreationHelper factory = wb1.getCreationHelper();
 
-        r.createCell(0).setCellValue(false);
-        r.createCell(1).setCellValue(true);
-        r.createCell(2).setCellValue(1.5);
-        r.createCell(3).setCellValue(factory.createRichTextString("Astring"));
-        r.createCell(4).setCellErrorValue(FormulaError.DIV0.getCode());
-        r.createCell(5).setCellFormula("A1+B1");
-        r.createCell(6); // blank
+            r.createCell(0).setCellValue(false);
+            r.createCell(1).setCellValue(true);
+            r.createCell(2).setCellValue(1.5);
+            r.createCell(3).setCellValue(factory.createRichTextString("Astring"));
+            r.createCell(4).setCellErrorValue(FormulaError.DIV0.getCode());
+            r.createCell(5).setCellFormula("A1+B1");
+            r.createCell(6); // blank
 
-        // create date-formatted cell
-        Calendar c = LocaleUtil.getLocaleCalendar();
-        c.set(2010, Calendar.FEBRUARY, 2, 0, 0, 0);
-        r.createCell(7).setCellValue(c);
-        CellStyle dateStyle = wb1.createCellStyle();
-        short formatId = wb1.getCreationHelper().createDataFormat().getFormat("m/d/yy h:mm"); // any date format will do
-        dateStyle.setDataFormat(formatId);
-        r.getCell(7).setCellStyle(dateStyle);
+            // create date-formatted cell
+            Calendar c = LocaleUtil.getLocaleCalendar();
+            c.set(2010, Calendar.FEBRUARY, 2, 0, 0, 0);
+            r.createCell(7).setCellValue(c);
+            CellStyle dateStyle = wb1.createCellStyle();
+            short formatId = wb1.getCreationHelper().createDataFormat().getFormat("m/d/yy h:mm"); // any date format will do
+            dateStyle.setDataFormat(formatId);
+            r.getCell(7).setCellStyle(dateStyle);
 
-        assertEquals("Boolean", "FALSE", r.getCell(0).toString());
-        assertEquals("Boolean", "TRUE", r.getCell(1).toString());
-        assertEquals("Numeric", "1.5", r.getCell(2).toString());
-        assertEquals("String", "Astring", r.getCell(3).toString());
-        assertEquals("Error", "#DIV/0!", r.getCell(4).toString());
-        assertEquals("Formula", "A1+B1", r.getCell(5).toString());
-        assertEquals("Blank", "", r.getCell(6).toString());
-        // toString on a date-formatted cell displays dates as dd-MMM-yyyy, which has locale problems with the month
-        String dateCell1 = r.getCell(7).toString();
-        assertTrue("Date (Day)", dateCell1.startsWith("02-"));
-        assertTrue("Date (Year)", dateCell1.endsWith("-2010"));
+            assertEquals("Boolean", "FALSE", r.getCell(0).toString());
+            assertEquals("Boolean", "TRUE", r.getCell(1).toString());
+            assertEquals("Numeric", "1.5", r.getCell(2).toString());
+            assertEquals("String", "Astring", r.getCell(3).toString());
+            assertEquals("Error", "#DIV/0!", r.getCell(4).toString());
+            assertEquals("Formula", "A1+B1", r.getCell(5).toString());
+            assertEquals("Blank", "", r.getCell(6).toString());
+            // toString on a date-formatted cell displays dates as dd-MMM-yyyy, which has locale problems with the month
+            String dateCell1 = r.getCell(7).toString();
+            assertTrue("Date (Day)", dateCell1.startsWith("02-"));
+            assertTrue("Date (Year)", dateCell1.endsWith("-2010"));
 
 
-        //Write out the file, read it in, and then check cell values
-        Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1);
-        wb1.close();
-
-        r = wb2.getSheetAt(0).getRow(0);
-        assertEquals("Boolean", "FALSE", r.getCell(0).toString());
-        assertEquals("Boolean", "TRUE", r.getCell(1).toString());
-        assertEquals("Numeric", "1.5", r.getCell(2).toString());
-        assertEquals("String", "Astring", r.getCell(3).toString());
-        assertEquals("Error", "#DIV/0!", r.getCell(4).toString());
-        assertEquals("Formula", "A1+B1", r.getCell(5).toString());
-        assertEquals("Blank", "", r.getCell(6).toString());
-        String dateCell2 = r.getCell(7).toString();
-        assertEquals("Date", dateCell1, dateCell2);
-        wb2.close();
+            //Write out the file, read it in, and then check cell values
+            try (Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1)) {
+                r = wb2.getSheetAt(0).getRow(0);
+                assertEquals("Boolean", "FALSE", r.getCell(0).toString());
+                assertEquals("Boolean", "TRUE", r.getCell(1).toString());
+                assertEquals("Numeric", "1.5", r.getCell(2).toString());
+                assertEquals("String", "Astring", r.getCell(3).toString());
+                assertEquals("Error", "#DIV/0!", r.getCell(4).toString());
+                assertEquals("Formula", "A1+B1", r.getCell(5).toString());
+                assertEquals("Blank", "", r.getCell(6).toString());
+                String dateCell2 = r.getCell(7).toString();
+                assertEquals("Date", dateCell1, dateCell2);
+            }
+        }
     }
 

@@ -1,33 +1,36 @@
+   @Test
    public void testSelfRelations_bug51187() throws Exception {
     	ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    	OPCPackage pkg = OPCPackage.create(baos);
+        PackageRelationship rel1;
+    	try (OPCPackage pkg = OPCPackage.create(baos)) {
 
-    	PackagePart partA =
-    		pkg.createPart(PackagingURIHelper.createPartName("/partA"), "text/plain");
-    	assertNotNull(partA);
+            PackagePart partA =
+                    pkg.createPart(PackagingURIHelper.createPartName("/partA"), "text/plain");
+            assertNotNull(partA);
 
-    	// reference itself
-    	PackageRelationship rel1 = partA.addRelationship(partA.getPartName(), TargetMode.INTERNAL, "partA");
-
-    	
-    	// Save, and re-load
-    	pkg.close();
-    	ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-    	pkg = OPCPackage.open(bais);
-
-    	partA = pkg.getPart(PackagingURIHelper.createPartName("/partA"));
+            // reference itself
+            rel1 = partA.addRelationship(partA.getPartName(), TargetMode.INTERNAL, "partA");
 
 
-    	// Check the relations
-    	assertEquals(1, partA.getRelationships().size());
+            // Save, and re-load
+        }
 
-       PackageRelationship rel2 = partA.getRelationships().getRelationship(0);
+        ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    	try (OPCPackage pkg = OPCPackage.open(bais)) {
+            PackagePart partA = pkg.getPart(PackagingURIHelper.createPartName("/partA"));
 
-       assertNotNull(rel2);
-       assertEquals(rel1.getRelationshipType(), rel2.getRelationshipType());
-       assertEquals(rel1.getId(), rel2.getId());
-       assertEquals(rel1.getSourceURI(), rel2.getSourceURI());
-       assertEquals(rel1.getTargetURI(), rel2.getTargetURI());
-       assertEquals(rel1.getTargetMode(), rel2.getTargetMode());
+
+            // Check the relations
+            assertEquals(1, partA.getRelationships().size());
+
+            PackageRelationship rel2 = partA.getRelationships().getRelationship(0);
+
+            assertNotNull(rel2);
+            assertEquals(rel1.getRelationshipType(), rel2.getRelationshipType());
+            assertEquals(rel1.getId(), rel2.getId());
+            assertEquals(rel1.getSourceURI(), rel2.getSourceURI());
+            assertEquals(rel1.getTargetURI(), rel2.getTargetURI());
+            assertEquals(rel1.getTargetMode(), rel2.getTargetMode());
+        }
     }
 

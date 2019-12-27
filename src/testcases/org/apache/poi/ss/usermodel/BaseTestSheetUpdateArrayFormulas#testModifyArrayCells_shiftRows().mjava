@@ -1,26 +1,26 @@
     @Test
     public void testModifyArrayCells_shiftRows() throws IOException {
-        Workbook workbook = _testDataProvider.createWorkbook();
-        Sheet sheet = workbook.createSheet();
+        try (Workbook workbook = _testDataProvider.createWorkbook()) {
+            Sheet sheet = workbook.createSheet();
 
-        //single-cell array formulas behave just like normal cells - we can change the cell type
-        CellRange<? extends Cell> srange =
-                sheet.setArrayFormula("SUM(A4:A6,B4:B6)", CellRangeAddress.valueOf("B5"));
-        Cell scell = srange.getTopLeftCell();
-        assertEquals("SUM(A4:A6,B4:B6)", scell.getCellFormula());
-        sheet.shiftRows(0, 0, 1);
-        sheet.shiftRows(0, 1, 1);
-
-        //we cannot set individual formulas for cells included in an array formula
-        sheet.setArrayFormula("A1:A3*B1:B3", CellRangeAddress.valueOf("C1:C3"));
-
-        try {
+            //single-cell array formulas behave just like normal cells - we can change the cell type
+            CellRange<? extends Cell> srange =
+                    sheet.setArrayFormula("SUM(A4:A6,B4:B6)", CellRangeAddress.valueOf("B5"));
+            Cell scell = srange.getTopLeftCell();
+            assertEquals("SUM(A4:A6,B4:B6)", scell.getCellFormula());
             sheet.shiftRows(0, 0, 1);
-            fail("expected exception");
-        } catch (IllegalStateException e){
-            String msg = "Row[rownum=0] contains cell(s) included in a multi-cell array formula. You cannot change part of an array.";
-            assertEquals(msg, e.getMessage());
-        }
+            sheet.shiftRows(0, 1, 1);
+
+            //we cannot set individual formulas for cells included in an array formula
+            sheet.setArrayFormula("A1:A3*B1:B3", CellRangeAddress.valueOf("C1:C3"));
+
+            try {
+                sheet.shiftRows(0, 0, 1);
+                fail("expected exception");
+            } catch (IllegalStateException e) {
+                String msg = "Row[rownum=0] contains cell(s) included in a multi-cell array formula. You cannot change part of an array.";
+                assertEquals(msg, e.getMessage());
+            }
         /*
          TODO: enable shifting the whole array
 
@@ -36,6 +36,6 @@
         }
 
         */
-        workbook.close();
+        }
     }
 

@@ -1,17 +1,14 @@
-    @Override
-    public void setUp() {
+    @Before
+    public void setUp() throws IOException {
         HSSFRequest req = new HSSFRequest();
-        mockListen = new MockHSSFListener();
-        listener = new SheetRecordCollectingListener(mockListen);
+        fRecs.clear();
+        listener = new SheetRecordCollectingListener(this::addFormulaRecord);
         req.addListenerForAllRecords(listener);
 
         HSSFEventFactory factory = new HSSFEventFactory();
-        try {
-            InputStream is = HSSFTestDataSamples.openSampleFileStream("3dFormulas.xls");
-            POIFSFileSystem fs = new POIFSFileSystem(is);
+        try (InputStream is = HSSFTestDataSamples.openSampleFileStream("3dFormulas.xls");
+            POIFSFileSystem fs = new POIFSFileSystem(is)) {
             factory.processWorkbookEvents(req, fs);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 

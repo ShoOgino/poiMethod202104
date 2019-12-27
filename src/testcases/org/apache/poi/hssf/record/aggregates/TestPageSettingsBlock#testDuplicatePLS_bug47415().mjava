@@ -7,9 +7,10 @@
 	 *
 	 * As of June 2009, PLS is still uninterpreted by POI
 	 */
+	@Test
 	public void testDuplicatePLS_bug47415() {
-		Record plsA = ur(UnknownRecord.PLS_004D, "BA AD F0 0D");
-		Record plsB = ur(UnknownRecord.PLS_004D, "DE AD BE EF");
+		Record plsA = new UnknownRecord(UnknownRecord.PLS_004D, HexRead.readFromString("BA AD F0 0D"));
+		Record plsB = new UnknownRecord(UnknownRecord.PLS_004D, HexRead.readFromString("DE AD BE EF"));
 		Record contB1 = new ContinueRecord(HexRead.readFromString("FE ED"));
 		Record contB2 = new ContinueRecord(HexRead.readFromString("FA CE"));
 		Record[] recs = {
@@ -21,22 +22,14 @@
 				plsB, contB1, contB2, // make sure continuing PLS is still OK
 		};
 		RecordStream rs = new RecordStream(Arrays.asList(recs), 0);
-		PageSettingsBlock psb;
-		try {
-			psb = new PageSettingsBlock(rs);
-		} catch (org.apache.poi.util.RecordFormatException e) {
-			if ("Duplicate PageSettingsBlock record (sid=0x4d)".equals(e.getMessage())) {
-				throw new AssertionFailedError("Identified bug 47415");
-			}
-			throw e;
-		}
+		// bug 47415 - Duplicate PageSettingsBlock record (sid=0x4d)
+		PageSettingsBlock psb = new PageSettingsBlock(rs);
 
 		// serialize the PSB to see what records come out
-		RecordCollector rc = new RecordCollector();
-		psb.visitContainedRecords(rc);
-		Record[] outRecs = rc.getRecords();
+		List<Record> outRecs = new ArrayList<>();
+		psb.visitContainedRecords(outRecs::add);
 
 		// records were assembled in standard order, so this simple check is OK
-		assertArrayEquals(recs, outRecs);
+		assertArrayEquals(recs, outRecs.toArray(new Record[0]));
 	}
 

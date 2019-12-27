@@ -1,0 +1,51 @@
+	private String digest(int start, int len) {
+		StringBuilder sb = new StringBuilder(len*10);
+		int lastRow = -1;
+		for (Record r : _records.subList(start, start+len+1)) {
+			String dig = null;
+			int row = -1;
+			if (r instanceof RowRecord) {
+				RowRecord rr = (RowRecord)r;
+				row = rr.getRowNumber();
+				dig = "rr";
+			} else if (r instanceof MissingRowDummyRecord) {
+				MissingRowDummyRecord mr = (MissingRowDummyRecord)r;
+				row = mr.getRowNumber();
+				dig = "mr";
+			} else if (r instanceof MissingCellDummyRecord) {
+				MissingCellDummyRecord mc = (MissingCellDummyRecord)r;
+				row = mc.getRow();
+				dig = "mc" + mc.getColumn();
+			} else if (r instanceof LastCellOfRowDummyRecord) {
+				LastCellOfRowDummyRecord lc = (LastCellOfRowDummyRecord)r;
+				row = lc.getRow();
+				dig = "lc" + (lc.getLastColumnNumber() > -1 ? lc.getLastColumnNumber() : "");
+			} else if (r instanceof NumberRecord) {
+				NumberRecord nr = (NumberRecord)r;
+				row = nr.getRow();
+				dig = "nr" + nr.getColumn() + "/" + (int)nr.getValue();
+			} else if (r instanceof LabelSSTRecord) {
+				LabelSSTRecord ls = (LabelSSTRecord) r;
+				row = ls.getRow();
+				dig = "ls" + ls.getColumn();
+			} else if (r instanceof WindowTwoRecord) {
+				dig = "wr";
+			} else if (r instanceof DimensionsRecord) {
+				dig = "dr";
+			} else if (r instanceof CellValueRecordInterface) {
+				CellValueRecordInterface cv = (CellValueRecordInterface) r;
+				row = cv.getRow();
+				dig = "cv" + cv.getColumn();
+			} else {
+				// unhandled record
+				dig = "ur";
+			}
+			if (lastRow != row && row > -1) {
+				sb.append((lastRow > -1 ? "," : "") + row + ":");
+				lastRow = row;
+			}
+			sb.append(dig);
+		}
+		return sb.toString();
+	}
+
