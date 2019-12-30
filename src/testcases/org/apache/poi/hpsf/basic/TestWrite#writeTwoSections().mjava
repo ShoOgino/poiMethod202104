@@ -1,6 +1,6 @@
     /**
-     * <p>Writes a simple property set with two sections to a POIFS and reads it
-     * back in.</p>
+     * Writes a simple property set with two sections to a POIFS and reads it
+     * back in.
      *
      * @exception IOException if an I/O exception occurs
      * @exception WritingNotSupportedException if HPSF does not yet support
@@ -11,33 +11,30 @@
         final String STREAM_NAME = "PropertySetStream";
         final String SECTION1 = "Section 1";
         final String SECTION2 = "Section 2";
+        final ClassID FORMATID = ClassIDPredefined.EXCEL_V12.getClassID();
 
         final File dataDir = _samples.getFile("");
         final File filename = new File(dataDir, POI_FS);
         filename.deleteOnExit();
-        final OutputStream out = new FileOutputStream(filename);
 
-        final POIFSFileSystem poiFs = new POIFSFileSystem();
-        final PropertySet ps = new PropertySet();
-        ps.clearSections();
+        try (OutputStream out = new FileOutputStream(filename);
+            POIFSFileSystem poiFs = new POIFSFileSystem()) {
+            final PropertySet ps = new PropertySet();
+            ps.clearSections();
 
-        final ClassID formatID = new ClassID();
-        formatID.setBytes(new byte[]{0, 1,  2,  3,  4,  5,  6,  7,
-                                     8, 9, 10, 11, 12, 13, 14, 15});
-        final Section s1 = new Section();
-        s1.setFormatID(formatID);
-        s1.setProperty(2, SECTION1);
-        ps.addSection(s1);
+            final Section s1 = new Section();
+            s1.setFormatID(FORMATID);
+            s1.setProperty(2, SECTION1);
+            ps.addSection(s1);
 
-        final Section s2 = new Section();
-        s2.setFormatID(formatID);
-        s2.setProperty(2, SECTION2);
-        ps.addSection(s2);
+            final Section s2 = new Section();
+            s2.setFormatID(FORMATID);
+            s2.setProperty(2, SECTION2);
+            ps.addSection(s2);
 
-        poiFs.createDocument(ps.toInputStream(), STREAM_NAME);
-        poiFs.writeFilesystem(out);
-        poiFs.close();
-        out.close();
+            poiFs.createDocument(ps.toInputStream(), STREAM_NAME);
+            poiFs.writeFilesystem(out);
+        }
 
         /* Read the POIFS: */
         final PropertySet[] psa = new PropertySet[1];
@@ -55,7 +52,7 @@
 
         assertNotNull(psa[0]);
         Section s = (psa[0].getSections().get(0));
-        assertEquals(s.getFormatID(), formatID);
+        assertEquals(s.getFormatID(), FORMATID);
         Object p = s.getProperty(2);
         assertEquals(SECTION1, p);
         s = (psa[0].getSections().get(1));

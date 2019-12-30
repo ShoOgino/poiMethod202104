@@ -1,6 +1,5 @@
     /**
-     * <p>Writes an empty property set to a POIFS and reads it back
-     * in.</p>
+     * Writes an empty property set to a POIFS and reads it back in.
      *
      * @exception IOException if an I/O exception occurs
      * @exception UnsupportedVariantTypeException if HPSF does not yet support
@@ -14,26 +13,23 @@
         filename.deleteOnExit();
 
         /* Create a mutable property set and write it to a POIFS: */
-        final OutputStream out = new FileOutputStream(filename);
-        final POIFSFileSystem poiFs = new POIFSFileSystem();
-        final PropertySet ps = new PropertySet();
-        final Section s = ps.getSections().get(0);
-        s.setFormatID(SummaryInformation.FORMAT_ID);
-
-        final ByteArrayOutputStream psStream = new ByteArrayOutputStream();
-        ps.write(psStream);
-        psStream.close();
-        final byte[] streamData = psStream.toByteArray();
-        poiFs.createDocument(new ByteArrayInputStream(streamData),
-                             SummaryInformation.DEFAULT_STREAM_NAME);
-        poiFs.writeFilesystem(out);
-        poiFs.close();
-        out.close();
+        try (OutputStream out = new FileOutputStream(filename);
+            POIFSFileSystem poiFs = new POIFSFileSystem();
+             ByteArrayOutputStream psStream = new ByteArrayOutputStream()) {
+            final PropertySet ps = new PropertySet();
+            final Section s = ps.getSections().get(0);
+            s.setFormatID(SummaryInformation.FORMAT_ID);
+            ps.write(psStream);
+            poiFs.createDocument(new ByteArrayInputStream(psStream.toByteArray()), SummaryInformation.DEFAULT_STREAM_NAME);
+            poiFs.writeFilesystem(out);
+        }
 
         /* Read the POIFS: */
         final POIFSReader r = new POIFSReader();
-        r.registerListener(new MyPOIFSReaderListener(),
-                           SummaryInformation.DEFAULT_STREAM_NAME);
+        final List<PropertySet> psa = new ArrayList<>();
+
+        r.registerListener(getListener(psa), SummaryInformation.DEFAULT_STREAM_NAME);
         r.read(filename);
+        assertEquals(1, psa.size());
     }
 

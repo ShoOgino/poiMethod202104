@@ -3,45 +3,9 @@
      * Only use this method in test cases!!!
      */
     public static void assertReflectEquals(final Object expected, Object actual) throws Exception {
-        final List<Field> fields;
-        try {
-            fields = AccessController.doPrivileged(new PrivilegedExceptionAction<List<Field>>() {
-                @Override
-                @SuppressForbidden("Test only")
-                public List<Field> run() throws Exception {
-                    List<Field> flds = new ArrayList<>();
-                    for (Class<?> c = expected.getClass(); c != null; c = c.getSuperclass()) {
-                        Field[] fs = c.getDeclaredFields();
-                        AccessibleObject.setAccessible(fs, true);                        
-                        for (Field f : fs) {
-                            // JaCoCo Code Coverage adds it's own field, don't look at this one here
-                            if(f.getName().equals("$jacocoData")) {
-                                continue;
-                            }
-                            
-                            flds.add(f);
-                        }
-                    }
-                    return flds;
-                }
-            });
-        } catch (PrivilegedActionException pae) {
-            throw pae.getException();
-        }
-        
-        for (Field f : fields) {
-            Class<?> t = f.getType();
-            if (t.isArray()) {
-                if (Object[].class.isAssignableFrom(t)) {
-                    assertArrayEquals((Object[])f.get(expected), (Object[])f.get(actual));
-                } else if (byte[].class.isAssignableFrom(t)) {
-                    assertArrayEquals((byte[])f.get(expected), (byte[])f.get(actual));
-                } else {
-                    fail("Array type is not yet implemented ... add it!");
-                }
-            } else {
-                assertEquals(f.get(expected), f.get(actual));
-            }
-        }
+        // as long as ReflectionEquals is provided by Mockito, use it ... otherwise use commons.lang for the tests
+
+        // JaCoCo Code Coverage adds its own field, don't look at this one here
+        assertTrue(new ReflectionEquals(expected, "$jacocoData").matches(actual));
     }
 

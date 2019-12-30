@@ -14,45 +14,35 @@
         final File dataDir = _samples.getFile("");
         final File filename = new File(dataDir, POI_FS);
         filename.deleteOnExit();
-        final OutputStream out = new FileOutputStream(filename);
-        final POIFSFileSystem poiFs = new POIFSFileSystem();
+        try (OutputStream out = new FileOutputStream(filename);
+            POIFSFileSystem poiFs = new POIFSFileSystem()) {
 
-        final PropertySet ps = new PropertySet();
-        final Section si = new Section();
-        si.setFormatID(SummaryInformation.FORMAT_ID);
-        ps.clearSections();
-        ps.addSection(si);
+            final PropertySet ps = new PropertySet();
+            final Section si = new Section();
+            si.setFormatID(SummaryInformation.FORMAT_ID);
+            ps.clearSections();
+            ps.addSection(si);
 
-        final Property p = new Property();
-        p.setID(PropertyIDMap.PID_AUTHOR);
-        p.setType(Variant.VT_LPWSTR);
-        p.setValue(AUTHOR);
-        si.setProperty(p);
-        si.setProperty(PropertyIDMap.PID_TITLE, Variant.VT_LPSTR, TITLE);
+            final Property p = new Property();
+            p.setID(PropertyIDMap.PID_AUTHOR);
+            p.setType(Variant.VT_LPWSTR);
+            p.setValue(AUTHOR);
+            si.setProperty(p);
+            si.setProperty(PropertyIDMap.PID_TITLE, Variant.VT_LPSTR, TITLE);
 
-        poiFs.createDocument(ps.toInputStream(),
-                             SummaryInformation.DEFAULT_STREAM_NAME);
-        poiFs.writeFilesystem(out);
-        poiFs.close();
-        out.close();
+            poiFs.createDocument(ps.toInputStream(), SummaryInformation.DEFAULT_STREAM_NAME);
+            poiFs.writeFilesystem(out);
+        }
 
         /* Read the POIFS: */
-        final PropertySet[] psa = new PropertySet[1];
+        final List<PropertySet> psa = new ArrayList<>();
         final POIFSReader r = new POIFSReader();
-        final POIFSReaderListener listener = event -> {
-            try {
-                psa[0] = PropertySetFactory.create(event.getStream());
-            } catch (Exception ex) {
-                fail(ex.getMessage());
-            }
-        };
-        r.registerListener(listener, SummaryInformation.DEFAULT_STREAM_NAME);
-
+        r.registerListener(getListener(psa), SummaryInformation.DEFAULT_STREAM_NAME);
         r.read(filename);
-        assertNotNull(psa[0]);
-        assertTrue(psa[0].isSummaryInformation());
+        assertEquals(1, psa.size());
+        assertTrue(psa.get(0).isSummaryInformation());
 
-        final Section s = (psa[0].getSections().get(0));
+        final Section s = psa.get(0).getSections().get(0);
         Object p1 = s.getProperty(PropertyIDMap.PID_AUTHOR);
         Object p2 = s.getProperty(PropertyIDMap.PID_TITLE);
         assertEquals(AUTHOR, p1);
