@@ -1,0 +1,39 @@
+    /**
+     * Output the compressed representation for the bytes
+     * found in rawCode
+     */
+    private void outputCompressed() throws IOException {
+        // It's not worth compressing only 1 or two bytes, due to the overheads
+        // So if asked, just output uncompressed
+        if (rawCodeLen < 3) {
+            final int rcl = rawCodeLen;
+            for (int i = 0; i < rcl; i++) {
+                outputUncompressed(rawCode[i]);
+            }
+            return;
+        }
+
+        // Grab where the data lives
+        int codesAt = findRawCodeInBuffer();
+        codesAt = (codesAt-18) & DICT_MASK;
+
+        // Increment the mask bit count, we've done another code
+        maskBitsSet++;
+
+        // Add the length+code to the buffer
+        // (The position is the first 12 bits, the length is the last 4 bits)
+        int bp1 = (codesAt & 0xFF);
+        int bp2 = (rawCodeLen - 3) + ((codesAt - bp1) >>> 4);
+        buffer[bufferLen++] = (byte) bp1;
+        buffer[bufferLen++] = (byte) bp2;
+
+        assert(maskBitsSet <= 8);
+
+        // If we're now at 8 codes, output
+        if (maskBitsSet == 8) {
+            output8Codes();
+        }
+
+        rawCodeLen = 0;
+    }
+

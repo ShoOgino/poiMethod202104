@@ -1,28 +1,30 @@
-/**
- * Returns the last place that the bytes from rawCode are found
- *  at in the buffer, or -1 if they can't be found
- */
-private int findRawCodeInBuffer() {
-	// Work our way through all the codes until we
-   //  find the right one. Visio starts from the end
-	for(int i=4096-rawCodeLen; i>0; i--) {
-		boolean matches = true;
-		for(int j=0; matches && j<rawCodeLen; j++) {
-			if(dict[i+j] == rawCode[j]) {
-				// Fits
-			} else {
-				// Doesn't fit, can't be a match
-				matches = false;
-			}
-		}
+    /**
+     * Returns the last place that the bytes from rawCode are found
+     * at in the buffer, or -1 if they can't be found
+     */
+    private int findRawCodeInBuffer() {
+        // Work our way through all the codes until we
+        //  find the right one. Visio starts from the end
+        for (int i = rawCodeLen+1; i < DICT_SIZE; i++) {
+            int pos = (posInp - i) & DICT_MASK;
+            // in the example data it seems, that the compressor doesn't like to wrap beyond DICT_SIZE
+            // if (pos + rawCodeLen > DICT_SIZE) continue;
+            boolean matches = true;
+            for (int j = 0; j < rawCodeLen; j++) {
+                if (dict[(pos + j) & DICT_MASK] != rawCode[j]) {
+                    // Doesn't fit, can't be a match
+                    matches = false;
+                    break;
+                }
+            }
 
-		// Was this position a match?
-		if(matches) {
-			return i;
-		}
-	}
+            // Was this position a match?
+            if (matches) {
+                return pos;
+            }
+        }
 
-	// Not found
-	return -1;
-}
+        // Not found
+        return -1;
+    }
 

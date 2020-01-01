@@ -1,0 +1,73 @@
+    /**
+     * Does the compression
+     */
+    public void compress(InputStream src) throws IOException {
+        int dataI = -1;
+        while (true) {
+            if (dataI > -1) {
+                // copy the last read byte into the dictionary.
+                // the example data compressor used self references, so we don't wait for filling the dictionary
+                // until we know if it's a un-/compressed token.
+                dict[(posInp++) & DICT_MASK] = (byte)dataI;
+            }
+            // This is an unsigned byte read from the stream
+            // It needs to be unsigned, so that bit stuff works
+            dataI = src.read();
+
+            // If we've run out of data, output anything that's pending then finish
+            if (dataI == -1) {
+                if (rawCodeLen > 0) {
+                    outputCompressed();
+                    if (maskBitsSet > 0) {
+                        output8Codes();
+                    }
+                }
+                break;
+            }
+
+            // This is a byte as looked up in the dictionary
+            // It needs to be signed, as it'll get passed on to the output stream
+            byte dataB = (byte) dataI;
+
+            // Try adding this new byte onto rawCode, and see if all of that is still found
+            // in the buffer dictionary or not
+            rawCode[rawCodeLen++] = dataB;
+            int rawAt = findRawCodeInBuffer();
+
+            if (rawAt > -1) {
+                // If we found it and are now at 18 bytes, we need to output our pending code block
+                if (rawCodeLen == 18) {
+                    outputCompressed();
+                }
+
+                // If we did find all of rawCode with our new byte added on,
+                // we can wait to see what happens with the next byte
+                continue;
+            }
+
+            // If we get here, then the rawCode + this byte weren't found in the dictionary
+
+            // If there was something in rawCode before, then that was
+            // found in the dictionary, so output that compressed
+            rawCodeLen--;
+            if (rawCodeLen > 0) {
+                // Output the old rawCode
+                outputCompressed();
+
+                // Can this byte start a new rawCode, or does it need outputting itself?
+                rawCode[0] = dataB;
+                rawCodeLen = 1;
+                if (findRawCodeInBuffer() > -1) {
+                    // Fits in, wait for next byte
+                    continue;
+                }
+                // Doesn't fit, output
+                outputUncompressed(dataB);
+            } else {
+                // Nothing in rawCode before, so this byte isn't in the buffer dictionary
+                // Output it un-compressed
+                outputUncompressed(dataB);
+            }
+        }
+    }
+
