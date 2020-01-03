@@ -1,31 +1,34 @@
     @Test
     public void testSolverContainerMustBeSavedDuringSerialization() throws IOException{
-        HSSFWorkbook wb1 = HSSFTestDataSamples.openSampleWorkbook("SolverContainerAfterSPGR.xls");
-        HSSFSheet sh = wb1.getSheetAt(0);
-        InternalSheet ish = HSSFTestHelper.getSheetForTest(sh);
-        List<RecordBase> records = ish.getRecords();
-        // records to be aggregated
-        List<RecordBase> dgRecords = records.subList(19, 22);
-        byte[] dgBytes = toByteArray(dgRecords);
-        sh.getDrawingPatriarch();
-        EscherAggregate agg = (EscherAggregate) ish.findFirstRecordBySid(EscherAggregate.sid);
-        assertEquals(agg.getEscherRecords().get(0).getChildRecords().size(), 3);
-        assertEquals(agg.getEscherRecords().get(0).getChild(2).getRecordId(), EscherContainerRecord.SOLVER_CONTAINER);
-        HSSFWorkbook wb2 = HSSFTestDataSamples.writeOutAndReadBack(wb1);
-        wb1.close();
-        sh = wb2.getSheetAt(0);
-        sh.getDrawingPatriarch();
-        ish = HSSFTestHelper.getSheetForTest(sh);
-        agg = (EscherAggregate) ish.findFirstRecordBySid(EscherAggregate.sid);
-        assertEquals(agg.getEscherRecords().get(0).getChildRecords().size(), 3);
-        assertEquals(agg.getEscherRecords().get(0).getChild(2).getRecordId(), EscherContainerRecord.SOLVER_CONTAINER);
+        try (HSSFWorkbook wb1 = HSSFTestDataSamples.openSampleWorkbook("SolverContainerAfterSPGR.xls")) {
+            HSSFSheet sh = wb1.getSheetAt(0);
+            InternalSheet ish = HSSFTestHelper.getSheetForTest(sh);
+            List<RecordBase> records = ish.getRecords();
+            // records to be aggregated
+            List<RecordBase> dgRecords = records.subList(19, 22);
+            byte[] dgBytes = toByteArray(dgRecords);
+            sh.getDrawingPatriarch();
+            EscherAggregate agg = (EscherAggregate) ish.findFirstRecordBySid(EscherAggregate.sid);
+            assertNotNull(agg);
+            assertEquals(agg.getEscherRecords().get(0).getChildRecords().size(), 3);
+            assertEquals(agg.getEscherRecords().get(0).getChild(2).getRecordId(), EscherContainerRecord.SOLVER_CONTAINER);
+            try (HSSFWorkbook wb2 = HSSFTestDataSamples.writeOutAndReadBack(wb1)) {
+                sh = wb2.getSheetAt(0);
+                sh.getDrawingPatriarch();
+                ish = HSSFTestHelper.getSheetForTest(sh);
+                agg = (EscherAggregate) ish.findFirstRecordBySid(EscherAggregate.sid);
+                assertNotNull(agg);
+                assertEquals(agg.getEscherRecords().get(0).getChildRecords().size(), 3);
+                assertEquals(agg.getEscherRecords().get(0).getChild(2).getRecordId(), EscherContainerRecord.SOLVER_CONTAINER);
 
 
-        // collect drawing records into a byte buffer.
-        agg = (EscherAggregate) ish.findFirstRecordBySid(EscherAggregate.sid);
-        byte[] dgBytesAfterSave = agg.serialize();
-        assertEquals("different size of drawing data before and after save", dgBytes.length, dgBytesAfterSave.length);
-        assertArrayEquals("drawing data before and after save is different", dgBytes, dgBytesAfterSave);
-        wb2.close();
+                // collect drawing records into a byte buffer.
+                agg = (EscherAggregate) ish.findFirstRecordBySid(EscherAggregate.sid);
+                assertNotNull(agg);
+                byte[] dgBytesAfterSave = agg.serialize();
+                assertEquals("different size of drawing data before and after save", dgBytes.length, dgBytesAfterSave.length);
+                assertArrayEquals("drawing data before and after save is different", dgBytes, dgBytesAfterSave);
+            }
+        }
     }
 

@@ -1,17 +1,20 @@
     /** bug 35027, underscore in sheet name */
     @Test
     public void testUnderscore() throws IOException {
-        HSSFWorkbook wb = new HSSFWorkbook();
+        try (HSSFWorkbook wb = new HSSFWorkbook()) {
+            HSSFSheet sheet1 = wb.createSheet("Cash_Flow");
+            sheet1.createRow(0).createCell(0).setCellValue("Cash_Flow");
 
-        wb.createSheet("Cash_Flow");
+            HSSFSheet sheet = wb.createSheet("Test");
+            HSSFRow row = sheet.createRow(0);
+            HSSFCell cell;
 
-        HSSFSheet sheet = wb.createSheet("Test");
-        HSSFRow row = sheet.createRow(0);
-        HSSFCell cell;
+            cell = row.createCell(0);
+            cell.setCellFormula("Cash_Flow!A1");
 
-        cell = row.createCell(0);
-        cell.setCellFormula("Cash_Flow!A1");
-        
-        wb.close();
+            FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
+            String act = evaluator.evaluate(cell).getStringValue();
+            assertEquals("Cash_Flow", act);
+        }
     }
 

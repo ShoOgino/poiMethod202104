@@ -1,20 +1,28 @@
     @Test
     public void testWorksheetReferences() throws IOException {
-        HSSFWorkbook wb = new HSSFWorkbook();
+        try (HSSFWorkbook wb = new HSSFWorkbook()) {
 
-        wb.createSheet("NoQuotesNeeded");
-        wb.createSheet("Quotes Needed Here &#$@");
+            HSSFSheet sheet1 = wb.createSheet("NoQuotesNeeded");
+            sheet1.createRow(0).createCell(0).setCellValue("NoQuotesNeeded");
+            HSSFSheet sheet2 = wb.createSheet("Quotes Needed Here &#$@");
+            sheet2.createRow(0).createCell(0).setCellValue("Quotes Needed Here &#$@");
 
-        HSSFSheet sheet = wb.createSheet("Test");
-        HSSFRow row = sheet.createRow(0);
-        HSSFCell cell;
+            HSSFSheet sheet = wb.createSheet("Test");
+            HSSFRow row = sheet.createRow(0);
 
-        cell = row.createCell(0);
-        cell.setCellFormula("NoQuotesNeeded!A1");
+            FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
+            HSSFCell cell;
+            String act;
 
-        cell = row.createCell(1);
-        cell.setCellFormula("'Quotes Needed Here &#$@'!A1");
-        
-        wb.close();
+            cell = row.createCell(0);
+            cell.setCellFormula("NoQuotesNeeded!A1");
+            act = evaluator.evaluate(cell).getStringValue();
+            assertEquals("NoQuotesNeeded", act);
+
+            cell = row.createCell(1);
+            cell.setCellFormula("'Quotes Needed Here &#$@'!A1");
+            act = evaluator.evaluate(cell).getStringValue();
+            assertEquals("Quotes Needed Here &#$@", act);
+        }
     }
 

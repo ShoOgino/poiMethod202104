@@ -1,14 +1,17 @@
-    @Ignore("Calls System.exit()")
-    @Test
+    @Test(expected = ExitException.class)
     public void testMainUsage() throws IOException {
         PrintStream save = System.err;
+        SecurityManager sm = System.getSecurityManager();
+        System.setSecurityManager(new NoExitSecurityManager());
         try {
             try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
                 PrintStream str = new PrintStream(out, false, "UTF-8");
                 System.setErr(str);
+                // calls System.exit()
                 OldExcelExtractor.main(new String[]{});
             }
         } finally {
+            System.setSecurityManager(sm);
             System.setErr(save);
         }
     }

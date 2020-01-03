@@ -1,26 +1,25 @@
     @Test
     public void testSerializeDrawingBigger8k_noAggregation() throws IOException {
-        HSSFWorkbook wb1 = HSSFTestDataSamples.openSampleWorkbook("DrawingContinue.xls");
+        try (HSSFWorkbook wb1 = HSSFTestDataSamples.openSampleWorkbook("DrawingContinue.xls")) {
+            InternalSheet isheet = HSSFTestHelper.getSheetForTest(wb1.getSheetAt(0));
+            List<RecordBase> records = isheet.getRecords();
 
-        InternalSheet isheet = HSSFTestHelper.getSheetForTest(wb1.getSheetAt(0));
-        List<RecordBase> records = isheet.getRecords();
+            try (HSSFWorkbook wb2 = HSSFTestDataSamples.writeOutAndReadBack(wb1)) {
+                InternalSheet isheet2 = HSSFTestHelper.getSheetForTest(wb2.getSheetAt(0));
+                List<RecordBase> records2 = isheet2.getRecords();
 
-        HSSFWorkbook wb2 = HSSFTestDataSamples.writeOutAndReadBack(wb1);
-        wb1.close();
-        InternalSheet isheet2 = HSSFTestHelper.getSheetForTest(wb2.getSheetAt(0));
-        List<RecordBase> records2 = isheet2.getRecords();
-
-        assertEquals(records.size(), records2.size());
-        for (int i = 0; i < records.size(); i++) {
-            RecordBase r1 = records.get(i);
-            RecordBase r2 = records2.get(i);
-            assertSame(r1.getClass(), r2.getClass());
-            assertEquals(r1.getRecordSize(), r2.getRecordSize());
-            if (r1 instanceof Record) {
-                assertEquals(((Record) r1).getSid(), ((Record) r2).getSid());
-                assertArrayEquals(((Record) r1).serialize(), ((Record) r2).serialize());
+                assertEquals(records.size(), records2.size());
+                for (int i = 0; i < records.size(); i++) {
+                    RecordBase r1 = records.get(i);
+                    RecordBase r2 = records2.get(i);
+                    assertSame(r1.getClass(), r2.getClass());
+                    assertEquals(r1.getRecordSize(), r2.getRecordSize());
+                    if (r1 instanceof Record) {
+                        assertEquals(((Record) r1).getSid(), ((Record) r2).getSid());
+                        assertArrayEquals(((Record) r1).serialize(), ((Record) r2).serialize());
+                    }
+                }
             }
         }
-        wb2.close();
     }
 
