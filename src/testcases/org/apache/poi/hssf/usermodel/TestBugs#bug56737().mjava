@@ -6,38 +6,38 @@
      */
     @Test
     public void bug56737() throws IOException {
-        Workbook wb = openSample("56737.xls");
+        try (Workbook wb = openSampleWorkbook("56737.xls")) {
 
-        // Check the named range definitions
-        Name nSheetScope = wb.getName("NR_To_A1");
-        Name nWBScope = wb.getName("NR_Global_B2");
+            // Check the named range definitions
+            Name nSheetScope = wb.getName("NR_To_A1");
+            Name nWBScope = wb.getName("NR_Global_B2");
 
-        assertNotNull(nSheetScope);
-        assertNotNull(nWBScope);
+            assertNotNull(nSheetScope);
+            assertNotNull(nWBScope);
 
-        assertEquals("Defines!$A$1", nSheetScope.getRefersToFormula());
-        assertEquals("Defines!$B$2", nWBScope.getRefersToFormula());
+            assertEquals("Defines!$A$1", nSheetScope.getRefersToFormula());
+            assertEquals("Defines!$B$2", nWBScope.getRefersToFormula());
 
-        // Check the different kinds of formulas
-        Sheet s = wb.getSheetAt(0);
-        Cell cRefSName = s.getRow(1).getCell(3);
-        Cell cRefWName = s.getRow(2).getCell(3);
+            // Check the different kinds of formulas
+            Sheet s = wb.getSheetAt(0);
+            Cell cRefSName = s.getRow(1).getCell(3);
+            Cell cRefWName = s.getRow(2).getCell(3);
 
-        assertEquals("Defines!NR_To_A1", cRefSName.getCellFormula());
+            assertEquals("Defines!NR_To_A1", cRefSName.getCellFormula());
 
-        // TODO Correct this, so that the filename is shown too, see bug #56742
-        // This is what Excel itself shows
-        //assertEquals("'56737.xls'!NR_Global_B2", cRefWName.getCellFormula());
-        // TODO This isn't right, but it's what we currently generate....
-        assertEquals("NR_Global_B2", cRefWName.getCellFormula());
+            // TODO Correct this, so that the filename is shown too, see bug #56742
+            // This is what Excel itself shows
+            //assertEquals("'56737.xls'!NR_Global_B2", cRefWName.getCellFormula());
+            // TODO This isn't right, but it's what we currently generate....
+            assertEquals("NR_Global_B2", cRefWName.getCellFormula());
 
-        // Try to evaluate them
-        FormulaEvaluator eval = wb.getCreationHelper().createFormulaEvaluator();
-        assertEquals("Test A1", eval.evaluate(cRefSName).getStringValue());
-        assertEquals(142, (int) eval.evaluate(cRefWName).getNumberValue());
+            // Try to evaluate them
+            FormulaEvaluator eval = wb.getCreationHelper().createFormulaEvaluator();
+            assertEquals("Test A1", eval.evaluate(cRefSName).getStringValue());
+            assertEquals(142, (int) eval.evaluate(cRefWName).getNumberValue());
 
-        // Try to evaluate everything
-        eval.evaluateAll();
-        wb.close();
+            // Try to evaluate everything
+            eval.evaluateAll();
+        }
     }
 

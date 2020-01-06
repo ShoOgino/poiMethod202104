@@ -4,30 +4,29 @@
      */
     @Test
     public void bug42618() throws Exception {
-        HSSFWorkbook wb1 = openSample("SimpleWithChoose.xls");
-        HSSFWorkbook wb2 = writeOutAndReadBack(wb1);
-        wb1.close();
-        // Check we detect the string properly too
-        HSSFSheet s = wb2.getSheetAt(0);
+        try (HSSFWorkbook wb1 = openSampleWorkbook("SimpleWithChoose.xls");
+            HSSFWorkbook wb2 = writeOutAndReadBack(wb1)){
+            // Check we detect the string properly too
+            HSSFSheet s = wb2.getSheetAt(0);
 
-        // Textual value
-        HSSFRow r1 = s.getRow(0);
-        HSSFCell c1 = r1.getCell(1);
-        assertEquals("=CHOOSE(2,A2,A3,A4)", c1.getRichStringCellValue().toString());
+            // Textual value
+            HSSFRow r1 = s.getRow(0);
+            HSSFCell c1 = r1.getCell(1);
+            assertEquals("=CHOOSE(2,A2,A3,A4)", c1.getRichStringCellValue().toString());
 
-        // Formula Value
-        HSSFRow r2 = s.getRow(1);
-        HSSFCell c2 = r2.getCell(1);
-        assertEquals(25, (int) c2.getNumericCellValue());
+            // Formula Value
+            HSSFRow r2 = s.getRow(1);
+            HSSFCell c2 = r2.getCell(1);
+            assertEquals(25, (int) c2.getNumericCellValue());
 
-        try {
-            assertEquals("CHOOSE(2,A2,A3,A4)", c2.getCellFormula());
-        } catch (IllegalStateException e) {
-            if (e.getMessage().startsWith("Too few arguments")
-                    && e.getMessage().indexOf("ConcatPtg") > 0) {
-                fail("identified bug 44306");
+            try {
+                assertEquals("CHOOSE(2,A2,A3,A4)", c2.getCellFormula());
+            } catch (IllegalStateException e) {
+                if (e.getMessage().startsWith("Too few arguments")
+                        && e.getMessage().indexOf("ConcatPtg") > 0) {
+                    fail("identified bug 44306");
+                }
             }
         }
-        wb2.close();
     }
 

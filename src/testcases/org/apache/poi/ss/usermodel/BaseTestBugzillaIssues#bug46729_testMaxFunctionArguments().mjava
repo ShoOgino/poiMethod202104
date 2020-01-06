@@ -3,26 +3,26 @@
         String[] func = {"COUNT", "AVERAGE", "MAX", "MIN", "OR", "SUBTOTAL", "SKEW"};
 
         SpreadsheetVersion ssVersion = _testDataProvider.getSpreadsheetVersion();
-        Workbook wb = _testDataProvider.createWorkbook();
-        Cell cell = wb.createSheet().createRow(0).createCell(0);
+        try (Workbook wb = _testDataProvider.createWorkbook()) {
+            Cell cell = wb.createSheet().createRow(0).createCell(0);
 
-        String fmla;
-        for (String name : func) {
+            String fmla;
+            for (String name : func) {
 
-            fmla = createFunction(name, 5);
-            cell.setCellFormula(fmla);
-
-            fmla = createFunction(name, ssVersion.getMaxFunctionArgs());
-            cell.setCellFormula(fmla);
-
-            try {
-                fmla = createFunction(name, ssVersion.getMaxFunctionArgs() + 1);
+                fmla = createFunction(name, 5);
                 cell.setCellFormula(fmla);
-                fail("Expected FormulaParseException");
-            } catch (FormulaParseException e){
-                 assertTrue(e.getMessage().startsWith("Too many arguments to function '"+name+"'"));
+
+                fmla = createFunction(name, ssVersion.getMaxFunctionArgs());
+                cell.setCellFormula(fmla);
+
+                try {
+                    fmla = createFunction(name, ssVersion.getMaxFunctionArgs() + 1);
+                    cell.setCellFormula(fmla);
+                    fail("Expected FormulaParseException");
+                } catch (FormulaParseException e) {
+                    assertTrue(e.getMessage().startsWith("Too many arguments to function '" + name + "'"));
+                }
             }
         }
-        wb.close();
     }
 

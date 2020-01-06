@@ -1,31 +1,21 @@
     @Test
     public void bug56325() throws IOException {
-        HSSFWorkbook wb1;
-        POIFSFileSystem fs;
+        try (HSSFWorkbook wb1 = openSampleWorkbook("56325.xls")) {
+            assertEquals(3, wb1.getNumberOfSheets());
+            wb1.removeSheetAt(0);
+            assertEquals(2, wb1.getNumberOfSheets());
 
-        File file = HSSFTestDataSamples.getSampleFile("56325.xls");
-        try (InputStream stream = new FileInputStream(file)) {
-            fs = new POIFSFileSystem(stream);
-            wb1 = new HSSFWorkbook(fs);
+            try (HSSFWorkbook wb2 = writeOutAndReadBack(wb1)) {
+                assertEquals(2, wb2.getNumberOfSheets());
+                wb2.removeSheetAt(0);
+                assertEquals(1, wb2.getNumberOfSheets());
+                wb2.removeSheetAt(0);
+                assertEquals(0, wb2.getNumberOfSheets());
+
+                try (HSSFWorkbook wb3 = writeOutAndReadBack(wb2)) {
+                    assertEquals(0, wb3.getNumberOfSheets());
+                }
+            }
         }
-
-        assertEquals(3, wb1.getNumberOfSheets());
-        wb1.removeSheetAt(0);
-        assertEquals(2, wb1.getNumberOfSheets());
-
-        HSSFWorkbook wb2 = writeOutAndReadBack(wb1);
-        wb1.close();
-        fs.close();
-        assertEquals(2, wb2.getNumberOfSheets());
-        wb2.removeSheetAt(0);
-        assertEquals(1, wb2.getNumberOfSheets());
-        wb2.removeSheetAt(0);
-        assertEquals(0, wb2.getNumberOfSheets());
-
-        HSSFWorkbook wb3 = writeOutAndReadBack(wb2);
-        wb2.close();
-
-        assertEquals(0, wb3.getNumberOfSheets());
-        wb3.close();
     }
 

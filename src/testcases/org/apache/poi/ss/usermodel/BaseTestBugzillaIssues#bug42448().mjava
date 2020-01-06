@@ -3,10 +3,17 @@
      */
     @Test
     public final void bug42448() throws IOException {
-        Workbook wb = _testDataProvider.createWorkbook();
-        Cell cell = wb.createSheet().createRow(0).createCell(0);
-        cell.setCellFormula("SUMPRODUCT(A!C7:A!C67, B8:B68) / B69");
-        assertTrue("no errors parsing formula", true);
-        wb.close();
+        String exp = "SUMPRODUCT(A!C7:A!C67, B8:B68) / B69";
+        try (Workbook wb1 = _testDataProvider.createWorkbook()) {
+            Cell cell = wb1.createSheet().createRow(0).createCell(0);
+            cell.setCellFormula(exp);
+            wb1.createSheet("A");
+            cell.setCellFormula(exp);
+            try (Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1)) {
+                String act = wb2.getSheetAt(0).getRow(0).getCell(0).getCellFormula();
+                // XSSF saves formula as-is, HSSF saves as PTG and strips the whitespace
+                assertEquals(exp.replace(" ",""), act.replace(" ", ""));
+            }
+        }
     }
 

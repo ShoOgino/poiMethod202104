@@ -1,13 +1,6 @@
     @Test
     public void bug51535() throws Exception {
-        byte[] data = HSSFITestDataProvider.instance.getTestDataFileContent("51535.xls");
-
-        HSSFWorkbook wbPOIFS = new HSSFWorkbook(new POIFSFileSystem(
-                new ByteArrayInputStream(data)).getRoot(), false);
-        HSSFWorkbook wbPOIFS2 = new HSSFWorkbook(new POIFSFileSystem(
-                new ByteArrayInputStream(data)).getRoot(), false);
-
-        for (HSSFWorkbook wb : new HSSFWorkbook[]{wbPOIFS, wbPOIFS2}) {
+        try (HSSFWorkbook wb = openSampleWorkbook("51535.xls")) {
             assertEquals(3, wb.getNumberOfSheets());
 
             // Check directly
@@ -18,13 +11,13 @@
             assertEquals("Bottom Right Cell", s.getRow(65535).getCell(255).getStringCellValue());
 
             // Extract and check
-            ExcelExtractor ex = new ExcelExtractor(wb);
-            String text = ex.getText();
-            assertContains(text, "Top Left Cell");
-            assertContains(text, "Top Right Cell");
-            assertContains(text, "Bottom Left Cell");
-            assertContains(text, "Bottom Right Cell");
-            ex.close();
+            try (ExcelExtractor ex = new ExcelExtractor(wb)) {
+                String text = ex.getText();
+                assertContains(text, "Top Left Cell");
+                assertContains(text, "Top Right Cell");
+                assertContains(text, "Bottom Left Cell");
+                assertContains(text, "Bottom Right Cell");
+            }
         }
     }
 

@@ -7,56 +7,55 @@
      */
     @Test
     public void bug46664() throws Exception {
-        HSSFWorkbook wb1 = new HSSFWorkbook();
-        HSSFSheet sheet = wb1.createSheet("new_sheet");
-        HSSFRow row = sheet.createRow((short) 0);
-        row.createCell(0).setCellValue(new HSSFRichTextString("Column A"));
-        row.createCell(1).setCellValue(new HSSFRichTextString("Column B"));
-        row.createCell(2).setCellValue(new HSSFRichTextString("Column C"));
-        row.createCell(3).setCellValue(new HSSFRichTextString("Column D"));
-        row.createCell(4).setCellValue(new HSSFRichTextString("Column E"));
-        row.createCell(5).setCellValue(new HSSFRichTextString("Column F"));
+        try (HSSFWorkbook wb1 = new HSSFWorkbook()) {
+            HSSFSheet sheet = wb1.createSheet("new_sheet");
+            HSSFRow row = sheet.createRow((short) 0);
+            row.createCell(0).setCellValue(new HSSFRichTextString("Column A"));
+            row.createCell(1).setCellValue(new HSSFRichTextString("Column B"));
+            row.createCell(2).setCellValue(new HSSFRichTextString("Column C"));
+            row.createCell(3).setCellValue(new HSSFRichTextString("Column D"));
+            row.createCell(4).setCellValue(new HSSFRichTextString("Column E"));
+            row.createCell(5).setCellValue(new HSSFRichTextString("Column F"));
 
-        //set print area from column a to column c (on first row)
-        wb1.setPrintArea(
-                0, //sheet index
-                0, //start column
-                2, //end column
-                0, //start row
-                0  //end row
-        );
+            //set print area from column a to column c (on first row)
+            wb1.setPrintArea(
+                    0, //sheet index
+                    0, //start column
+                    2, //end column
+                    0, //start row
+                    0  //end row
+            );
 
-        HSSFWorkbook wb2 = writeOutAndReadBack(wb1);
-        wb1.close();
+            try (HSSFWorkbook wb2 = writeOutAndReadBack(wb1)) {
+                // Ensure the tab index
+                TabIdRecord tr = null;
+                for (Record r : wb2.getWorkbook().getRecords()) {
+                    if (r instanceof TabIdRecord) {
+                        tr = (TabIdRecord) r;
+                    }
+                }
+                assertNotNull(tr);
+                assertEquals(1, tr._tabids.length);
+                assertEquals(0, tr._tabids[0]);
 
-        // Ensure the tab index
-        TabIdRecord tr = null;
-        for (Record r : wb2.getWorkbook().getRecords()) {
-            if (r instanceof TabIdRecord) {
-                tr = (TabIdRecord) r;
+                // Ensure the print setup
+                assertEquals("new_sheet!$A$1:$C$1", wb2.getPrintArea(0));
+                HSSFName printArea = wb2.getName("Print_Area");
+                assertNotNull(printArea);
+                assertEquals("new_sheet!$A$1:$C$1", printArea.getRefersToFormula());
+
+                // Needs reference not value
+                NameRecord nr = wb2.getWorkbook().getNameRecord(
+                        wb2.getNameIndex("Print_Area")
+                );
+                assertEquals("Print_Area", nr.getNameText());
+                assertEquals(1, nr.getNameDefinition().length);
+                assertEquals(
+                        "new_sheet!$A$1:$C$1",
+                        ((Area3DPtg) nr.getNameDefinition()[0]).toFormulaString(HSSFEvaluationWorkbook.create(wb2))
+                );
+                assertEquals('R', nr.getNameDefinition()[0].getRVAType());
             }
         }
-        assertNotNull(tr);
-        assertEquals(1, tr._tabids.length);
-        assertEquals(0, tr._tabids[0]);
-
-        // Ensure the print setup
-        assertEquals("new_sheet!$A$1:$C$1", wb2.getPrintArea(0));
-        HSSFName printArea = wb2.getName("Print_Area");
-        assertNotNull(printArea);
-        assertEquals("new_sheet!$A$1:$C$1", printArea.getRefersToFormula());
-
-        // Needs reference not value
-        NameRecord nr = wb2.getWorkbook().getNameRecord(
-                wb2.getNameIndex("Print_Area")
-        );
-        assertEquals("Print_Area", nr.getNameText());
-        assertEquals(1, nr.getNameDefinition().length);
-        assertEquals(
-                "new_sheet!$A$1:$C$1",
-                ((Area3DPtg) nr.getNameDefinition()[0]).toFormulaString(HSSFEvaluationWorkbook.create(wb2))
-        );
-        assertEquals('R', nr.getNameDefinition()[0].getRVAType());
-        wb2.close();
     }
 

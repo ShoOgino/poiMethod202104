@@ -1,49 +1,40 @@
     @Test
     public void test59200() throws IOException {
-        Workbook wb = _testDataProvider.createWorkbook();
-        final Sheet sheet = wb.createSheet();
+        try (Workbook wb = _testDataProvider.createWorkbook()) {
+            final Sheet sheet = wb.createSheet();
 
-        DataValidation dataValidation;
-        CellRangeAddressList headerCell = new CellRangeAddressList(0, 1, 0, 1);
-        DataValidationConstraint constraint = sheet.getDataValidationHelper().createCustomConstraint("A1<>\"\"");
+            DataValidation dataValidation;
+            CellRangeAddressList headerCell = new CellRangeAddressList(0, 1, 0, 1);
+            DataValidationConstraint constraint = sheet.getDataValidationHelper().createCustomConstraint("A1<>\"\"");
 
-        dataValidation = sheet.getDataValidationHelper().createValidation(constraint, headerCell);
+            dataValidation = sheet.getDataValidationHelper().createValidation(constraint, headerCell);
 
-        // HSSF has 32/255 limits as part of the Spec, XSSF has no limit in the spec, but Excel applies a 255 length limit!
-        // more than 255 fail for all
-        checkFailures(dataValidation, TEST_256, TEST_32, true);
-        checkFailures(dataValidation, TEST_32, TEST_256, true);
+            // HSSF has 32/255 limits as part of the Spec, XSSF has no limit in the spec, but Excel applies a 255 length limit!
+            // more than 255 fail for all
+            checkFailures(dataValidation, TEST_256, TEST_32, true);
+            checkFailures(dataValidation, TEST_32, TEST_256, true);
 
-        // null does work
-        checkFailures(dataValidation, null, null, false);
+            // null does work
+            checkFailures(dataValidation, null, null, false);
 
-        // more than 32 title fail for HSSFWorkbook
-        checkFailures(dataValidation, TEST_255, TEST_32, wb instanceof HSSFWorkbook);
+            // more than 32 title fail for HSSFWorkbook
+            checkFailures(dataValidation, TEST_255, TEST_32, wb instanceof HSSFWorkbook);
 
-        // special characters work
-        checkFailures(dataValidation, TEST_SPECIAL_TITLE, TEST_SPECIAL, false);
+            // special characters work
+            checkFailures(dataValidation, TEST_SPECIAL_TITLE, TEST_SPECIAL, false);
 
-        // 32 length title and 255 length text work for both
-        checkFailures(dataValidation, TEST_32, TEST_255, false);
+            // 32 length title and 255 length text work for both
+            checkFailures(dataValidation, TEST_32, TEST_255, false);
 
-        dataValidation.setShowErrorBox(false);
-        sheet.addValidationData(dataValidation);
+            dataValidation.setShowErrorBox(false);
+            sheet.addValidationData(dataValidation);
 
-        // write out and read back in to trigger some more validation
-        final Workbook wbBack = _testDataProvider.writeOutAndReadBack(wb);
+            // write out and read back in to trigger some more validation
+            final Workbook wbBack = _testDataProvider.writeOutAndReadBack(wb);
 
-        final Sheet sheetBack = wbBack.getSheetAt(0);
-        final List<? extends DataValidation> dataValidations = sheetBack.getDataValidations();
-        assertEquals(1, dataValidations.size());
-
-        /*String ext = (wb instanceof HSSFWorkbook) ? ".xls" : ".xlsx";
-        OutputStream str = new FileOutputStream("C:\\temp\\59200" + ext);
-        try {
-            wb.write(str);
-        } finally {
-            str.close();
-        }*/
-
-        wb.close();
+            final Sheet sheetBack = wbBack.getSheetAt(0);
+            final List<? extends DataValidation> dataValidations = sheetBack.getDataValidations();
+            assertEquals(1, dataValidations.size());
+        }
     }
 

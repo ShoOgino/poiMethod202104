@@ -4,86 +4,86 @@
      */
     @Test
     public void bugZipCodeFormulas() throws Exception {
-        HSSFWorkbook wb1 = new HSSFWorkbook();
-        HSSFSheet s = wb1.createSheet();
-        s.createRow(0);
-        HSSFCell c1 = s.getRow(0).createCell(0);
-        HSSFCell c2 = s.getRow(0).createCell(1);
-        HSSFCell c3 = s.getRow(0).createCell(2);
+        try (HSSFWorkbook wb1 = new HSSFWorkbook()) {
+            HSSFSheet s = wb1.createSheet();
+            s.createRow(0);
+            HSSFCell c1 = s.getRow(0).createCell(0);
+            HSSFCell c2 = s.getRow(0).createCell(1);
+            HSSFCell c3 = s.getRow(0).createCell(2);
 
-        // As number and string
-        c1.setCellFormula("70164");
-        c2.setCellFormula("\"70164\"");
-        c3.setCellFormula("\"90210\"");
+            // As number and string
+            c1.setCellFormula("70164");
+            c2.setCellFormula("\"70164\"");
+            c3.setCellFormula("\"90210\"");
 
-        // Check the formulas
-        assertEquals("70164", c1.getCellFormula());
-        assertEquals("\"70164\"", c2.getCellFormula());
+            // Check the formulas
+            assertEquals("70164", c1.getCellFormula());
+            assertEquals("\"70164\"", c2.getCellFormula());
 
-        // And check the values - blank
-        confirmCachedValue(0.0, c1);
-        confirmCachedValue(0.0, c2);
-        confirmCachedValue(0.0, c3);
+            // And check the values - blank
+            confirmCachedValue(0.0, c1);
+            confirmCachedValue(0.0, c2);
+            confirmCachedValue(0.0, c3);
 
-        // Try changing the cached value on one of the string
-        //  formula cells, so we can see it updates properly
-        c3.setCellValue(new HSSFRichTextString("test"));
-        confirmCachedValue("test", c3);
-        try {
-            c3.getNumericCellValue();
-            fail("exception should have been thrown");
-        } catch (IllegalStateException e) {
-            assertEquals("Cannot get a NUMERIC value from a STRING formula cell", e.getMessage());
-        }
-
-
-        // Now evaluate, they should all be changed
-        HSSFFormulaEvaluator eval = new HSSFFormulaEvaluator(wb1);
-        eval.evaluateFormulaCell(c1);
-        eval.evaluateFormulaCell(c2);
-        eval.evaluateFormulaCell(c3);
-
-        // Check that the cells now contain
-        //  the correct values
-        confirmCachedValue(70164.0, c1);
-        confirmCachedValue("70164", c2);
-        confirmCachedValue("90210", c3);
+            // Try changing the cached value on one of the string
+            //  formula cells, so we can see it updates properly
+            c3.setCellValue(new HSSFRichTextString("test"));
+            confirmCachedValue("test", c3);
+            try {
+                c3.getNumericCellValue();
+                fail("exception should have been thrown");
+            } catch (IllegalStateException e) {
+                assertEquals("Cannot get a NUMERIC value from a STRING formula cell", e.getMessage());
+            }
 
 
-        // Write and read
-        HSSFWorkbook wb2 = writeOutAndReadBack(wb1);
-        wb1.close();
-        HSSFSheet ns = wb2.getSheetAt(0);
-        HSSFCell nc1 = ns.getRow(0).getCell(0);
-        HSSFCell nc2 = ns.getRow(0).getCell(1);
-        HSSFCell nc3 = ns.getRow(0).getCell(2);
+            // Now evaluate, they should all be changed
+            HSSFFormulaEvaluator eval = new HSSFFormulaEvaluator(wb1);
+            eval.evaluateFormulaCell(c1);
+            eval.evaluateFormulaCell(c2);
+            eval.evaluateFormulaCell(c3);
 
-        // Re-check
-        confirmCachedValue(70164.0, nc1);
-        confirmCachedValue("70164", nc2);
-        confirmCachedValue("90210", nc3);
+            // Check that the cells now contain
+            //  the correct values
+            confirmCachedValue(70164.0, c1);
+            confirmCachedValue("70164", c2);
+            confirmCachedValue("90210", c3);
 
-        int i = 0;
-        for (Iterator<CellValueRecordInterface> it = ns.getSheet().getCellValueIterator(); it.hasNext(); i++) {
-            CellValueRecordInterface cvr = it.next();
-            if (cvr instanceof FormulaRecordAggregate) {
-                FormulaRecordAggregate fr = (FormulaRecordAggregate) cvr;
 
-                if (i == 0) {
-                    assertEquals(70164.0, fr.getFormulaRecord().getValue(), 0.0001);
-                    assertNull(fr.getStringRecord());
-                } else if (i == 1) {
-                    assertEquals(0.0, fr.getFormulaRecord().getValue(), 0.0001);
-                    assertNotNull(fr.getStringRecord());
-                    assertEquals("70164", fr.getStringRecord().getString());
-                } else {
-                    assertEquals(0.0, fr.getFormulaRecord().getValue(), 0.0001);
-                    assertNotNull(fr.getStringRecord());
-                    assertEquals("90210", fr.getStringRecord().getString());
+            // Write and read
+            try (HSSFWorkbook wb2 = writeOutAndReadBack(wb1)) {
+                HSSFSheet ns = wb2.getSheetAt(0);
+                HSSFCell nc1 = ns.getRow(0).getCell(0);
+                HSSFCell nc2 = ns.getRow(0).getCell(1);
+                HSSFCell nc3 = ns.getRow(0).getCell(2);
+
+                // Re-check
+                confirmCachedValue(70164.0, nc1);
+                confirmCachedValue("70164", nc2);
+                confirmCachedValue("90210", nc3);
+
+                int i = 0;
+                for (Iterator<CellValueRecordInterface> it = ns.getSheet().getCellValueIterator(); it.hasNext(); i++) {
+                    CellValueRecordInterface cvr = it.next();
+                    if (cvr instanceof FormulaRecordAggregate) {
+                        FormulaRecordAggregate fr = (FormulaRecordAggregate) cvr;
+
+                        if (i == 0) {
+                            assertEquals(70164.0, fr.getFormulaRecord().getValue(), 0.0001);
+                            assertNull(fr.getStringRecord());
+                        } else if (i == 1) {
+                            assertEquals(0.0, fr.getFormulaRecord().getValue(), 0.0001);
+                            assertNotNull(fr.getStringRecord());
+                            assertEquals("70164", fr.getStringRecord().getString());
+                        } else {
+                            assertEquals(0.0, fr.getFormulaRecord().getValue(), 0.0001);
+                            assertNotNull(fr.getStringRecord());
+                            assertEquals("90210", fr.getStringRecord().getString());
+                        }
+                    }
                 }
+                assertEquals(3, i);
             }
         }
-        assertEquals(3, i);
-        wb2.close();
     }
 

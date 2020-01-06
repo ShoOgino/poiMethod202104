@@ -2,46 +2,46 @@
      *test opening the resulting file in Excel*/
     @Test
     public final void bug22568() throws IOException {
-        Workbook wb1 = _testDataProvider.createWorkbook();
-        Sheet sheet = wb1.createSheet("ExcelTest") ;
+        try (Workbook wb1 = _testDataProvider.createWorkbook()) {
+            Sheet sheet = wb1.createSheet("ExcelTest");
 
-        int col_cnt = 3;
-        int rw_cnt = 2000;
+            int col_cnt = 3;
+            int rw_cnt = 2000;
 
-        Row rw ;
-        rw = sheet.createRow(0) ;
-        //Header row
-        for(int j=0; j<col_cnt; j++){
-            Cell cell = rw.createCell(j) ;
-            cell.setCellValue("Col " + (j+1));
-        }
+            Row rw;
+            rw = sheet.createRow(0);
+            //Header row
+            for (int j = 0; j < col_cnt; j++) {
+                Cell cell = rw.createCell(j);
+                cell.setCellValue("Col " + (j + 1));
+            }
 
-        for(int i=1; i<rw_cnt; i++){
-            rw = sheet.createRow(i) ;
-            for(int j=0; j<col_cnt; j++){
-                Cell cell = rw.createCell(j) ;
-                cell.setCellValue("Row:" + (i+1) + ",Column:" + (j+1));
+            for (int i = 1; i < rw_cnt; i++) {
+                rw = sheet.createRow(i);
+                for (int j = 0; j < col_cnt; j++) {
+                    Cell cell = rw.createCell(j);
+                    cell.setCellValue("Row:" + (i + 1) + ",Column:" + (j + 1));
+                }
+            }
+
+            sheet.setDefaultColumnWidth(18);
+
+            try (Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1)) {
+                sheet = wb2.getSheetAt(0);
+                rw = sheet.getRow(0);
+                //Header row
+                for (int j = 0; j < col_cnt; j++) {
+                    Cell cell = rw.getCell(j);
+                    assertEquals("Col " + (j + 1), cell.getStringCellValue());
+                }
+                for (int i = 1; i < rw_cnt; i++) {
+                    rw = sheet.getRow(i);
+                    for (int j = 0; j < col_cnt; j++) {
+                        Cell cell = rw.getCell(j);
+                        assertEquals("Row:" + (i + 1) + ",Column:" + (j + 1), cell.getStringCellValue());
+                    }
+                }
             }
         }
-
-        sheet.setDefaultColumnWidth(18) ;
-
-        Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1);
-        wb1.close();
-        sheet = wb2.getSheetAt(0);
-        rw = sheet.getRow(0);
-        //Header row
-        for(int j=0; j<col_cnt; j++){
-            Cell cell = rw.getCell(j) ;
-            assertEquals("Col " + (j+1), cell.getStringCellValue());
-        }
-        for(int i=1; i<rw_cnt; i++){
-            rw = sheet.getRow(i) ;
-            for(int j=0; j<col_cnt; j++){
-                Cell cell = rw.getCell(j) ;
-                assertEquals("Row:" + (i+1) + ",Column:" + (j+1), cell.getStringCellValue());
-            }
-        }
-        wb2.close();
     }
 

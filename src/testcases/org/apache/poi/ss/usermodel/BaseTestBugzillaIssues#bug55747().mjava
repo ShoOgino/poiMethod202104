@@ -4,64 +4,64 @@
      */
     @Test
     public void bug55747() throws IOException {
-        Workbook wb1 = _testDataProvider.createWorkbook();
-        FormulaEvaluator ev = wb1.getCreationHelper().createFormulaEvaluator();
-        Sheet s = wb1.createSheet();
+        try (Workbook wb1 = _testDataProvider.createWorkbook()) {
+            FormulaEvaluator ev = wb1.getCreationHelper().createFormulaEvaluator();
+            Sheet s = wb1.createSheet();
 
-        Row row = s.createRow(0);
-        row.createCell(0).setCellValue("abc");
-        row.createCell(1).setCellValue("");
-        row.createCell(2).setCellValue(3);
+            Row row = s.createRow(0);
+            row.createCell(0).setCellValue("abc");
+            row.createCell(1).setCellValue("");
+            row.createCell(2).setCellValue(3);
 
-        Cell cell = row.createCell(5);
-        cell.setCellFormula("IF(A1<>\"\",MID(A1,1,2),\" \")");
-        ev.evaluateAll();
-        assertEquals("ab", cell.getStringCellValue());
+            Cell cell = row.createCell(5);
+            cell.setCellFormula("IF(A1<>\"\",MID(A1,1,2),\" \")");
+            ev.evaluateAll();
+            assertEquals("ab", cell.getStringCellValue());
 
-        cell = row.createCell(6);
-        cell.setCellFormula("IF(B1<>\"\",MID(A1,1,2),\"empty\")");
-        ev.evaluateAll();
-        assertEquals("empty", cell.getStringCellValue());
+            cell = row.createCell(6);
+            cell.setCellFormula("IF(B1<>\"\",MID(A1,1,2),\"empty\")");
+            ev.evaluateAll();
+            assertEquals("empty", cell.getStringCellValue());
 
-        cell = row.createCell(7);
-        cell.setCellFormula("IF(A1<>\"\",IF(C1<>\"\",MID(A1,1,2),\"c1\"),\"c2\")");
-        ev.evaluateAll();
-        assertEquals("ab", cell.getStringCellValue());
+            cell = row.createCell(7);
+            cell.setCellFormula("IF(A1<>\"\",IF(C1<>\"\",MID(A1,1,2),\"c1\"),\"c2\")");
+            ev.evaluateAll();
+            assertEquals("ab", cell.getStringCellValue());
 
-        // Write it back out, and re-read
-        Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1);
-        wb1.close();
-        ev = wb2.getCreationHelper().createFormulaEvaluator();
-        s = wb2.getSheetAt(0);
-        row = s.getRow(0);
+            // Write it back out, and re-read
+            try (Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1)) {
+                ev = wb2.getCreationHelper().createFormulaEvaluator();
+                s = wb2.getSheetAt(0);
+                row = s.getRow(0);
 
-        // Check read ok, and re-evaluate fine
-        cell = row.getCell(5);
-        assertEquals("ab", cell.getStringCellValue());
-        assertEquals(CellType.FORMULA, cell.getCellType());
-        assertEquals("IF(A1<>\"\",MID(A1,1,2),\" \")", cell.getCellFormula());
-        ev.evaluateFormulaCell(cell);
-        assertEquals("ab", cell.getStringCellValue());
-        assertEquals(CellType.FORMULA, cell.getCellType());
-        assertEquals("IF(A1<>\"\",MID(A1,1,2),\" \")", cell.getCellFormula());
+                // Check read ok, and re-evaluate fine
+                cell = row.getCell(5);
+                assertEquals("ab", cell.getStringCellValue());
+                assertEquals(CellType.FORMULA, cell.getCellType());
+                assertEquals("IF(A1<>\"\",MID(A1,1,2),\" \")", cell.getCellFormula());
+                ev.evaluateFormulaCell(cell);
+                assertEquals("ab", cell.getStringCellValue());
+                assertEquals(CellType.FORMULA, cell.getCellType());
+                assertEquals("IF(A1<>\"\",MID(A1,1,2),\" \")", cell.getCellFormula());
 
-        cell = row.getCell(6);
-        assertEquals("empty", cell.getStringCellValue());
-        assertEquals(CellType.FORMULA, cell.getCellType());
-        assertEquals("IF(B1<>\"\",MID(A1,1,2),\"empty\")", cell.getCellFormula());
-        ev.evaluateFormulaCell(cell);
-        assertEquals("empty", cell.getStringCellValue());
-        assertEquals(CellType.FORMULA, cell.getCellType());
-        assertEquals("IF(B1<>\"\",MID(A1,1,2),\"empty\")", cell.getCellFormula());
+                cell = row.getCell(6);
+                assertEquals("empty", cell.getStringCellValue());
+                assertEquals(CellType.FORMULA, cell.getCellType());
+                assertEquals("IF(B1<>\"\",MID(A1,1,2),\"empty\")", cell.getCellFormula());
+                ev.evaluateFormulaCell(cell);
+                assertEquals("empty", cell.getStringCellValue());
+                assertEquals(CellType.FORMULA, cell.getCellType());
+                assertEquals("IF(B1<>\"\",MID(A1,1,2),\"empty\")", cell.getCellFormula());
 
-        cell = row.getCell(7);
-        assertEquals("ab", cell.getStringCellValue());
-        assertEquals(CellType.FORMULA, cell.getCellType());
-        assertEquals("IF(A1<>\"\",IF(C1<>\"\",MID(A1,1,2),\"c1\"),\"c2\")", cell.getCellFormula());
-        ev.evaluateFormulaCell(cell);
-        assertEquals("ab", cell.getStringCellValue());
-        assertEquals(CellType.FORMULA, cell.getCellType());
-        assertEquals("IF(A1<>\"\",IF(C1<>\"\",MID(A1,1,2),\"c1\"),\"c2\")", cell.getCellFormula());
-        wb2.close();
+                cell = row.getCell(7);
+                assertEquals("ab", cell.getStringCellValue());
+                assertEquals(CellType.FORMULA, cell.getCellType());
+                assertEquals("IF(A1<>\"\",IF(C1<>\"\",MID(A1,1,2),\"c1\"),\"c2\")", cell.getCellFormula());
+                ev.evaluateFormulaCell(cell);
+                assertEquals("ab", cell.getStringCellValue());
+                assertEquals(CellType.FORMULA, cell.getCellType());
+                assertEquals("IF(A1<>\"\",IF(C1<>\"\",MID(A1,1,2),\"c1\"),\"c2\")", cell.getCellFormula());
+            }
+        }
     }
 

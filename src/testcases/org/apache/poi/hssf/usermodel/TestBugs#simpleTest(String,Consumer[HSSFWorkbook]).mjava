@@ -1,0 +1,24 @@
+    private void simpleTest(String fileName, Consumer<HSSFWorkbook> addTest) throws IOException {
+        try (HSSFWorkbook wb1 = openSampleWorkbook(fileName)) {
+            if (addTest != null) {
+                addTest.accept(wb1);
+            }
+
+            HSSFSheet s = wb1.getSheetAt(0);
+            HSSFRow r = s.createRow(10_000);
+            HSSFCell c = r.createCell(0);
+            c.setCellValue(10);
+            simpleTestHelper(wb1, fileName);
+
+            try (HSSFWorkbook wb2 = writeOutAndReadBack(wb1)) {
+                if (addTest != null) {
+                    addTest.accept(wb2);
+                }
+
+                double act = wb2.getSheetAt(0).getRow(10_000).getCell(0).getNumericCellValue();
+                assertEquals(10, act, 0);
+                simpleTestHelper(wb2, fileName);
+            }
+        }
+    }
+
