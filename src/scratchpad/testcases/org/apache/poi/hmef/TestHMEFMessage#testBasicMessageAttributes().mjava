@@ -1,8 +1,6 @@
     @Test
     public void testBasicMessageAttributes() throws Exception {
-        HMEFMessage msg = new HMEFMessage(
-                _samples.openResourceAsStream("quick-winmail.dat")
-        );
+        HMEFMessage msg = openSample("quick-winmail.dat");
 
         // Should have version, codepage, class and MAPI
         assertEquals(4, msg.getMessageAttributes().size());
@@ -22,13 +20,12 @@
         assertNull(msg.getMessageAttribute(TNEFProperty.ID_ATTACHDATA));
 
         // Now check the details of one or two
-        assertEquals(
-                0x010000,
-                LittleEndian.getInt(msg.getMessageAttribute(TNEFProperty.ID_TNEFVERSION).getData())
-        );
-        assertEquals(
-                "IPM.Microsoft Mail.Note\0",
-            new String(msg.getMessageAttribute(TNEFProperty.ID_MESSAGECLASS).getData(), StandardCharsets.US_ASCII)
-        );
+        TNEFAttribute version = msg.getMessageAttribute(TNEFProperty.ID_TNEFVERSION);
+        assertNotNull(version);
+        assertEquals(0x010000, LittleEndian.getInt(version.getData()));
+
+        TNEFAttribute msgCls = msg.getMessageAttribute(TNEFProperty.ID_MESSAGECLASS);
+        assertNotNull(msgCls);
+        assertEquals("IPM.Microsoft Mail.Note\0", new String(msgCls.getData(), StandardCharsets.US_ASCII));
     }
 
