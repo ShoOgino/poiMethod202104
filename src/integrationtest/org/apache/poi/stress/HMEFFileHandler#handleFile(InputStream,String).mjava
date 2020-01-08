@@ -1,19 +1,26 @@
 	@Override
     public void handleFile(InputStream stream, String path) throws Exception {
 		HMEFMessage msg = new HMEFMessage(stream);
-		
+
 		// list all properties
 		StringBuilder props = new StringBuilder();
 		for(MAPIAttribute att : msg.getMessageMAPIAttributes()) {
 			props.append(att.getType()).append(": ").append(MAPIStringAttribute.getAsString( att)).append("\n");
 		}
-		
+
 		// there are two test-files that have no body...
-		if(!msg.getSubject().equals("Testing TNEF Message") && !msg.getSubject().equals("TNEF test message with attachments")) {
-    		assertNotNull("Had: " + msg.getBody() + ", " + msg.getSubject() + ", " + msg.getAttachments() + ": " + props,
-    				msg.getBody());
+		String[] HTML_BODY = {
+			"Testing TNEF Message", "TNEF test message with attachments", "Test"
+		};
+		String bodyStr;
+		if(Arrays.asList(HTML_BODY).contains(msg.getSubject())) {
+			MAPIAttribute bodyHtml = msg.getMessageMAPIAttribute(MAPIProperty.BODY_HTML);
+			assertNotNull(bodyHtml);
+			bodyStr = new String(bodyHtml.getData(), getEncoding(msg));
+		} else {
+			bodyStr = msg.getBody();
 		}
-		assertNotNull("Had: " + msg.getBody() + ", " + msg.getSubject() + ", " + msg.getAttachments() + ": " + props,
-				msg.getSubject());
+		assertNotNull("Body is not set", bodyStr);
+		assertNotNull("Subject is not set", msg.getSubject());
 	}
 
