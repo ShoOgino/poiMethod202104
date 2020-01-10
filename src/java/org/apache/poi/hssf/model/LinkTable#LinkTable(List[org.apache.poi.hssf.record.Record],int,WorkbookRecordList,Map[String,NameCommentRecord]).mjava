@@ -1,0 +1,46 @@
+    public LinkTable(List<org.apache.poi.hssf.record.Record> inputList, int startIndex, WorkbookRecordList workbookRecordList, Map<String, NameCommentRecord> commentRecords) {
+
+        _workbookRecordList = workbookRecordList;
+        RecordStream rs = new RecordStream(inputList, startIndex);
+
+        List<ExternalBookBlock> temp = new ArrayList<>();
+        while (rs.peekNextClass() == SupBookRecord.class) {
+            temp.add(new ExternalBookBlock(rs));
+        }
+
+        _externalBookBlocks = new ExternalBookBlock[temp.size()];
+        temp.toArray(_externalBookBlocks);
+        temp.clear();
+
+        if (_externalBookBlocks.length > 0) {
+            // If any ExternalBookBlock present, there is always 1 of ExternSheetRecord
+            if (rs.peekNextClass() != ExternSheetRecord.class) {
+                // not quite - if written by google docs
+                _externSheetRecord = null;
+            } else {
+                _externSheetRecord = readExtSheetRecord(rs);
+            }
+        } else {
+            _externSheetRecord = null;
+        }
+
+        _definedNames = new ArrayList<>();
+        // collect zero or more DEFINEDNAMEs id=0x18,
+        //  with their comments if present
+        while (true) {
+            Class<? extends Record> nextClass = rs.peekNextClass();
+            if (nextClass == NameRecord.class) {
+                NameRecord nr = (NameRecord) rs.getNext();
+                _definedNames.add(nr);
+            } else if (nextClass == NameCommentRecord.class) {
+                NameCommentRecord ncr = (NameCommentRecord) rs.getNext();
+                commentRecords.put(ncr.getNameText(), ncr);
+            } else {
+                break;
+            }
+        }
+
+        _recordCount = rs.getCountRead();
+        _workbookRecordList.getRecords().addAll(inputList.subList(startIndex, startIndex + _recordCount));
+    }
+

@@ -1,0 +1,40 @@
+    protected static org.apache.poi.hslf.record.Record[] addEncryptionRecord(org.apache.poi.hslf.record.Record[] records, DocumentEncryptionAtom dea) {
+        assert(dea != null);
+        int ueaIdx = -1, ptrIdx = -1, deaIdx = -1, idx = -1;
+        for (org.apache.poi.hslf.record.Record r : records) {
+            idx++;
+            if (r instanceof UserEditAtom) {
+                ueaIdx = idx;
+            } else if (r instanceof PersistPtrHolder) {
+                ptrIdx = idx;
+            } else if (r instanceof DocumentEncryptionAtom) {
+                deaIdx = idx;
+            }
+        }
+        assert(ueaIdx != -1 && ptrIdx != -1 && ptrIdx < ueaIdx);
+        if (deaIdx != -1) {
+            DocumentEncryptionAtom deaOld = (DocumentEncryptionAtom)records[deaIdx];
+            dea.setLastOnDiskOffset(deaOld.getLastOnDiskOffset());
+            records[deaIdx] = dea;
+            return records;
+        } else {
+            PersistPtrHolder ptr = (PersistPtrHolder)records[ptrIdx];
+            UserEditAtom uea = ((UserEditAtom)records[ueaIdx]);
+            dea.setLastOnDiskOffset(ptr.getLastOnDiskOffset()-1);
+            int nextSlideId = uea.getMaxPersistWritten()+1;
+            ptr.addSlideLookup(nextSlideId, ptr.getLastOnDiskOffset()-1);
+            uea.setEncryptSessionPersistIdRef(nextSlideId);
+            uea.setMaxPersistWritten(nextSlideId);
+
+            org.apache.poi.hslf.record.Record[] newRecords = new org.apache.poi.hslf.record.Record[records.length + 1];
+            if (ptrIdx > 0) {
+                System.arraycopy(records, 0, newRecords, 0, ptrIdx);
+            }
+            if (ptrIdx < records.length-1) {
+                System.arraycopy(records, ptrIdx, newRecords, ptrIdx+1, records.length-ptrIdx);
+            }
+            newRecords[ptrIdx] = dea;
+            return newRecords;
+        }
+    }
+

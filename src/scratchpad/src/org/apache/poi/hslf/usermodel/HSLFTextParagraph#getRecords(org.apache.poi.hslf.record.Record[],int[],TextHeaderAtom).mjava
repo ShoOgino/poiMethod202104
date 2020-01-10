@@ -1,0 +1,32 @@
+    private static org.apache.poi.hslf.record.Record[] getRecords(org.apache.poi.hslf.record.Record[] records, int[] startIdx, TextHeaderAtom headerAtom) {
+        if (records == null) {
+            throw new NullPointerException("records need to be set.");
+        }
+
+        for (; startIdx[0] < records.length; startIdx[0]++) {
+            org.apache.poi.hslf.record.Record r = records[startIdx[0]];
+            if (r instanceof TextHeaderAtom && (headerAtom == null || r == headerAtom)) {
+                break;
+            }
+        }
+
+        if (startIdx[0] >= records.length) {
+            logger.log(POILogger.INFO, "header atom wasn't found - container might contain only an OutlineTextRefAtom");
+            return new org.apache.poi.hslf.record.Record[0];
+        }
+
+        int length;
+        for (length = 1; startIdx[0] + length < records.length; length++) {
+            org.apache.poi.hslf.record.Record r = records[startIdx[0]+length];
+            if (r instanceof TextHeaderAtom || r instanceof SlidePersistAtom) {
+                break;
+            }
+        }
+
+        org.apache.poi.hslf.record.Record[] result = new org.apache.poi.hslf.record.Record[length];
+        System.arraycopy(records, startIdx[0], result, 0, length);
+        startIdx[0] += length;
+
+        return result;
+    }
+

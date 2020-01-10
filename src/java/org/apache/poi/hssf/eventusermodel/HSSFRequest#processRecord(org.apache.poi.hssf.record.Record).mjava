@@ -1,0 +1,31 @@
+	/**
+	 * Called by HSSFEventFactory, passes the Record to each listener associated with
+	 * a record.sid.
+	 * 
+	 * @param rec the record to be processed
+	 *
+	 * @return numeric user-specified result code. If zero continue processing.
+	 * @throws HSSFUserException User exception condition
+	 */
+	protected short processRecord(org.apache.poi.hssf.record.Record rec) throws HSSFUserException {
+		List<HSSFListener> listeners = _records.get(Short.valueOf(rec.getSid()));
+		short userCode = 0;
+
+		if (listeners != null) {
+
+			for (int k = 0; k < listeners.size(); k++) {
+				Object listenObj = listeners.get(k);
+				if (listenObj instanceof AbortableHSSFListener) {
+					AbortableHSSFListener listener = (AbortableHSSFListener) listenObj;
+					userCode = listener.abortableProcessRecord(rec);
+					if (userCode != 0)
+						break;
+				} else {
+					HSSFListener listener = (HSSFListener) listenObj;
+					listener.processRecord(rec);
+				}
+			}
+		}
+		return userCode;
+	}
+
