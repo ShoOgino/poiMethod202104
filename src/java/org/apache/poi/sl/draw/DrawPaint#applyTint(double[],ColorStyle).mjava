@@ -6,12 +6,22 @@
      */
     private static void applyTint(double[] hsl, ColorStyle fc) {
         int tint = fc.getTint();
-        if (tint == -1) {
+        if (tint == -1 || tint == 0) {
             return;
         }
 
         // see 18.8.19 fgColor (Foreground Color)
-        double tintPct = tint / 100000.;
-        hsl[2] = hsl[2]*(1.-tintPct) + (100.-100.*(1.-tintPct));
+        double tintPct = tint / 100_000.;
+
+
+        // The tint value is stored as a double from -1.0 .. 1.0, where -1.0 means 100% darken
+        // and 1.0 means 100% lighten. Also, 0.0 means no change.
+        if (tintPct < 0) {
+            // Lum’ = Lum * (1.0 + tint)
+            hsl[2] *= (1 + tintPct);
+        } else {
+            // Lum‘ = Lum * (1.0-tint) + (HLSMAX – HLSMAX * (1.0-tint))
+            hsl[2] = hsl[2]*(1-tintPct) + (100-100*(1-tintPct));
+        }
     }
 

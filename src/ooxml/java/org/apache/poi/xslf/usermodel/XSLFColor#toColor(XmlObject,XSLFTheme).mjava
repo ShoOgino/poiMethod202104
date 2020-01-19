@@ -1,58 +1,31 @@
     private Color toColor(XmlObject obj, XSLFTheme theme) {
         Color color = null;
-        for (XmlObject ch : obj.selectPath("*")) {
+        List<XmlObject> xo = new ArrayList<>();
+        xo.add(obj);
+        xo.addAll(Arrays.asList(obj.selectPath("*")));
+        boolean isFirst = true;
+        for (XmlObject ch : xo) {
             if (ch instanceof CTHslColor) {
-                CTHslColor hsl = (CTHslColor)ch;
-                int h = hsl.getHue2();
-                int s = hsl.getSat2();
-                int l = hsl.getLum2();
-                color = DrawPaint.HSL2RGB(h / 60000d, s / 1000d, l / 1000d, 1d);
+                color = toColor((CTHslColor)ch);
             } else if (ch instanceof CTPresetColor) {
-                CTPresetColor prst = (CTPresetColor)ch;
-                String colorName = prst.getVal().toString();
-                PresetColor pc = PresetColor.valueOfOoxmlId(colorName);
-                if (pc != null) {
-                    color = pc.color;
-                }
+                color = toColor((CTPresetColor)ch);
             } else if (ch instanceof CTSchemeColor) {
-                CTSchemeColor schemeColor = (CTSchemeColor)ch;
-                String colorRef = schemeColor.getVal().toString();
-                if(_phClr != null) {
-                    // context color overrides the theme
-                    colorRef = _phClr.getVal().toString();
-                }
-                // find referenced CTColor in the theme and convert it to java.awt.Color via a recursive call
-                CTColor ctColor = theme == null ? null : theme.getCTColor(colorRef);
-                if(ctColor != null) {
-                    color = toColor(ctColor, null);
-                }
+                color = toColor((CTSchemeColor)ch, theme);
             } else if (ch instanceof CTScRgbColor) {
-                // color in percentage is in linear RGB color space, i.e. needs to be gamma corrected for AWT color
-                CTScRgbColor scrgb = (CTScRgbColor)ch;
-                color = new Color(DrawPaint.lin2srgb(scrgb.getR()), DrawPaint.lin2srgb(scrgb.getG()), DrawPaint.lin2srgb(scrgb.getB()));
+                color = toColor((CTScRgbColor)ch);
             } else if (ch instanceof CTSRgbColor) {
-                // color in sRGB color space, i.e. same as AWT Color
-                CTSRgbColor srgb = (CTSRgbColor)ch;
-                byte[] val = srgb.getVal();
-                color = new Color(0xFF & val[0], 0xFF & val[1], 0xFF & val[2]);
+                color = toColor((CTSRgbColor)ch);
             } else if (ch instanceof CTSystemColor) {
-                CTSystemColor sys = (CTSystemColor)ch;
-                if(sys.isSetLastClr()) {
-                    byte[] val = sys.getLastClr();
-                    color = new Color(0xFF & val[0], 0xFF & val[1], 0xFF & val[2]);
-                } else {
-                    String colorName = sys.getVal().toString();
-                    PresetColor pc = PresetColor.valueOfOoxmlId(colorName);
-                    if (pc != null) {
-                        color = pc.color;
-                    }
-                    if (color == null) {
-                        color = Color.black;
-                    }
-                }
+                color = toColor((CTSystemColor)ch);
             } else if (!(ch instanceof CTFontReference)) {
-                throw new IllegalArgumentException("Unexpected color choice: " + ch.getClass());
+                if (!isFirst) {
+                    throw new IllegalArgumentException("Unexpected color choice: " + ch.getClass());
+                }
             }
+            if (color != null) {
+                break;
+            }
+            isFirst = false;
         }
         return color;
     }

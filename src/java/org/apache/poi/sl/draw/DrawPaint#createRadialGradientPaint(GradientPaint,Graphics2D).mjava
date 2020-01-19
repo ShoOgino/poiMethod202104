@@ -1,11 +1,35 @@
     @SuppressWarnings("WeakerAccess")
     protected Paint createRadialGradientPaint(GradientPaint fill, Graphics2D graphics) {
         Rectangle2D anchor = DrawShape.getAnchor(graphics, shape);
+        if (anchor == null) {
+            return TRANSPARENT;
+        }
 
-        final Point2D pCenter = new Point2D.Double(anchor.getCenterX(), anchor.getCenterY());
+        Insets2D insets = fill.getFillToInsets();
+        if (insets == null) {
+            insets = new Insets2D(0,0,0,0);
+        }
+
+        // TODO: handle negative width/height
+        final Point2D pCenter = new Point2D.Double(
+            anchor.getCenterX(), anchor.getCenterY()
+        );
+
+        final Point2D pFocus = new Point2D.Double(
+            getCenterVal(anchor.getMinX(), anchor.getMaxX(), insets.left, insets.right),
+            getCenterVal(anchor.getMinY(), anchor.getMaxY(), insets.top, insets.bottom)
+        );
 
         final float radius = (float)Math.max(anchor.getWidth(), anchor.getHeight());
 
-        return safeFractions((f,c)->new RadialGradientPaint(pCenter,radius,f,c), fill);
+        final AffineTransform at = new AffineTransform();
+        at.translate(pFocus.getX(), pFocus.getY());
+        at.scale(
+            getScale(anchor.getMinX(), anchor.getMaxX(), insets.left, insets.right),
+            getScale(anchor.getMinY(), anchor.getMaxY(), insets.top, insets.bottom)
+        );
+        at.translate(-pFocus.getX(), -pFocus.getY());
+
+        return safeFractions((f,c)->new RadialGradientPaint(pCenter, radius, pFocus, f, c, CycleMethod.NO_CYCLE, ColorSpaceType.SRGB, at), fill);
     }
 
