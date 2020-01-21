@@ -2,25 +2,26 @@
     public void bug58630() throws Exception {
         // test deletion of sheet 0 and signing
         File tpl = copy(testdata.getFile("bug58630.xlsx"));
-        SXSSFWorkbook wb1 = new SXSSFWorkbook((XSSFWorkbook)WorkbookFactory.create(tpl), 10);
-        wb1.setCompressTempFiles(true);
-        wb1.removeSheetAt(0);
-        ByteArrayOutputStream os = new ByteArrayOutputStream();
-        wb1.write(os);
-        wb1.close();
-        OPCPackage pkg = OPCPackage.open(new ByteArrayInputStream(os.toByteArray()));
-        
-        initKeyPair("Test", "CN=Test");
-        SignatureConfig signatureConfig = new SignatureConfig();
-        signatureConfig.setKey(keyPair.getPrivate());
-        signatureConfig.setSigningCertificateChain(Collections.singletonList(x509));
-        signatureConfig.setOpcPackage(pkg);
-        
-        SignatureInfo si = new SignatureInfo();
-        si.setSignatureConfig(signatureConfig);
-        si.confirmSignature();
-        assertTrue("invalid signature", si.verifySignature());
-        
-        pkg.close();
+        try (SXSSFWorkbook wb1 = new SXSSFWorkbook((XSSFWorkbook)WorkbookFactory.create(tpl), 10)) {
+            wb1.setCompressTempFiles(true);
+            wb1.removeSheetAt(0);
+            ByteArrayOutputStream os = new ByteArrayOutputStream();
+            wb1.write(os);
+            wb1.close();
+            try (OPCPackage pkg = OPCPackage.open(new ByteArrayInputStream(os.toByteArray()))) {
+
+                initKeyPair("Test", "CN=Test");
+                SignatureConfig signatureConfig = new SignatureConfig();
+                signatureConfig.setKey(keyPair.getPrivate());
+                signatureConfig.setSigningCertificateChain(Collections.singletonList(x509));
+                signatureConfig.setOpcPackage(pkg);
+
+                SignatureInfo si = new SignatureInfo();
+                si.setSignatureConfig(signatureConfig);
+                si.confirmSignature();
+                assertTrue("invalid signature", si.verifySignature());
+
+            }
+        }
     }
 

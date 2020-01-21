@@ -14,31 +14,31 @@
         }
         x509 = certChain.get(0);
         keyPair = new KeyPair(x509.getPublicKey(), (PrivateKey)key);
-        
+
         String testFile = "hello-world-unsigned.xlsx";
-        OPCPackage pkg = OPCPackage.open(copy(testdata.getFile(testFile)), PackageAccess.READ_WRITE);
+        try (OPCPackage pkg = OPCPackage.open(copy(testdata.getFile(testFile)), PackageAccess.READ_WRITE)) {
 
-        SignatureConfig signatureConfig = new SignatureConfig();
-        signatureConfig.setKey(keyPair.getPrivate());
-        signatureConfig.setSigningCertificateChain(certChain);
-        Calendar oldCal = LocaleUtil.getLocaleCalendar(2007, 7, 1);
-        signatureConfig.setExecutionTime(oldCal.getTime());
-        signatureConfig.setDigestAlgo(HashAlgorithm.sha1);
-        signatureConfig.setOpcPackage(pkg);
-        
-        SignatureInfo si = new SignatureInfo();
-        si.setSignatureConfig(signatureConfig);
+            SignatureConfig signatureConfig = new SignatureConfig();
+            signatureConfig.setKey(keyPair.getPrivate());
+            signatureConfig.setSigningCertificateChain(certChain);
+            Calendar oldCal = LocaleUtil.getLocaleCalendar(2007, 7, 1);
+            signatureConfig.setExecutionTime(oldCal.getTime());
+            signatureConfig.setDigestAlgo(HashAlgorithm.sha1);
+            signatureConfig.setOpcPackage(pkg);
 
-        si.confirmSignature();
-        
-        for (SignaturePart sp : si.getSignatureParts()){
-            assertTrue("Could not validate", sp.validate());
-            X509Certificate signer = sp.getSigner();
-            assertNotNull("signer undefined?!", signer);
-            List<X509Certificate> certChainRes = sp.getCertChain();
-            assertEquals(3, certChainRes.size());
+            SignatureInfo si = new SignatureInfo();
+            si.setSignatureConfig(signatureConfig);
+
+            si.confirmSignature();
+
+            for (SignaturePart sp : si.getSignatureParts()) {
+                assertTrue("Could not validate", sp.validate());
+                X509Certificate signer = sp.getSigner();
+                assertNotNull("signer undefined?!", signer);
+                List<X509Certificate> certChainRes = sp.getCertChain();
+                assertEquals(3, certChainRes.size());
+            }
+
         }
-        
-        pkg.close();
     }
 

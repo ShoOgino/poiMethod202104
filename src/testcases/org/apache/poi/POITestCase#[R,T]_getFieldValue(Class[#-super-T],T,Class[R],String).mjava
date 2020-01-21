@@ -2,18 +2,14 @@
      * Utility method to get the value of a private/protected field.
      * Only use this method in test cases!!!
      */
+    @SuppressWarnings({"unused", "unchecked"})
     public static <R,T> R getFieldValue(final Class<? super T> clazz, final T instance, final Class<R> fieldType, final String fieldName) {
         assertTrue("Reflection of private fields is only allowed for POI classes.", clazz.getName().startsWith("org.apache.poi."));
         try {
-            return AccessController.doPrivileged(new PrivilegedExceptionAction<R>() {
-                @Override
-                @SuppressWarnings("unchecked")
-                @SuppressForbidden("For test usage only")
-                public R run() throws Exception {
-                    Field f = clazz.getDeclaredField(fieldName);
-                    f.setAccessible(true);
-                    return (R) f.get(instance);
-                }
+            return AccessController.doPrivileged((PrivilegedExceptionAction<R>) () -> {
+                Field f = clazz.getDeclaredField(fieldName);
+                f.setAccessible(true);
+                return (R) f.get(instance);
             });
         } catch (PrivilegedActionException pae) {
             throw new RuntimeException("Cannot access field '" + fieldName + "' of class " + clazz, pae.getException());

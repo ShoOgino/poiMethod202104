@@ -2,27 +2,28 @@
     public void testManipulation() throws Exception {
         // sign & validate
         String testFile = "hello-world-unsigned.xlsx";
-        @SuppressWarnings("resource")
-        OPCPackage pkg = OPCPackage.open(copy(testdata.getFile(testFile)), PackageAccess.READ_WRITE);
-        sign(pkg, "Test", "CN=Test", 1);
-        
-        // manipulate
-        XSSFWorkbook wb = new XSSFWorkbook(pkg);
-        wb.setSheetName(0, "manipulated");
-        // ... I don't know, why commit is protected ...
-        POITestCase.callMethod(XSSFWorkbook.class, wb, Void.class, "commit", new Class[0], new Object[0]);
+        try (OPCPackage pkg = OPCPackage.open(copy(testdata.getFile(testFile)), PackageAccess.READ_WRITE)) {
+            sign(pkg, "Test", "CN=Test", 1);
 
-        // todo: test a manipulation on a package part, which is not signed
-        // ... maybe in combination with #56164 
-        
-        // validate
-        SignatureConfig sic = new SignatureConfig();
-        sic.setOpcPackage(pkg);
-        SignatureInfo si = new SignatureInfo();
-        si.setSignatureConfig(sic);
-        boolean b = si.verifySignature();
-        assertFalse("signature should be broken", b);
-        
-        wb.close();
+            // manipulate
+            try (CommitableWorkbook wb = new CommitableWorkbook(pkg)) {
+                wb.setSheetName(0, "manipulated");
+                // ... I don't know, why commit is protected ...
+                wb.commit();
+
+                // todo: test a manipulation on a package part, which is not signed
+                // ... maybe in combination with #56164
+
+                // validate
+                SignatureConfig sic = new SignatureConfig();
+                sic.setOpcPackage(pkg);
+                SignatureInfo si = new SignatureInfo();
+                si.setSignatureConfig(sic);
+                boolean b = si.verifySignature();
+                assertFalse("signature should be broken", b);
+            }
+            thrown.expectMessage("Fail to save: an error occurs while saving the package : Zip File is close");
+            thrown.expect(OpenXML4JRuntimeException.class);
+        }
     }
 
