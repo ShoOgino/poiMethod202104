@@ -4,29 +4,24 @@
      */
     public void refAreaArrayFunctionTest(String function) throws IOException {
 
-        HSSFWorkbook     wb1    = new HSSFWorkbook();
-        HSSFSheet        s      = wb1.createSheet();
-        HSSFRow          r;
-        HSSFCell         c;
+        try (HSSFWorkbook wb1 = new HSSFWorkbook()) {
+            HSSFSheet s = wb1.createSheet();
+            HSSFRow r = s.createRow(0);
+            HSSFCell c = r.createCell(0);
+            c.setCellFormula(function + "(A2:A4,B2:B4)");
+            c = r.createCell(1);
+            c.setCellFormula(function + "($A$2:$A4,B$2:B4)");
 
+            try (HSSFWorkbook wb2 = writeOutAndReadBack(wb1)) {
+                s = wb2.getSheetAt(0);
+                r = s.getRow(0);
+                c = r.getCell(0);
 
-        r = s.createRow(0);
+                assertEquals("function =" + function + "(A2:A4,B2:B4)", (function + "(A2:A4,B2:B4)"), c.getCellFormula());
 
-        c = r.createCell(0);
-        c.setCellFormula(function+"(A2:A4,B2:B4)");
-        c=r.createCell(1);
-        c.setCellFormula(function+"($A$2:$A4,B$2:B4)");
-
-        HSSFWorkbook wb2 = HSSFTestDataSamples.writeOutAndReadBack(wb1);
-        wb1.close();
-        s = wb2.getSheetAt(0);
-        r = s.getRow(0);
-        c = r.getCell(0);
-
-        assertEquals("function =" + function + "(A2:A4,B2:B4)", (function + "(A2:A4,B2:B4)"), c.getCellFormula());
-
-        c=r.getCell(1);
-        assertEquals("function =" + function + "($A$2:$A4,B$2:B4)", (function + "($A$2:$A4,B$2:B4)"), c.getCellFormula());
-        wb2.close();
+                c = r.getCell(1);
+                assertEquals("function =" + function + "($A$2:$A4,B$2:B4)", (function + "($A$2:$A4,B$2:B4)"), c.getCellFormula());
+            }
+        }
     }
 

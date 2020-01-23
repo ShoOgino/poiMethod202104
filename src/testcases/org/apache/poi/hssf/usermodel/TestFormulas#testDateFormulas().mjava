@@ -1,29 +1,30 @@
     @Test
     public void testDateFormulas() throws IOException {
-        HSSFWorkbook     wb     = new HSSFWorkbook();
-        HSSFSheet        s      = wb.createSheet("testSheet1");
-        HSSFRow          r;
-        HSSFCell         c;
+        try (HSSFWorkbook wb = new HSSFWorkbook()) {
+            HSSFSheet s = wb.createSheet("testSheet1");
+            HSSFRow r = s.createRow(0);
+            HSSFCell c = r.createCell(0);
 
-        r = s.createRow(0 );
-        c = r.createCell(0 );
+            Calendar cal = LocaleUtil.getLocaleCalendar();
 
-        HSSFCellStyle cellStyle = wb.createCellStyle();
-        cellStyle.setDataFormat(HSSFDataFormat.getBuiltinFormat("m/d/yy h:mm"));
-        c.setCellValue(new Date());
-        c.setCellStyle(cellStyle);
+            HSSFCellStyle cellStyle = wb.createCellStyle();
+            cellStyle.setDataFormat(HSSFDataFormat.getBuiltinFormat("m/d/yy h:mm"));
+            c.setCellValue(cal.getTime());
+            c.setCellStyle(cellStyle);
 
-       // assertEquals("Checking hour = " + hour, date.getTime().getTime(),
-       //              DateUtil.getJavaDate(excelDate).getTime());
+            int hour = cal.get(Calendar.HOUR_OF_DAY);
+            double excelDate = c.getNumericCellValue();
+            assertEquals(cal.getTime().getTime(), DateUtil.getJavaDate(excelDate).getTime());
+            assertEquals(cal.getTime(), c.getDateCellValue());
 
-        for (int k=1; k < 100; k++) {
-          r=s.createRow(k);
-          c=r.createCell(0);
-          c.setCellFormula("A"+(k)+"+1");
-          c.setCellStyle(cellStyle);
+            for (int k = 1; k < 100; k++) {
+                r = s.createRow(k);
+                c = r.createCell(0);
+                c.setCellFormula("A" + (k) + "+1");
+                c.setCellStyle(cellStyle);
+            }
+
+            writeOutAndReadBack(wb).close();
         }
-
-        HSSFTestDataSamples.writeOutAndReadBack(wb).close();
-        wb.close();
     }
 

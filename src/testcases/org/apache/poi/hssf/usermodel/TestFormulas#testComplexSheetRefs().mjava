@@ -1,14 +1,19 @@
     /** test for bug 34021*/
     @Test
-    public void testComplexSheetRefs () throws IOException {
-        try (HSSFWorkbook sb = new HSSFWorkbook()) {
-            HSSFSheet s1 = sb.createSheet("Sheet a.1");
-            HSSFSheet s2 = sb.createSheet("Sheet.A");
+    public void testComplexSheetRefs() throws IOException {
+        try (HSSFWorkbook wb1 = new HSSFWorkbook()) {
+            HSSFSheet s1 = wb1.createSheet("Sheet a.1");
+            HSSFSheet s2 = wb1.createSheet("Sheet.A");
             s2.createRow(1).createCell(2).setCellFormula("'Sheet a.1'!A1");
             s1.createRow(1).createCell(2).setCellFormula("'Sheet.A'!A1");
-            File file = TempFile.createTempFile("testComplexSheetRefs", ".xls");
-            try (FileOutputStream stream = new FileOutputStream(file)) {
-                sb.write(stream);
+
+            try (HSSFWorkbook wb2 = writeOutAndReadBack(wb1)) {
+                s1 = wb2.getSheet("Sheet a.1");
+                assertNotNull(s1);
+                assertEquals("Sheet.A!A1", s1.getRow(1).getCell(2).getCellFormula());
+                s2 = wb2.getSheet("Sheet.A");
+                assertNotNull(s2);
+                assertEquals("'Sheet a.1'!A1", s2.getRow(1).getCell(2).getCellFormula());
             }
         }
     }
