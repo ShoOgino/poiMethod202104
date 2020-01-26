@@ -6,7 +6,7 @@
      * @param data   The byte array to serialize to.
      * @return The number of bytes serialized.
      */
-    public int serialize(int offset, byte[] data) {
+    public int serialize(final int offset, final byte[] data) {
         // Determine buffer size
         List <EscherRecord>records = getEscherRecords();
         int size = getEscherRecordSize(records);
@@ -37,18 +37,14 @@
         // the first one because it's the patriach).
         pos = offset;
         int writtenEscherBytes = 0;
-        int i;
-        for (i = 1; i < shapes.size(); i++) {
-            int endOffset = spEndingOffsets.get(i) - 1;
-            int startOffset;
-            if (i == 1)
-                startOffset = 0;
-            else
-                startOffset = spEndingOffsets.get(i - 1);
+        boolean isFirst = true;
+        int endOffset = 0;
+        for (int i = 1; i < shapes.size(); i++) {
+            int startOffset = endOffset;
+            endOffset = spEndingOffsets.get(i);
 
-            byte[] drawingData = new byte[endOffset - startOffset + 1];
-            System.arraycopy(buffer, startOffset, drawingData, 0, drawingData.length);
-            pos += writeDataIntoDrawingRecord(drawingData, writtenEscherBytes, pos, data, i);
+            byte[] drawingData = Arrays.copyOfRange(buffer, startOffset, endOffset);
+            pos += writeDataIntoDrawingRecord(drawingData, writtenEscherBytes, pos, data, isFirst);
 
             writtenEscherBytes += drawingData.length;
 
@@ -56,24 +52,22 @@
             Record obj = shapeToObj.get(shapes.get(i));
             pos += obj.serialize(pos, data);
 
-            if (i == shapes.size() - 1 && endOffset < buffer.length - 1) {
-                drawingData = new byte[buffer.length - endOffset - 1];
-                System.arraycopy(buffer, endOffset + 1, drawingData, 0, drawingData.length);
-                pos += writeDataIntoDrawingRecord(drawingData, writtenEscherBytes, pos, data, i);
-            }
+            isFirst = false;
         }
-        if ((pos - offset) < buffer.length - 1) {
-            byte[] drawingData = new byte[buffer.length - (pos - offset)];
-            System.arraycopy(buffer, (pos - offset), drawingData, 0, drawingData.length);
-            pos += writeDataIntoDrawingRecord(drawingData, writtenEscherBytes, pos, data, i);
+
+        if (endOffset < buffer.length - 1) {
+            byte[] drawingData = Arrays.copyOfRange(buffer, endOffset, buffer.length);
+            pos += writeDataIntoDrawingRecord(drawingData, writtenEscherBytes, pos, data, isFirst);
         }
 
         for (NoteRecord noteRecord : tailRec.values()) {
             pos += noteRecord.serialize(pos, data);
         }
+
         int bytesWritten = pos - offset;
-        if (bytesWritten != getRecordSize())
+        if (bytesWritten != getRecordSize()) {
             throw new RecordFormatException(bytesWritten + " bytes written but getRecordSize() reports " + getRecordSize());
+        }
         return bytesWritten;
     }
 

@@ -7,81 +7,50 @@
      * @param locFirstDrawingRecord - location of the first DrawingRecord inside sheet
      * @return new EscherAggregate create from all aggregated records which belong to drawing layer
      */
-    public static EscherAggregate createAggregate(List<RecordBase> records, int locFirstDrawingRecord) {
-        // Keep track of any shape records created so we can match them back to the object id's.
-        // Textbox objects are also treated as shape objects.
-        final List<EscherRecord> shapeRecords = new ArrayList<>();
-        EscherRecordFactory recordFactory = new DefaultEscherRecordFactory() {
-            public EscherRecord createRecord(byte[] data, int offset) {
-                EscherRecord r = super.createRecord(data, offset);
-                if (r.getRecordId() == EscherClientDataRecord.RECORD_ID || r.getRecordId() == EscherTextboxRecord.RECORD_ID) {
-                    shapeRecords.add(r);
-                }
-                return r;
-            }
-        };
-
-        // Create one big buffer
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    public static EscherAggregate createAggregate(final List<RecordBase> records, final int locFirstDrawingRecord) {
         EscherAggregate agg = new EscherAggregate(false);
-        int loc = locFirstDrawingRecord;
-        while (loc + 1 < records.size()
-                && (isDrawingLayerRecord(sid(records, loc)))) {
-            try {
-                if (!(sid(records, loc) == DrawingRecord.sid || sid(records, loc) == ContinueRecord.sid)) {
-                    loc++;
+
+        ShapeCollector recordFactory = new ShapeCollector();
+        List<Record> objectRecords = new ArrayList<>();
+
+        int nextIdx = locFirstDrawingRecord;
+        for (RecordBase rb : records.subList(locFirstDrawingRecord, records.size())) {
+            nextIdx++;
+            switch (sid(rb)) {
+                case DrawingRecord.sid:
+                    recordFactory.addBytes(((DrawingRecord)rb).getRecordData());
                     continue;
-                }
-                if (sid(records, loc) == DrawingRecord.sid) {
-                    buffer.write(((DrawingRecord) records.get(loc)).getRecordData());
-                } else {
-                    buffer.write(((ContinueRecord) records.get(loc)).getData());
-                }
-            } catch (IOException e) {
-                throw new RuntimeException("Couldn't get data from drawing/continue records", e);
+                case ContinueRecord.sid:
+                    recordFactory.addBytes(((ContinueRecord)rb).getData());
+                    continue;
+                case ObjRecord.sid:
+                case TextObjectRecord.sid:
+                    objectRecords.add((org.apache.poi.hssf.record.Record)rb);
+                    continue;
+                case NoteRecord.sid:
+                    // any NoteRecords that follow the drawing block must be aggregated and saved in the tailRec collection
+                    NoteRecord r = (NoteRecord)rb;
+                    agg.tailRec.put(r.getShapeId(), r);
+                    continue;
+                default:
+                    nextIdx--;
+                    break;
             }
-            loc++;
+            break;
+        }
+
+        // replace drawing block with the created EscherAggregate
+        records.set(locFirstDrawingRecord, agg);
+        if (locFirstDrawingRecord+1 <= nextIdx) {
+            records.subList(locFirstDrawingRecord + 1, nextIdx).clear();
         }
 
         // Decode the shapes
-        // agg.escherRecords = new ArrayList();
-        int pos = 0;
-        while (pos < buffer.size()) {
-            EscherRecord r = recordFactory.createRecord(buffer.toByteArray(), pos);
-            int bytesRead = r.fillFields(buffer.toByteArray(), pos, recordFactory);
-            agg.addEscherRecord(r);
-            pos += bytesRead;
-        }
+        Iterator<EscherRecord> shapeIter = recordFactory.parse(agg).iterator();
 
         // Associate the object records with the shapes
-        loc = locFirstDrawingRecord + 1;
-        int shapeIndex = 0;
-        while (loc < records.size()
-                && (isDrawingLayerRecord(sid(records, loc)))) {
-            if (!isObjectRecord(records, loc)) {
-                loc++;
-                continue;
-            }
-            Record objRecord = (org.apache.poi.hssf.record.Record) records.get(loc);
-            agg.shapeToObj.put(shapeRecords.get(shapeIndex++), objRecord);
-            loc++;
-        }
+        objectRecords.forEach(or -> agg.shapeToObj.put(shapeIter.next(), or));
 
-        // any NoteRecords that follow the drawing block must be aggregated and and saved in the tailRec collection
-        while (loc < records.size()) {
-            if (sid(records, loc) == NoteRecord.sid) {
-                NoteRecord r = (NoteRecord) records.get(loc);
-                agg.tailRec.put(r.getShapeId(), r);
-            } else {
-                break;
-            }
-            loc++;
-        }
-
-        int locLastDrawingRecord = loc;
-        // replace drawing block with the created EscherAggregate
-        records.subList(locFirstDrawingRecord, locLastDrawingRecord).clear();
-        records.add(locFirstDrawingRecord, agg);
         return agg;
     }
 

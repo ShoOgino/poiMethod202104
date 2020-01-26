@@ -1,0 +1,23 @@
+    protected Supplier<? extends EscherRecord> getConstructor(short options, short recordId) {
+        EscherRecordTypes recordTypes = EscherRecordTypes.forTypeID(recordId);
+
+        // Options of 0x000F means container record
+        // However, EscherTextboxRecord are containers of records for the host application,
+        // not of other Escher records, but those are returned by the above anyway
+        if (recordTypes == EscherRecordTypes.UNKNOWN && IS_CONTAINER.isAllSet(options)) {
+            return EscherContainerRecord::new;
+        }
+
+        if (recordTypes.constructor != null) {
+            return recordTypes.constructor;
+        }
+
+        // handle unknown blip records
+        if (EscherBlipRecord.RECORD_ID_START <= recordId && recordId <= EscherBlipRecord.RECORD_ID_END) {
+            return EscherBlipRecord::new;
+        }
+
+        // catch all
+        return UnknownEscherRecord::new;
+    }
+
