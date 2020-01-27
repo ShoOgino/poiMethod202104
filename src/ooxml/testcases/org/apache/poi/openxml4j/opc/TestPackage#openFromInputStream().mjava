@@ -7,20 +7,21 @@
 	public void openFromInputStream() throws IOException, InvalidFormatException {
 		String originalFile = OpenXML4JTestDataSamples.getSampleFileName("TestPackageCommon.docx");
 
-		FileInputStream finp = new FileInputStream(originalFile);
+		try (FileInputStream finp = new FileInputStream(originalFile)) {
+			@SuppressWarnings("resource")
+			OPCPackage p = OPCPackage.open(finp);
 
-		@SuppressWarnings("resource")
-        OPCPackage p = OPCPackage.open(finp);
+			try {
+				assertNotNull(p);
+				assertNotNull(p.getRelationships());
+				assertEquals(12, p.getParts().size());
 
-		assertNotNull(p);
-		assertNotNull(p.getRelationships());
-		assertEquals(12, p.getParts().size());
-
-		// Check it has the usual bits
-		assertTrue(p.hasRelationships());
-		assertTrue(p.containPart(PackagingURIHelper.createPartName("/_rels/.rels")));
-		
-		p.revert();
-		finp.close();
+				// Check it has the usual bits
+				assertTrue(p.hasRelationships());
+				assertTrue(p.containPart(PackagingURIHelper.createPartName("/_rels/.rels")));
+			} finally {
+				p.revert();
+			}
+		}
 	}
 
