@@ -5,7 +5,7 @@
      * @param parent parent part
      * @param part  the PackagePart representing the created instance
      * @return A new instance of a POIXMLDocumentPart.
-     * 
+     *
      * @since by POI 3.14-Beta1
      */
     public POIXMLDocumentPart createDocumentPart(POIXMLDocumentPart parent, PackagePart part) {
@@ -15,20 +15,22 @@
 
         // don't parse the document parts, if its class can't be determined
         // or if it's a package relation of another embedded resource
-        if (descriptor == null || descriptor.getRelationClass() == null || POIXMLDocument.PACK_OBJECT_REL_TYPE.equals(relType)) {
+        try {
+            if (descriptor != null && !POIXMLDocument.PACK_OBJECT_REL_TYPE.equals(relType)) {
+                ParentPartConstructor parentPartConstructor = descriptor.getParentPartConstructor();
+                if (parentPartConstructor != null) {
+                    return parentPartConstructor.init(parent, part);
+                }
+                PackagePartConstructor packagePartConstructor = descriptor.getPackagePartConstructor();
+                if (packagePartConstructor != null) {
+                    return packagePartConstructor.init(part);
+                }
+            }
+
             LOGGER.log(POILogger.DEBUG, "using default POIXMLDocumentPart for " + rel.getRelationshipType());
             return new POIXMLDocumentPart(parent, part);
-        }
-
-        Class<? extends POIXMLDocumentPart> cls = descriptor.getRelationClass();
-        try {
-            try {
-                return createDocumentPart(cls, PARENT_PART, new Object[]{parent, part});
-            } catch (NoSuchMethodException e) {
-                return createDocumentPart(cls, ORPHAN_PART, new Object[]{part});
-            }
-        } catch (Exception e) {
-            throw new POIXMLException((e.getCause() != null ? e.getCause() : e).getMessage(), e);
+        } catch (IOException | XmlException e) {
+            throw new POIXMLException(e.getMessage(), e);
         }
     }
 
