@@ -1,0 +1,71 @@
+    /**
+     * Internal code - API may change any time!
+     * <p>
+     * The {@link #selectProperty(Class, String)} xquery method has some performance penalties,
+     * which can be workaround by using {@link XmlCursor}. This method also takes into account
+     * that {@code AlternateContent} tags can occur anywhere on the given path.
+     * <p>
+     * It returns the first element found - the search order is:
+     * <ul>
+     *     <li>searching for a direct child</li>
+     *     <li>searching for a AlternateContent.Choice child</li>
+     *     <li>searching for a AlternateContent.Fallback child</li>
+     * </ul>
+     * Currently POI OOXML is based on the first edition of the ECMA 376 schema, which doesn't
+     * allow AlternateContent tags to show up everywhere. The factory flag is
+     * a workaround to process files based on a later edition. But it comes with the drawback:
+     * any change on the returned XmlObject aren't saved back to the underlying document -
+     * so it's a non updatable clone. If factory is null, a XmlException is
+     * thrown if the AlternateContent is not allowed by the surrounding element or if the
+     * extracted object is of the generic type XmlAnyTypeImpl.
+     *
+     * @param resultClass the requested result class
+     * @param factory a factory parse method reference to allow reparsing of elements
+     *                extracted from AlternateContent elements. Usually the enclosing XmlBeans type needs to be used
+     *                to parse the stream
+     * @param path the elements path, each array must contain at least 1 QName,
+     *             but can contain additional alternative tags
+     * @return the xml object at the path location, or null if not found
+     *
+     * @throws XmlException If factory is null, a XmlException is
+     *      thrown if the AlternateContent is not allowed by the surrounding element or if the
+     *      extracted object is of the generic type XmlAnyTypeImpl.
+     *
+     * @since POI 4.1.2
+     */
+    @SuppressWarnings("unchecked")
+    @Internal
+    public <T extends XmlObject> T selectProperty(Class<T> resultClass, ReparseFactory<T> factory, QName[]... path)
+    throws XmlException {
+        XmlObject xo = getXmlObject();
+        XmlCursor cur = xo.newCursor();
+        XmlCursor innerCur = null;
+        try {
+            innerCur = selectProperty(cur, path, 0, factory != null, false);
+            if (innerCur == null) {
+                return null;
+            }
+
+            // Pesky XmlBeans bug - see Bugzilla #49934
+            // it never happens when using the full ooxml-schemas jar but may happen with the abridged poi-ooxml-schemas
+            xo = innerCur.getObject();
+            if (xo instanceof XmlAnyTypeImpl) {
+                String errorTxt = OSGI_ERROR
+                    .replace("<CLASS>", resultClass.getSimpleName())
+                    .replace("<XSB>", resultClass.getSimpleName().toLowerCase(Locale.ROOT)+"*");
+                if (factory == null) {
+                    throw new XmlException(errorTxt);
+                } else {
+                    xo = factory.parse(innerCur.newXMLStreamReader());
+                }
+            }
+
+            return (T)xo;
+        } finally {
+            cur.dispose();
+            if (innerCur != null) {
+                innerCur.dispose();
+            }
+        }
+    }
+
