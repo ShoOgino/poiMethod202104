@@ -1,10 +1,9 @@
     CustomGeometry getGeometry(Path2D path2D) {
-        final ObjectFactory of = new ObjectFactory();
-        final CTCustomGeometry2D cusGeo = of.createCTCustomGeometry2D();
-        cusGeo.setAvLst(of.createCTGeomGuideList());
-        cusGeo.setGdLst(of.createCTGeomGuideList());
-        cusGeo.setAhLst(of.createCTAdjustHandleList());
-        cusGeo.setCxnLst(of.createCTConnectionSiteList());
+        final CTCustomGeometry2D cusGeo = OF.createCTCustomGeometry2D();
+        cusGeo.setAvLst(OF.createCTGeomGuideList());
+        cusGeo.setGdLst(OF.createCTGeomGuideList());
+        cusGeo.setAhLst(OF.createCTAdjustHandleList());
+        cusGeo.setCxnLst(OF.createCTConnectionSiteList());
 
         final AbstractEscherOptRecord opt = getEscherOptRecord();
 
@@ -28,8 +27,8 @@
         final int[] xyPoints = new int[2];
         boolean isClosed = false;
 
-        final CTPath2DList pathLst = of.createCTPath2DList();
-        final CTPath2D pathCT = of.createCTPath2D();
+        final CTPath2DList pathLst = OF.createCTPath2DList();
+        final CTPath2D pathCT = OF.createCTPath2D();
         final List<Object> moveLst = pathCT.getCloseOrMoveToOrLnTo();
         pathLst.getPath().add(pathCT);
         cusGeo.setPathLst(pathLst);
@@ -41,46 +40,23 @@
                 continue;
             }
             switch (pi) {
-                case escape: {
+                case escape:
                     handleEscapeInfo(pathCT, path2D, segElem, vertIter);
                     break;
-                }
                 case moveTo:
-                    if (vertIter.hasNext()) {
-                        final CTPath2DMoveTo m = of.createCTPath2DMoveTo();
-                        m.setPt(fillPoint(vertIter.next(), xyPoints));
-                        moveLst.add(m);
-                        path2D.moveTo(xyPoints[0], xyPoints[1]);
-                    }
+                    handleMoveTo(vertIter, xyPoints, moveLst, path2D);
                     break;
                 case lineTo:
-                    if (vertIter.hasNext()) {
-                        final CTPath2DLineTo m = of.createCTPath2DLineTo();
-                        m.setPt(fillPoint(vertIter.next(), xyPoints));
-                        moveLst.add(m);
-                        path2D.lineTo(xyPoints[0], xyPoints[1]);
-                    }
+                    handleLineTo(vertIter, xyPoints, moveLst, path2D);
                     break;
-                case curveTo: {
-                    final CTPath2DCubicBezierTo m = of.createCTPath2DCubicBezierTo();
-                    List<CTAdjPoint2D> mLst = m.getPt();
-
-                    int[] pts = new int[6];
-
-                    for (int i=0; vertIter.hasNext() && i<3; i++) {
-                        mLst.add(fillPoint(vertIter.next(), xyPoints));
-                        pts[i*2] = xyPoints[0];
-                        pts[i*2+1] = xyPoints[1];
-                        if (i == 2) {
-                            moveLst.add(m);
-                            path2D.curveTo(pts[0], pts[1], pts[2], pts[3], pts[4], pts[5]);
-                        }
-                    }
+                case curveTo:
+                    handleCurveTo(vertIter, xyPoints, moveLst, path2D);
                     break;
-                }
                 case close:
-                    moveLst.add(of.createCTPath2DClose());
-                    path2D.closePath();
+                    if (path2D.getCurrentPoint() != null) {
+                        moveLst.add(OF.createCTPath2DClose());
+                        path2D.closePath();
+                    }
                     isClosed = true;
                     break;
                 default:
@@ -88,28 +64,11 @@
             }
         }
 
-        EscherSimpleProperty shapePath = getEscherProperty(opt, EscherPropertyTypes.GEOMETRY__SHAPEPATH);
-        HSLFFreeformShape.ShapePath sp = HSLFFreeformShape.ShapePath.valueOf(shapePath == null ? 1 : shapePath.getPropertyValue());
-        if ((sp == HSLFFreeformShape.ShapePath.LINES_CLOSED || sp == HSLFFreeformShape.ShapePath.CURVES_CLOSED) && !isClosed) {
-            moveLst.add(of.createCTPath2DClose());
-            path2D.closePath();
+        if (!isClosed) {
+            handleClosedShape(opt, moveLst, path2D);
         }
 
-        EscherSimpleProperty geoLeft = getEscherProperty(opt, EscherPropertyTypes.GEOMETRY__LEFT);
-        EscherSimpleProperty geoRight = getEscherProperty(opt, EscherPropertyTypes.GEOMETRY__RIGHT);
-        EscherSimpleProperty geoTop = getEscherProperty(opt, EscherPropertyTypes.GEOMETRY__TOP);
-        EscherSimpleProperty geoBottom = getEscherProperty(opt, EscherPropertyTypes.GEOMETRY__BOTTOM);
-
-        final Rectangle2D bounds;
-        if (geoLeft != null && geoRight != null && geoTop != null && geoBottom != null) {
-            bounds = new Rectangle2D.Double();
-            bounds.setFrameFromDiagonal(
-                new Point2D.Double(geoLeft.getPropertyValue(), geoTop.getPropertyValue()),
-                new Point2D.Double(geoRight.getPropertyValue(), geoBottom.getPropertyValue())
-            );
-        } else {
-            bounds = path2D.getBounds2D();
-        }
+        final Rectangle2D bounds = getBounds(opt, path2D);
 
         pathCT.setW((int)Math.rint(bounds.getWidth()));
         pathCT.setH((int)Math.rint(bounds.getHeight()));
