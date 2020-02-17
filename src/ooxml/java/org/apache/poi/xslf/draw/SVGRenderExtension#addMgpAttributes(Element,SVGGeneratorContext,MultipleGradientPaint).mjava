@@ -1,0 +1,51 @@
+    private void addMgpAttributes(Element gradElem, SVGGeneratorContext genCtx, MultipleGradientPaint gradient) {
+        gradElem.setAttribute(SVG_GRADIENT_UNITS_ATTRIBUTE, SVG_USER_SPACE_ON_USE_VALUE);
+
+        // Set cycle method
+        final String cycleVal;
+        switch (gradient.getCycleMethod()) {
+            case REFLECT:
+                cycleVal = SVG_REFLECT_VALUE;
+                break;
+            case REPEAT:
+                cycleVal = SVG_REPEAT_VALUE;
+                break;
+            case NO_CYCLE:
+            default:
+                cycleVal = SVG_PAD_VALUE;
+                break;
+        }
+        gradElem.setAttribute(SVG_SPREAD_METHOD_ATTRIBUTE, cycleVal);
+
+        // Set color space
+        final String colorSpace = (gradient.getColorSpace() == LINEAR_RGB) ? SVG_LINEAR_RGB_VALUE : SVG_SRGB_VALUE;
+        gradElem.setAttribute(SVG_COLOR_INTERPOLATION_ATTRIBUTE, colorSpace);
+
+        // Set transform matrix if not identity
+        AffineTransform tf = gradient.getTransform();
+        if (!tf.isIdentity()) {
+            String matrix = "matrix(" + tf.getScaleX() + " " + tf.getShearY()
+                    + " " + tf.getShearX() + " " + tf.getScaleY() + " "
+                    + tf.getTranslateX() + " " + tf.getTranslateY() + ")";
+            gradElem.setAttribute(SVG_GRADIENT_TRANSFORM_ATTRIBUTE, matrix);
+        }
+
+        // Convert gradient stops
+        Color[] colors = gradient.getColors();
+        float[] fracs = gradient.getFractions();
+
+        for (int i = 0; i < colors.length; i++) {
+            Element stop = genCtx.getDOMFactory().createElementNS(SVG_NAMESPACE_URI, SVG_STOP_TAG);
+            SVGPaintDescriptor pd = SVGColor.toSVG(colors[i], genCtx);
+
+            stop.setAttribute(SVG_OFFSET_ATTRIBUTE, (int) (fracs[i] * 100.0f) + "%");
+            stop.setAttribute(SVG_STOP_COLOR_ATTRIBUTE, pd.getPaintValue());
+
+            if (colors[i].getAlpha() != 255) {
+                stop.setAttribute(SVG_STOP_OPACITY_ATTRIBUTE, pd.getOpacityValue());
+            }
+
+            gradElem.appendChild(stop);
+        }
+    }
+
