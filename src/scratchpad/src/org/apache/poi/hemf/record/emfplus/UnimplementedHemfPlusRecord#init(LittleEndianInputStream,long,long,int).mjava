@@ -2,8 +2,10 @@
     public long init(LittleEndianInputStream leis, long dataSize, long recordId, int flags) throws IOException {
         recordType = HemfPlusRecordType.getById(recordId);
         this.flags = flags;
-        recordBytes = IOUtils.safelyAllocate(dataSize, MAX_RECORD_LENGTH);
-        leis.readFully(recordBytes);
-        return recordBytes.length;
+        long skipped = IOUtils.skipFully(leis, dataSize);
+        if (skipped < dataSize) {
+            throw new IOException("End of stream reached before record read");
+        }
+        return skipped;
     }
 
