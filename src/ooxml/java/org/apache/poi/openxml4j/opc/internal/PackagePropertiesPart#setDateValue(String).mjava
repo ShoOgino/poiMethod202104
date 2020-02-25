@@ -10,40 +10,22 @@
         }
 
         Matcher m = TIME_ZONE_PAT.matcher(dateStr);
+        Date d = null;
         if (m.find()) {
-            String dateTzStr = dateStr.substring(0, m.start())+
-                    m.group(1)+m.group(2);
-            for (String fStr : TZ_DATE_FORMATS) {
-                SimpleDateFormat df = new SimpleDateFormat(fStr, Locale.ROOT);
-                df.setTimeZone(LocaleUtil.TIMEZONE_UTC);
-                Date d = df.parse(dateTzStr, new ParsePosition(0));
-                if (d != null) {
-                    return Optional.of(d);
-                }
-            }
+            String dateTzStr = dateStr.substring(0, m.start())+m.group(1)+m.group(2);
+            d = parseDateFormat(TZ_DATE_FORMATS, dateTzStr);
         }
-        String dateTzStr = dateStr.endsWith("Z") ? dateStr : (dateStr + "Z");
-        for (String fStr : DATE_FORMATS) {
-            SimpleDateFormat df = new SimpleDateFormat(fStr, Locale.ROOT);
-            df.setTimeZone(LocaleUtil.TIMEZONE_UTC);
-            Date d = df.parse(dateTzStr, new ParsePosition(0));
-            if (d != null) {
-                return Optional.of(d);
-            }
+        if (d == null) {
+            String dateTzStr = dateStr.endsWith("Z") ? dateStr : (dateStr + "Z");
+            d = parseDateFormat(DATE_FORMATS, dateTzStr);
         }
+        if (d != null) {
+            return Optional.of(d);
+        }
+
         //if you're here, no pattern matched, throw exception
-        StringBuilder sb = new StringBuilder();
-        int i = 0;
-        for (String fStr : TZ_DATE_FORMATS) {
-            if (i++ > 0) {
-                sb.append(", ");
-            }
-            sb.append(fStr);
-        }
-        for (String fStr : DATE_FORMATS) {
-            sb.append(", ").append(fStr);
-        }
-        throw new InvalidFormatException("Date " + dateStr + " not well formatted, "
-                + "expected format in: "+ sb);
+        String allFormats = Stream.of(TZ_DATE_FORMATS, DATE_FORMATS)
+            .flatMap(Stream::of).collect(Collectors.joining(", "));
+        throw new InvalidFormatException("Date " + dateStr + " not well formatted, expected format in: "+ allFormats);
     }
 
