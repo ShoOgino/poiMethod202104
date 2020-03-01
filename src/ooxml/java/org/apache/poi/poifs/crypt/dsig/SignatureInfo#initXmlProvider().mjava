@@ -1,18 +1,37 @@
     /**
      * Initialize the xml signing environment and the bouncycastle provider
      */
-    protected static synchronized void initXmlProvider() {
-        if (isInitialized) {
-            return;
+    @SuppressWarnings("deprecation")
+    protected void initXmlProvider() {
+        if (opcPackage == null) {
+            opcPackage = signatureConfig.getOpcPackage();
         }
-        isInitialized = true;
-
-        try {
-            Init.init();
-            RelationshipTransformService.registerDsigProvider();
-            CryptoFunctions.registerBouncyCastle();
-        } catch (Exception e) {
-            throw new RuntimeException("Xml & BouncyCastle-Provider initialization failed", e);
+        if (provider == null) {
+            provider = signatureConfig.getProvider();
+            if (provider == null) {
+                provider = XmlProviderInitSingleton.getInstance().findProvider();
+            }
+        }
+        if (signatureFactory == null) {
+            signatureFactory = signatureConfig.getSignatureFactory();
+            if (signatureFactory == null) {
+                signatureFactory = XMLSignatureFactory.getInstance("DOM", provider);
+            }
+        }
+        if (keyInfoFactory == null) {
+            keyInfoFactory = signatureConfig.getKeyInfoFactory();
+            if (keyInfoFactory == null) {
+                keyInfoFactory = KeyInfoFactory.getInstance("DOM", provider);
+            }
+        }
+        if (uriDereferencer == null) {
+            uriDereferencer = signatureConfig.getUriDereferencer();
+            if (uriDereferencer == null) {
+                uriDereferencer = new OOXMLURIDereferencer();
+            }
+        }
+        if (uriDereferencer instanceof OOXMLURIDereferencer) {
+            ((OOXMLURIDereferencer)uriDereferencer).setSignatureInfo(this);
         }
     }
 

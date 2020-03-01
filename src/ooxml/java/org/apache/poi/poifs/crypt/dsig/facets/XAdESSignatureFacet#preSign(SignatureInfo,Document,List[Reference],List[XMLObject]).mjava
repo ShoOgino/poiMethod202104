@@ -1,0 +1,45 @@
+    @Override
+    public void preSign(
+          SignatureInfo signatureInfo
+        , Document document
+        , List<Reference> references
+        , List<XMLObject> objects)
+    throws XMLSignatureException {
+        LOG.log(POILogger.DEBUG, "preSign");
+
+        SignatureConfig signatureConfig = signatureInfo.getSignatureConfig();
+
+        // QualifyingProperties
+        QualifyingPropertiesDocument qualDoc = QualifyingPropertiesDocument.Factory.newInstance();
+        QualifyingPropertiesType qualifyingProperties = qualDoc.addNewQualifyingProperties();
+        qualifyingProperties.setTarget("#" + signatureConfig.getPackageSignatureId());
+
+        // SignedProperties
+        SignedPropertiesType signedProperties = qualifyingProperties.addNewSignedProperties();
+        signedProperties.setId(signatureConfig.getXadesSignatureId());
+
+        // SignedSignatureProperties
+        SignedSignaturePropertiesType signedSignatureProperties = signedProperties.addNewSignedSignatureProperties();
+
+        // SigningTime
+        addSigningTime(signatureInfo, signedSignatureProperties);
+
+        // SigningCertificate
+        addCertificate(signatureInfo, signedSignatureProperties);
+
+        // ClaimedRole
+        addXadesRole(signatureInfo, signedSignatureProperties);
+
+        // XAdES-EPES
+        addPolicy(signatureInfo, signedSignatureProperties);
+
+        // DataObjectFormat
+        addMimeTypes(signedProperties);
+
+        // add XAdES ds:Object
+        objects.add(addXadesObject(signatureInfo, document, qualifyingProperties));
+
+        // add XAdES ds:Reference
+        references.add(addXadesReference(signatureInfo));
+    }
+

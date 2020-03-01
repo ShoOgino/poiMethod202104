@@ -1,0 +1,43 @@
+    private void initKeyPair(String pfxInput) throws Exception {
+        final String alias = "Test";
+        final char[] password = "test".toCharArray();
+        File file = new File("build/test.pfx");
+
+        KeyStore keystore = KeyStore.getInstance("PKCS12");
+
+        if (pfxInput != null) {
+            try (InputStream fis = new ByteArrayInputStream(RawDataUtil.decompress(pfxInput))) {
+                keystore.load(fis, password);
+            }
+        } else if (file.exists()) {
+            try (InputStream fis = new FileInputStream(file)) {
+                keystore.load(fis, password);
+            }
+        } else {
+            keystore.load(null, password);
+        }
+
+        if (keystore.isKeyEntry(alias)) {
+            Key key = keystore.getKey(alias, password);
+            x509 = (X509Certificate)keystore.getCertificate(alias);
+            keyPair = new KeyPair(x509.getPublicKey(), (PrivateKey)key);
+        } else {
+            keyPair = generateKeyPair();
+            Date notBefore = cal.getTime();
+            Calendar cal2 = (Calendar)cal.clone();
+            cal2.add(Calendar.YEAR, 1);
+            Date notAfter = cal2.getTime();
+            KeyUsage keyUsage = new KeyUsage(KeyUsage.digitalSignature);
+
+            x509 = generateCertificate(keyPair.getPublic(), notBefore, notAfter, keyPair.getPrivate(), keyUsage);
+
+            keystore.setKeyEntry(alias, keyPair.getPrivate(), password, new Certificate[]{x509});
+
+            if (pfxInput == null) {
+                try (FileOutputStream fos = new FileOutputStream(file)) {
+                    keystore.store(fos, password);
+                }
+            }
+        }
+    }
+

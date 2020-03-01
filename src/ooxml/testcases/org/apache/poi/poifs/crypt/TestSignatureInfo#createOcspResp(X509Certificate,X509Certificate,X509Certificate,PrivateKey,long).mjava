@@ -1,0 +1,58 @@
+    private static OCSPResp createOcspResp(X509Certificate certificate,
+                                           X509Certificate issuerCertificate,
+                                           X509Certificate ocspResponderCertificate,
+                                           PrivateKey ocspResponderPrivateKey,
+                                           long nonceTimeinMillis)
+            throws Exception {
+        DigestCalculator digestCalc = new JcaDigestCalculatorProviderBuilder()
+                .setProvider("BC").build().get(CertificateID.HASH_SHA1);
+        X509CertificateHolder issuerHolder = new X509CertificateHolder(issuerCertificate.getEncoded());
+        CertificateID certId = new CertificateID(digestCalc, issuerHolder, certificate.getSerialNumber());
+
+        // request
+        //create a nonce to avoid replay attack
+        BigInteger nonce = BigInteger.valueOf(nonceTimeinMillis);
+        DEROctetString nonceDer = new DEROctetString(nonce.toByteArray());
+        Extension ext = new Extension(OCSPObjectIdentifiers.id_pkix_ocsp_nonce, true, nonceDer);
+        Extensions exts = new Extensions(ext);
+
+        OCSPReqBuilder ocspReqBuilder = new OCSPReqBuilder();
+        ocspReqBuilder.addRequest(certId);
+        ocspReqBuilder.setRequestExtensions(exts);
+        OCSPReq ocspReq = ocspReqBuilder.build();
+
+
+        SubjectPublicKeyInfo keyInfo = new SubjectPublicKeyInfo
+                (CertificateID.HASH_SHA1, ocspResponderCertificate.getPublicKey().getEncoded());
+
+        BasicOCSPRespBuilder basicOCSPRespBuilder = new BasicOCSPRespBuilder(keyInfo, digestCalc);
+        basicOCSPRespBuilder.setResponseExtensions(exts);
+
+        // request processing
+        Req[] requestList = ocspReq.getRequestList();
+        for (Req ocspRequest : requestList) {
+            CertificateID certificateID = ocspRequest.getCertID();
+            CertificateStatus certificateStatus = CertificateStatus.GOOD;
+            basicOCSPRespBuilder.addResponse(certificateID, certificateStatus);
+        }
+
+        // basic response generation
+        X509CertificateHolder[] chain = null;
+        if (!ocspResponderCertificate.equals(issuerCertificate)) {
+            // TODO: HorribleProxy can't convert array input params yet
+            chain = new X509CertificateHolder[] {
+                    new X509CertificateHolder(ocspResponderCertificate.getEncoded()),
+                    issuerHolder
+            };
+        }
+
+        ContentSigner contentSigner = new JcaContentSignerBuilder("SHA1withRSA")
+                .setProvider("BC").build(ocspResponderPrivateKey);
+        BasicOCSPResp basicOCSPResp = basicOCSPRespBuilder.build(contentSigner, chain, new Date(nonceTimeinMillis));
+
+
+        OCSPRespBuilder ocspRespBuilder = new OCSPRespBuilder();
+
+        return ocspRespBuilder.build(OCSPRespBuilder.SUCCESSFUL, basicOCSPResp);
+    }
+

@@ -1,7 +1,7 @@
     @Test
     public void testNonSha1() throws Exception {
         String testFile = "hello-world-unsigned.xlsx";
-        initKeyPair("Test", "CN=Test");
+        initKeyPair();
 
         SignatureConfig signatureConfig = new SignatureConfig();
         signatureConfig.setKey(keyPair.getPrivate());
@@ -11,13 +11,10 @@
                 , HashAlgorithm.sha384, HashAlgorithm.sha512, HashAlgorithm.ripemd160};
 
         for (HashAlgorithm ha : testAlgo) {
-            OPCPackage pkg = null;
-            try {
-                signatureConfig.setDigestAlgo(ha);
-                pkg = OPCPackage.open(copy(testdata.getFile(testFile)), PackageAccess.READ_WRITE);
-                signatureConfig.setOpcPackage(pkg);
-
+            signatureConfig.setDigestAlgo(ha);
+            try (OPCPackage pkg = OPCPackage.open(copy(testdata.getFile(testFile)), PackageAccess.READ_WRITE)) {
                 SignatureInfo si = new SignatureInfo();
+                si.setOpcPackage(pkg);
                 si.setSignatureConfig(signatureConfig);
 
                 si.confirmSignature();
@@ -25,10 +22,6 @@
                 assertTrue("Signature not correctly calculated for " + ha, b);
             } catch (EncryptedDocumentException e) {
                 Assume.assumeTrue(e.getMessage().startsWith("Export Restrictions"));
-            } finally {
-                if (pkg != null) {
-                    pkg.close();
-                }
             }
         }
     }

@@ -3,57 +3,7 @@
      * the parts can be validated independently.
      */
     public Iterable<SignaturePart> getSignatureParts() {
-        signatureConfig.init(true);
-        return new Iterable<SignaturePart>() {
-            @Override
-            public Iterator<SignaturePart> iterator() {
-                return new Iterator<SignaturePart>() {
-                    OPCPackage pkg = signatureConfig.getOpcPackage();
-                    Iterator<PackageRelationship> sigOrigRels =
-                        pkg.getRelationshipsByType(PackageRelationshipTypes.DIGITAL_SIGNATURE_ORIGIN).iterator();
-                    Iterator<PackageRelationship> sigRels;
-                    PackagePart sigPart;
-
-                    @Override
-                    public boolean hasNext() {
-                        while (sigRels == null || !sigRels.hasNext()) {
-                            if (!sigOrigRels.hasNext()) {
-                                return false;
-                            }
-                            sigPart = pkg.getPart(sigOrigRels.next());
-                            LOG.log(POILogger.DEBUG, "Digital Signature Origin part", sigPart);
-                            try {
-                                sigRels = sigPart.getRelationshipsByType(PackageRelationshipTypes.DIGITAL_SIGNATURE).iterator();
-                            } catch (InvalidFormatException e) {
-                                LOG.log(POILogger.WARN, "Reference to signature is invalid.", e);
-                            }
-                        }
-                        return true;
-                    }
-
-                    @Override
-                    public SignaturePart next() {
-                        PackagePart sigRelPart = null;
-                        do {
-                            try {
-                                if (!hasNext()) {
-                                    throw new NoSuchElementException();
-                                }
-                                sigRelPart = sigPart.getRelatedPart(sigRels.next());
-                                LOG.log(POILogger.DEBUG, "XML Signature part", sigRelPart);
-                            } catch (InvalidFormatException e) {
-                                LOG.log(POILogger.WARN, "Reference to signature is invalid.", e);
-                            }
-                        } while (sigRelPart == null);
-                        return new SignaturePart(sigRelPart, signatureConfig);
-                    }
-
-                    @Override
-                    public void remove() {
-                        throw new UnsupportedOperationException();
-                    }
-                };
-            }
-        };
+        initXmlProvider();
+        return SignaturePartIterator::new;
     }
 

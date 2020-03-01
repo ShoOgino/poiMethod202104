@@ -2,7 +2,7 @@
      * Write XML signature into the OPC package
      *
      * @param document the xml signature document
-     * @throws MarshalException
+     * @throws MarshalException if the document can't be serialized
      */
     protected void writeDocument(Document document) throws MarshalException {
         XmlOptions xo = new XmlOptions();
@@ -17,23 +17,21 @@
          * Copy the original OOXML content to the signed OOXML package. During
          * copying some files need to changed.
          */
-        OPCPackage pkg = signatureConfig.getOpcPackage();
-
         try {
             // <Default Extension="sigs" ContentType="application/vnd.openxmlformats-package.digital-signature-origin"/>
             final DSigRelation originDesc = DSigRelation.ORIGIN_SIGS;
             PackagePartName originPartName = PackagingURIHelper.createPartName(originDesc.getFileName(0));
 
-            PackagePart originPart = pkg.getPart(originPartName);
+            PackagePart originPart = opcPackage.getPart(originPartName);
             if (originPart == null) {
                 // touch empty marker file
-                originPart = pkg.createPart(originPartName, originDesc.getContentType());
-                pkg.addRelationship(originPartName, TargetMode.INTERNAL, originDesc.getRelation());
+                originPart = opcPackage.createPart(originPartName, originDesc.getContentType());
+                opcPackage.addRelationship(originPartName, TargetMode.INTERNAL, originDesc.getRelation());
             }
 
             // <Override PartName="/_xmlsignatures/sig1.xml" ContentType="application/vnd.openxmlformats-package.digital-signature-xmlsignature+xml"/>
             final DSigRelation sigDesc = DSigRelation.SIG;
-            int nextSigIdx = pkg.getUnusedPartIndex(sigDesc.getDefaultFileName());
+            int nextSigIdx = opcPackage.getUnusedPartIndex(sigDesc.getDefaultFileName());
 
             if (!signatureConfig.isAllowMultipleSignatures()) {
                 PackageRelationshipCollection prc = originPart.getRelationshipsByType(sigDesc.getRelation());
@@ -48,16 +46,16 @@
                         }
                     }
 
-                    pkg.removePart(pkg.getPart(pn));
+                    opcPackage.removePart(opcPackage.getPart(pn));
                 }
                 nextSigIdx = 1;
             }
 
 
             PackagePartName sigPartName = PackagingURIHelper.createPartName(sigDesc.getFileName(nextSigIdx));
-            PackagePart sigPart = pkg.getPart(sigPartName);
+            PackagePart sigPart = opcPackage.getPart(sigPartName);
             if (sigPart == null) {
-                sigPart = pkg.createPart(sigPartName, sigDesc.getContentType());
+                sigPart = opcPackage.createPart(sigPartName, sigDesc.getContentType());
                 originPart.addRelationship(sigPartName, TargetMode.INTERNAL, sigDesc.getRelation());
             } else {
                 sigPart.clear();

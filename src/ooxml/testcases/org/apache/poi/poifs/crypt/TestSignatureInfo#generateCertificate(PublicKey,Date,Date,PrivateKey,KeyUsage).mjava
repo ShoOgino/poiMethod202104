@@ -1,0 +1,60 @@
+    private static X509Certificate generateCertificate(PublicKey subjectPublicKey,
+                                                       Date notBefore, Date notAfter,
+                                                       PrivateKey issuerPrivateKey,
+                                                       KeyUsage keyUsage)
+            throws IOException, OperatorCreationException, CertificateException {
+        final String signatureAlgorithm = "SHA1withRSA";
+        final String subjectDn = "CN=Test";
+        X500Name issuerName = new X500Name(subjectDn);
+
+        RSAPublicKey rsaPubKey = (RSAPublicKey)subjectPublicKey;
+        RSAKeyParameters rsaSpec = new RSAKeyParameters(false, rsaPubKey.getModulus(), rsaPubKey.getPublicExponent());
+
+        SubjectPublicKeyInfo subjectPublicKeyInfo =
+                SubjectPublicKeyInfoFactory.createSubjectPublicKeyInfo(rsaSpec);
+
+        DigestCalculator digestCalc = new JcaDigestCalculatorProviderBuilder()
+                .setProvider("BC").build().get(CertificateID.HASH_SHA1);
+
+        X509v3CertificateBuilder certificateGenerator = new X509v3CertificateBuilder(
+                issuerName
+                , new BigInteger(128, new SecureRandom())
+                , notBefore
+                , notAfter
+                , new X500Name(subjectDn)
+                , subjectPublicKeyInfo
+        );
+
+        X509ExtensionUtils exUtils = new X509ExtensionUtils(digestCalc);
+        SubjectKeyIdentifier subKeyId = exUtils.createSubjectKeyIdentifier(subjectPublicKeyInfo);
+        AuthorityKeyIdentifier autKeyId = exUtils.createAuthorityKeyIdentifier(subjectPublicKeyInfo);
+
+        certificateGenerator.addExtension(Extension.subjectKeyIdentifier, false, subKeyId);
+        certificateGenerator.addExtension(Extension.authorityKeyIdentifier, false, autKeyId);
+
+        BasicConstraints bc = new BasicConstraints(0);
+        certificateGenerator.addExtension(Extension.basicConstraints, false, bc);
+
+        if (null != keyUsage) {
+            certificateGenerator.addExtension(Extension.keyUsage, true, keyUsage);
+        }
+
+        JcaContentSignerBuilder signerBuilder = new JcaContentSignerBuilder(signatureAlgorithm);
+        signerBuilder.setProvider("BC");
+
+        X509CertificateHolder certHolder =
+                certificateGenerator.build(signerBuilder.build(issuerPrivateKey));
+
+        /*
+         * Next certificate factory trick is needed to make sure that the
+         * certificate delivered to the caller is provided by the default
+         * security provider instead of BouncyCastle. If we don't do this trick
+         * we might run into trouble when trying to use the CertPath validator.
+         */
+//        CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+//        certificate = (X509Certificate) certificateFactory
+//                .generateCertificate(new ByteArrayInputStream(certificate
+//                        .getEncoded()));
+        return new JcaX509CertificateConverter().getCertificate(certHolder);
+    }
+

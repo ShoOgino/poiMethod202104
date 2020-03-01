@@ -1,0 +1,28 @@
+    // it's necessary to explicitly set the mdssi namespace, but the sign() method has no
+    // normal way to interfere with, so we need to add the namespace under the hand ...
+    protected void registerEventListener(Document document) {
+        final SignatureMarshalListener sml = signatureConfig.getSignatureMarshalListener();
+        if (sml == null) {
+            return;
+        }
+
+        EventTarget target = (EventTarget)document;
+
+        final EventListener[] el = { null };
+        el[0] = (e) -> {
+            if (!(e instanceof MutationEvent)) {
+                return;
+            }
+
+            MutationEvent mutEvt = (MutationEvent) e;
+            EventTarget et = mutEvt.getTarget();
+            if (!(et instanceof Element)) {
+                return;
+            }
+
+            sml.handleElement(this, (Element) et, target, el[0]);
+        };
+
+        SignatureMarshalListener.setListener(target, el[0], true);
+    }
+

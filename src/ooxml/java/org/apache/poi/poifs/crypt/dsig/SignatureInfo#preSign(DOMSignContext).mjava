@@ -5,35 +5,18 @@
     @SuppressWarnings("unchecked")
     public DOMSignedInfo preSign(final DOMSignContext xmlSignContext)
     throws XMLSignatureException, MarshalException {
-        signatureConfig.init(false);
-
         final Document document = (Document)xmlSignContext.getParent();
 
-        // it's necessary to explicitly set the mdssi namespace, but the sign() method has no
-        // normal way to interfere with, so we need to add the namespace under the hand ...
-        EventTarget target = (EventTarget)document;
-        EventListener creationListener = signatureConfig.getSignatureMarshalListener();
-        if (creationListener != null) {
-            if (creationListener instanceof SignatureMarshalListener) {
-                ((SignatureMarshalListener)creationListener).setEventTarget(target);
-            }
-            SignatureMarshalListener.setListener(target, creationListener, true);
-        }
+        registerEventListener(document);
 
-        /*
-         * Signature context construction.
-         */
-        URIDereferencer uriDereferencer = signatureConfig.getUriDereferencer();
-        if (null != uriDereferencer) {
+        // Signature context construction.
+        if (uriDereferencer != null) {
             xmlSignContext.setURIDereferencer(uriDereferencer);
         }
 
         signatureConfig.getNamespacePrefixes().forEach(xmlSignContext::putNamespacePrefix);
 
         xmlSignContext.setDefaultNamespacePrefix("");
-        // signatureConfig.getNamespacePrefixes().get(XML_DIGSIG_NS));
-
-        XMLSignatureFactory signatureFactory = signatureConfig.getSignatureFactory();
 
         /*
          * Add ds:References that come from signing client local files.
@@ -46,7 +29,7 @@
         List<XMLObject> objects = new ArrayList<>();
         for (SignatureFacet signatureFacet : signatureConfig.getSignatureFacets()) {
             LOG.log(POILogger.DEBUG, "invoking signature facet: " + signatureFacet.getClass().getSimpleName());
-            signatureFacet.preSign(document, references, objects);
+            signatureFacet.preSign(this, document, references, objects);
         }
 
         /*

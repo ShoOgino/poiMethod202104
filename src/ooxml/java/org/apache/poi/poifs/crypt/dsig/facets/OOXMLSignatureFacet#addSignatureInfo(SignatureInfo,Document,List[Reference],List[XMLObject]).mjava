@@ -1,0 +1,41 @@
+    protected void addSignatureInfo(
+          SignatureInfo signatureInfo
+        , Document document
+        , List<Reference> references
+        , List<XMLObject> objects)
+    throws XMLSignatureException {
+        SignatureConfig signatureConfig = signatureInfo.getSignatureConfig();
+        XMLSignatureFactory sigFac = signatureInfo.getSignatureFactory();
+
+        List<XMLStructure> objectContent = new ArrayList<>();
+
+        SignatureInfoV1Document sigV1 = SignatureInfoV1Document.Factory.newInstance();
+        CTSignatureInfoV1 ctSigV1 = sigV1.addNewSignatureInfoV1();
+        ctSigV1.setManifestHashAlgorithm(signatureConfig.getDigestMethodUri());
+
+        if (signatureConfig.getSignatureDescription() != null) {
+            ctSigV1.setSignatureComments(signatureConfig.getSignatureDescription());
+        }
+
+        Element n = (Element)document.importNode(ctSigV1.getDomNode(), true);
+        n.setAttributeNS(XML_NS, XMLConstants.XMLNS_ATTRIBUTE, MS_DIGSIG_NS);
+
+        List<XMLStructure> signatureInfoContent = new ArrayList<>();
+        signatureInfoContent.add(new DOMStructure(n));
+        SignatureProperty signatureInfoSignatureProperty = sigFac
+            .newSignatureProperty(signatureInfoContent, "#" + signatureConfig.getPackageSignatureId(),
+            "idOfficeV1Details");
+
+        List<SignatureProperty> signaturePropertyContent = new ArrayList<>();
+        signaturePropertyContent.add(signatureInfoSignatureProperty);
+        SignatureProperties signatureProperties = sigFac
+            .newSignatureProperties(signaturePropertyContent, null);
+        objectContent.add(signatureProperties);
+
+        String objectId = "idOfficeObject";
+        objects.add(sigFac.newXMLObject(objectContent, objectId, null, null));
+
+        Reference reference = newReference(signatureInfo, "#" + objectId, null, XML_DIGSIG_NS+"Object", null, null);
+        references.add(reference);
+    }
+

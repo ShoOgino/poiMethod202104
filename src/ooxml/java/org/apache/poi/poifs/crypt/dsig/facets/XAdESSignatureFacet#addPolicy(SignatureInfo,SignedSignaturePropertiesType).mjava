@@ -1,0 +1,36 @@
+    private void addPolicy(SignatureInfo signatureInfo, SignedSignaturePropertiesType signedSignatureProperties) {
+        SignatureConfig signatureConfig = signatureInfo.getSignatureConfig();
+        SignaturePolicyService policyService = signatureConfig.getSignaturePolicyService();
+        if (policyService == null) {
+            if (signatureConfig.isXadesSignaturePolicyImplied()) {
+                signedSignatureProperties.
+                addNewSignaturePolicyIdentifier().
+                addNewSignaturePolicyImplied();
+            }
+            return;
+        }
+
+        SignaturePolicyIdentifierType policyId =
+            signedSignatureProperties.addNewSignaturePolicyIdentifier();
+
+        SignaturePolicyIdType signaturePolicyId = policyId.addNewSignaturePolicyId();
+
+        ObjectIdentifierType oit = signaturePolicyId.addNewSigPolicyId();
+        oit.setDescription(policyService.getSignaturePolicyDescription());
+        oit.addNewIdentifier().setStringValue(policyService.getSignaturePolicyIdentifier());
+
+        byte[] signaturePolicyDocumentData = policyService.getSignaturePolicyDocument();
+        DigestAlgAndValueType sigPolicyHash = signaturePolicyId.addNewSigPolicyHash();
+        setDigestAlgAndValue(sigPolicyHash, signaturePolicyDocumentData, signatureConfig.getDigestAlgo());
+
+        String signaturePolicyDownloadUrl = policyService.getSignaturePolicyDownloadUrl();
+        if (signaturePolicyDownloadUrl == null) {
+            return;
+        }
+        AnyType sigPolicyQualifier =
+            signaturePolicyId.addNewSigPolicyQualifiers().addNewSigPolicyQualifier();
+        XmlString spUriElement = XmlString.Factory.newInstance();
+        spUriElement.setStringValue(signaturePolicyDownloadUrl);
+        insertXChild(sigPolicyQualifier, spUriElement);
+    }
+

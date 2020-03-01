@@ -1,0 +1,25 @@
+    static Reference newReference(
+            SignatureInfo signatureInfo
+            , String uri
+            , List<Transform> transforms
+            , String type
+            , String id
+            , byte[] digestValue)
+            throws XMLSignatureException {
+        // the references appear in the package signature or the package object
+        // so we can use the default digest algorithm
+        SignatureConfig signatureConfig = signatureInfo.getSignatureConfig();
+        String digestMethodUri = signatureConfig.getDigestMethodUri();
+        XMLSignatureFactory sigFac = signatureInfo.getSignatureFactory();
+        DigestMethod digestMethod;
+        try {
+            digestMethod = sigFac.newDigestMethod(digestMethodUri, null);
+        } catch (GeneralSecurityException e) {
+            throw new XMLSignatureException("unknown digest method uri: "+digestMethodUri, e);
+        }
+
+        return (digestValue == null)
+                ? sigFac.newReference(uri, digestMethod, transforms, type, id)
+                : sigFac.newReference(uri, digestMethod, transforms, type, id, digestValue);
+    }
+

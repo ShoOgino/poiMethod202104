@@ -1,0 +1,36 @@
+    private void sign(OPCPackage pkgCopy) throws Exception {
+        int signerCount = 1;
+
+        SignatureConfig signatureConfig = prepareConfig(null);
+
+        SignatureInfo si = new SignatureInfo();
+        si.setOpcPackage(pkgCopy);
+        si.setSignatureConfig(signatureConfig);
+
+        final Document document = DocumentHelper.createDocument();
+        final DOMSignContext xmlSignContext = si.createXMLSignContext(document);
+
+        // operate
+        final DOMSignedInfo signedInfo = si.preSign(xmlSignContext);
+
+        // verify
+        assertNotNull(signedInfo);
+        assertEquals("Office OpenXML Document", signatureConfig.getSignatureDescription());
+
+        // setup: key material, signature value
+        final String signatureValue = si.signDigest(xmlSignContext, signedInfo);
+
+        // operate: postSign
+        si.postSign(xmlSignContext, signatureValue);
+
+        // verify: signature
+        si.setOpcPackage(pkgCopy);
+        List<X509Certificate> result = new ArrayList<>();
+        for (SignaturePart sp : si.getSignatureParts()) {
+            if (sp.validate()) {
+                result.add(sp.getSigner());
+            }
+        }
+        assertEquals(signerCount, result.size());
+    }
+

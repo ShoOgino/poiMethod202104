@@ -1,0 +1,79 @@
+    @SuppressWarnings("resource")
+    protected void addManifestReferences(SignatureInfo signatureInfo, List<Reference> manifestReferences)
+    throws XMLSignatureException {
+        OPCPackage opcPackage = signatureInfo.getOpcPackage();
+        List<PackagePart> relsEntryNames = opcPackage.getPartsByContentType(ContentTypes.RELATIONSHIPS_PART);
+
+        Set<String> digestedPartNames = new HashSet<>();
+        for (PackagePart pp : relsEntryNames) {
+            final String baseUri = pp.getPartName().getName().replaceFirst("(.*)/_rels/.*", "$1");
+
+            PackageRelationshipCollection prc;
+            try {
+                prc = new PackageRelationshipCollection(opcPackage);
+                prc.parseRelationshipsPart(pp);
+            } catch (InvalidFormatException e) {
+                throw new XMLSignatureException("Invalid relationship descriptor: "+pp.getPartName().getName(), e);
+            }
+
+            RelationshipTransformParameterSpec parameterSpec = new RelationshipTransformParameterSpec();
+            for (PackageRelationship relationship : prc) {
+                String relationshipType = relationship.getRelationshipType();
+
+                /*
+                 * ECMA-376 Part 2 - 3rd edition
+                 * 13.2.4.16 Manifest Element
+                 * "The producer shall not create a Manifest element that references any data outside of the package."
+                 */
+                if (TargetMode.EXTERNAL == relationship.getTargetMode()) {
+                    continue;
+                }
+
+                if (!isSignedRelationship(relationshipType)) {
+                    continue;
+                }
+
+                parameterSpec.addRelationshipReference(relationship.getId());
+
+                String partName = normalizePartName(relationship.getTargetURI(), baseUri);
+
+                // We only digest a part once.
+                if (digestedPartNames.contains(partName)) {
+                    continue;
+                }
+                digestedPartNames.add(partName);
+
+                String contentType;
+                try {
+                    PackagePartName relName = PackagingURIHelper.createPartName(partName);
+                    PackagePart pp2 = opcPackage.getPart(relName);
+                    contentType = pp2.getContentType();
+                } catch (InvalidFormatException e) {
+                    throw new XMLSignatureException(e);
+                }
+
+                if (relationshipType.endsWith("customXml")
+                    && !(contentType.equals("inkml+xml") || contentType.equals("text/xml"))) {
+                    LOG.log(POILogger.DEBUG, "skipping customXml with content type: " + contentType);
+                    continue;
+                }
+
+                String uri = partName + "?ContentType=" + contentType;
+                Reference reference = newReference(signatureInfo, uri, null, null, null, null);
+                manifestReferences.add(reference);
+            }
+
+            if (parameterSpec.hasSourceIds()) {
+                List<Transform> transforms = new ArrayList<>();
+                transforms.add(newTransform(signatureInfo, RelationshipTransformService.TRANSFORM_URI, parameterSpec));
+                transforms.add(newTransform(signatureInfo, CanonicalizationMethod.INCLUSIVE));
+                String uri = normalizePartName(pp.getPartName().getURI(), baseUri)
+                    + "?ContentType=application/vnd.openxmlformats-package.relationships+xml";
+                Reference reference = newReference(signatureInfo, uri, transforms, null, null, null);
+                manifestReferences.add(reference);
+            }
+        }
+
+        manifestReferences.sort(Comparator.comparing(URIReference::getURI));
+    }
+

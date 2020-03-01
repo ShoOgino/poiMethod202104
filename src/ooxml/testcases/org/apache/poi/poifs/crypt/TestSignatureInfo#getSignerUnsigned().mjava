@@ -8,19 +8,19 @@
         };
 
         for (String testFile : testFiles) {
-            OPCPackage pkg = OPCPackage.open(testdata.getFile(testFile), PackageAccess.READ);
-            SignatureConfig sic = new SignatureConfig();
-            sic.setOpcPackage(pkg);
-            SignatureInfo si = new SignatureInfo();
-            si.setSignatureConfig(sic);
             List<X509Certificate> result = new ArrayList<>();
-            for (SignaturePart sp : si.getSignatureParts()) {
-                if (sp.validate()) {
-                    result.add(sp.getSigner());
+            try (OPCPackage pkg = OPCPackage.open(testdata.getFile(testFile), PackageAccess.READ)) {
+                SignatureConfig sic = new SignatureConfig();
+                SignatureInfo si = new SignatureInfo();
+                si.setOpcPackage(pkg);
+                si.setSignatureConfig(sic);
+                for (SignaturePart sp : si.getSignatureParts()) {
+                    if (sp.validate()) {
+                        result.add(sp.getSigner());
+                    }
                 }
+                pkg.revert();
             }
-            pkg.revert();
-            pkg.close();
             assertNotNull(result);
             assertTrue(result.isEmpty());
         }

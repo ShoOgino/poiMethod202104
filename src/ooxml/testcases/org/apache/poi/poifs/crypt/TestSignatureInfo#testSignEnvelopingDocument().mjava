@@ -9,12 +9,11 @@
 
         try (OPCPackage pkg = OPCPackage.open(copy(sigCopy), PackageAccess.READ_WRITE)) {
 
-            initKeyPair("Test", "CN=Test");
+            initKeyPair();
             final X509CRL crl = generateCrl(x509, keyPair.getPrivate());
 
             // setup
             SignatureConfig signatureConfig = new SignatureConfig();
-            signatureConfig.setOpcPackage(pkg);
             signatureConfig.setKey(keyPair.getPrivate());
 
             /*
@@ -57,17 +56,9 @@
             }
 
             if (mockTsp) {
-                TimeStampService tspService = new TimeStampService() {
-                    @Override
-                    public byte[] timeStamp(byte[] data, RevocationData revocationData) {
-                        revocationData.addCRL(crl);
-                        return "time-stamp-token".getBytes(LocaleUtil.CHARSET_1252);
-                    }
-
-                    @Override
-                    public void setSignatureConfig(SignatureConfig config) {
-                        // empty on purpose
-                    }
+                TimeStampService tspService = (signatureInfo, data, revocationData) -> {
+                    revocationData.addCRL(crl);
+                    return "time-stamp-token".getBytes(LocaleUtil.CHARSET_1252);
                 };
                 signatureConfig.setTspService(tspService);
             } else {
@@ -83,8 +74,7 @@
 
             final RevocationData revocationData = new RevocationData();
             revocationData.addCRL(crl);
-            OCSPResp ocspResp = createOcspResp(x509, false,
-                    x509, x509, keyPair.getPrivate(), "SHA1withRSA", cal.getTimeInMillis());
+            OCSPResp ocspResp = createOcspResp(x509, x509, x509, keyPair.getPrivate(), cal.getTimeInMillis());
             revocationData.addOCSP(ocspResp.getEncoded());
 
             RevocationDataService revocationDataService = revocationChain -> revocationData;
@@ -92,33 +82,31 @@
 
             // operate
             SignatureInfo si = new SignatureInfo();
+            si.setOpcPackage(pkg);
             si.setSignatureConfig(signatureConfig);
             try {
                 si.confirmSignature();
             } catch (RuntimeException e) {
-                pkg.close();
                 // only allow a ConnectException because of timeout, we see this in Jenkins from time to time...
                 if (e.getCause() == null) {
                     throw e;
                 }
                 if ((e.getCause() instanceof ConnectException) || (e.getCause() instanceof SocketTimeoutException)) {
                     Assume.assumeFalse("Only allowing ConnectException with 'timed out' as message here, but had: " + e,
-                            e.getCause().getMessage().contains("timed out"));
+                                       e.getCause().getMessage().contains("timed out"));
                 } else if (e.getCause() instanceof IOException) {
                     Assume.assumeFalse("Only allowing IOException with 'Error contacting TSP server' as message here, but had: " + e,
-                            e.getCause().getMessage().contains("Error contacting TSP server"));
+                                       e.getCause().getMessage().contains("Error contacting TSP server"));
                 } else if (e.getCause() instanceof RuntimeException) {
                     Assume.assumeFalse("Only allowing RuntimeException with 'This site is cur' as message here, but had: " + e,
-                            e.getCause().getMessage().contains("This site is cur"));
+                                       e.getCause().getMessage().contains("This site is cur"));
                 }
                 throw e;
             }
 
             // verify
             Iterator<SignaturePart> spIter = si.getSignatureParts().iterator();
-            assertTrue("Had: " + si.getSignatureConfig().getOpcPackage().
-                            getRelationshipsByType(PackageRelationshipTypes.DIGITAL_SIGNATURE_ORIGIN),
-                    spIter.hasNext());
+            assertTrue("Had: " + pkg.getRelationshipsByType(PackageRelationshipTypes.DIGITAL_SIGNATURE_ORIGIN), spIter.hasNext());
             SignaturePart sp = spIter.next();
             boolean valid = sp.validate();
             assertTrue(valid);
@@ -155,10 +143,10 @@
 
         try (OPCPackage pkg = OPCPackage.open(new ByteArrayInputStream(bos.toByteArray()))) {
             SignatureConfig signatureConfig = new SignatureConfig();
-            signatureConfig.setOpcPackage(pkg);
             signatureConfig.setUpdateConfigOnValidate(true);
 
             SignatureInfo si = new SignatureInfo();
+            si.setOpcPackage(pkg);
             si.setSignatureConfig(signatureConfig);
 
             assertTrue(si.verifySignature());
