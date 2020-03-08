@@ -1,0 +1,24 @@
+    private long getPropertyTag(long streamID, long nameOffset, long propertyNameCRC32) {
+        for (Chunk chunk : allChunks) {
+            if (chunk.getType() != Types.BINARY || chunk.getChunkId() != streamID) {
+                continue;
+            }
+            byte[] matchChunkBytes = ((ByteChunk) chunk).getValue();
+            if (matchChunkBytes == null) {
+                continue;
+            }
+            LittleEndianByteArrayInputStream leis = new LittleEndianByteArrayInputStream(matchChunkBytes);
+            for (int m = 0; m < matchChunkBytes.length / 8; m++) {
+                long nameCRC = leis.readUInt();
+                int matchGuidIndex = leis.readUShort();
+                int matchPropertyIndex = leis.readUShort();
+                int matchPropertyKind = matchGuidIndex & 0x01;
+
+                if (nameCRC == (matchPropertyKind == 0 ? nameOffset : propertyNameCRC32)) {
+                    return 0x8000 + matchPropertyIndex;
+                }
+            }
+        }
+        return 0;
+    }
+

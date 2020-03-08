@@ -1,0 +1,28 @@
+    private long getStreamID(int propertyKind, int nameOffset, ClassID guid, int guidIndex,
+        Consumer<String> propertyNameSetter, Consumer<Long> propertyNameCRC32Setter) {
+        if (propertyKind == 0) {
+            // numerical named property
+            return 0x1000 + (nameOffset ^ (guidIndex << 1)) % 0x1F;
+        }
+
+        // string named property
+        byte[] stringBytes = stringStream.getValue();
+        long propertyNameCRC32 = -1;
+        if (stringBytes.length > nameOffset) {
+            long nameLength = LittleEndian.getUInt(stringBytes, nameOffset);
+            if (stringBytes.length >= nameOffset + 4 + nameLength) {
+                int nameStart = nameOffset + 4;
+                String propertyName = new String(stringBytes, nameStart, (int) nameLength, StringUtil.UTF16LE);
+                if (PropertySetType.PS_INTERNET_HEADERS.classID.equals(guid)) {
+                    byte[] n = propertyName.toLowerCase(Locale.ROOT).getBytes(StringUtil.UTF16LE);
+                    propertyNameCRC32 = calculateCRC32(n, 0, n.length);
+                } else {
+                    propertyNameCRC32 = calculateCRC32(stringBytes, nameStart, (int)nameLength);
+                }
+                propertyNameSetter.accept(propertyName);
+                propertyNameCRC32Setter.accept(propertyNameCRC32);
+            }
+        }
+        return 0x1000 + (propertyNameCRC32 ^ ((guidIndex << 1) | 1)) % 0x1F;
+    }
+

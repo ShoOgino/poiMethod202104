@@ -1,0 +1,30 @@
+    /**
+     * Creates a chunk, and gives it to its parent group
+     */
+    private static void process(Entry entry, ChunkGroup grouping, Map<Integer, MultiChunk> multiChunks) {
+        final String entryName = entry.getName();
+        boolean[] isMultiValued = { false };
+
+        // Is it a properties chunk? (They have special names)
+        Chunk chunk = (PropertiesChunk.NAME.equals(entryName))
+            ? readPropertiesChunk(grouping, entry)
+            : readPrimitiveChunk(entry, isMultiValued, multiChunks);
+
+        if (chunk == null) {
+            return;
+        }
+
+        if (entry instanceof DocumentNode) {
+            try (DocumentInputStream inp = new DocumentInputStream((DocumentNode) entry)) {
+                chunk.readValue(inp);
+            } catch (IOException e) {
+                LOG.log(POILogger.ERROR, "Error reading from part " + entry.getName(), e);
+            }
+        }
+
+        if (!isMultiValued[0]) {
+            // multi value chunks will be grouped later, in the correct order
+            grouping.record(chunk);
+        }
+    }
+

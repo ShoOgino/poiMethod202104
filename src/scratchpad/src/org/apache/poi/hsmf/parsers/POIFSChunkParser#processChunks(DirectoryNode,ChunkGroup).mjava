@@ -1,16 +1,21 @@
-   /**
-    * Creates all the chunks for a given Directory, but
-    *  doesn't recurse or descend 
-    */
-   protected static void processChunks(DirectoryNode node, ChunkGroup grouping) {
-      for(Entry entry : node) {
-         if(entry instanceof DocumentNode) {
-            process(entry, grouping);
-         } else if(entry instanceof DirectoryNode) {
-             if(entry.getName().endsWith(Types.DIRECTORY.asFileEnding())) {
-                 process(entry, grouping);
-             }
-         }
-      }
-   }
+    /**
+     * Creates all the chunks for a given Directory, but
+     * doesn't recurse or descend
+     */
+    private static void processChunks(DirectoryNode node, ChunkGroup grouping) {
+        final Map<Integer, MultiChunk> multiChunks = new TreeMap<>();
+
+        for (Entry entry : node) {
+            if (entry instanceof DocumentNode ||
+                (entry instanceof DirectoryNode && entry.getName().endsWith(Types.DIRECTORY.asFileEnding()))) {
+                process(entry, grouping, multiChunks);
+            }
+        }
+
+        // Finish up variable length multivalued properties
+        multiChunks.entrySet().stream()
+            .flatMap(me -> me.getValue().getChunks().values().stream())
+            .filter(Objects::nonNull)
+            .forEach(grouping::record);
+    }
 

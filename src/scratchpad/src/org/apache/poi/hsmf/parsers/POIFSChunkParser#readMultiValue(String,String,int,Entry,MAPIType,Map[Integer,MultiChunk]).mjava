@@ -1,0 +1,37 @@
+    private static Chunk readMultiValue(String namePrefix, String ids, int chunkId, Entry entry, MAPIType type,
+                                       Map<Integer, MultiChunk> multiChunks) {
+        long multiValueIdx = -1;
+        if (ids.contains("-")) {
+            String mvidxstr = ids.substring(ids.lastIndexOf('-') + 1);
+            try {
+                multiValueIdx = Long.parseLong(mvidxstr) & 0xFFFFFFFFL;
+            } catch (NumberFormatException ignore) {
+                LOG.log(POILogger.WARN, "Can't read multi value idx from entry " + entry.getName());
+            }
+        }
+
+        final MultiChunk mc = multiChunks.computeIfAbsent(chunkId, k -> new MultiChunk());
+        if (multiValueIdx == -1) {
+            return new ByteChunk(chunkId, Types.BINARY) {
+                @Override
+                public void readValue(InputStream value) throws IOException {
+                    super.readValue(value);
+                    mc.setLength(getValue().length / 4);
+                }
+            };
+        } else {
+            final Chunk chunk;
+            if (type == Types.BINARY) {
+                chunk = new ByteChunk(namePrefix, chunkId, type);
+            } else if (type == Types.ASCII_STRING || type == Types.UNICODE_STRING) {
+                chunk = new StringChunk(namePrefix, chunkId, type);
+            } else {
+                // Type of an unsupported multivalued type! Skipping...
+                LOG.log(POILogger.WARN, "Unsupported multivalued prop type for entry " + entry.getName());
+                return null;
+            }
+            mc.addChunk((int) multiValueIdx, chunk);
+            return chunk;
+        }
+    }
+

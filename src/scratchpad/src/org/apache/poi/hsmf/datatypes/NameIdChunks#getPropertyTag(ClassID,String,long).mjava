@@ -1,0 +1,52 @@
+    /**
+     * Get property tag id by property set GUID and string name or numerical name from named properties mapping
+     * @param guid Property set GUID in registry format without brackets.
+     *             May be one of the PS_* or PSETID_* constants
+     * @param name Property name in case of string named property
+     * @param id   Property id in case of numerical named property
+     * @return Property tag which can be matched with {@link org.apache.poi.hsmf.datatypes.MAPIProperty#id}
+     *         or 0 if the property could not be found.
+     *
+     */
+    public long getPropertyTag(ClassID guid, String name, long id) {
+        final byte[] entryStreamBytes = (entryStream == null) ? null : entryStream.getValue();
+        if (guidStream == null || entryStream == null || stringStream == null || guid == null ||
+            entryStreamBytes == null) {
+            return 0;
+        }
+
+        LittleEndianByteArrayInputStream leis = new LittleEndianByteArrayInputStream(entryStreamBytes);
+        for (int i = 0; i < entryStreamBytes.length / 8; i++) {
+            final long nameOffset = leis.readUInt();
+            int guidIndex = leis.readUShort();
+            final int propertyKind = guidIndex & 0x01;
+            guidIndex = guidIndex >>> 1;
+            final int propertyIndex = leis.readUShort();
+
+            // fetch and match property GUID
+            if (!guid.equals(getPropertyGUID(guidIndex))) {
+                continue;
+            }
+
+            // fetch property name / stream ID
+            final String[] propertyName = { null };
+            final long[] propertyNameCRC32 = { -1L };
+            long streamID = getStreamID(propertyKind, (int)nameOffset, guid, guidIndex,
+                                        n -> propertyName[0] = n, c -> propertyNameCRC32[0] = c);
+
+            if (!matchesProperty(propertyKind, nameOffset, name, propertyName[0], id)) {
+                continue;
+            }
+
+            // find property index in matching stream entry
+            if (propertyKind == 1 && propertyNameCRC32[0] < 0) {
+                // skip stream entry matching and return tag from property index from entry stream
+                // this code should not be reached
+                return 0x8000 + propertyIndex;
+            }
+
+            return getPropertyTag(streamID, nameOffset, propertyNameCRC32[0]);
+        }
+        return 0;
+    }
+

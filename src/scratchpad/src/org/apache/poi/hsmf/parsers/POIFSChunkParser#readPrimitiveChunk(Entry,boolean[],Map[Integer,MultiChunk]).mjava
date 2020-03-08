@@ -1,0 +1,70 @@
+    private static Chunk readPrimitiveChunk(Entry entry, boolean[] isMultiValue, Map<Integer, MultiChunk> multiChunks) {
+        final String entryName = entry.getName();
+        final int splitAt = entryName.lastIndexOf('_');
+
+        // Check it's a regular chunk
+        if (entryName.length() < 9 || splitAt == -1) {
+            // Name in the wrong format
+            return null;
+        }
+
+        // Split it into its parts
+        final String namePrefix = entryName.substring(0, splitAt + 1);
+        final String ids = entryName.substring(splitAt + 1);
+
+        // Make sure we got what we expected, should be of
+        // the form __<name>_<id><type>
+        if (namePrefix.equals("Olk10SideProps") || namePrefix.equals("Olk10SideProps_")) {
+            // This is some odd Outlook 2002 thing, skip
+            return null;
+        } else if (splitAt > entryName.length() - 8) {
+            // Underscores not the right place, something's wrong
+            throw new IllegalArgumentException("Invalid chunk name " + entryName);
+        }
+
+        // Now try to turn it into id + type
+        final int chunkId, typeId;
+        try {
+            chunkId = Integer.parseInt(ids.substring(0, 4), 16);
+            int tid = Integer.parseInt(ids.substring(4, 8), 16);
+            isMultiValue[0] = (tid & Types.MULTIVALUED_FLAG) != 0;
+            typeId = tid & ~Types.MULTIVALUED_FLAG;
+        } catch (NumberFormatException e) {
+            // Name in the wrong format
+            return null;
+        }
+
+        MAPIType type = Types.getById(typeId);
+        if (type == null) {
+            type = Types.createCustom(typeId);
+        }
+
+        // Special cases based on the ID
+        if (chunkId == MAPIProperty.MESSAGE_SUBMISSION_ID.id) {
+            return new MessageSubmissionChunk(namePrefix, chunkId, type);
+        } else if (type == Types.BINARY && chunkId == MAPIProperty.ATTACH_DATA.id) {
+            ByteChunkDeferred bcd = new ByteChunkDeferred(namePrefix, chunkId, type);
+            if (entry instanceof DocumentNode) {
+                bcd.readValue((DocumentNode) entry);
+            }
+            return bcd;
+        } else {
+            // Nothing special about this ID
+            // So, do the usual thing which is by type
+            if (isMultiValue[0]) {
+                return readMultiValue(namePrefix, ids, chunkId, entry, type, multiChunks);
+            } else {
+                if (type == Types.DIRECTORY && entry instanceof DirectoryNode) {
+                    return new DirectoryChunk((DirectoryNode) entry, namePrefix, chunkId, type);
+                } else if (type == Types.BINARY) {
+                    return new ByteChunk(namePrefix, chunkId, type);
+                } else if (type == Types.ASCII_STRING || type == Types.UNICODE_STRING) {
+                    return new StringChunk(namePrefix, chunkId, type);
+                }
+                // Type of an unsupported type! Skipping...
+                LOG.log(POILogger.WARN, "UNSUPPORTED PROP TYPE " + entryName);
+                return null;
+            }
+        }
+    }
+
