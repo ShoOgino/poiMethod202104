@@ -12,76 +12,25 @@
         Sheet sheet = picture.getSheet();
 
         // in pixel
-        Dimension imgSize = getImageDimension(new ByteArrayInputStream(data.getData()), data.getPictureType());
+        final Dimension imgSize = (scaleX == Double.MAX_VALUE || scaleY == Double.MAX_VALUE)
+            ? getImageDimension(new ByteArrayInputStream(data.getData()), data.getPictureType())
+            : new Dimension();
+
         // in emus
-        Dimension anchorSize = ImageUtils.getDimensionFromAnchor(picture);
+        final Dimension anchorSize = (scaleX != Double.MAX_VALUE || scaleY != Double.MAX_VALUE)
+            ? ImageUtils.getDimensionFromAnchor(picture)
+            : new Dimension();
+
         final double scaledWidth = (scaleX == Double.MAX_VALUE)
             ? imgSize.getWidth() : anchorSize.getWidth()/EMU_PER_PIXEL * scaleX;
         final double scaledHeight = (scaleY == Double.MAX_VALUE)
             ? imgSize.getHeight() : anchorSize.getHeight()/EMU_PER_PIXEL * scaleY;
 
-        double w = 0;
-        int col2 = anchor.getCol1();
-        int dx2 = 0;
+        scaleCell(scaledWidth, anchor.getCol1(), anchor.getDx1(), anchor::setCol2, anchor::setDx2,
+             isHSSF ? WIDTH_UNITS : 0, sheet::getColumnWidthInPixels);
 
-        //space in the leftmost cell
-        w = sheet.getColumnWidthInPixels(col2++);
-        if (isHSSF) {
-            w *= 1d - anchor.getDx1()/1024d;
-        } else {
-            w -= anchor.getDx1()/(double)EMU_PER_PIXEL;
-        }
-
-        while(w < scaledWidth){
-            w += sheet.getColumnWidthInPixels(col2++);
-        }
-
-        if(w > scaledWidth) {
-            //calculate dx2, offset in the rightmost cell
-            double cw = sheet.getColumnWidthInPixels(--col2);
-            double delta = w - scaledWidth;
-            if (isHSSF) {
-                dx2 = (int)((cw-delta)/cw*1024);
-            } else {
-                dx2 = (int)((cw-delta)*EMU_PER_PIXEL);
-            }
-            if (dx2 < 0) {
-                dx2 = 0;
-            }
-        }
-        anchor.setCol2(col2);
-        anchor.setDx2(dx2);
-
-        double h = 0;
-        int row2 = anchor.getRow1();
-        int dy2 = 0;
-
-        h = getRowHeightInPixels(sheet,row2++);
-        if (isHSSF) {
-            h *= 1 - anchor.getDy1()/256d;
-        } else {
-            h -= anchor.getDy1()/(double)EMU_PER_PIXEL;
-        }
-
-        while(h < scaledHeight){
-            h += getRowHeightInPixels(sheet,row2++);
-        }
-
-        if(h > scaledHeight) {
-            double ch = getRowHeightInPixels(sheet,--row2);
-            double delta = h - scaledHeight;
-            if (isHSSF) {
-                dy2 = (int)((ch-delta)/ch*256);
-            } else {
-                dy2 = (int)((ch-delta)*EMU_PER_PIXEL);
-            }
-            if (dy2 < 0) {
-                dy2 = 0;
-            }
-        }
-
-        anchor.setRow2(row2);
-        anchor.setDy2(dy2);
+        scaleCell(scaledHeight, anchor.getRow1(), anchor.getDy1(), anchor::setRow2, anchor::setDy2,
+                  isHSSF ? HEIGHT_UNITS : 0, (row) -> getRowHeightInPixels(sheet, row));
 
         return new Dimension(
             (int)Math.round(scaledWidth*EMU_PER_PIXEL),

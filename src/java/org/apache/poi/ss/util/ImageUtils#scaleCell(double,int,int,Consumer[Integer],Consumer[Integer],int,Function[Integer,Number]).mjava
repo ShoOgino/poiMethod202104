@@ -1,0 +1,43 @@
+    private static void scaleCell(final double targetSize,
+                                  final int startCell,
+                                  final int startD,
+                                  Consumer<Integer> endCell,
+                                  Consumer<Integer> endD,
+                                  final int hssfUnits,
+                                  Function<Integer,Number> nextSize) {
+        if (targetSize < 0) {
+            throw new IllegalArgumentException("target size < 0");
+        }
+
+        int cellIdx = startCell;
+        double dim, delta;
+        for (double totalDim = 0, remDim;; cellIdx++, totalDim += remDim) {
+            dim = nextSize.apply(cellIdx).doubleValue();
+            remDim = dim;
+            if (cellIdx == startCell) {
+                if (hssfUnits > 0) {
+                    remDim *= 1 - startD/(double)hssfUnits;
+                } else {
+                    remDim -= startD/(double)EMU_PER_PIXEL;
+                }
+            }
+            delta = targetSize - totalDim;
+            if (delta < remDim) {
+                break;
+            }
+        }
+
+        double endDval;
+        if (hssfUnits > 0) {
+            endDval = delta/dim * (double)hssfUnits;
+        } else {
+            endDval = delta * EMU_PER_PIXEL;
+        }
+        if (cellIdx == startCell) {
+            endDval += startD;
+        }
+
+        endCell.accept(cellIdx);
+        endD.accept((int)Math.rint(endDval));
+    }
+

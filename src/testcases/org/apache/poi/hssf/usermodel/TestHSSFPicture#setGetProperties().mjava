@@ -1,27 +1,28 @@
     @SuppressWarnings("resource")
     @Test
     public void setGetProperties() throws IOException {
-        HSSFWorkbook wb = new HSSFWorkbook();
+        try (HSSFWorkbook wb1 = new HSSFWorkbook()) {
 
-        HSSFSheet sh = wb.createSheet("Pictures");
-        HSSFPatriarch dr = sh.createDrawingPatriarch();
-        HSSFClientAnchor anchor = new HSSFClientAnchor();
+            HSSFSheet sh = wb1.createSheet("Pictures");
+            HSSFPatriarch dr = sh.createDrawingPatriarch();
+            HSSFClientAnchor anchor = new HSSFClientAnchor();
 
-        //register a picture
-        byte[] data1 = new byte[]{1, 2, 3};
-        int idx1 = wb.addPicture(data1, Workbook.PICTURE_TYPE_JPEG);
-        HSSFPicture p1 = dr.createPicture(anchor, idx1);
+            //register a picture
+            byte[] data1 = {1, 2, 3};
+            int idx1 = wb1.addPicture(data1, Workbook.PICTURE_TYPE_JPEG);
+            HSSFPicture p1 = dr.createPicture(anchor, idx1);
 
-        assertEquals(p1.getFileName(), "");
-        p1.setFileName("aaa");
-        assertEquals(p1.getFileName(), "aaa");
+            assertEquals(p1.getFileName(), "");
+            p1.setFileName("aaa");
+            assertEquals(p1.getFileName(), "aaa");
 
-        wb = HSSFTestDataSamples.writeOutAndReadBack(wb);
-        sh = wb.getSheet("Pictures");
-        dr = sh.getDrawingPatriarch();
+            try (HSSFWorkbook wb2 = HSSFTestDataSamples.writeOutAndReadBack(wb1)) {
+                sh = wb2.getSheet("Pictures");
+                dr = sh.getDrawingPatriarch();
 
-        p1 = (HSSFPicture) dr.getChildren().get(0);
-        assertEquals(p1.getFileName(), "aaa");
-        wb.close();
+                p1 = (HSSFPicture) dr.getChildren().get(0);
+                assertEquals(p1.getFileName(), "aaa");
+            }
+        }
     }
 

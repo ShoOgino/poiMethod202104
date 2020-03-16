@@ -1,50 +1,48 @@
     /**
      * same image refrerred by mulitple sheets
      */
-    @SuppressWarnings("resource")
     @Test
     public void multiRelationShips() throws IOException {
-        XSSFWorkbook wb = new XSSFWorkbook();
+        try (XSSFWorkbook wb1 = new XSSFWorkbook()) {
+            byte[] pic1Data = "test jpeg data".getBytes(LocaleUtil.CHARSET_1252);
+            byte[] pic2Data = "test png data".getBytes(LocaleUtil.CHARSET_1252);
 
-        byte[] pic1Data = "test jpeg data".getBytes(LocaleUtil.CHARSET_1252);
-        byte[] pic2Data = "test png data".getBytes(LocaleUtil.CHARSET_1252);
+            List<XSSFPictureData> pictures = wb1.getAllPictures();
+            assertEquals(0, pictures.size());
 
-        List<XSSFPictureData> pictures = wb.getAllPictures();
-        assertEquals(0, pictures.size());
+            int pic1 = wb1.addPicture(pic1Data, XSSFWorkbook.PICTURE_TYPE_JPEG);
+            int pic2 = wb1.addPicture(pic2Data, XSSFWorkbook.PICTURE_TYPE_PNG);
 
-        int pic1 = wb.addPicture(pic1Data, XSSFWorkbook.PICTURE_TYPE_JPEG);
-        int pic2 = wb.addPicture(pic2Data, XSSFWorkbook.PICTURE_TYPE_PNG);
+            XSSFSheet sheet1 = wb1.createSheet();
+            XSSFDrawing drawing1 = sheet1.createDrawingPatriarch();
+            XSSFPicture shape1 = drawing1.createPicture(new XSSFClientAnchor(), pic1);
+            XSSFPicture shape2 = drawing1.createPicture(new XSSFClientAnchor(), pic2);
 
-        XSSFSheet sheet1 = wb.createSheet();
-        XSSFDrawing drawing1 = sheet1.createDrawingPatriarch();
-        XSSFPicture shape1 = drawing1.createPicture(new XSSFClientAnchor(), pic1);
-        XSSFPicture shape2 = drawing1.createPicture(new XSSFClientAnchor(), pic2);
+            XSSFSheet sheet2 = wb1.createSheet();
+            XSSFDrawing drawing2 = sheet2.createDrawingPatriarch();
+            XSSFPicture shape3 = drawing2.createPicture(new XSSFClientAnchor(), pic2);
+            XSSFPicture shape4 = drawing2.createPicture(new XSSFClientAnchor(), pic1);
 
-        XSSFSheet sheet2 = wb.createSheet();
-        XSSFDrawing drawing2 = sheet2.createDrawingPatriarch();
-        XSSFPicture shape3 = drawing2.createPicture(new XSSFClientAnchor(), pic2);
-        XSSFPicture shape4 = drawing2.createPicture(new XSSFClientAnchor(), pic1);
+            assertEquals(2, pictures.size());
 
-        assertEquals(2, pictures.size());
+            try (XSSFWorkbook wb2 = XSSFTestDataSamples.writeOutAndReadBack(wb1)) {
+                pictures = wb2.getAllPictures();
+                assertEquals(2, pictures.size());
 
-        wb = XSSFTestDataSamples.writeOutAndReadBack(wb);
-        pictures = wb.getAllPictures();
-        assertEquals(2, pictures.size());
+                sheet1 = wb2.getSheetAt(0);
+                drawing1 = sheet1.createDrawingPatriarch();
+                XSSFPicture shape11 = (XSSFPicture) drawing1.getShapes().get(0);
+                assertArrayEquals(shape1.getPictureData().getData(), shape11.getPictureData().getData());
+                XSSFPicture shape22 = (XSSFPicture) drawing1.getShapes().get(1);
+                assertArrayEquals(shape2.getPictureData().getData(), shape22.getPictureData().getData());
 
-        sheet1 = wb.getSheetAt(0);
-        drawing1 = sheet1.createDrawingPatriarch();
-        XSSFPicture shape11 = (XSSFPicture)drawing1.getShapes().get(0);
-        assertArrayEquals(shape1.getPictureData().getData(), shape11.getPictureData().getData());
-        XSSFPicture shape22 = (XSSFPicture)drawing1.getShapes().get(1);
-        assertArrayEquals(shape2.getPictureData().getData(), shape22.getPictureData().getData());
-
-        sheet2 = wb.getSheetAt(1);
-        drawing2 = sheet2.createDrawingPatriarch();
-        XSSFPicture shape33 = (XSSFPicture)drawing2.getShapes().get(0);
-        assertArrayEquals(shape3.getPictureData().getData(), shape33.getPictureData().getData());
-        XSSFPicture shape44 = (XSSFPicture)drawing2.getShapes().get(1);
-        assertArrayEquals(shape4.getPictureData().getData(), shape44.getPictureData().getData());
-
-        wb.close();
+                sheet2 = wb2.getSheetAt(1);
+                drawing2 = sheet2.createDrawingPatriarch();
+                XSSFPicture shape33 = (XSSFPicture) drawing2.getShapes().get(0);
+                assertArrayEquals(shape3.getPictureData().getData(), shape33.getPictureData().getData());
+                XSSFPicture shape44 = (XSSFPicture) drawing2.getShapes().get(1);
+                assertArrayEquals(shape4.getPictureData().getData(), shape44.getPictureData().getData());
+            }
+        }
     }
 

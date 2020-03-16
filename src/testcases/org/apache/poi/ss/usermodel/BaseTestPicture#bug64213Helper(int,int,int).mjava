@@ -1,0 +1,50 @@
+    private int[] bug64213Helper(int imgDim, int colWidth, int rowHeight) throws IOException {
+        final int col1 = 2;
+        final int dx1Pixel = 100;
+        final int row1 = 2;
+        final float scale = 0.5f;
+
+        try (Workbook wb = _testDataProvider.createWorkbook()) {
+            Sheet sheet = wb.createSheet("Sheet1");
+
+            final byte[] bytes = createTestImage(imgDim, imgDim);
+            int pictureIdx = wb.addPicture(bytes, Workbook.PICTURE_TYPE_PNG);
+
+            sheet.setColumnWidth(col1, colWidth);
+            float col1px = sheet.getColumnWidthInPixels(col1);
+            if (rowHeight > -1) {
+                sheet.createRow(row1).setHeightInPoints((float) Units.pixelToPoints(rowHeight));
+            }
+
+            //create an anchor with upper left cell column/startRow, only one cell anchor since bottom right depends on resizing
+            CreationHelper helper = wb.getCreationHelper();
+            ClientAnchor anchor = helper.createClientAnchor();
+            anchor.setCol1(col1);
+            if (wb instanceof HSSFWorkbook) {
+                anchor.setDx1((int)(dx1Pixel * 1024 / col1px));
+            } else {
+                anchor.setDx1(dx1Pixel * Units.EMU_PER_PIXEL);
+            }
+            anchor.setRow1(row1);
+
+
+            //create a picture anchored to Col1 and Row1
+            Drawing<?> drawing = sheet.createDrawingPatriarch();
+            Picture pict = drawing.createPicture(anchor, pictureIdx);
+
+            //resize the picture to it's native size
+            pict.resize();
+
+            //resize the picture scaled proportional
+            pict.resize(scale);
+
+            ClientAnchor anc = (ClientAnchor)pict.getAnchor();
+            return new int[]{
+                anc.getCol1(), anc.getDx1(),
+                anc.getRow1(), anc.getDy1(),
+                anc.getCol2(), anc.getDx2(),
+                anc.getRow2(), anc.getDy2()
+            };
+        }
+    }
+

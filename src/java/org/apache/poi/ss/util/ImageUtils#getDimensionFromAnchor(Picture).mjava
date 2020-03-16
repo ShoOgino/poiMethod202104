@@ -9,50 +9,19 @@
         boolean isHSSF = (anchor instanceof HSSFClientAnchor);
         Sheet sheet = picture.getSheet();
 
-        double w = 0;
-        int col2 = anchor.getCol1();
-
-        //space in the leftmost cell
-        w = sheet.getColumnWidthInPixels(col2++);
-        if (isHSSF) {
-            w *= 1 - anchor.getDx1()/1024d;
-        } else {
-            w -= anchor.getDx1()/(double)EMU_PER_PIXEL;
+        // default to image size (in pixel), if the anchor is only specified for Col1/Row1
+        Dimension imgSize = null;
+        if (anchor.getCol2() < anchor.getCol1() || anchor.getRow2() < anchor.getRow1()) {
+            PictureData data = picture.getPictureData();
+            imgSize = getImageDimension(new ByteArrayInputStream(data.getData()), data.getPictureType());
         }
 
-        while(col2 < anchor.getCol2()){
-            w += sheet.getColumnWidthInPixels(col2++);
-        }
+        int w = getDimFromCell(imgSize == null ? 0 : imgSize.getWidth(), anchor.getCol1(), anchor.getDx1(), anchor.getCol2(), anchor.getDx2(),
+            isHSSF ? WIDTH_UNITS : 0, sheet::getColumnWidthInPixels);
 
-        if (isHSSF) {
-            w += anchor.getDx2()/1024d * sheet.getColumnWidthInPixels(col2);
-        } else {
-            w += anchor.getDx2()/(double)EMU_PER_PIXEL;
-        }
+        int h = getDimFromCell(imgSize == null ? 0 : imgSize.getHeight(), anchor.getRow1(), anchor.getDy1(), anchor.getRow2(), anchor.getDy2(),
+                               isHSSF ? HEIGHT_UNITS : 0, (row) -> getRowHeightInPixels(sheet, row));
 
-        double h = 0;
-        int row2 = anchor.getRow1();
-
-        h = getRowHeightInPixels(sheet,row2++);
-        if (isHSSF) {
-            h *= 1 - anchor.getDy1()/256d;
-        } else {
-            h -= anchor.getDy1()/(double)EMU_PER_PIXEL;
-        }
-
-        while(row2 < anchor.getRow2()){
-            h += getRowHeightInPixels(sheet,row2++);
-        }
-
-        if (isHSSF) {
-            h += getRowHeightInPixels(sheet,row2) * anchor.getDy2()/256;
-        } else {
-            h += anchor.getDy2()/(double)EMU_PER_PIXEL;
-        }
-
-        w *= EMU_PER_PIXEL;
-        h *= EMU_PER_PIXEL;
-
-        return new Dimension((int)Math.rint(w), (int)Math.rint(h));
+        return new Dimension(w, h);
     }
 
