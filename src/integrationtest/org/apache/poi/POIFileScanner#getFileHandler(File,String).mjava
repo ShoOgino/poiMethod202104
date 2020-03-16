@@ -10,70 +10,9 @@
     protected static FileHandler getFileHandler(File rootDir, String file) throws IOException {
         FileHandler fileHandler = TestAllFiles.HANDLERS.get(TestAllFiles.getExtension(file));
         if(fileHandler == null) {
-            File testFile = new File(rootDir, file);
-            FileMagic magic = FileMagic.valueOf(testFile);
-            // if we have a file-type that we can read, but no extension, we try to determine the
-            // file type manually
-
-            switch(magic) {
-                case OLE2: {
-                    try {
-                        try (POIFSFileSystem fs = new POIFSFileSystem(testFile, true)) {
-                            HSSFWorkbook.getWorkbookDirEntryName(fs.getRoot());
-                        }
-
-                        // we did not get an exception, so it seems this is a HSSFWorkbook
-                        fileHandler = TestAllFiles.HANDLERS.get(".xls");
-                    } catch (IOException | RuntimeException e) {
-                        try {
-                            try (FileInputStream istream = new FileInputStream(testFile)) {
-                                try (HWPFDocument ignored = new HWPFDocument(istream)) {
-                                    // seems to be a valid document
-                                    fileHandler = TestAllFiles.HANDLERS.get(".doc");
-                                }
-                            }
-                        } catch (IOException | RuntimeException e2) {
-                            System.out.println("Could not open POIFSFileSystem for OLE2 file " + testFile + ": " + e + " and " + e2);
-                            fileHandler = new TestAllFiles.NullFileHandler();
-                        }
-                    }
-                    break;
-                }
-                case OOXML: {
-                    try {
-                        WorkbookFactory.create(testFile);
-
-                        // seems to be a valid workbook
-                        fileHandler = TestAllFiles.HANDLERS.get(".xlsx");
-                    } catch (IOException | RuntimeException e) {
-                        try {
-                            try (FileInputStream is = new FileInputStream(testFile)) {
-                                try (XWPFDocument ignored = new XWPFDocument(is)) {
-                                    // seems to be a valid document
-                                    fileHandler = TestAllFiles.HANDLERS.get(".docx");
-                                }
-                            }
-                        } catch (IOException | RuntimeException e2) {
-                            System.out.println("Could not open POIFSFileSystem for OOXML file " + testFile + ": " + e + " and " + e2);
-                            fileHandler = new TestAllFiles.NullFileHandler();
-                        }
-                    }
-                    break;
-                }
-
-                // do not warn about a few detected file types
-                case RTF:
-                case PDF:
-                case HTML:
-                    fileHandler = new TestAllFiles.NullFileHandler();
-                    break;
-            }
-
-            if(fileHandler == null) {
-                System.out.println("Did not get a handler for extension " + TestAllFiles.getExtension(file) +
-                        " of file " + file + ": " + magic);
-                fileHandler = new TestAllFiles.NullFileHandler();
-            }
+            // we could not detect a type of file based on the extension, so we
+            // need to take a close look at the file
+            fileHandler = detectUnnamedFile(rootDir, file);
         }
         return fileHandler;
     }
