@@ -1,0 +1,19 @@
+    @Override
+    public void handleElement(SignatureInfo signatureInfo, Document doc, EventTarget target, EventListener parentListener) {
+        // see POI #63712 : because of Santuario change r1853805 in XmlSec 2.1.3,
+        // we have to deal with the whole document now
+
+        final DocumentTraversal traversal = (DocumentTraversal) doc;
+        final Map<String, String> prefixCfg = signatureInfo.getSignatureConfig().getNamespacePrefixes();
+
+        final Map<String, String> prefixUsed = new HashMap<>();
+
+        NodeList nl = doc.getElementsByTagName(OBJECT_TAG);
+        final int objLen = nl.getLength();
+        for (int i=0; i<objLen; i++) {
+            final Element objNode = (Element)nl.item(i);
+            getAllNamespaces(traversal, objNode, prefixCfg, prefixUsed);
+            prefixUsed.forEach((ns, prefix) -> objNode.setAttributeNS(XML_NS, "xmlns:"+prefix, ns));
+        }
+    }
+
