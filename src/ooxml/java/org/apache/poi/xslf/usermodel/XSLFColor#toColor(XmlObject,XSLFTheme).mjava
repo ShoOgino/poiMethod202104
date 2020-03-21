@@ -1,31 +1,31 @@
     private Color toColor(XmlObject obj, XSLFTheme theme) {
+        if (obj == null) {
+            return _phClr == null ? null : toColor(_phClr, theme);
+        }
+
+        final XmlCursor cur = obj.newCursor();
         Color color = null;
-        List<XmlObject> xo = new ArrayList<>();
-        xo.add(obj);
-        xo.addAll(Arrays.asList(obj.selectPath("*")));
-        boolean isFirst = true;
-        for (XmlObject ch : xo) {
-            if (ch instanceof CTHslColor) {
-                color = toColor((CTHslColor)ch);
-            } else if (ch instanceof CTPresetColor) {
-                color = toColor((CTPresetColor)ch);
-            } else if (ch instanceof CTSchemeColor) {
-                color = toColor((CTSchemeColor)ch, theme);
-            } else if (ch instanceof CTScRgbColor) {
-                color = toColor((CTScRgbColor)ch);
-            } else if (ch instanceof CTSRgbColor) {
-                color = toColor((CTSRgbColor)ch);
-            } else if (ch instanceof CTSystemColor) {
-                color = toColor((CTSystemColor)ch);
-            } else if (!(ch instanceof CTFontReference)) {
-                if (!isFirst) {
+        try {
+            XmlObject ch;
+            for (int idx=0; color == null && (ch = nextObject(obj, cur, idx)) != null; idx++) {
+                if (ch instanceof CTHslColor) {
+                    color = toColor((CTHslColor)ch);
+                } else if (ch instanceof CTPresetColor) {
+                    color = toColor((CTPresetColor)ch);
+                } else if (ch instanceof CTSchemeColor) {
+                    color = toColor((CTSchemeColor)ch, theme);
+                } else if (ch instanceof CTScRgbColor) {
+                    color = toColor((CTScRgbColor)ch);
+                } else if (ch instanceof CTSRgbColor) {
+                    color = toColor((CTSRgbColor)ch);
+                } else if (ch instanceof CTSystemColor) {
+                    color = toColor((CTSystemColor)ch);
+                } else if (!(ch instanceof CTFontReference) && idx > 0) {
                     throw new IllegalArgumentException("Unexpected color choice: " + ch.getClass());
                 }
             }
-            if (color != null) {
-                break;
-            }
-            isFirst = false;
+        } finally {
+            cur.dispose();
         }
         return color;
     }

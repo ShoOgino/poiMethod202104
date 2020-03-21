@@ -1,27 +1,24 @@
     private static int getRawValue(CTSchemeColor phClr, XmlObject xmlObject, String elem) {
-        String query = "declare namespace a='http://schemas.openxmlformats.org/drawingml/2006/main' $this//a:" + elem;
-
-        XmlObject[] obj;
-
-        // first ask the context color and if not found, ask the actual color bean
-        if (phClr != null){
-            obj = phClr.selectPath(query);
-            if (obj.length == 1){
-                Node attr = obj[0].getDomNode().getAttributes().getNamedItem("val");
-                if(attr != null) {
-                    return Integer.parseInt(attr.getNodeValue());
+        for (XmlObject obj : new XmlObject[]{xmlObject,phClr}) {
+            if (obj == null) {
+                continue;
+            }
+            XmlCursor cur = obj.newCursor();
+            try {
+                if (!(
+                        cur.toChild(XSLFRelation.NS_DRAWINGML, elem) ||
+                        (cur.toFirstChild() && cur.toChild(XSLFRelation.NS_DRAWINGML, elem))
+                    )) {
+                    continue;
                 }
+                String str = cur.getAttributeText(VAL_ATTR);
+                if (str != null && !"".equals(str)) {
+                    return Integer.parseInt(str);
+                }
+            } finally {
+                cur.dispose();
             }
         }
-
-        obj = xmlObject.selectPath(query);
-        if (obj.length == 1){
-            Node attr = obj[0].getDomNode().getAttributes().getNamedItem("val");
-            if(attr != null) {
-                return Integer.parseInt(attr.getNodeValue());
-            }
-        }
-
         return -1;
     }
 
