@@ -1,0 +1,29 @@
+    /**
+     * insert a new hyperlink Run in all runs
+     *
+     * @param pos The position at which the new run should be added.
+     * @param uri hyperlink uri
+     *
+     * @return the inserted run or null if the given pos is out of bounds.
+     */
+    public XWPFHyperlinkRun insertNewHyperlinkRun(int pos, String uri) {
+        if (pos == runs.size()) {
+            return createHyperlinkRun(uri);
+        }
+        XWPFHyperlinkRun newRun = insertNewProvidedRun(pos, newCursor -> {
+            String namespaceURI = CTHyperlink.type.getName().getNamespaceURI();
+            String localPart = "hyperlink";
+            newCursor.beginElement(localPart, namespaceURI);
+            // move the cursor to the START token to the hyperlink just created
+            newCursor.toParent();
+            CTHyperlink ctHyperLink = (CTHyperlink) newCursor.getObject();
+            return new XWPFHyperlinkRun(ctHyperLink, ctHyperLink.addNewR(), this);
+        });
+
+        String rId = getPart().getPackagePart().addExternalRelationship(
+                uri, XWPFRelation.HYPERLINK.getRelation()
+        ).getId();
+        newRun.getCTHyperlink().setId(rId);
+        return newRun;
+    }
+

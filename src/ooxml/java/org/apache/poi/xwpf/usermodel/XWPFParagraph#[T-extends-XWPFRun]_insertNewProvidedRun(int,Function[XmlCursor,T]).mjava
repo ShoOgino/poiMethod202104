@@ -1,0 +1,38 @@
+    /**
+     * insert a new run provided by  in all runs
+     *
+     * @param <T> XWPFRun or XWPFHyperlinkRun or XWPFFieldRun
+     * @param pos The position at which the new run should be added.
+     * @param provider provide a new run at position of the given cursor.
+     * @return the inserted run or null if the given pos is out of bounds.
+     */
+    private <T extends XWPFRun> T insertNewProvidedRun(int pos, Function<XmlCursor, T> provider) {
+        if (pos >= 0 && pos < runs.size()) {
+            XWPFRun run = runs.get(pos);
+            CTR ctr = run.getCTR();
+            XmlCursor newCursor = ctr.newCursor();
+            if (!isCursorInParagraph(newCursor)) {
+                // look up correct position for CTP -> XXX -> R array
+                newCursor.toParent();
+            }
+            if (isCursorInParagraph(newCursor)) {
+                // provide a new run
+                T newRun = provider.apply(newCursor);
+
+                // To update the iruns, find where we're going
+                // in the normal runs, and go in there
+                int iPos = iruns.size();
+                int oldAt = iruns.indexOf(run);
+                if (oldAt != -1) {
+                    iPos = oldAt;
+                }
+                iruns.add(iPos, newRun);
+                // Runs itself is easy to update
+                runs.add(pos, newRun);
+                return newRun;
+            }
+            newCursor.dispose();
+        }
+        return null;
+    }
+

@@ -1,46 +1,24 @@
     /**
-     * insert a new Run in RunArray
+     * insert a new Run in all runs
      *
      * @param pos The position at which the new run should be added.
      *
      * @return the inserted run or null if the given pos is out of bounds.
      */
     public XWPFRun insertNewRun(int pos) {
-        if (pos >= 0 && pos <= runs.size()) {
-            // calculate the correct pos as our run/irun list contains
-            // hyperlinks
-            // and fields so it is different to the paragraph R array.
-            int rPos = 0;
-            for (int i = 0; i < pos; i++) {
-                XWPFRun currRun = runs.get(i);
-                if (!(currRun instanceof XWPFHyperlinkRun
-                        || currRun instanceof XWPFFieldRun)) {
-                    rPos++;
-                }
-            }
-
-            CTR ctRun = paragraph.insertNewR(rPos);
-            XWPFRun newRun = new XWPFRun(ctRun, (IRunBody) this);
-
-            // To update the iruns, find where we're going
-            // in the normal runs, and go in there
-            int iPos = iruns.size();
-            if (pos < runs.size()) {
-                XWPFRun oldAtPos = runs.get(pos);
-                int oldAt = iruns.indexOf(oldAtPos);
-                if (oldAt != -1) {
-                    iPos = oldAt;
-                }
-            }
-            iruns.add(iPos, newRun);
-
-            // Runs itself is easy to update
-            runs.add(pos, newRun);
-
-            return newRun;
+        if (pos == runs.size()) {
+            return createRun();
         }
-
-        return null;
+        return insertNewProvidedRun(pos, newCursor -> {
+            String uri = CTR.type.getName().getNamespaceURI();
+            String localPart = "r";
+            // creates a new run, cursor is positioned inside the new
+            // element
+            newCursor.beginElement(localPart, uri);
+            // move the cursor to the START token to the run just created
+            newCursor.toParent();
+            CTR r = (CTR) newCursor.getObject();
+            return new XWPFRun(r, (IRunBody)this);
+        });
     }
-    // TODO Add methods to allow adding a HyperlinkRun or a FieldRun
 
