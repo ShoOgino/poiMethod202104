@@ -6,13 +6,13 @@
 		// 1223 void XclImpOleObj::ReadPictFmla( XclImpStream& rStrm, sal_uInt16 nRecSize )
 
 		int streamIdOffset = in.readShort(); // OOO calls this 'nFmlaLen'
-		int remaining = size - LittleEndian.SHORT_SIZE;
+		int remaining = size - LittleEndianConsts.SHORT_SIZE;
 
 		int dataLenAfterFormula = remaining - streamIdOffset;
 		int formulaSize = in.readUShort();
-		remaining -= LittleEndian.SHORT_SIZE;
+		remaining -= LittleEndianConsts.SHORT_SIZE;
 		field_1_unknown_int = in.readInt();
-		remaining -= LittleEndian.INT_SIZE;
+		remaining -= LittleEndianConsts.INT_SIZE;
 		byte[] formulaRawBytes = readRawData(in, formulaSize);
 		remaining -= formulaSize;
 		field_2_refPtg = readRefPtg(formulaRawBytes);
@@ -28,16 +28,16 @@
 		int stringByteCount;
 		if (remaining >= dataLenAfterFormula + 3) {
 			int tag = in.readByte();
-			stringByteCount = LittleEndian.BYTE_SIZE;
+			stringByteCount = LittleEndianConsts.BYTE_SIZE;
 			if (tag != 0x03) {
 				throw new RecordFormatException("Expected byte 0x03 here");
 			}
 			int nChars = in.readUShort();
-			stringByteCount += LittleEndian.SHORT_SIZE;
+			stringByteCount += LittleEndianConsts.SHORT_SIZE;
 			if (nChars > 0) {
 				 // OOO: the 4th way Xcl stores a unicode string: not even a Grbit byte present if length 0
 				field_3_unicode_flag = ( in.readByte() & 0x01 ) != 0;
-				stringByteCount += LittleEndian.BYTE_SIZE;
+				stringByteCount += LittleEndianConsts.BYTE_SIZE;
 				if (field_3_unicode_flag) {
 					field_4_ole_classname = StringUtil.readUnicodeLE(in, nChars);
 					stringByteCount += nChars * 2;
@@ -56,9 +56,9 @@
 		// Pad to next 2-byte boundary
 		if (((stringByteCount + formulaSize) % 2) != 0) {
 			int b = in.readByte();
-			remaining -= LittleEndian.BYTE_SIZE;
+			remaining -= LittleEndianConsts.BYTE_SIZE;
 			if (field_2_refPtg != null && field_4_ole_classname == null) {
-				field_4_unknownByte = Byte.valueOf((byte)b);
+				field_4_unknownByte = (byte)b;
 			}
 		}
 		int nUnexpectedPadding = remaining - dataLenAfterFormula;
@@ -71,8 +71,8 @@
 
 		// Fetch the stream ID
 		if (dataLenAfterFormula >= 4) {
-			field_5_stream_id = Integer.valueOf(in.readInt());
-			remaining -= LittleEndian.INT_SIZE;
+			field_5_stream_id = in.readInt();
+			remaining -= LittleEndianConsts.INT_SIZE;
 		} else {
 			field_5_stream_id = null;
 		}

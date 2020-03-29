@@ -1,54 +1,53 @@
     @Test
     public void testShiftRows() throws IOException {
-        Workbook wb = _testDataProvider.createWorkbook();
-        Sheet sheet = wb.createSheet();
+        try (Workbook wb = _testDataProvider.createWorkbook()) {
+            Sheet sheet = wb.createSheet();
 
-        SheetConditionalFormatting sheetCF = sheet.getSheetConditionalFormatting();
+            SheetConditionalFormatting sheetCF = sheet.getSheetConditionalFormatting();
 
-        ConditionalFormattingRule rule1 = sheetCF.createConditionalFormattingRule(
-                ComparisonOperator.BETWEEN, "SUM(A10:A15)", "1+SUM(B16:B30)");
-        FontFormatting fontFmt = rule1.createFontFormatting();
-        fontFmt.setFontStyle(true, false);
+            ConditionalFormattingRule rule1 = sheetCF.createConditionalFormattingRule(
+                    ComparisonOperator.BETWEEN, "SUM(A10:A15)", "1+SUM(B16:B30)");
+            FontFormatting fontFmt = rule1.createFontFormatting();
+            fontFmt.setFontStyle(true, false);
 
-        PatternFormatting patternFmt = rule1.createPatternFormatting();
-        patternFmt.setFillBackgroundColor(IndexedColors.YELLOW.index);
+            PatternFormatting patternFmt = rule1.createPatternFormatting();
+            patternFmt.setFillBackgroundColor(IndexedColors.YELLOW.index);
 
-        ConditionalFormattingRule rule2 = sheetCF.createConditionalFormattingRule(
-                ComparisonOperator.BETWEEN, "SUM(A10:A15)", "1+SUM(B16:B30)");
-        BorderFormatting borderFmt = rule2.createBorderFormatting();
-        borderFmt.setBorderDiagonal(BorderStyle.MEDIUM);
+            ConditionalFormattingRule rule2 = sheetCF.createConditionalFormattingRule(
+                    ComparisonOperator.BETWEEN, "SUM(A10:A15)", "1+SUM(B16:B30)");
+            BorderFormatting borderFmt = rule2.createBorderFormatting();
+            borderFmt.setBorderDiagonal(BorderStyle.MEDIUM);
 
-        CellRangeAddress [] regions = {
-            new CellRangeAddress(2, 4, 0, 0), // A3:A5
-        };
-        sheetCF.addConditionalFormatting(regions, rule1);
-        sheetCF.addConditionalFormatting(regions, rule2);
+            CellRangeAddress[] regions = {
+                    new CellRangeAddress(2, 4, 0, 0), // A3:A5
+            };
+            sheetCF.addConditionalFormatting(regions, rule1);
+            sheetCF.addConditionalFormatting(regions, rule2);
 
-        // This row-shift should destroy the CF region
-        sheet.shiftRows(10, 20, -9);
-        assertEquals(0, sheetCF.getNumConditionalFormattings());
+            // This row-shift should destroy the CF region
+            sheet.shiftRows(10, 20, -9);
+            assertEquals(0, sheetCF.getNumConditionalFormattings());
 
-        // re-add the CF
-        sheetCF.addConditionalFormatting(regions, rule1);
-        sheetCF.addConditionalFormatting(regions, rule2);
+            // re-add the CF
+            sheetCF.addConditionalFormatting(regions, rule1);
+            sheetCF.addConditionalFormatting(regions, rule2);
 
-        // This row shift should only affect the formulas
-        sheet.shiftRows(14, 17, 8);
-        ConditionalFormatting cf1 = sheetCF.getConditionalFormattingAt(0);
-        assertEquals("SUM(A10:A23)", cf1.getRule(0).getFormula1());
-        assertEquals("1+SUM(B24:B30)", cf1.getRule(0).getFormula2());
-        ConditionalFormatting cf2 = sheetCF.getConditionalFormattingAt(1);
-        assertEquals("SUM(A10:A23)", cf2.getRule(0).getFormula1());
-        assertEquals("1+SUM(B24:B30)", cf2.getRule(0).getFormula2());
+            // This row shift should only affect the formulas
+            sheet.shiftRows(14, 17, 8);
+            ConditionalFormatting cf1 = sheetCF.getConditionalFormattingAt(0);
+            assertEquals("SUM(A10:A23)", cf1.getRule(0).getFormula1());
+            assertEquals("1+SUM(B24:B30)", cf1.getRule(0).getFormula2());
+            ConditionalFormatting cf2 = sheetCF.getConditionalFormattingAt(1);
+            assertEquals("SUM(A10:A23)", cf2.getRule(0).getFormula1());
+            assertEquals("1+SUM(B24:B30)", cf2.getRule(0).getFormula2());
 
-        sheet.shiftRows(0, 8, 21);
-        cf1 = sheetCF.getConditionalFormattingAt(0);
-        assertEquals("SUM(A10:A21)", cf1.getRule(0).getFormula1());
-        assertEquals("1+SUM(#REF!)", cf1.getRule(0).getFormula2());
-        cf2 = sheetCF.getConditionalFormattingAt(1);
-        assertEquals("SUM(A10:A21)", cf2.getRule(0).getFormula1());
-        assertEquals("1+SUM(#REF!)", cf2.getRule(0).getFormula2());
-
-        wb.close();
+            sheet.shiftRows(0, 8, 21);
+            cf1 = sheetCF.getConditionalFormattingAt(0);
+            assertEquals("SUM(A10:A21)", cf1.getRule(0).getFormula1());
+            assertEquals("1+SUM(#REF!)", cf1.getRule(0).getFormula2());
+            cf2 = sheetCF.getConditionalFormattingAt(1);
+            assertEquals("SUM(A10:A21)", cf2.getRule(0).getFormula1());
+            assertEquals("1+SUM(#REF!)", cf2.getRule(0).getFormula2());
+        }
     }
 

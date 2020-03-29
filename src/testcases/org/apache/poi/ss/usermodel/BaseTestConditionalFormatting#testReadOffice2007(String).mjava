@@ -1,207 +1,207 @@
     public void testReadOffice2007(String filename) throws IOException {
-        Workbook wb = _testDataProvider.openSampleWorkbook(filename);
-        Sheet s = wb.getSheet("CF");
+        try (Workbook wb = _testDataProvider.openSampleWorkbook(filename)) {
+            Sheet s = wb.getSheet("CF");
 
-        // Sanity check data
-        assertEquals("Values", s.getRow(0).getCell(0).toString());
-        assertEquals("10.0", s.getRow(2).getCell(0).toString());
+            // Sanity check data
+            assertEquals("Values", s.getRow(0).getCell(0).toString());
+            assertEquals("10.0", s.getRow(2).getCell(0).toString());
 
-        // Check we found all the conditional formatting rules we should have
-        SheetConditionalFormatting sheetCF = s.getSheetConditionalFormatting();
-        int numCF = 3;
-        int numCF12 = 15;
-        int numCFEX = 0; // TODO This should be 2, but we don't support CFEX formattings yet, see #58149
-        assertEquals(numCF+numCF12+numCFEX, sheetCF.getNumConditionalFormattings());
-        
-        int fCF = 0, fCF12 = 0, fCFEX = 0;
-        for (int i=0; i<sheetCF.getNumConditionalFormattings(); i++) {
-            ConditionalFormatting cf = sheetCF.getConditionalFormattingAt(i);
-            if (cf instanceof HSSFConditionalFormatting) {
-                String str = cf.toString();
-                if (str.contains("[CF]")) fCF++;
-                if (str.contains("[CF12]")) fCF12++;
-                if (str.contains("[CFEX]")) fCFEX++;
-            } else {
-                ConditionType type = cf.getRule(cf.getNumberOfRules()-1).getConditionType();
-                if (type == ConditionType.CELL_VALUE_IS ||
-                    type == ConditionType.FORMULA) {
-                    fCF++;
+            // Check we found all the conditional formatting rules we should have
+            SheetConditionalFormatting sheetCF = s.getSheetConditionalFormatting();
+            int numCF = 3;
+            int numCF12 = 15;
+            int numCFEX = 0; // TODO This should be 2, but we don't support CFEX formattings yet, see #58149
+            assertEquals(numCF + numCF12 + numCFEX, sheetCF.getNumConditionalFormattings());
+
+            int fCF = 0, fCF12 = 0, fCFEX = 0;
+            for (int i = 0; i < sheetCF.getNumConditionalFormattings(); i++) {
+                ConditionalFormatting cf = sheetCF.getConditionalFormattingAt(i);
+                if (cf instanceof HSSFConditionalFormatting) {
+                    String str = cf.toString();
+                    if (str.contains("[CF]")) fCF++;
+                    if (str.contains("[CF12]")) fCF12++;
+                    if (str.contains("[CFEX]")) fCFEX++;
                 } else {
-                    // TODO Properly detect Ext ones from the xml
-                    fCF12++;
+                    ConditionType type = cf.getRule(cf.getNumberOfRules() - 1).getConditionType();
+                    if (type == ConditionType.CELL_VALUE_IS ||
+                            type == ConditionType.FORMULA) {
+                        fCF++;
+                    } else {
+                        // TODO Properly detect Ext ones from the xml
+                        fCF12++;
+                    }
                 }
             }
-        }
-        assertEquals(numCF, fCF);
-        assertEquals(numCF12, fCF12);
-        assertEquals(numCFEX, fCFEX);
-        
-        
-        // Check the rules / values in detail
-        
-        
-        // Highlight Positive values - Column C
-        ConditionalFormatting cf = sheetCF.getConditionalFormattingAt(0);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("C2:C17", cf.getFormattingRanges()[0].formatAsString());
-        
-        assertEquals(1, cf.getNumberOfRules());
-        ConditionalFormattingRule cr = cf.getRule(0);
-        assertEquals(ConditionType.CELL_VALUE_IS, cr.getConditionType());
-        assertEquals(ComparisonOperator.GT, cr.getComparisonOperation());
-        assertEquals("0", cr.getFormula1());
-        assertNull(cr.getFormula2());
-        // When it matches:
-        //   Sets the font colour to dark green
-        //   Sets the background colour to lighter green
-        // TODO Should the colours be slightly different between formats? Would CFEX support help for HSSF?
-        if (cr instanceof HSSFConditionalFormattingRule) {
-            assertColour("0:8080:0", cr.getFontFormatting().getFontColor());
-            assertColour("CCCC:FFFF:CCCC", cr.getPatternFormatting().getFillBackgroundColorColor());
-        } else {
-            assertColour("006100", cr.getFontFormatting().getFontColor());
-            assertColour("C6EFCE", cr.getPatternFormatting().getFillBackgroundColorColor());
-        }
-        
-        
-        // Highlight 10-30 - Column D
-        cf = sheetCF.getConditionalFormattingAt(1);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("D2:D17", cf.getFormattingRanges()[0].formatAsString());
-        
-        assertEquals(1, cf.getNumberOfRules());
-        cr = cf.getRule(0);
-        assertEquals(ConditionType.CELL_VALUE_IS, cr.getConditionType());
-        assertEquals(ComparisonOperator.BETWEEN, cr.getComparisonOperation());
-        assertEquals("10", cr.getFormula1());
-        assertEquals("30", cr.getFormula2());
-        // When it matches:
-        //   Sets the font colour to dark red
-        //   Sets the background colour to lighter red
-        // TODO Should the colours be slightly different between formats? Would CFEX support help for HSSF?
-        if (cr instanceof HSSFConditionalFormattingRule) {
-            assertColour("8080:0:8080", cr.getFontFormatting().getFontColor());
-            assertColour("FFFF:9999:CCCC", cr.getPatternFormatting().getFillBackgroundColorColor());
-        } else {
-            assertColour("9C0006", cr.getFontFormatting().getFontColor());
-            assertColour("FFC7CE", cr.getPatternFormatting().getFillBackgroundColorColor());
-        }
+            assertEquals(numCF, fCF);
+            assertEquals(numCF12, fCF12);
+            assertEquals(numCFEX, fCFEX);
 
-        
-        // Data Bars - Column E
-        cf = sheetCF.getConditionalFormattingAt(2);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("E2:E17", cf.getFormattingRanges()[0].formatAsString());
-        assertDataBar(cf, "FF63C384");
-        
-        
-        // Colours Red->Yellow->Green - Column F
-        cf = sheetCF.getConditionalFormattingAt(3);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("F2:F17", cf.getFormattingRanges()[0].formatAsString());
-        assertColorScale(cf, "F8696B", "FFEB84", "63BE7B");
 
-        
-        // Colours Blue->White->Red - Column G
-        cf = sheetCF.getConditionalFormattingAt(4);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("G2:G17", cf.getFormattingRanges()[0].formatAsString());
-        assertColorScale(cf, "5A8AC6", "FCFCFF", "F8696B");
+            // Check the rules / values in detail
 
-        
-        // Icons : Default - Column H, percentage thresholds
-        cf = sheetCF.getConditionalFormattingAt(5);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("H2:H17", cf.getFormattingRanges()[0].formatAsString());
-        assertIconSetPercentages(cf, IconSet.GYR_3_TRAFFIC_LIGHTS, 0d, 33d, 67d);
-        
-        
-        // Icons : 3 signs - Column I
-        cf = sheetCF.getConditionalFormattingAt(6);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("I2:I17", cf.getFormattingRanges()[0].formatAsString());
-        assertIconSetPercentages(cf, IconSet.GYR_3_SHAPES, 0d, 33d, 67d);
-        
-        
-        // Icons : 3 traffic lights 2 - Column J
-        cf = sheetCF.getConditionalFormattingAt(7);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("J2:J17", cf.getFormattingRanges()[0].formatAsString());
-        assertIconSetPercentages(cf, IconSet.GYR_3_TRAFFIC_LIGHTS_BOX, 0d, 33d, 67d);
-        
-        
-        // Icons : 4 traffic lights - Column K
-        cf = sheetCF.getConditionalFormattingAt(8);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("K2:K17", cf.getFormattingRanges()[0].formatAsString());
-        assertIconSetPercentages(cf, IconSet.GYRB_4_TRAFFIC_LIGHTS, 0d, 25d, 50d, 75d);
 
-        
-        // Icons : 3 symbols with backgrounds - Column L
-        cf = sheetCF.getConditionalFormattingAt(9);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("L2:L17", cf.getFormattingRanges()[0].formatAsString());
-        assertIconSetPercentages(cf, IconSet.GYR_3_SYMBOLS_CIRCLE, 0d, 33d, 67d);
+            // Highlight Positive values - Column C
+            ConditionalFormatting cf = sheetCF.getConditionalFormattingAt(0);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("C2:C17", cf.getFormattingRanges()[0].formatAsString());
 
-        
-        // Icons : 3 flags - Column M2 Only
-        cf = sheetCF.getConditionalFormattingAt(10);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("M2", cf.getFormattingRanges()[0].formatAsString());
-        assertIconSetPercentages(cf, IconSet.GYR_3_FLAGS, 0d, 33d, 67d);
+            assertEquals(1, cf.getNumberOfRules());
+            ConditionalFormattingRule cr = cf.getRule(0);
+            assertEquals(ConditionType.CELL_VALUE_IS, cr.getConditionType());
+            assertEquals(ComparisonOperator.GT, cr.getComparisonOperation());
+            assertEquals("0", cr.getFormula1());
+            assertNull(cr.getFormula2());
+            // When it matches:
+            //   Sets the font colour to dark green
+            //   Sets the background colour to lighter green
+            // TODO Should the colours be slightly different between formats? Would CFEX support help for HSSF?
+            if (cr instanceof HSSFConditionalFormattingRule) {
+                assertColour("0:8080:0", cr.getFontFormatting().getFontColor());
+                assertColour("CCCC:FFFF:CCCC", cr.getPatternFormatting().getFillBackgroundColorColor());
+            } else {
+                assertColour("006100", cr.getFontFormatting().getFontColor());
+                assertColour("C6EFCE", cr.getPatternFormatting().getFillBackgroundColorColor());
+            }
 
-        // Icons : 3 flags - Column M (all)
-        cf = sheetCF.getConditionalFormattingAt(11);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("M2:M17", cf.getFormattingRanges()[0].formatAsString());
-        assertIconSetPercentages(cf, IconSet.GYR_3_FLAGS, 0d, 33d, 67d);
 
-        
-        // Icons : 3 symbols 2 (no background) - Column N
-        cf = sheetCF.getConditionalFormattingAt(12);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("N2:N17", cf.getFormattingRanges()[0].formatAsString());
-        assertIconSetPercentages(cf, IconSet.GYR_3_SYMBOLS, 0d, 33d, 67d);
+            // Highlight 10-30 - Column D
+            cf = sheetCF.getConditionalFormattingAt(1);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("D2:D17", cf.getFormattingRanges()[0].formatAsString());
 
-        
-        // Icons : 3 arrows - Column O
-        cf = sheetCF.getConditionalFormattingAt(13);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("O2:O17", cf.getFormattingRanges()[0].formatAsString());
-        assertIconSetPercentages(cf, IconSet.GYR_3_ARROW, 0d, 33d, 67d);
+            assertEquals(1, cf.getNumberOfRules());
+            cr = cf.getRule(0);
+            assertEquals(ConditionType.CELL_VALUE_IS, cr.getConditionType());
+            assertEquals(ComparisonOperator.BETWEEN, cr.getComparisonOperation());
+            assertEquals("10", cr.getFormula1());
+            assertEquals("30", cr.getFormula2());
+            // When it matches:
+            //   Sets the font colour to dark red
+            //   Sets the background colour to lighter red
+            // TODO Should the colours be slightly different between formats? Would CFEX support help for HSSF?
+            if (cr instanceof HSSFConditionalFormattingRule) {
+                assertColour("8080:0:8080", cr.getFontFormatting().getFontColor());
+                assertColour("FFFF:9999:CCCC", cr.getPatternFormatting().getFillBackgroundColorColor());
+            } else {
+                assertColour("9C0006", cr.getFontFormatting().getFontColor());
+                assertColour("FFC7CE", cr.getPatternFormatting().getFillBackgroundColorColor());
+            }
 
-        
-        // Icons : 5 arrows grey - Column P    
-        cf = sheetCF.getConditionalFormattingAt(14);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("P2:P17", cf.getFormattingRanges()[0].formatAsString());
-        assertIconSetPercentages(cf, IconSet.GREY_5_ARROWS, 0d, 20d, 40d, 60d, 80d);
 
-        
-        // Icons : 3 stars (ext) - Column Q
-        // TODO Support EXT formattings
+            // Data Bars - Column E
+            cf = sheetCF.getConditionalFormattingAt(2);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("E2:E17", cf.getFormattingRanges()[0].formatAsString());
+            assertDataBar(cf, "FF63C384");
 
-        
-        // Icons : 4 ratings - Column R
-        cf = sheetCF.getConditionalFormattingAt(15);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("R2:R17", cf.getFormattingRanges()[0].formatAsString());
-        assertIconSetPercentages(cf, IconSet.RATINGS_4, 0d, 25d, 50d, 75d);
 
-        
-        // Icons : 5 ratings - Column S
-        cf = sheetCF.getConditionalFormattingAt(16);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("S2:S17", cf.getFormattingRanges()[0].formatAsString());
-        assertIconSetPercentages(cf, IconSet.RATINGS_5, 0d, 20d, 40d, 60d, 80d);
+            // Colours Red->Yellow->Green - Column F
+            cf = sheetCF.getConditionalFormattingAt(3);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("F2:F17", cf.getFormattingRanges()[0].formatAsString());
+            assertColorScale(cf, "F8696B", "FFEB84", "63BE7B");
 
-        
-        // Custom Icon+Format - Column T
-        cf = sheetCF.getConditionalFormattingAt(17);
-        assertEquals(1, cf.getFormattingRanges().length);
-        assertEquals("T2:T17", cf.getFormattingRanges()[0].formatAsString());
-        
-        // TODO Support IconSet + Other CFs with 2 rules
+
+            // Colours Blue->White->Red - Column G
+            cf = sheetCF.getConditionalFormattingAt(4);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("G2:G17", cf.getFormattingRanges()[0].formatAsString());
+            assertColorScale(cf, "5A8AC6", "FCFCFF", "F8696B");
+
+
+            // Icons : Default - Column H, percentage thresholds
+            cf = sheetCF.getConditionalFormattingAt(5);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("H2:H17", cf.getFormattingRanges()[0].formatAsString());
+            assertIconSetPercentages(cf, IconSet.GYR_3_TRAFFIC_LIGHTS, 0d, 33d, 67d);
+
+
+            // Icons : 3 signs - Column I
+            cf = sheetCF.getConditionalFormattingAt(6);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("I2:I17", cf.getFormattingRanges()[0].formatAsString());
+            assertIconSetPercentages(cf, IconSet.GYR_3_SHAPES, 0d, 33d, 67d);
+
+
+            // Icons : 3 traffic lights 2 - Column J
+            cf = sheetCF.getConditionalFormattingAt(7);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("J2:J17", cf.getFormattingRanges()[0].formatAsString());
+            assertIconSetPercentages(cf, IconSet.GYR_3_TRAFFIC_LIGHTS_BOX, 0d, 33d, 67d);
+
+
+            // Icons : 4 traffic lights - Column K
+            cf = sheetCF.getConditionalFormattingAt(8);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("K2:K17", cf.getFormattingRanges()[0].formatAsString());
+            assertIconSetPercentages(cf, IconSet.GYRB_4_TRAFFIC_LIGHTS, 0d, 25d, 50d, 75d);
+
+
+            // Icons : 3 symbols with backgrounds - Column L
+            cf = sheetCF.getConditionalFormattingAt(9);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("L2:L17", cf.getFormattingRanges()[0].formatAsString());
+            assertIconSetPercentages(cf, IconSet.GYR_3_SYMBOLS_CIRCLE, 0d, 33d, 67d);
+
+
+            // Icons : 3 flags - Column M2 Only
+            cf = sheetCF.getConditionalFormattingAt(10);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("M2", cf.getFormattingRanges()[0].formatAsString());
+            assertIconSetPercentages(cf, IconSet.GYR_3_FLAGS, 0d, 33d, 67d);
+
+            // Icons : 3 flags - Column M (all)
+            cf = sheetCF.getConditionalFormattingAt(11);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("M2:M17", cf.getFormattingRanges()[0].formatAsString());
+            assertIconSetPercentages(cf, IconSet.GYR_3_FLAGS, 0d, 33d, 67d);
+
+
+            // Icons : 3 symbols 2 (no background) - Column N
+            cf = sheetCF.getConditionalFormattingAt(12);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("N2:N17", cf.getFormattingRanges()[0].formatAsString());
+            assertIconSetPercentages(cf, IconSet.GYR_3_SYMBOLS, 0d, 33d, 67d);
+
+
+            // Icons : 3 arrows - Column O
+            cf = sheetCF.getConditionalFormattingAt(13);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("O2:O17", cf.getFormattingRanges()[0].formatAsString());
+            assertIconSetPercentages(cf, IconSet.GYR_3_ARROW, 0d, 33d, 67d);
+
+
+            // Icons : 5 arrows grey - Column P
+            cf = sheetCF.getConditionalFormattingAt(14);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("P2:P17", cf.getFormattingRanges()[0].formatAsString());
+            assertIconSetPercentages(cf, IconSet.GREY_5_ARROWS, 0d, 20d, 40d, 60d, 80d);
+
+
+            // Icons : 3 stars (ext) - Column Q
+            // TODO Support EXT formattings
+
+
+            // Icons : 4 ratings - Column R
+            cf = sheetCF.getConditionalFormattingAt(15);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("R2:R17", cf.getFormattingRanges()[0].formatAsString());
+            assertIconSetPercentages(cf, IconSet.RATINGS_4, 0d, 25d, 50d, 75d);
+
+
+            // Icons : 5 ratings - Column S
+            cf = sheetCF.getConditionalFormattingAt(16);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("S2:S17", cf.getFormattingRanges()[0].formatAsString());
+            assertIconSetPercentages(cf, IconSet.RATINGS_5, 0d, 20d, 40d, 60d, 80d);
+
+
+            // Custom Icon+Format - Column T
+            cf = sheetCF.getConditionalFormattingAt(17);
+            assertEquals(1, cf.getFormattingRanges().length);
+            assertEquals("T2:T17", cf.getFormattingRanges()[0].formatAsString());
+
+            // TODO Support IconSet + Other CFs with 2 rules
 //        assertEquals(2, cf.getNumberOfRules());
 //        cr = cf.getRule(0);
 //        assertIconSetPercentages(cr, IconSet.GYR_3_TRAFFIC_LIGHTS_BOX, 0d, 33d, 67d);
@@ -215,11 +215,11 @@
 //            assertEquals("MOD(ROW($T2),2)=1", cr.getFormula1());
 //        }
 //        assertEquals(null, cr.getFormula2());
-        
-        
-        // Mixed icons - Column U
-        // TODO Support EXT formattings
-        
-        wb.close();
+
+
+            // Mixed icons - Column U
+            // TODO Support EXT formattings
+
+        }
     }
 
