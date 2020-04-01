@@ -1,30 +1,31 @@
 	@Test
 	public void testBug56479() throws Exception {
-		InputStream is = OpenXML4JTestDataSamples.openSampleStream("dcterms_bug_56479.zip");
-		OPCPackage p = OPCPackage.open(is);
+		try (InputStream is = openSampleStream("dcterms_bug_56479.zip");
+			OPCPackage p = OPCPackage.open(is)) {
 
-		// Check we found the contents of it
-		boolean foundCoreProps = false, foundDocument = false, foundTheme1 = false;
-		for (final PackagePart part : p.getParts()) {
-			final String partName = part.getPartName().toString();
-			final String contentType = part.getContentType();
-			if ("/docProps/core.xml".equals(partName)) {
-				assertEquals(ContentTypes.CORE_PROPERTIES_PART, contentType);
-				foundCoreProps = true;
+			// Check we found the contents of it
+			boolean foundCoreProps = false, foundDocument = false, foundTheme1 = false;
+			for (final PackagePart part : p.getParts()) {
+				final String partName = part.getPartName().toString();
+				final String contentType = part.getContentType();
+				switch (partName) {
+					case "/docProps/core.xml":
+						assertEquals(ContentTypes.CORE_PROPERTIES_PART, contentType);
+						foundCoreProps = true;
+						break;
+					case "/word/document.xml":
+						assertEquals(XWPFRelation.DOCUMENT.getContentType(), contentType);
+						foundDocument = true;
+						break;
+					case "/word/theme/theme1.xml":
+						assertEquals(XWPFRelation.THEME.getContentType(), contentType);
+						foundTheme1 = true;
+						break;
+				}
 			}
-			if ("/word/document.xml".equals(partName)) {
-				assertEquals(XWPFRelation.DOCUMENT.getContentType(), contentType);
-				foundDocument = true;
-			}
-			if ("/word/theme/theme1.xml".equals(partName)) {
-				assertEquals(XWPFRelation.THEME.getContentType(), contentType);
-				foundTheme1 = true;
-			}
+			assertTrue("Core not found in " + p.getParts(), foundCoreProps);
+			assertFalse("Document should not be found in " + p.getParts(), foundDocument);
+			assertFalse("Theme1 should not found in " + p.getParts(), foundTheme1);
 		}
-		assertTrue("Core not found in " + p.getParts(), foundCoreProps);
-		assertFalse("Document should not be found in " + p.getParts(), foundDocument);
-		assertFalse("Theme1 should not found in " + p.getParts(), foundTheme1);
-		p.close();
-		is.close();
 	}
 

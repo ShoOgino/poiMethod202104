@@ -1,0 +1,38 @@
+    protected void runFormatTests(String workbookName, CellValue valueGetter) throws IOException {
+        try (Workbook workbook = _testDataProvider.openSampleWorkbook(workbookName)) {
+            workbook.setMissingCellPolicy(Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+
+            Sheet sheet = workbook.getSheet("Tests");
+            boolean isHeader = true;
+            for (Row row : sheet) {
+                // Skip the header row
+                if (isHeader || row == null) {
+                    isHeader = false;
+                    continue;
+                }
+                String expectedText = row.getCell(0).getStringCellValue();
+                String format = row.getCell(1).getStringCellValue();
+                Cell value = row.getCell(2);
+
+                if (expectedText.isEmpty() && format.isEmpty()) {
+                    continue;
+                }
+
+                Object objVal = valueGetter.getValue(value);
+                JLabel label = new JLabel();
+                label.setForeground(TEST_COLOR);
+                label.setText("xyzzy");
+
+                Color origColor = label.getForeground();
+                CellFormatPart cellFormatPart = new CellFormatPart(format);
+                // If this doesn't apply, no color change is expected
+                Color expectedColor = cellFormatPart.apply(label, objVal).applies ? TEST_COLOR : origColor;
+
+                String actualText = label.getText();
+                Color actualColor = label.getForeground();
+                valueGetter.equivalent(expectedText, actualText, cellFormatPart);
+                assertEquals("no color", expectedColor, actualColor);
+            }
+        }
+    }
+

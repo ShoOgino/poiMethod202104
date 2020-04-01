@@ -6,77 +6,74 @@
     @Test
 	public void createPackageWithCoreDocument() throws IOException, InvalidFormatException, URISyntaxException, SAXException {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		OPCPackage pkg = OPCPackage.create(baos);
+		try (OPCPackage pkg = OPCPackage.create(baos)) {
 
-		// Add a core document
-        PackagePartName corePartName = PackagingURIHelper.createPartName("/xl/workbook.xml");
-        // Create main part relationship
-        pkg.addRelationship(corePartName, TargetMode.INTERNAL, PackageRelationshipTypes.CORE_DOCUMENT, "rId1");
-        // Create main document part
-        PackagePart corePart = pkg.createPart(corePartName, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml");
-        // Put in some dummy content
-        OutputStream coreOut = corePart.getOutputStream();
-        coreOut.write("<dummy-xml />".getBytes(StandardCharsets.UTF_8));
-        coreOut.close();
+			// Add a core document
+			PackagePartName corePartName = createPartName("/xl/workbook.xml");
+			// Create main part relationship
+			pkg.addRelationship(corePartName, TargetMode.INTERNAL, PackageRelationshipTypes.CORE_DOCUMENT, "rId1");
+			// Create main document part
+			PackagePart corePart = pkg.createPart(corePartName, XSSFRelation.WORKBOOK.getContentType());
+			// Put in some dummy content
+			try (OutputStream coreOut = corePart.getOutputStream()) {
+				coreOut.write("<dummy-xml />".getBytes(StandardCharsets.UTF_8));
+			}
 
-		// And another bit
-        PackagePartName sheetPartName = PackagingURIHelper.createPartName("/xl/worksheets/sheet1.xml");
-        PackageRelationship rel =
-        	 corePart.addRelationship(sheetPartName, TargetMode.INTERNAL, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet", "rSheet1");
-		assertNotNull(rel);
+			// And another bit
+			PackagePartName sheetPartName = createPartName("/xl/worksheets/sheet1.xml");
+			PackageRelationship rel = corePart.addRelationship(
+					sheetPartName, TargetMode.INTERNAL, XSSFRelation.WORKSHEET.getRelation(), "rSheet1");
+			assertNotNull(rel);
 
-        PackagePart part = pkg.createPart(sheetPartName, "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml");
-        assertNotNull(part);
+			PackagePart part = pkg.createPart(sheetPartName, XSSFRelation.WORKSHEET.getContentType());
+			assertNotNull(part);
 
-        // Dummy content again
-        coreOut = corePart.getOutputStream();
-        coreOut.write("<dummy-xml2 />".getBytes(StandardCharsets.UTF_8));
-        coreOut.close();
+			// Dummy content again
+			try (OutputStream coreOut = corePart.getOutputStream()) {
+				coreOut.write("<dummy-xml2 />".getBytes(StandardCharsets.UTF_8));
+			}
 
-        //add a relationship with internal target: "#Sheet1!A1"
-        corePart.addRelationship(new URI("#Sheet1!A1"), TargetMode.INTERNAL, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink", "rId2");
+			//add a relationship with internal target: "#Sheet1!A1"
+			corePart.addRelationship(new URI("#Sheet1!A1"), TargetMode.INTERNAL, PackageRelationshipTypes.HYPERLINK_PART, "rId2");
 
-        // Check things are as expected
-        PackageRelationshipCollection coreRels =
-        	pkg.getRelationshipsByType(PackageRelationshipTypes.CORE_DOCUMENT);
-        assertEquals(1, coreRels.size());
-        PackageRelationship coreRel = coreRels.getRelationship(0);
-		assertNotNull(coreRel);
-        assertEquals("/", coreRel.getSourceURI().toString());
-        assertEquals("/xl/workbook.xml", coreRel.getTargetURI().toString());
-        assertNotNull(pkg.getPart(coreRel));
+			// Check things are as expected
+			PackageRelationshipCollection coreRels =
+					pkg.getRelationshipsByType(PackageRelationshipTypes.CORE_DOCUMENT);
+			assertEquals(1, coreRels.size());
+			PackageRelationship coreRel = coreRels.getRelationship(0);
+			assertNotNull(coreRel);
+			assertEquals("/", coreRel.getSourceURI().toString());
+			assertEquals("/xl/workbook.xml", coreRel.getTargetURI().toString());
+			assertNotNull(pkg.getPart(coreRel));
+		}
 
 
-        // Save and re-load
-        pkg.close();
+		// Save and re-load
         File tmp = TempFile.createTempFile("testCreatePackageWithCoreDocument", ".zip");
 		try (OutputStream fout = new FileOutputStream(tmp)) {
-			fout.write(baos.toByteArray());
+			baos.writeTo(fout);
+			fout.flush();
 		}
-        pkg = OPCPackage.open(tmp.getPath());
-        //tmp.delete();
 
-        try {
+        try (OPCPackage pkg = OPCPackage.open(tmp.getPath())) {
             // Check still right
-            coreRels = pkg.getRelationshipsByType(PackageRelationshipTypes.CORE_DOCUMENT);
+			PackageRelationshipCollection coreRels = pkg.getRelationshipsByType(PackageRelationshipTypes.CORE_DOCUMENT);
             assertEquals(1, coreRels.size());
-            coreRel = coreRels.getRelationship(0);
+			PackageRelationship coreRel = coreRels.getRelationship(0);
 
 			assertNotNull(coreRel);
             assertEquals("/", coreRel.getSourceURI().toString());
             assertEquals("/xl/workbook.xml", coreRel.getTargetURI().toString());
-            corePart = pkg.getPart(coreRel);
+			PackagePart corePart = pkg.getPart(coreRel);
             assertNotNull(corePart);
 
-            PackageRelationshipCollection rels = corePart.getRelationshipsByType("http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink");
+            PackageRelationshipCollection rels = corePart.getRelationshipsByType(PackageRelationshipTypes.HYPERLINK_PART);
             assertEquals(1, rels.size());
-            rel = rels.getRelationship(0);
+			PackageRelationship rel = rels.getRelationship(0);
 			assertNotNull(rel);
             assertEquals("Sheet1!A1", rel.getTargetURI().getRawFragment());
 
             assertMSCompatibility(pkg);
-        } finally {
-            pkg.close();
         }
     }
 

@@ -1,40 +1,34 @@
     @Test
-	public void deletePartRecursive() throws InvalidFormatException {
-		TreeMap<PackagePartName, String> expectedValues;
-		TreeMap<PackagePartName, String> values;
-
-		values = new TreeMap<>();
+	public void deletePartRecursive() throws InvalidFormatException, IOException {
+		final TreeMap<PackagePartName, String> expectedValues = new TreeMap<>();
+		final TreeMap<PackagePartName, String> values = new TreeMap<>();
 
 		// Expected values
-		expectedValues = new TreeMap<>();
-		expectedValues.put(PackagingURIHelper.createPartName("/_rels/.rels"),
-				"application/vnd.openxmlformats-package.relationships+xml");
+		expectedValues.put(createPartName("/_rels/.rels"), ContentTypes.RELATIONSHIPS_PART);
+		expectedValues.put(createPartName("/docProps/app.xml"), CONTENT_EXT_PROPS);
+		expectedValues.put(createPartName("/docProps/core.xml"), ContentTypes.CORE_PROPERTIES_PART);
 
-		expectedValues
-				.put(PackagingURIHelper.createPartName("/docProps/app.xml"),
-						"application/vnd.openxmlformats-officedocument.extended-properties+xml");
-		expectedValues.put(PackagingURIHelper
-				.createPartName("/docProps/core.xml"),
-				"application/vnd.openxmlformats-package.core-properties+xml");
+		String filepath = getSampleFileName("sample.docx");
 
-		String filepath = OpenXML4JTestDataSamples.getSampleFileName("sample.docx");
+        try (OPCPackage p = OPCPackage.open(filepath, PackageAccess.READ_WRITE)) {
+        	try {
+				// Remove the core part
+				p.deletePartRecursive(createPartName("/word/document.xml"));
 
-		@SuppressWarnings("resource")
-        OPCPackage p = OPCPackage.open(filepath, PackageAccess.READ_WRITE);
-		// Remove the core part
-		p.deletePartRecursive(PackagingURIHelper.createPartName("/word/document.xml"));
+				for (PackagePart part : p.getParts()) {
+					values.put(part.getPartName(), part.getContentType());
+					logger.log(POILogger.DEBUG, part.getPartName());
+				}
 
-		for (PackagePart part : p.getParts()) {
-			values.put(part.getPartName(), part.getContentType());
-			logger.log(POILogger.DEBUG, part.getPartName());
+				// Compare expected values with values return by the package
+				for (PackagePartName partName : expectedValues.keySet()) {
+					assertNotNull(values.get(partName));
+					assertEquals(expectedValues.get(partName), values.get(partName));
+				}
+			} finally {
+				// Don't save modifications
+				p.revert();
+			}
 		}
-
-		// Compare expected values with values return by the package
-		for (PackagePartName partName : expectedValues.keySet()) {
-			assertNotNull(values.get(partName));
-			assertEquals(expectedValues.get(partName), values.get(partName));
-		}
-		// Don't save modifications
-		p.revert();
 	}
 

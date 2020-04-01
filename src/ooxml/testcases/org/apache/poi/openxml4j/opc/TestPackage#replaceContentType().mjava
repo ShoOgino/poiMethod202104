@@ -1,24 +1,19 @@
     @Test
-    public void replaceContentType()
-    throws IOException, InvalidFormatException, SecurityException, IllegalArgumentException {
-        InputStream is = OpenXML4JTestDataSamples.openSampleStream("sample.xlsx");
-        @SuppressWarnings("resource")
-        OPCPackage p = OPCPackage.open(is);
+    public void replaceContentType() throws IOException, InvalidFormatException {
+        try (InputStream is = openSampleStream("sample.xlsx");
+        	OPCPackage p = OPCPackage.open(is)) {
+			try {
+				ContentTypeManager mgr = getContentTypeManager(p);
 
-        ContentTypeManager mgr = getContentTypeManager(p);
+				assertTrue(mgr.isContentTypeRegister(XSSFRelation.WORKBOOK.getContentType()));
+				assertFalse(mgr.isContentTypeRegister(XSSFRelation.MACROS_WORKBOOK.getContentType()));
+				assertTrue(p.replaceContentType(XSSFRelation.WORKBOOK.getContentType(), XSSFRelation.MACROS_WORKBOOK.getContentType()));
 
-        assertTrue(mgr.isContentTypeRegister("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"));
-        assertFalse(mgr.isContentTypeRegister("application/vnd.ms-excel.sheet.macroEnabled.main+xml"));
-
-        assertTrue(
-                p.replaceContentType(
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
-                "application/vnd.ms-excel.sheet.macroEnabled.main+xml")
-        );
-
-        assertFalse(mgr.isContentTypeRegister("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"));
-        assertTrue(mgr.isContentTypeRegister("application/vnd.ms-excel.sheet.macroEnabled.main+xml"));
-        p.revert();
-        is.close();
+				assertFalse(mgr.isContentTypeRegister(XSSFRelation.WORKBOOK.getContentType()));
+				assertTrue(mgr.isContentTypeRegister(XSSFRelation.MACROS_WORKBOOK.getContentType()));
+			} finally {
+				p.revert();
+			}
+		}
     }
 
