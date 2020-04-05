@@ -1,7 +1,32 @@
+    /**
+     * Symbol fonts like "Wingdings" or "Symbol" have glyphs mapped to a Unicode private use range via the Java font loader,
+     * although a system font viewer might show you the glyphs in the ASCII range.
+     * This maps the chars of the text string to the corresponding private use range chars.
+     *
+     * @param graphics the used graphics context
+     * @param fontInfo the font info
+     * @param text the input string
+     *
+     * @return the mapped string, typically consists of chars in the range of 0xf000 to 0xf0ff
+     *
+     * @since POI 4.0.0
+     */
+    @Override
     public String mapFontCharset(Graphics2D graphics, FontInfo fontInfo, String text) {
-        // TODO: find a real charset mapping solution instead of hard coding for Wingdings
-        return (fontInfo != null && knownSymbolFonts.contains(fontInfo.getTypeface()))
-            ? mapSymbolChars(text)
-            : text;
+        if (fontInfo == null || text == null || text.isEmpty()) {
+            return text;
+        }
+
+        String typeface = fontInfo.getTypeface();
+        if (fontInfo.getCharset() == FontCharset.SYMBOL || knownSymbolFonts.contains(typeface)) {
+            int[] cps = text.codePoints().map(DrawFontManagerDefault::mapSymbolChar).toArray();
+            String ret = new String(cps, 0, cps.length);
+
+            String[] allFonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
+            boolean hasFont = Arrays.asList(allFonts).contains(typeface);
+            return hasFont ? ret : StringUtil.mapMsCodepointString(ret);
+        }
+
+        return text;
     }
 

@@ -2,155 +2,44 @@
         final HwmfDrawProperties prop = getProperties();
 
         final AffineTransform at = graphicsCtx.getTransform();
-
         try {
             at.createInverse();
         } catch (NoninvertibleTransformException e) {
             return;
         }
 
-        HwmfFont font = prop.getFont();
+        final HwmfFont font = prop.getFont();
         if (font == null || text == null || text.length == 0) {
             return;
         }
 
-        double fontH = getFontHeight(font);
-        // TODO: another approx. ...
-        double fontW = fontH/1.8;
-
-        Charset charset;
-        if (isUnicode) {
-            charset = Charsets.UTF_16LE;
-        } else {
-            charset = font.getCharset().getCharset();
-            if (charset == null) {
-                charset = DEFAULT_CHARSET;
-            }
-        }
-
-        int trimLen;
-        for (trimLen=0; trimLen<text.length; trimLen+=2) {
-            if (trimLen == text.length-1) {
-                if (text[trimLen] != 0) {
-                    trimLen++;
-                }
-                break;
-            } else if ((text[trimLen] == -1 && text[trimLen+1] == -1) ||
-                ((text[trimLen] & 0xE0) == 0 && text[trimLen+1] == 0)) {
-                break;
-            }
-        }
-
-        String textString = new String(text, 0, trimLen, charset);
-        textString = textString.substring(0, Math.min(textString.length(), length));
-
+        String textString = trimText(font, isUnicode, text, length);
         if (textString.isEmpty()) {
             return;
         }
 
-        DrawFontManager fontHandler = DrawFactory.getInstance(graphicsCtx).getFontManager(graphicsCtx);
-        FontInfo fontInfo = fontHandler.getMappedFont(graphicsCtx, font);
-        if (fontInfo.getCharset() == FontCharset.SYMBOL) {
-            textString = DrawFontManagerDefault.mapSymbolChars(textString);
-        }
+        final DrawFontManager fontHandler = DrawFactory.getInstance(graphicsCtx).getFontManager(graphicsCtx);
+        final FontInfo fontInfo = fontHandler.getMappedFont(graphicsCtx, font);
+        textString = fontHandler.mapFontCharset(graphicsCtx, fontInfo, textString);
 
-        AttributedString as = new AttributedString(textString);
-        addAttributes(as, font, fontInfo.getTypeface());
-
-        // disabled for the time being, as the results aren't promising
-        /*
-        if (dx != null && !dx.isEmpty()) {
-            //for multi-byte encodings (e.g. Shift_JIS), the byte length
-            //might not equal the string length().
-            //The x information is stored in dx[], an array parallel to the
-            //byte array text[].  dx[] stores the x info in the
-            //first byte of a multibyte character, but dx[] stores 0
-            //for the other bytes in that character.
-            //We need to map this information to the String offsets
-            //dx[0] = 13 text[0] = -125
-            //dx[1] = 0  text[1] = 118
-            //dx[2] = 14 text[2] = -125
-            //dx[3] = 0  text[3] = -115
-            // needs to be remapped as:
-            //dxNormed[0] = 13 textString.get(0) = U+30D7
-            //dxNormed[1] = 14 textString.get(1) = U+30ED
-
-            final int cps = textString.codePointCount(0, textString.length());
-            final int unicodeSteps = Math.max(dx.size()/cps, 1);
-            int dxPosition = 0, lastDxPosition = 0;
-            int beginIndex = 0;
-            while (beginIndex < textString.length() && dxPosition < dx.size()) {
-                int endIndex = textString.offsetByCodePoints(beginIndex, 1);
-                if (beginIndex > 0) {
-                    // Tracking works as a prefix/advance space on characters whereas
-                    // dx[...] is the complete width of the current char
-                    // therefore we need to add the additional/suffix width to the next char
-
-                    as.addAttribute(TextAttribute.TRACKING, (float)((dx.get(lastDxPosition) - fontW) / fontH), beginIndex, endIndex);
-                }
-                lastDxPosition = dxPosition;
-                dxPosition += (isUnicode) ? unicodeSteps : (endIndex-beginIndex);
-                beginIndex = endIndex;
-            }
-        }
-        */
-
-        double angle = Math.toRadians(-font.getEscapement()/10.);
-
-        final HwmfText.HwmfTextAlignment align = prop.getTextAlignLatin();
-        final HwmfText.HwmfTextVerticalAlignment valign = prop.getTextVAlignLatin();
+        final AttributedString as = new AttributedString(textString);
+        addAttributes(as::addAttribute, font, fontInfo.getTypeface());
         final FontRenderContext frc = graphicsCtx.getFontRenderContext();
-        final TextLayout layout = new TextLayout(as.getIterator(), frc);
 
-        final Rectangle2D pixelBounds = layout.getBounds();
+        calculateDx(textString, dx, font, fontInfo, frc, as);
 
-        AffineTransform tx = new AffineTransform();
-        switch (align) {
-            default:
-            case LEFT:
-                break;
-            case CENTER:
-                tx.translate(-pixelBounds.getWidth() / 2., 0);
-                break;
-            case RIGHT:
-                tx.translate(-layout.getAdvance(), 0);
-                break;
-        }
+        final double angle = Math.toRadians(-font.getEscapement()/10.);
 
-        // TODO: check min/max orientation
-        switch (valign) {
-            case TOP:
-                tx.translate(0, layout.getAscent());
-                break;
-            default:
-            case BASELINE:
-                break;
-            case BOTTOM:
-                tx.translate(0, -(pixelBounds.getHeight()-layout.getDescent()));
-                break;
-        }
-        tx.rotate(angle);
-        Point2D src = new Point2D.Double();
-        Point2D dst = new Point2D.Double();
-        tx.transform(src, dst);
-
+        final Point2D dst = getRotatedOffset(angle, frc, as);
         final Shape clipShape = graphicsCtx.getClip();
-        try {
-            if (clip != null && !clip.getBounds2D().isEmpty()) {
-                graphicsCtx.translate(-clip.getCenterX(), -clip.getCenterY());
-                graphicsCtx.rotate(angle);
-                graphicsCtx.translate(clip.getCenterX(), clip.getCenterY());
-                if (prop.getBkMode() == HwmfBkMode.OPAQUE && opts.isOpaque()) {
-                    graphicsCtx.setPaint(prop.getBackgroundColor().getColor());
-                    graphicsCtx.fill(clip);
-                }
-                if (opts.isClipped()) {
-                    graphicsCtx.setClip(clip);
-                }
-                graphicsCtx.setTransform(at);
-            }
 
-            graphicsCtx.translate(reference.getX(), reference.getY());
+        try {
+            updateClipping(graphicsCtx, clip, angle, opts);
+
+            // TODO: Check: certain images don't use the reference of the extTextOut, but rely on a moveto issued beforehand
+            Point2D moveTo = (reference.distance(0,0) == 0) ? prop.getLocation() : reference;
+            graphicsCtx.translate(moveTo.getX(), moveTo.getY());
+
             graphicsCtx.rotate(angle);
             if (scale != null) {
                 graphicsCtx.scale(scale.getWidth() < 0 ? -1 : 1, scale.getHeight() < 0 ? -1 : 1);

@@ -1,0 +1,57 @@
+    /**
+     * The dx array indicate the distance between origins of adjacent character cells.
+     * For example, dx[i] logical units separate the origins of character cell i and character cell i + 1.
+     * So dx{i] is the complete width of the current char + space to the next character
+     *
+     * In AWT we have the {@link TextAttribute#TRACKING} attribute, which works very similar.
+     * As we don't know (yet) the calculation based on the font size/height, we interpolate
+     * between the default tracking and a tracking value of 1
+     */
+    private void calculateDx(String textString, List<Integer> dx, HwmfFont font, FontInfo fontInfo, FontRenderContext frc, AttributedString as) {
+        if (dx == null || dx.isEmpty()) {
+            return;
+        }
+        final List<DxLayout> dxList = new ArrayList<>();
+
+        Map<TextAttribute,Object> fontAtt = new HashMap<>();
+        // Font tracking default (= 0)
+        addAttributes(fontAtt::put, font, fontInfo.getTypeface());
+        final GlyphVector gv0 = new Font(fontAtt).createGlyphVector(frc, textString);
+        // Font tracking = 1
+        fontAtt.put(TextAttribute.TRACKING, 1);
+        final GlyphVector gv1 = new Font(fontAtt).createGlyphVector(frc, textString);
+
+        int beginIndex = 0;
+        for (int offset = 0; offset < dx.size(); offset++) {
+            if (beginIndex >= textString.length()) {
+                break;
+            }
+            DxLayout dxLayout = new DxLayout();
+            dxLayout.dx = dx.get(offset);
+            dxLayout.pos0 = gv0.getGlyphPosition(offset).getX();
+            dxLayout.pos1 = gv1.getGlyphPosition(offset).getX();
+            dxLayout.beginIndex = beginIndex;
+            dxLayout.endIndex = textString.offsetByCodePoints(beginIndex, 1);
+            dxList.add(dxLayout);
+
+            beginIndex = dxLayout.endIndex;
+        }
+
+        // Calculate the linear (y ~= Tracking setting / x ~= character spacing / target value)
+        // y = m * x + n
+        // y = ((y2-y1)/(x2-x1))x + ((y1x2-y2x1)/(x2-x1))
+
+        DxLayout dx0 = null;
+        for (DxLayout dx1 : dxList) {
+            if (dx0 != null) {
+                // Default Tracking = 0 (y1)
+                double y1 = 0, x1 = dx1.pos0-dx0.pos0;
+                // Second Tracking = 1 (y2)
+                double y2 = 1, x2 = dx1.pos1-dx0.pos1;
+                double track = ((y2-y1)/(x2-x1))*dx0.dx + ((y1*x2-y2*x1)/(x2-x1));
+                as.addAttribute(TextAttribute.TRACKING, (float)track, dx0.beginIndex, dx0.endIndex);
+            }
+            dx0 = dx1;
+        }
+    }
+
