@@ -8,28 +8,9 @@
      */
     public static SubRecord createSubRecord(LittleEndianInput in, int cmoOt) {
 		int sid = in.readUShort();
-		int secondUShort = in.readUShort(); // Often (but not always) the datasize for the sub-record
-
-		switch (sid) {
-			case CommonObjectDataSubRecord.sid:
-				return new CommonObjectDataSubRecord(in, secondUShort);
-			case EmbeddedObjectRefSubRecord.sid:
-				return new EmbeddedObjectRefSubRecord(in, secondUShort);
-			case GroupMarkerSubRecord.sid:
-				return new GroupMarkerSubRecord(in, secondUShort);
-			case EndSubRecord.sid:
-				return new EndSubRecord(in, secondUShort);
-			case NoteStructureSubRecord.sid:
-				return new NoteStructureSubRecord(in, secondUShort);
-			case LbsDataSubRecord.sid:
-				return new LbsDataSubRecord(in, secondUShort, cmoOt);
-            case FtCblsSubRecord.sid:
-                return new FtCblsSubRecord(in, secondUShort);
-            case FtPioGrbitSubRecord.sid:
-            	return new FtPioGrbitSubRecord(in, secondUShort);
-            case FtCfSubRecord.sid:
-            	return new FtCfSubRecord(in, secondUShort);
-		}
-		return new UnknownSubRecord(in, sid, secondUShort);
+		// Often (but not always) the datasize for the sub-record
+		int size = in.readUShort();
+		SubRecordTypes srt = SubRecordTypes.forSID(sid);
+		return srt.recordConstructor.apply(in, size, srt == SubRecordTypes.UNKNOWN ? sid : cmoOt);
 	}
 
