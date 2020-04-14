@@ -5,7 +5,7 @@
      */
     protected int getFreeBlock() throws IOException {
        int sectorsPerSBAT = _filesystem.getBigBlockSizeDetails().getBATEntriesPerBlock();
-       
+
        // First up, do we have any spare ones?
        int offset = 0;
         for (BATBlock sbat : _sbat_blocks) {
@@ -24,16 +24,16 @@
             // Move onto the next SBAT
             offset += sectorsPerSBAT;
         }
-       
+
        // If we get here, then there aren't any
        //  free sectors in any of the SBATs
        // So, we need to extend the chain and add another
-       
+
        // Create a new BATBlock
        BATBlock newSBAT = BATBlock.createEmptyBATBlock(_filesystem.getBigBlockSizeDetails(), false);
        int batForSBAT = _filesystem.getFreeBlock();
        newSBAT.setOurBlockIndex(batForSBAT);
-       
+
        // Are we the first SBAT?
        if(_header.getSBATCount() == 0) {
           // Tell the header that we've got our first SBAT there
@@ -51,20 +51,20 @@
              }
              batOffset = nextBat;
           }
-          
+
           // Add it in at the end
           _filesystem.setNextBlock(batOffset, batForSBAT);
-          
+
           // And update the count
           _header.setSBATBlockCount(
                 _header.getSBATCount() + 1
           );
        }
-       
+
        // Finish allocating
        _filesystem.setNextBlock(batForSBAT, POIFSConstants.END_OF_CHAIN);
        _sbat_blocks.add(newSBAT);
-       
+
        // Return our first spot
        return offset;
     }
