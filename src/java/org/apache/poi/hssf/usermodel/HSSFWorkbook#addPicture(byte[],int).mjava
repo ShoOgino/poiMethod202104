@@ -24,12 +24,9 @@
         short escherTag;
         switch (format) {
             case PICTURE_TYPE_WMF:
-                // remove first 22 bytes if file starts with magic bytes D7-CD-C6-9A
-                // see also http://de.wikipedia.org/wiki/Windows_Metafile#Hinweise_zur_WMF-Spezifikation
-                if (LittleEndian.getInt(pictureData) == 0x9AC6CDD7) {
-                    byte[] picDataNoHeader = new byte[pictureData.length - 22];
-                    System.arraycopy(pictureData, 22, picDataNoHeader, 0, pictureData.length-22);
-                    pictureData = picDataNoHeader;
+                // remove first 22 bytes if file starts with the WMF placeable header
+                if (FileMagic.valueOf(pictureData) == FileMagic.WMF) {
+                    pictureData = IOUtils.safelyClone(pictureData, 22, pictureData.length - 22, MAX_IMAGE_LENGTH);
                 }
                 // fall through
             case PICTURE_TYPE_EMF:

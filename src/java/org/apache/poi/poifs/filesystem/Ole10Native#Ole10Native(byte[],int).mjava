@@ -7,14 +7,14 @@
      */
     public Ole10Native(byte[] data, int offset) throws Ole10NativeException {
         int ofs = offset; // current offset, initialized to start
-        
+
         if (data.length < offset + 2) {
             throw new Ole10NativeException("data is too small");
         }
-        
+
         totalSize = LittleEndian.getInt(data, ofs);
         ofs += LittleEndianConsts.INT_SIZE;
-        
+
         mode = EncodingMode.unparsed;
         if (LittleEndian.getShort(data, ofs) == 2) {
             // some files like equations don't have a valid filename,
@@ -30,36 +30,36 @@
         switch (mode) {
         case parsed: {
             flags1 = LittleEndian.getShort(data, ofs);
-            
+
             // structured format
             ofs += LittleEndianConsts.SHORT_SIZE;
-        
+
             int len = getStringLength(data, ofs);
             label = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
             ofs += len;
-            
+
             len = getStringLength(data, ofs);
             fileName = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
             ofs += len;
-    
+
             flags2 = LittleEndian.getShort(data, ofs);
             ofs += LittleEndianConsts.SHORT_SIZE;
-            
+
             unknown1 = LittleEndian.getShort(data, ofs);
             ofs += LittleEndianConsts.SHORT_SIZE;
-          
+
             len = LittleEndian.getInt(data, ofs);
             ofs += LittleEndianConsts.INT_SIZE;
             command = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
             ofs += len;
-            
+
             if (totalSize < ofs) {
                 throw new Ole10NativeException("Invalid Ole10Native");
             }
-          
+
             dataSize = LittleEndian.getInt(data, ofs);
             ofs += LittleEndianConsts.INT_SIZE;
-          
+
             if (dataSize < 0 || totalSize - (ofs - LittleEndianConsts.INT_SIZE) < dataSize) {
                 throw new Ole10NativeException("Invalid Ole10Native");
             }
@@ -79,8 +79,6 @@
         if ((long)dataSize + (long)ofs > (long)data.length) { //cast to avoid overflow
             throw new Ole10NativeException("Invalid Ole10Native: declared data length > available data");
         }
-        dataBuffer = IOUtils.safelyAllocate(dataSize, MAX_RECORD_LENGTH);
-        System.arraycopy(data, ofs, dataBuffer, 0, dataSize);
-        ofs += dataSize;
+        dataBuffer = IOUtils.safelyClone(data, ofs, dataSize, MAX_RECORD_LENGTH);
     }
 

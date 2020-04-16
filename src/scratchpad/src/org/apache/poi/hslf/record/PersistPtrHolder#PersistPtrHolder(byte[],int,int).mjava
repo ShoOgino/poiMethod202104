@@ -7,8 +7,7 @@
 		if(len < 8) { len = 8; }
 
 		// Treat as an atom, grab and hold everything
-		_header = new byte[8];
-		System.arraycopy(source,start,_header,0,8);
+		_header = Arrays.copyOfRange(source, start, start+8);
 		_type = LittleEndian.getUShort(_header,2);
 
 		// Try to make sense of the data part:
@@ -19,8 +18,7 @@
 		//   count * 32 bit offsets
 		// Repeat as many times as you have data
 		_slideLocations = new HashMap<>();
-		_ptrData = IOUtils.safelyAllocate(len-8, MAX_RECORD_LENGTH);
-		System.arraycopy(source,start+8,_ptrData,0,_ptrData.length);
+		_ptrData = IOUtils.safelyClone(source, start+8, len-8, MAX_RECORD_LENGTH);
 
 		int pos = 0;
 		while(pos < _ptrData.length) {
@@ -31,7 +29,7 @@
 			// Remaining 12 bits = offset count
             int offset_no = persistIdFld.getValue(info);
 			int offset_count = cntPersistFld.getValue(info);
-			
+
 			// Wind on by the 4 byte info header
 			pos += 4;
 
