@@ -1,47 +1,23 @@
     /**
-     * constructor that adds additional subdirectories to an existing
-     * path
+     * constructor that adds additional subdirectories to an existing path
      *
      * @param path the existing path
      * @param components the additional subdirectory names to be added
      *
-     * @exception IllegalArgumentException if any of the Strings in
-     *                                     components is null or zero
-     *                                     length
+     * @exception IllegalArgumentException
+     *      if any of the Strings in components is null or zero length
      */
+    public POIFSDocumentPath(final POIFSDocumentPath path, final String[] components) throws IllegalArgumentException {
+        String[] s1 = (path == null) ? new String[0] : path.components;
+        String[] s2 = (components == null) ? new String[0] : components;
 
-    public POIFSDocumentPath(final POIFSDocumentPath path,
-                             final String [] components)
-        throws IllegalArgumentException
-    {
-        if (components == null)
-        {
-            this.components = new String[ path.components.length ];
+        // TODO: Although the Javadoc says empty strings are forbidden, the adapted legacy
+        //  implementation allowed it in case a path was specified...
+        Predicate<String> p = (path != null) ? Objects::isNull : (s) -> (s == null || s.isEmpty());
+        if (Stream.of(s2).anyMatch(p)) {
+            throw new IllegalArgumentException("components cannot contain null or empty strings");
         }
-        else
-        {
-            this.components =
-                new String[ path.components.length + components.length ];
-        }
-        System.arraycopy(path.components, 0, this.components, 0, path.components.length);
-        if (components != null)
-        {
-            for (int j = 0; j < components.length; j++)
-            {
-                if (components[ j ] == null)
-                {
-                    throw new IllegalArgumentException(
-                        "components cannot contain null");
-                }
-                if (components[ j ].length() == 0)
-                {
-                    log.log(POILogger.WARN, "Directory under " + path + " has an empty name, " +
-                            "not all OLE2 readers will handle this file correctly!");
-                }
-                
-                this.components[ j + path.components.length ] =
-                    components[ j ];
-            }
-        }
+
+        this.components = Stream.concat(Stream.of(s1),Stream.of(s2)).toArray(String[]::new);
     }
 

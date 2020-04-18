@@ -8,23 +8,16 @@
              * "event" object. */
             final POIFSDocumentPath path = event.getPath();
             final String name = event.getName();
-            final DocumentInputStream stream = event.getStream();
 
             Throwable t = null;
 
-            try {
+            try (final DocumentInputStream stream = event.getStream()) {
                 /* Find out whether the current document is a property set
                  * stream or not. */
                 if (stream != null && PropertySet.isPropertySetStream(stream)) {
                     /* Yes, the current document is a property set stream.
                      * Let's create a PropertySet instance from it. */
-                    PropertySet ps = null;
-                    try {
-                        ps = PropertySetFactory.create(stream);
-                    } catch (NoPropertySetStreamException ex) {
-                        /* This exception will not be thrown because we already
-                         * checked above. */
-                    }
+                    PropertySet ps = PropertySetFactory.create(stream);
 
                     /* Copy the property set to the destination POI file
                      * system. */
@@ -34,7 +27,7 @@
                      * copy it unmodified to the destination POIFS. */
                     copy(poiFs, path, name, stream);
                 }
-            } catch (MarkUnsupportedException | WritingNotSupportedException | IOException ex) {
+            } catch (MarkUnsupportedException | WritingNotSupportedException | IOException | NoPropertySetStreamException ex) {
                 t = ex;
             }
 

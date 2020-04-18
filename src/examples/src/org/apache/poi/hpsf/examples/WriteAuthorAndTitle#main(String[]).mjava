@@ -5,29 +5,27 @@
      * be the name of a POI filesystem to read.
      * @throws IOException if any I/O exception occurs.
      */
-    public static void main(final String[] args) throws IOException
-    {
+    public static void main(final String[] args) throws IOException {
         /* Check whether we have exactly two command-line arguments. */
-        if (args.length != 2)
-        {
-            System.err.println("Usage: " + WriteAuthorAndTitle.class.getName() +
-                               " originPOIFS destinationPOIFS");
+        if (args.length != 2) {
+            System.err.println("Usage: WriteAuthorAndTitle originPOIFS destinationPOIFS");
             System.exit(1);
         }
-        
+
         /* Read the names of the origin and destination POI filesystems. */
-        final String srcName = args[0];
-        final String dstName = args[1];
+        final String srcName = args[0], dstName = args[1];
 
         /* Read the origin POIFS using the eventing API. The real work is done
          * in the class ModifySICopyTheRest which is registered here as a
          * POIFSReader. */
-        final POIFSReader r = new POIFSReader();
-        final ModifySICopyTheRest msrl = new ModifySICopyTheRest(dstName);
-        r.registerListener(msrl);
-        r.read(new File(srcName));
+        try (POIFSFileSystem poifs = new POIFSFileSystem();
+             OutputStream out = new FileOutputStream(dstName)) {
+            final POIFSReader r = new POIFSReader();
+            r.registerListener((e) -> handleEvent(poifs, e));
+            r.read(new File(srcName));
 
-        /* Write the new POIFS to disk. */
-        msrl.close();
+            /* Write the new POIFS to disk. */
+            poifs.writeFilesystem(out);
+        }
     }
 
