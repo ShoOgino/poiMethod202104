@@ -18,7 +18,7 @@
         String originalFileName = null;
         String copyFileName = null;
 
-        /* Check the command-line arguments. */
+        // Check the command-line arguments.
         if (args.length == 1) {
             originalFileName = args[0];
             File f = TempFile.createTempFile("CopyOfPOIFileSystem-", ".ole2");
@@ -28,25 +28,26 @@
             originalFileName = args[0];
             copyFileName = args[1];
         } else {
-            System.err.println("Usage: " + CopyCompare.class.getName() +
-                    "originPOIFS [copyPOIFS]");
+            System.err.println("Usage: CopyCompare originPOIFS [copyPOIFS]");
             System.exit(1);
         }
 
-        /* Read the origin POIFS using the eventing API. The real work is done
-         * in the class CopyFile which is registered here as a POIFSReader. */
+
+        // Read the origin POIFS using the eventing API.
         final POIFSReader r = new POIFSReader();
-        final CopyFile cf = new CopyFile(copyFileName);
-        r.registerListener(cf);
-        r.setNotifyEmptyDirectories(true);
+        try (final POIFSFileSystem poiFs = new POIFSFileSystem();
+             OutputStream fos = new FileOutputStream(copyFileName)) {
+            r.registerListener(e -> handleEvent(poiFs, e));
+            r.setNotifyEmptyDirectories(true);
 
-        r.read(new File(originalFileName));
+            r.read(new File(originalFileName));
 
-        /* Write the new POIFS to disk. */
-        cf.close();
+            // Write the new POIFS to disk.
+            poiFs.writeFilesystem(fos);
+        }
 
-        /* Read all documents from the original POI file system and compare them
-         * with the equivalent document from the copy. */
+        // Read all documents from the original POI file system and compare them with
+        // the equivalent document from the copy.
         try (POIFSFileSystem opfs = new POIFSFileSystem(new File(originalFileName));
              POIFSFileSystem cpfs = new POIFSFileSystem(new File(copyFileName))) {
             final DirectoryEntry oRoot = opfs.getRoot();

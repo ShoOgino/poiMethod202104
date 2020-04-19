@@ -1,5 +1,5 @@
     /**
-     * Insert a bulleted multi-level list into a cell.
+     * Insert a multi-level list into a cell.
      *
      * @param workbook A reference to the HSSFWorkbook that 'contains' the
      *                 cell.
@@ -12,11 +12,27 @@
      * @param cell An instance of the HSSFCell class that encapsulates a
      *             reference to the spreadsheet cell into which the list
      *             will be written.
+     * @param highLevelStartingValue A primitive int containing the number
+     *                               for the first high level item in the list.
+     * @param highLevelIncrement A primitive int containing the value that
+     *                           should be used to calculate the number of
+     *                           subsequent high level item.
+     * @param lowLevelStartingValue A primitive int will containing the number
+     *                              for the first low level item associated
+     *                              with a high level item.
+     * @param lowLevelIncrement A primitive int containing the value that
+     *                          should be used to calculate the number of
+     *                          subsequent low level item.
      */
-    public void multiLevelBulletedListInCell(HSSFWorkbook workbook,
-                                             ArrayList<MultiLevelListItem> multiLevelListItems,
-                                             HSSFCell cell) {
+    public void multiLevelNumberedListInCell(HSSFWorkbook workbook,
+                                             List<MultiLevelListItem> multiLevelListItems,
+                                             HSSFCell cell,
+                                             int highLevelStartingValue,
+                                             int highLevelIncrement,
+                                             int lowLevelStartingValue,
+                                             int lowLevelIncrement) {
         StringBuilder buffer = new StringBuilder();
+        int highLevelItemNumber = highLevelStartingValue;
         // Note that again, an HSSFCellStye object is required and that
         // it's wrap text property should be set to 'true'
         HSSFCellStyle wrapStyle = workbook.createCellStyle();
@@ -25,22 +41,27 @@
         for(MultiLevelListItem multiLevelListItem : multiLevelListItems) {
             // For each element in the ArrayList, get the text for the high
             // level list item......
-            buffer.append(InCellLists.BULLET_CHARACTER);
-            buffer.append(" ");
+            buffer.append(highLevelItemNumber);
+            buffer.append(". ");
             buffer.append(multiLevelListItem.getItemText());
             buffer.append("\n");
             // and then an ArrayList whose elements encapsulate the text
             // for the lower level list items.
-            ArrayList<String> lowerLevelItems = multiLevelListItem.getLowerLevelItems();
-            if(!(lowerLevelItems == null) && !(lowerLevelItems.isEmpty())) {
+            List<String> lowerLevelItems = multiLevelListItem.getLowerLevelItems();
+            if(lowerLevelItems != null && !lowerLevelItems.isEmpty()) {
+                int lowLevelItemNumber = lowLevelStartingValue;
                 for(String item : lowerLevelItems) {
                     buffer.append(InCellLists.TAB);
-                    buffer.append(InCellLists.BULLET_CHARACTER);
+                    buffer.append(highLevelItemNumber);
+                    buffer.append(".");
+                    buffer.append(lowLevelItemNumber);
                     buffer.append(" ");
                     buffer.append(item);
                     buffer.append("\n");
+                    lowLevelItemNumber += lowLevelIncrement;
                 }
             }
+            highLevelItemNumber += highLevelIncrement;
         }
         // The StringBuilder's contents are the source for the contents
         // of the cell.

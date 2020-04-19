@@ -1,0 +1,54 @@
+    /**
+     * The method is called by POI's eventing API for each file in the origin POIFS.
+     */
+    public static void handleEvent(final POIFSFileSystem poiFs, final POIFSReaderEvent event) {
+        // The following declarations are shortcuts for accessing the "event" object.
+        final DocumentInputStream stream = event.getStream();
+
+        try {
+
+            // Find out whether the current document is a property set stream or not.
+            InputStreamSupplier su;
+            if (stream != null && PropertySet.isPropertySetStream(stream)) {
+                // Yes, the current document is a property set stream. Let's create
+                // a PropertySet instance from it.
+                PropertySet ps = PropertySetFactory.create(stream);
+
+                // Copy the property set to the destination POI file system.
+                final PropertySet mps;
+                if (ps instanceof DocumentSummaryInformation) {
+                    mps = new DocumentSummaryInformation(ps);
+                } else if (ps instanceof SummaryInformation) {
+                    mps = new SummaryInformation(ps);
+                } else {
+                    mps = new PropertySet(ps);
+                }
+                su = mps::toInputStream;
+            } else {
+                // No, the current document is not a property set stream.
+                // We copy it unmodified to the destination POIFS.
+                su = event::getStream;
+            }
+
+            try (InputStream is = su.get()) {
+                final POIFSDocumentPath path = event.getPath();
+
+                // Ensures that the directory hierarchy for a document in a POI fileystem is in place.
+                // Get the root directory. It does not have to be created since it always exists in a POIFS.
+                DirectoryEntry de = poiFs.getRoot();
+
+                for (int i=0; i<path.length(); i++) {
+                    String subDir = path.getComponent(i);
+                    de = (de.hasEntry(subDir)) ? (DirectoryEntry)de.getEntry(subDir) : de.createDirectory(subDir);
+                }
+
+                de.createDocument(event.getName(), is);
+            }
+
+        } catch (HPSFException | IOException ex) {
+            // According to the definition of the processPOIFSReaderEvent method we cannot pass checked
+            // exceptions to the caller.
+            throw new HPSFRuntimeException("Could not read file " + event.getPath() + "/" + event.getName(), ex);
+        }
+    }
+
