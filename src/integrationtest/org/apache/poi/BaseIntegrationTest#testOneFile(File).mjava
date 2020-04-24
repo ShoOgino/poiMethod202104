@@ -1,0 +1,58 @@
+	protected void testOneFile(File inputFile) throws Exception {
+		try {
+			handleFile(inputFile);
+		} catch (OfficeXmlFileException e) {
+			// switch XWPF and HWPF and so forth depending on the error message
+			handleWrongOLE2XMLExtension(inputFile, e);
+		} catch (OldFileFormatException e) {
+			// Not even text extraction is supported for these: handler.handleExtracting(inputFile);
+			Assume.assumeFalse("File " + file + " excluded because it is unsupported old Excel format", true);
+		} catch (EncryptedDocumentException e) {
+			// Do not try to read encrypted files
+			Assume.assumeFalse("File " + file + " excluded because it is password-encrypted", true);
+		} catch (ZipException e) {
+			// some files are corrupted
+			if (e.getMessage().equals("unexpected EOF") || e.getMessage().equals("Truncated ZIP file")) {
+				Assume.assumeFalse("File " + file + " excluded because the Zip file is incomplete", true);
+			}
+
+			throw e;
+		} catch (IOException e) {
+			// ignore some other ways of corrupted files
+			String message = e.getMessage();
+			if(message != null && message.contains("Truncated ZIP file")) {
+				Assume.assumeFalse("File " + file + " excluded because the Zip file is incomplete", true);
+			}
+
+			// sometimes binary format has XML-format-extension...
+			if(message != null && message.contains("rong file format or file extension for OO XML file")) {
+				handleWrongOLE2XMLExtension(inputFile, e);
+				return;
+			}
+
+			throw e;
+		} catch (IllegalArgumentException e) {
+			// ignore errors for documents with incorrect extension
+			String message = e.getMessage();
+			if(message != null && (message.equals("The document is really a RTF file") ||
+					message.equals("The document is really a PDF file") ||
+					message.equals("The document is really a HTML file"))) {
+				Assume.assumeFalse("File " + file + " excluded because it is actually a PDF/RTF/HTML file", true);
+			}
+
+			if(message != null && message.equals("The document is really a OOXML file")) {
+				handleWrongOLE2XMLExtension(inputFile, e);
+				return;
+			}
+
+			throw e;
+		}
+
+		try {
+			handler.handleExtracting(inputFile);
+		} catch (EncryptedDocumentException e) {
+			// Do not try to read encrypted files
+			Assume.assumeFalse("File " + file + " excluded because it is password-encrypted", true);
+		}
+	}
+
