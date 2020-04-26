@@ -1,21 +1,26 @@
     private void copyRange(CellRangeAddress sourceRange, int deltaX, int deltaY, Sheet sourceClone) { //NOSONAR, it's a bit complex but monolith method, does not make much sense to divide it
         if(deltaX != 0)
-            horizontalFormulaShifter = FormulaShifter.createForColumnCopy(sourceSheet.getWorkbook().getSheetIndex(sourceSheet), 
+            horizontalFormulaShifter = FormulaShifter.createForColumnCopy(sourceSheet.getWorkbook().getSheetIndex(sourceSheet),
                     sourceSheet.getSheetName(), sourceRange.getFirstColumn(), sourceRange.getLastColumn(), deltaX, sourceSheet.getWorkbook().getSpreadsheetVersion());
         if(deltaY != 0)
-            verticalFormulaShifter = FormulaShifter.createForRowCopy(sourceSheet.getWorkbook().getSheetIndex(sourceSheet), 
+            verticalFormulaShifter = FormulaShifter.createForRowCopy(sourceSheet.getWorkbook().getSheetIndex(sourceSheet),
                     sourceSheet.getSheetName(), sourceRange.getFirstRow(), sourceRange.getLastRow(), deltaY, sourceSheet.getWorkbook().getSpreadsheetVersion());
-        
-        for(int rowNo = sourceRange.getFirstRow(); rowNo <= sourceRange.getLastRow(); rowNo++) {   
-            Row sourceRow = sourceClone.getRow(rowNo); // copy from source copy, original source might be overridden in process!
-            for (int columnIndex = sourceRange.getFirstColumn(); columnIndex <= sourceRange.getLastColumn(); columnIndex++) {  
+
+        for(int rowNo = sourceRange.getFirstRow(); rowNo <= sourceRange.getLastRow(); rowNo++) {
+            // copy from source copy, original source might be overridden in process!
+            Row sourceRow = sourceClone.getRow(rowNo);
+            if(sourceRow == null) {
+                continue;
+            }
+
+            for (int columnIndex = sourceRange.getFirstColumn(); columnIndex <= sourceRange.getLastColumn(); columnIndex++) {
                 Cell sourceCell = sourceRow.getCell(columnIndex);
                 if(sourceCell == null)
                     continue;
                 Row destRow = destSheet.getRow(rowNo + deltaY);
                 if(destRow == null)
                     destRow = destSheet.createRow(rowNo + deltaY);
-                
+
                 Cell newCell = destRow.getCell(columnIndex + deltaX);
                 if(newCell == null) {
                     newCell = destRow.createCell(columnIndex + deltaX);
