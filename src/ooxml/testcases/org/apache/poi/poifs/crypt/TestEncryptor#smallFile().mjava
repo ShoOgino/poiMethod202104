@@ -1,0 +1,53 @@
+    @Test
+    public void smallFile() throws IOException, GeneralSecurityException {
+        // see https://stackoverflow.com/questions/61463301
+        final int tinyFileSize = 80_000_000;
+        final String pass = "s3cr3t";
+
+        File tmpFile = TempFile.createTempFile("tiny", ".bin");
+
+        // create/populate empty file
+        try (POIFSFileSystem poifs = new POIFSFileSystem();
+             FileOutputStream fos = new FileOutputStream(tmpFile)) {
+            poifs.writeFilesystem(fos);
+        }
+
+        EncryptionInfo info1 = new EncryptionInfo(EncryptionMode.agile);
+        Encryptor enc = info1.getEncryptor();
+        enc.confirmPassword(pass);
+
+        final MessageDigest md = getMessageDigest(HashAlgorithm.sha256);
+
+        // reopen as mmap-ed file
+        try (POIFSFileSystem poifs = new POIFSFileSystem(tmpFile, false)) {
+            try (OutputStream os = enc.getDataStream(poifs);
+                 RandomStream rs = new RandomStream(md)) {
+                IOUtils.copy(rs, os, tinyFileSize);
+            }
+            poifs.writeFilesystem();
+        }
+
+        final byte[] digest1 = md.digest();
+        md.reset();
+
+        // reopen and check the digest
+        try (POIFSFileSystem poifs = new POIFSFileSystem(tmpFile)) {
+            EncryptionInfo info2 = new EncryptionInfo(poifs);
+            Decryptor dec = info2.getDecryptor();
+            boolean passOk = dec.verifyPassword(pass);
+            assertTrue(passOk);
+
+            try (InputStream is = dec.getDataStream(poifs);
+                 DigestInputStream dis = new DigestInputStream(is, md);
+                 NullOutputStream nos = new NullOutputStream()) {
+                IOUtils.copy(dis, nos);
+            }
+        }
+
+        final byte[] digest2 = md.digest();
+        assertArrayEquals(digest1, digest2);
+
+        boolean isDeleted = tmpFile.delete();
+        assertTrue(isDeleted);
+    }
+
