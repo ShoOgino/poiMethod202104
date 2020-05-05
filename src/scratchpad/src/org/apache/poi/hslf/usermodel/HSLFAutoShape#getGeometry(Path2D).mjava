@@ -1,9 +1,5 @@
     CustomGeometry getGeometry(Path2D path2D) {
-        final CTCustomGeometry2D cusGeo = OF.createCTCustomGeometry2D();
-        cusGeo.setAvLst(OF.createCTGeomGuideList());
-        cusGeo.setGdLst(OF.createCTGeomGuideList());
-        cusGeo.setAhLst(OF.createCTAdjustHandleList());
-        cusGeo.setCxnLst(OF.createCTConnectionSiteList());
+        final CustomGeometry cusGeo = new CustomGeometry();
 
         final AbstractEscherOptRecord opt = getEscherOptRecord();
 
@@ -27,11 +23,8 @@
         final int[] xyPoints = new int[2];
         boolean isClosed = false;
 
-        final CTPath2DList pathLst = OF.createCTPath2DList();
-        final CTPath2D pathCT = OF.createCTPath2D();
-        final List<Object> moveLst = pathCT.getCloseOrMoveToOrLnTo();
-        pathLst.getPath().add(pathCT);
-        cusGeo.setPathLst(pathLst);
+        final Path path = new Path();
+        cusGeo.addPath(path);
 
         while (segIter.hasNext()) {
             byte[] segElem = segIter.next();
@@ -41,20 +34,20 @@
             }
             switch (pi) {
                 case escape:
-                    handleEscapeInfo(pathCT, path2D, segElem, vertIter);
+                    handleEscapeInfo(path, path2D, segElem, vertIter);
                     break;
                 case moveTo:
-                    handleMoveTo(vertIter, xyPoints, moveLst, path2D);
+                    handleMoveTo(vertIter, xyPoints, path, path2D);
                     break;
                 case lineTo:
-                    handleLineTo(vertIter, xyPoints, moveLst, path2D);
+                    handleLineTo(vertIter, xyPoints, path, path2D);
                     break;
                 case curveTo:
-                    handleCurveTo(vertIter, xyPoints, moveLst, path2D);
+                    handleCurveTo(vertIter, xyPoints, path, path2D);
                     break;
                 case close:
                     if (path2D.getCurrentPoint() != null) {
-                        moveLst.add(OF.createCTPath2DClose());
+                        path.addCommand(new ClosePathCommand());
                         path2D.closePath();
                     }
                     isClosed = true;
@@ -65,14 +58,14 @@
         }
 
         if (!isClosed) {
-            handleClosedShape(opt, moveLst, path2D);
+            handleClosedShape(opt, path, path2D);
         }
 
         final Rectangle2D bounds = getBounds(opt, path2D);
 
-        pathCT.setW((int)Math.rint(bounds.getWidth()));
-        pathCT.setH((int)Math.rint(bounds.getHeight()));
+        path.setW((int)Math.rint(bounds.getWidth()));
+        path.setH((int)Math.rint(bounds.getHeight()));
 
-        return new CustomGeometry(cusGeo);
+        return cusGeo;
     }
 

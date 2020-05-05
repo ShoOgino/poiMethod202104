@@ -1,2 +1,19 @@
-    protected PresetGeometries(){}
+    private PresetGeometries() {
+        // use a local object first to not assign a partly constructed object in case of failure
+        try {
+            try (InputStream is = PresetGeometries.class.getResourceAsStream("presetShapeDefinitions.xml")) {
+                XMLInputFactory staxFactory = XMLHelper.newXMLInputFactory();
+                XMLStreamReader sr = staxFactory.createXMLStreamReader(new StreamSource(is));
+                try {
+                    PresetParser p = new PresetParser(PresetParser.Mode.FILE);
+                    p.parse(sr);
+                    p.getGeom().forEach(map::put);
+                } finally {
+                    sr.close();
+                }
+            }
+        } catch (IOException | XMLStreamException e){
+            throw new RuntimeException(e);
+        }
+    }
 
