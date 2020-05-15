@@ -1,0 +1,36 @@
+    @Override
+    public ValueEval evaluate(int srcRowIndex, int srcColumnIndex, ValueEval dateTextArg) {
+        try {
+            String dateText = OperandResolver.coerceValueToString(
+                    OperandResolver.getSingleValue(dateTextArg, srcRowIndex, srcColumnIndex));
+
+            if (dateText == null || dateText.isEmpty()) {
+                return BlankEval.instance;
+            }
+
+            for (Format format : Format.values()) {
+                Matcher matcher = format.pattern.matcher(dateText);
+                if (matcher.find()) {
+                    MatchResult matchResult = matcher.toMatchResult();
+                    List<String> groups = new ArrayList<>();
+                    for (int i = 1; i <= matchResult.groupCount(); ++i) {
+                        groups.add(matchResult.group(i));
+                    }
+                    int year = format.hasYear
+                            ? Integer.valueOf(groups.get(format.yearIndex))
+                            : LocalDate.now().getYear();
+                    int month = parseMonth(groups.get(format.monthIndex));
+                    int day = Integer.valueOf(groups.get(format.dayIndex));
+                    return new NumberEval(DateUtil.getExcelDate(LocalDate.of(year, month, day)));
+
+                }
+            }
+        } catch (DateTimeException e) {
+            return ErrorEval.VALUE_INVALID;
+        } catch (EvaluationException e) {
+            return e.getErrorEval();
+        }
+
+        return ErrorEval.VALUE_INVALID;
+    }
+
