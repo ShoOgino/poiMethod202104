@@ -1,0 +1,42 @@
+	private static int recurseDir(DirectoryEntry dir) throws IOException, NoPropertySetStreamException {
+		int count = 0;
+		for (Entry entry : dir) {
+			count++;
+			if (entry instanceof DirectoryEntry) {
+				count += recurseDir((DirectoryEntry) entry);
+			}
+			if (entry instanceof DocumentEntry) {
+				DocumentEntry de = (DocumentEntry) entry;
+				HashMap<String, String> props = new HashMap<>();
+				try (DocumentInputStream dis = new DocumentInputStream(de)) {
+					props.put("name", de.getName());
+
+					if (PropertySet.isPropertySetStream(dis)) {
+						dis.mark(10000000);
+						PropertySet ps = null;
+						try {
+							ps = new PropertySet(dis);
+
+						} catch (UnsupportedEncodingException e) {
+							// ignore
+						}
+						if (ps != null) {
+							for (Section section : ps.getSections()) {
+								for (Property p : section.getProperties()) {
+									String prop = section.getDictionary() != null
+											? section.getDictionary().get(p.getID())
+											: String.valueOf(p.getID());
+									if (p.getValue() != null)
+										props.put("property_" + prop, p.getValue().toString());
+								}
+							}
+						}
+						dis.reset();
+					}
+				}
+				assertTrue(props.size() > 0);
+			}
+		}
+		return count;
+	}
+
