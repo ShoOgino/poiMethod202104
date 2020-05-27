@@ -1,0 +1,22 @@
+    @Test
+    public void testDefaultRunProperties() throws IOException {
+        // bug #63290
+        POIDataSamples pds = POIDataSamples.getSlideShowInstance();
+        try (InputStream is = pds.openResourceAsStream("bug63290.pptx");
+             XMLSlideShow ppt = new XMLSlideShow(is)) {
+            XSLFSlide slide = ppt.getSlides().get(0);
+            for (XSLFShape shape : slide.getShapes()) {
+                if (shape instanceof  XSLFTextShape) {
+                    XSLFTextShape text = (XSLFTextShape) shape;
+                    XSLFTextParagraph paragraph = text.getTextParagraphs().get(0);
+                    XSLFTextRun defaultRun = paragraph.getTextRuns().get(0);
+                    assertEquals("DefaultRunProperties", defaultRun.getRawText().trim());
+                    XSLFTextRun explicitRun = paragraph.getTextRuns().get(1);
+                    assertEquals("ExplicitRunProperties", explicitRun.getRawText().trim());
+                    assertEquals(defaultRun.getFontSize(), explicitRun.getFontSize());
+                    assertNotEquals(defaultRun.getFontColor(), explicitRun.getFontColor());
+                }
+            }
+        }
+    }
+
