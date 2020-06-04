@@ -6,6 +6,7 @@
      * @return  wrapping width in points
      */
     protected double getWrappingWidth(boolean firstLine, Graphics2D graphics){
+        final long TAB_SIZE = 347663L;
         TextShape<?,?> ts = paragraph.getParentShape();
 
         // internal margins for the text box
@@ -21,11 +22,11 @@
         Double leftMargin = paragraph.getLeftMargin();
         if (leftMargin == null) {
             // if the marL attribute is omitted, then a value of 347663 is implied
-            leftMargin = Units.toPoints(347663L*(indentLevel+1));
+            leftMargin = Units.toPoints(TAB_SIZE * indentLevel);
         }
         Double indent = paragraph.getIndent();
         if (indent == null) {
-            indent = Units.toPoints(347663L*indentLevel);
+            indent = 0.;
         }
         Double rightMargin = paragraph.getRightMargin();
         if (rightMargin == null) {
@@ -59,18 +60,9 @@
                     width = anchor.getHeight() - leftInset - rightInset - leftMargin - rightMargin;
                     break;
             }
-            if (firstLine && !isHSLF()) {
-                if (bullet != null){
-                    if (indent > 0) {
-                        width -= indent;
-                    }
-                } else {
-                    if (indent > 0) {
-                        width -= indent; // first line indentation
-                    } else if (indent < 0) { // hanging indentation: the first line start at the left margin
-                        width += leftMargin;
-                    }
-                }
+            if (firstLine && bullet == null) {
+                // indent is usually negative in XSLF
+                width += isHSLF() ? (leftMargin - indent) : -indent;
             }
         }
 

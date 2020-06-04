@@ -9,7 +9,6 @@
         DrawFactory fact = DrawFactory.getInstance(graphics);
         StringBuilder text = new StringBuilder();
         AttributedString at = getAttributedString(graphics, text);
-        boolean emptyParagraph = text.toString().trim().isEmpty();
 
         AttributedCharacterIterator it = at.getIterator();
         LineBreakMeasurer measurer = new LineBreakMeasurer(it, graphics.getFontRenderContext());
@@ -23,41 +22,46 @@
                 wrappingWidth = 1;
             }
 
-            int nextBreak = text.indexOf("\n", startIndex + 1);
-            if (nextBreak == -1) {
-                nextBreak = it.getEndIndex();
+            // usually "\n" is added after a line, if it occurs before it - only possible as first char -
+            // we need to add an empty line
+            TextLayout layout;
+            int endIndex;
+            if (startIndex == 0 && text.toString().startsWith("\n")) {
+                layout = measurer.nextLayout((float) wrappingWidth, 1, false);
+                endIndex = 1;
+            } else {
+                int nextBreak = text.indexOf("\n", startIndex + 1);
+                if (nextBreak == -1) {
+                    nextBreak = it.getEndIndex();
+                }
+
+                layout = measurer.nextLayout((float) wrappingWidth, nextBreak, true);
+                if (layout == null) {
+                    // layout can be null if the entire word at the current position
+                    // does not fit within the wrapping width. Try with requireNextWord=false.
+                    layout = measurer.nextLayout((float) wrappingWidth, nextBreak, false);
+                }
+
+                if (layout == null) {
+                    // exit if can't break any more
+                    break;
+                }
+
+                endIndex = measurer.getPosition();
+                // skip over new line breaks (we paint 'clear' text runs not starting or ending with \n)
+                if (endIndex < it.getEndIndex() && text.charAt(endIndex) == '\n') {
+                    measurer.setPosition(endIndex + 1);
+                }
+
+                TextAlign hAlign = paragraph.getTextAlign();
+                if (hAlign == TextAlign.JUSTIFY || hAlign == TextAlign.JUSTIFY_LOW) {
+                    layout = layout.getJustifiedLayout((float) wrappingWidth);
+                }
             }
 
-            TextLayout layout = measurer.nextLayout((float)wrappingWidth, nextBreak, true);
-            if (layout == null) {
-                 // layout can be null if the entire word at the current position
-                 // does not fit within the wrapping width. Try with requireNextWord=false.
-                 layout = measurer.nextLayout((float)wrappingWidth, nextBreak, false);
-            }
-
-            if(layout == null) {
-                // exit if can't break any more
-                break;
-            }
-
-            int endIndex = measurer.getPosition();
-            // skip over new line breaks (we paint 'clear' text runs not starting or ending with \n)
-            if(endIndex < it.getEndIndex() && text.charAt(endIndex) == '\n'){
-                measurer.setPosition(endIndex + 1);
-            }
-
-            TextAlign hAlign = paragraph.getTextAlign();
-            if(hAlign == TextAlign.JUSTIFY || hAlign == TextAlign.JUSTIFY_LOW) {
-                layout = layout.getJustifiedLayout((float)wrappingWidth);
-            }
-
-            AttributedString str = (emptyParagraph)
-                ? null // we will not paint empty paragraphs
-                : new AttributedString(it, startIndex, endIndex);
+            AttributedString str = new AttributedString(it, startIndex, endIndex);
             DrawTextFragment line = fact.getTextFragment(layout, str);
             lines.add(line);
-
-            maxLineHeight = Math.max(maxLineHeight, line.getHeight());
 
             if(endIndex == it.getEndIndex()) {
                 break;

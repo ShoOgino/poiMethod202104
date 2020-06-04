@@ -4,9 +4,10 @@
             return;
         }
 
+        final boolean isHSLF = isHSLF();
+
         double penY = y;
 
-        boolean firstLine = true;
         int indentLevel = paragraph.getIndentLevel();
         Double leftMargin = paragraph.getLeftMargin();
         if (leftMargin == null) {
@@ -16,10 +17,6 @@
         Double indent = paragraph.getIndent();
         if (indent == null) {
             indent = Units.toPoints(347663L*indentLevel);
-        }
-        if (isHSLF()) {
-            // special handling for HSLF
-            indent -= leftMargin;
         }
 
 //        Double rightMargin = paragraph.getRightMargin();
@@ -33,26 +30,41 @@
             spacing = 100d;
         }
 
+        DrawTextFragment lastLine = null;
         for(DrawTextFragment line : lines){
             double penX;
 
-            if(firstLine) {
+
+            if (!(isFirstParagraph() && lastLine == null)) {
+                // penY is now on descent line of the last text fragment
+                // need to substract descent height to get back to the baseline of the last fragment
+                // then add a multiple of the line height of the current text height
+                penY -= line.getLeading() + ((lastLine == null) ? 0 : lastLine.getLayout().getDescent());
+
+                if(spacing > 0) {
+                    // If linespacing >= 0, then linespacing is a percentage of normal line height.
+                    penY += (spacing*0.01) * line.getHeight(); //  + (isHSLF ? line.getLayout().getLeading() : 0));
+                } else {
+                    // negative value means absolute spacing in points
+                    penY += -spacing;
+                }
+                penY -= line.getLayout().getAscent();
+            }
+
+            penX = x + (isHSLF ? leftMargin : leftMargin);
+            if (lastLine == null) {
                 if (!isEmptyParagraph()) {
                     // TODO: find out character style for empty, but bulleted/numbered lines
                     bullet = getBullet(graphics, line.getAttributedString().getIterator());
                 }
 
-                if (bullet != null){
-                    bullet.setPosition(x+leftMargin+indent, penY);
+                if (bullet != null) {
+                    bullet.setPosition(isHSLF ? x+indent : x+leftMargin+indent, penY);
                     bullet.draw(graphics);
                     // don't let text overlay the bullet and advance by the bullet width
                     double bulletWidth = bullet.getLayout().getAdvance() + 1;
-                    penX = x + Math.max(leftMargin, leftMargin+indent+bulletWidth);
-                } else {
-                    penX = x + leftMargin;
+                    penX = x + (isHSLF ? leftMargin : Math.max(leftMargin, leftMargin+indent+bulletWidth));
                 }
-            } else {
-                penX = x + leftMargin;
             }
 
             Rectangle2D anchor = DrawShape.getAnchor(graphics, paragraph.getParentShape());
@@ -79,16 +91,9 @@
 
             line.setPosition(penX, penY);
             line.draw(graphics);
+            penY += line.getHeight();
 
-            if(spacing > 0) {
-                // If linespacing >= 0, then linespacing is a percentage of normal line height.
-                penY += spacing*0.01* line.getHeight();
-            } else {
-                // negative value means absolute spacing in points
-                penY += -spacing;
-            }
-
-            firstLine = false;
+            lastLine = line;
         }
 
         y = penY - y;
