@@ -5,80 +5,34 @@
      * @param offset The start offset of the record in the buffer
      * @throws Ole10NativeException on invalid or unexcepted data format
      */
-    public Ole10Native(byte[] data, int offset) throws Ole10NativeException {
-        int ofs = offset; // current offset, initialized to start
+    public Ole10Native(final byte[] data, final int offset) throws Ole10NativeException {
+        LittleEndianByteArrayInputStream leis = new LittleEndianByteArrayInputStream(data, offset);
 
-        if (data.length < offset + 2) {
-            throw new Ole10NativeException("data is too small");
-        }
+        totalSize = leis.readInt();
+        leis.limit(totalSize + LittleEndianConsts.INT_SIZE);
 
-        totalSize = LittleEndian.getInt(data, ofs);
-        ofs += LittleEndianConsts.INT_SIZE;
+        leis.mark(0);
 
-        mode = EncodingMode.unparsed;
-        if (LittleEndian.getShort(data, ofs) == 2) {
-            // some files like equations don't have a valid filename,
-            // but somehow encode the formula right away in the ole10 header
-            if (Character.isISOControl(data[ofs+LittleEndianConsts.SHORT_SIZE])) {
-                mode = EncodingMode.compact;
+        try {
+            flags1 = leis.readShort();
+            if (flags1 == 2) {
+                leis.mark(0);
+                // some files like equations don't have a valid filename,
+                // but somehow encode the formula right away in the ole10 header
+                boolean validFileName = !Character.isISOControl(leis.readByte());
+                leis.reset();
+
+                if (validFileName) {
+                    readParsed(leis);
+                } else {
+                    readCompact(leis);
+                }
             } else {
-                mode = EncodingMode.parsed;
+                leis.reset();
+                readUnparsed(leis);
             }
+        } catch (IOException e) {
+            throw new Ole10NativeException("Invalid Ole10Native", e);
         }
-
-        int dataSize;
-        switch (mode) {
-        case parsed: {
-            flags1 = LittleEndian.getShort(data, ofs);
-
-            // structured format
-            ofs += LittleEndianConsts.SHORT_SIZE;
-
-            int len = getStringLength(data, ofs);
-            label = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
-            ofs += len;
-
-            len = getStringLength(data, ofs);
-            fileName = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
-            ofs += len;
-
-            flags2 = LittleEndian.getShort(data, ofs);
-            ofs += LittleEndianConsts.SHORT_SIZE;
-
-            unknown1 = LittleEndian.getShort(data, ofs);
-            ofs += LittleEndianConsts.SHORT_SIZE;
-
-            len = LittleEndian.getInt(data, ofs);
-            ofs += LittleEndianConsts.INT_SIZE;
-            command = StringUtil.getFromCompressedUnicode(data, ofs, len - 1);
-            ofs += len;
-
-            if (totalSize < ofs) {
-                throw new Ole10NativeException("Invalid Ole10Native");
-            }
-
-            dataSize = LittleEndian.getInt(data, ofs);
-            ofs += LittleEndianConsts.INT_SIZE;
-
-            if (dataSize < 0 || totalSize - (ofs - LittleEndianConsts.INT_SIZE) < dataSize) {
-                throw new Ole10NativeException("Invalid Ole10Native");
-            }
-            break;
-        }
-        case compact:
-            flags1 = LittleEndian.getShort(data, ofs);
-            ofs += LittleEndianConsts.SHORT_SIZE;
-            dataSize = totalSize - LittleEndianConsts.SHORT_SIZE;
-            break;
-        default:
-        case unparsed:
-            dataSize = totalSize;
-            break;
-        }
-
-        if ((long)dataSize + (long)ofs > (long)data.length) { //cast to avoid overflow
-            throw new Ole10NativeException("Invalid Ole10Native: declared data length > available data");
-        }
-        dataBuffer = IOUtils.safelyClone(data, ofs, dataSize, MAX_RECORD_LENGTH);
     }
 

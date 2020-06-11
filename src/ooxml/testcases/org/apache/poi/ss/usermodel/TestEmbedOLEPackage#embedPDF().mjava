@@ -1,0 +1,54 @@
+    @Test
+    public void embedPDF() throws IOException {
+        try (InputStream is = ssamples.openResourceAsStream("bug64512_embed.xlsx");
+            XSSFWorkbook wb = new XSSFWorkbook(is)) {
+            List<XSSFObjectData> oleShapes = new ArrayList<>();
+            List<Ole10Native> ole10s = new ArrayList<>();
+            List<String> digests = new ArrayList<>();
+
+            final boolean digestMatch =
+                wb.getSheetAt(0).getDrawingPatriarch().getShapes().stream()
+                .map(s -> (XSSFObjectData)s)
+                .filter(oleShapes::add)
+                .map(TestEmbedOLEPackage::extractOle10Native)
+                .filter(ole10s::add)
+                .map(TestEmbedOLEPackage::digest)
+                .allMatch("FUJBVHTAZ0ly/TNDNmEj1gQ4a2TbZwDMVF4WUkDQLaM="::equals);
+
+            assertEquals(2, oleShapes.size());
+            assertEquals("Package", oleShapes.get(0).getOLE2ClassName());
+            assertEquals("Package2", oleShapes.get(1).getOLE2ClassName());
+            assertTrue(digestMatch);
+
+            final String expLabel = "Apache_POI_project_logo_(2018).pdf";
+            final String expFilenName = "C:\\Dell\\Apache_POI_project_logo_(2018).pdf";
+            final String expCmd1 = "C:\\Users\\KIWIWI~1\\AppData\\Local\\Temp\\{84287F34-B79C-4F3A-9A92-6BB664586F48}\\Apache_POI_project_logo_(2018).pdf";
+            final String expCmd2 = "C:\\Users\\KIWIWI~1\\AppData\\Local\\Temp\\{84287F34-B79C-4F3A-9A92-6BB664586F48}\\Apache_POI_project_logo_(2).pdf";
+
+            assertTrue(ole10s.stream().map(Ole10Native::getLabel).allMatch(expLabel::equals));
+            assertTrue(ole10s.stream().map(Ole10Native::getFileName).allMatch(expFilenName::equals));
+            assertEquals(expCmd1, ole10s.get(0).getCommand());
+            assertEquals(expCmd2, ole10s.get(1).getCommand());
+
+            for (Ole10Native o : ole10s) {
+                assertEquals(o.getLabel(), o.getLabel2());
+                assertEquals(o.getCommand(), o.getCommand2());
+                assertEquals(o.getFileName(), o.getFileName2());
+            }
+
+            Ole10Native scratch = new Ole10Native(expLabel, expFilenName, expCmd1,  ole10s.get(0).getDataBuffer());
+            scratch.setLabel2(expLabel);
+            scratch.setFileName2(expFilenName);
+            scratch.setCommand2(expCmd1);
+
+            try (POIFSFileSystem scratchFS = new POIFSFileSystem();
+                POIFSFileSystem ole1FS = new POIFSFileSystem(new ByteArrayInputStream(oleShapes.get(0).getObjectData()))) {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                scratch.writeOut(bos);
+                scratchFS.createDocument(new ByteArrayInputStream(bos.toByteArray()), Ole10Native.OLE10_NATIVE);
+                scratchFS.getRoot().setStorageClsid(ClassIDPredefined.OLE_V1_PACKAGE.getClassID());
+                assertTrue(EntryUtils.areDirectoriesIdentical(ole1FS.getRoot(), scratchFS.getRoot()));
+            }
+        }
+    }
+

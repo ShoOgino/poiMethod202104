@@ -12,40 +12,53 @@
         LittleEndianOutputStream leosOut = new LittleEndianOutputStream(out);
 
         switch (mode) {
-        case parsed: {
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            LittleEndianOutputStream leos = new LittleEndianOutputStream(bos);
-            // total size, will be determined later ..
+            case parsed: {
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                try (LittleEndianOutputStream leos = new LittleEndianOutputStream(bos)) {
+                    // total size, will be determined later ..
 
-            leos.writeShort(getFlags1());
-            leos.write(getLabel().getBytes(ISO1));
-            leos.write(0);
-            leos.write(getFileName().getBytes(ISO1));
-            leos.write(0);
-            leos.writeShort(getFlags2());
-            leos.writeShort(getUnknown1());
-            leos.writeInt(getCommand().length() + 1);
-            leos.write(getCommand().getBytes(ISO1));
-            leos.write(0);
-            leos.writeInt(getDataSize());
-            leos.write(getDataBuffer());
-            leos.writeShort(getFlags3());
-            leos.close(); // satisfy compiler ...
+                    leos.writeShort(getFlags1());
+                    leos.write(getLabel().getBytes(ISO1));
+                    leos.write(0);
+                    leos.write(getFileName().getBytes(ISO1));
+                    leos.write(0);
+                    leos.writeShort(getFlags2());
+                    leos.writeShort(getUnknown1());
+                    leos.writeInt(getCommand().length() + 1);
+                    leos.write(getCommand().getBytes(ISO1));
+                    leos.write(0);
+                    leos.writeInt(getDataSize());
+                    leos.write(getDataBuffer());
 
-            leosOut.writeInt(bos.size()); // total size
-            bos.writeTo(out);
-            break;
-        }
-        case compact:
-            leosOut.writeInt(getDataSize()+LittleEndianConsts.SHORT_SIZE);
-            leosOut.writeShort(getFlags1());
-            out.write(getDataBuffer());
-            break;
-        default:
-        case unparsed:
-            leosOut.writeInt(getDataSize());
-            out.write(getDataBuffer());
-            break;
+                    if (command2 == null || label2 == null || fileName2 == null) {
+                        leos.writeShort(0);
+                    } else {
+                        leos.writeUInt(command2.length());
+                        leos.write(StringUtil.getToUnicodeLE(command2));
+                        leos.writeUInt(label2.length());
+                        leos.write(StringUtil.getToUnicodeLE(label2));
+                        leos.writeUInt(fileName2.length());
+                        leos.write(StringUtil.getToUnicodeLE(fileName2));
+                    }
+                }
+
+                // total size
+                leosOut.writeInt(bos.size());
+                bos.writeTo(out);
+                break;
+            }
+
+            case compact:
+                leosOut.writeInt(getDataSize() + LittleEndianConsts.SHORT_SIZE);
+                leosOut.writeShort(getFlags1());
+                out.write(getDataBuffer());
+                break;
+
+            default:
+            case unparsed:
+                leosOut.writeInt(getDataSize());
+                out.write(getDataBuffer());
+                break;
         }
 
     }
