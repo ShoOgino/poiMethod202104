@@ -1,9 +1,8 @@
     /**
      * Adds a picture to the workbook.
      *
-     * @param pictureData       The bytes of the picture
-     * @param format            The format of the picture.  One of <code>PICTURE_TYPE_*</code>
-     *
+     * @param pictureData The bytes of the picture
+     * @param format      The format of the picture.  One of <code>PICTURE_TYPE_*</code>
      * @return the index to this picture (1 based).
      * @see #PICTURE_TYPE_WMF
      * @see #PICTURE_TYPE_EMF
@@ -14,8 +13,7 @@
      */
     @SuppressWarnings("fallthrough")
     @Override
-    public int addPicture(byte[] pictureData, int format)
-    {
+    public int addPicture(byte[] pictureData, int format) {
         initDrawings();
 
         byte[] uid = DigestUtils.md5(pictureData);
@@ -35,24 +33,23 @@
                 blipRecordMeta.setUID(uid);
                 blipRecordMeta.setPictureData(pictureData);
                 // taken from libre office export, it won't open, if this is left to 0
-                blipRecordMeta.setFilter((byte)-2);
+                blipRecordMeta.setFilter((byte) -2);
                 blipSize = blipRecordMeta.getCompressedSize() + 58;
                 escherTag = 0;
                 break;
             default:
                 EscherBitmapBlip blipRecordBitmap = new EscherBitmapBlip();
                 blipRecord = blipRecordBitmap;
-                blipRecordBitmap.setUID( uid );
-                blipRecordBitmap.setMarker( (byte) 0xFF );
-                blipRecordBitmap.setPictureData( pictureData );
+                blipRecordBitmap.setUID(uid);
+                blipRecordBitmap.setMarker((byte) 0xFF);
+                blipRecordBitmap.setPictureData(pictureData);
                 blipSize = pictureData.length + 25;
                 escherTag = (short) 0xFF;
-    	        break;
+                break;
         }
 
         blipRecord.setRecordId((short) (EscherBlipRecord.RECORD_ID_START + format));
-        switch (format)
-        {
+        switch (format) {
             case PICTURE_TYPE_EMF:
                 blipRecord.setOptions(HSSFPictureData.MSOBI_EMF);
                 break;
@@ -76,17 +73,17 @@
         }
 
         EscherBSERecord r = new EscherBSERecord();
-        r.setRecordId( EscherBSERecord.RECORD_ID );
-        r.setOptions( (short) ( 0x0002 | ( format << 4 ) ) );
-        r.setBlipTypeMacOS( (byte) format );
-        r.setBlipTypeWin32( (byte) format );
-        r.setUid( uid );
-        r.setTag( escherTag );
-        r.setSize( blipSize );
-        r.setRef( 0 );
-        r.setOffset( 0 );
-        r.setBlipRecord( blipRecord );
+        r.setRecordId(EscherBSERecord.RECORD_ID);
+        r.setOptions((short) (0x0002 | (format << 4)));
+        r.setBlipTypeMacOS((byte) format);
+        r.setBlipTypeWin32((byte) format);
+        r.setUid(uid);
+        r.setTag(escherTag);
+        r.setSize(blipSize);
+        r.setRef(0);
+        r.setOffset(0);
+        r.setBlipRecord(blipRecord);
 
-        return workbook.addBSERecord( r );
+        return workbook.addBSERecord(r);
     }
 
