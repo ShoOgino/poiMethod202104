@@ -1,0 +1,32 @@
+    @Test
+    public void gzipSheetdataWriter() throws IOException {
+        EmittingSXSSFWorkbook wb = new EmittingSXSSFWorkbook();
+        wb.setCompressTempFiles(true);
+        
+        final int rowNum = 1000;
+        final int sheetNum = 5;
+        populateData(wb, 1000, 5);
+        
+        XSSFWorkbook xwb = SXSSFITestDataProvider.instance.writeOutAndReadBack(wb);
+        for (int i = 0; i < sheetNum; i++) {
+            Sheet sh = xwb.getSheetAt(i);
+            assertEquals("sheet" + i, sh.getSheetName());
+            for (int j = 0; j < rowNum; j++) {
+                Row row = sh.getRow(j);
+                assertNotNull("row[" + j + "]", row);
+                Cell cell1 = row.getCell(0);
+                assertEquals(new CellReference(cell1).formatAsString(), cell1.getStringCellValue());
+                
+                Cell cell2 = row.getCell(1);
+                assertEquals(i, (int) cell2.getNumericCellValue());
+                
+                Cell cell3 = row.getCell(2);
+                assertEquals(j, (int) cell3.getNumericCellValue());
+            }
+        }
+        
+        assertTrue(wb.dispose());
+        xwb.close();
+        wb.close();
+    }
+
