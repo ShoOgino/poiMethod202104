@@ -3,12 +3,12 @@
         final XSSFWorkbook workbook = new XSSFWorkbook();
         final XSSFSheet sheet1 = workbook.createSheet("Sheet1");
         final Sheet sheet2 = workbook.createSheet("Sheet2");
-        
+
         final Row srcRow = sheet1.createRow(0);
         final XSSFRow destRow = sheet1.createRow(1);
         final Row observerRow = sheet1.createRow(2);
         final Row externObserverRow = sheet2.createRow(0);
-        
+
         srcRow.createCell(0).setCellValue("hello");
         srcRow.createCell(1).setCellValue("world");
         destRow.createCell(0).setCellValue(5.0); //A2 -> 5.0
@@ -16,10 +16,10 @@
         observerRow.createCell(0).setCellFormula("A2"); // A3 -> A2 -> 5.0
         observerRow.createCell(1).setCellFormula("B2"); // B3 -> B2 -> A1 -> "hello"
         externObserverRow.createCell(0).setCellFormula("Sheet1!A2"); //Sheet2!A1 -> Sheet1!A2 -> 5.0
-        
+
         // overwrite existing destRow with row-copy of srcRow
         destRow.copyRowFrom(srcRow, new CellCopyPolicy());
-        
+
         // copyRowFrom should update existing destRow, rather than creating a new row and reassigning the destRow pointer
         // to the new row (and allow the old row to be garbage collected)
         // this is mostly so existing references to rows that are overwritten are updated
@@ -28,16 +28,16 @@
         assertSame("existing references to destRow are still valid", destRow, sheet1.getRow(1));
         assertSame("existing references to observerRow are still valid", observerRow, sheet1.getRow(2));
         assertSame("existing references to externObserverRow are still valid", externObserverRow, sheet2.getRow(0));
-        
+
         // Make sure copyRowFrom actually copied row (this is tested elsewhere)
         assertEquals(CellType.STRING, destRow.getCell(0).getCellType());
         assertEquals("hello", destRow.getCell(0).getStringCellValue());
-        
+
         // We don't want #REF! errors if we copy a row that contains cells that are referred to by other cells outside of copied region
         assertEquals("references to overwritten cells are unmodified", "A2", observerRow.getCell(0).getCellFormula());
         assertEquals("references to overwritten cells are unmodified", "B2", observerRow.getCell(1).getCellFormula());
         assertEquals("references to overwritten cells are unmodified", "Sheet1!A2", externObserverRow.getCell(0).getCellFormula());
-        
+
         workbook.close();
     }
 

@@ -1,0 +1,46 @@
+    protected AgileEncryptionVerifier(EncryptionDocument ed) {
+        PasswordKeyEncryptor keyData = null;
+        for (KeyEncryptor ke : ed.getKeyEncryptors()) {
+            keyData = ke.getPasswordKeyEncryptor();
+            if (keyData != null) {
+                break;
+            }
+        }
+
+        if (keyData == null) {
+            throw new NullPointerException("encryptedKey not set");
+        }
+
+        setCipherAlgorithm(keyData.getCipherAlgorithm());
+        setKeySize(keyData.getKeyBits());
+
+        int blockSize = keyData.getBlockSize();
+        setBlockSize(blockSize);
+
+        int hashSize = keyData.getHashSize();
+
+        HashAlgorithm ha = keyData.getHashAlgorithm();
+        setHashAlgorithm(ha);
+
+        if (getHashAlgorithm().hashSize != hashSize) {
+            throw new EncryptedDocumentException("Unsupported hash algorithm: " +
+                    keyData.getHashAlgorithm() + " @ " + hashSize + " bytes");
+        }
+
+        setSpinCount(keyData.getSpinCount());
+        setEncryptedVerifier(keyData.getEncryptedVerifierHashInput());
+        setSalt(keyData.getSaltValue());
+        setEncryptedKey(keyData.getEncryptedKeyValue());
+        setEncryptedVerifierHash(keyData.getEncryptedVerifierHashValue());
+
+        int saltSize = keyData.getSaltSize();
+        if (saltSize != getSalt().length) {
+            throw new EncryptedDocumentException("Invalid salt size");
+        }
+
+        setChainingMode(keyData.getCipherChaining());
+        if (keyData.getCipherChaining() != ChainingMode.cbc && keyData.getCipherChaining() != ChainingMode.cfb) {
+            throw new EncryptedDocumentException("Unsupported chaining mode - "+ keyData.getCipherChaining());
+        }
+    }
+

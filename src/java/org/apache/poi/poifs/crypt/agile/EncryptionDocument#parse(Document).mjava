@@ -1,0 +1,21 @@
+    public void parse(Document doc) {
+        Element encryption = doc.getDocumentElement();
+        if (!ENC_NS.equals(encryption.getNamespaceURI()) || !"encryption".equals(encryption.getLocalName())) {
+            throw new EncryptedDocumentException("Unable to parse encryption descriptor");
+        }
+        keyData = new KeyData(encryption);
+        dataIntegrity = new DataIntegrity(encryption);
+
+        // The KeyEncryptor element, which MUST be used when encrypting password-protected agile encryption documents,
+        // is either a PasswordKeyEncryptor or a CertificateKeyEncryptor. Exactly one PasswordKeyEncryptor MUST be
+        // present. Zero or more CertificateKeyEncryptor elements are contained within the KeyEncryptors element.
+        Element keyEncryptors = getTag(encryption, ENC_NS, "keyEncryptors");
+        if (keyEncryptors == null) {
+            throw new EncryptedDocumentException("Unable to parse encryption descriptor");
+        }
+        NodeList ke = keyEncryptors.getElementsByTagNameNS(ENC_NS, "keyEncryptor");
+        for (int i=0; i<ke.getLength(); i++) {
+            this.keyEncryptors.add(new KeyEncryptor((Element)ke.item(i)));
+        }
+    }
+

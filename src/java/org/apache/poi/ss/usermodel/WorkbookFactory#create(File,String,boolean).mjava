@@ -20,17 +20,21 @@
             throw new FileNotFoundException(file.toString());
         }
 
-        POIFSFileSystem fs = null;
-        try {
-            fs = new POIFSFileSystem(file, readOnly);
-            return create(fs, password);
-        } catch(OfficeXmlFileException e) {
-            IOUtils.closeQuietly(fs);
-            initXssf();
-            return createXssfByFile.apply(file, readOnly);
-        } catch(RuntimeException e) {
-            IOUtils.closeQuietly(fs);
-            throw e;
+        if (file.length() == 0) {
+            throw new EmptyFileException();
         }
+
+        FileMagic fm = FileMagic.valueOf(file);
+        if (fm == FileMagic.OOXML) {
+            return wp(fm, w -> w.create(file, password, readOnly));
+        } else if (fm == FileMagic.OLE2) {
+            boolean ooxmlEnc = false;
+            try (POIFSFileSystem fs = new POIFSFileSystem(file, true)) {
+                ooxmlEnc = fs.getRoot().hasEntry(Decryptor.DEFAULT_POIFS_ENTRY);
+            }
+            return wp(ooxmlEnc ? FileMagic.OOXML : fm, w -> w.create(file, password, readOnly));
+        }
+
+        return null;
     }
 

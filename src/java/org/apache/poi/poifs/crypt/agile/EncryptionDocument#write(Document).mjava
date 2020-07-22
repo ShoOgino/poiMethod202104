@@ -1,0 +1,26 @@
+    public void write(Document doc) {
+        doc.setXmlStandalone(true);
+        Element encryption = (Element)doc.appendChild(doc.createElementNS(ENC_NS, "encryption"));
+        if (keyData != null) {
+            keyData.write(encryption);
+        }
+        if (dataIntegrity != null) {
+            dataIntegrity.write(encryption);
+        }
+        Element keyEncryptors = (Element)encryption.appendChild(doc.createElement("keyEncryptors"));
+        boolean hasPass = false;
+        boolean hasCert = false;
+        for (KeyEncryptor ke : this.keyEncryptors) {
+            ke.write(keyEncryptors);
+            hasPass |= ke.getPasswordKeyEncryptor() != null;
+            hasCert |= ke.getCertificateKeyEncryptor() != null;
+        }
+        if (hasPass) {
+            encryption.setAttributeNS(XMLConstants.XMLNS_ATTRIBUTE_NS_URI, "xmlns:p", KeyEncryptor.PASS_NS);
+        }
+        if (hasCert) {
+            encryption.setAttributeNS(XMLConstants.XMLNS_ATTRIBUTE_NS_URI, "xmlns:c", KeyEncryptor.CERT_NS);
+        }
+
+    }
+

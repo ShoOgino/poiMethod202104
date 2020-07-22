@@ -12,34 +12,9 @@
     public static Workbook create(final DirectoryNode root, String password) throws IOException {
         // Encrypted OOXML files go inside OLE2 containers, is this one?
         if (root.hasEntry(Decryptor.DEFAULT_POIFS_ENTRY)) {
-            InputStream stream = null;
-            try {
-                stream = DocumentFactoryHelper.getDecryptedStream(root, password);
-                initXssf();
-                return createXssfByStream.apply(stream);
-            } finally {
-                IOUtils.closeQuietly(stream);
-
-                // as we processed the full stream already, we can close the filesystem here
-                // otherwise file handles are leaked
-                root.getFileSystem().close();
-            }
-        }
-
-        // If we get here, it isn't an encrypted PPTX file
-        // So, treat it as a regular HSLF PPT one
-        boolean passwordSet = false;
-        if (password != null) {
-            Biff8EncryptionKey.setCurrentUserPassword(password);
-            passwordSet = true;
-        }
-        try {
-            initHssf();
-            return createHssfByNode.apply(root);
-        } finally {
-            if (passwordSet) {
-                Biff8EncryptionKey.setCurrentUserPassword(null);
-            }
+            return wp(FileMagic.OOXML, w -> w.create(root, password));
+        } else {
+            return wp(FileMagic.OLE2, w ->  w.create(root, password));
         }
     }
 

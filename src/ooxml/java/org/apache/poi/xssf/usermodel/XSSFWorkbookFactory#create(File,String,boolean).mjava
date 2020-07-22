@@ -1,0 +1,32 @@
+    /**
+     * Creates the XSSFWorkbook from the given File, which must exist and be readable.
+     * <p>Note that in order to properly release resources the Workbook should be closed after use.
+     *
+     *  @param file The file to read data from.
+     *  @param readOnly If the Workbook should be opened in read-only mode to avoid writing back
+     *      changes when the document is closed.
+     *
+     *  @return The created Workbook
+     *
+     *  @throws IOException if an error occurs while reading the data
+     *  @throws EncryptedDocumentException If the wrong password is given for a protected file
+     */
+    @SuppressWarnings("resource")
+    public XSSFWorkbook create(File file, String password, boolean readOnly) throws IOException {
+        FileMagic fm = FileMagic.valueOf(file);
+
+        if (fm == FileMagic.OLE2) {
+            try (POIFSFileSystem poifs = new POIFSFileSystem(file, true);
+                 InputStream stream = DocumentFactoryHelper.getDecryptedStream(poifs.getRoot(), password)) {
+                return create(stream);
+            }
+        }
+
+        try {
+            OPCPackage pkg = OPCPackage.open(file, readOnly ? PackageAccess.READ : PackageAccess.READ_WRITE);
+            return createWorkbook(pkg);
+        } catch (InvalidFormatException e) {
+            throw new IOException(e);
+        }
+    }
+

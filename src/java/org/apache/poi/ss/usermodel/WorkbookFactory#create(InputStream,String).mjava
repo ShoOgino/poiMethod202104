@@ -22,17 +22,25 @@
      */
     public static Workbook create(InputStream inp, String password) throws IOException, EncryptedDocumentException {
         InputStream is = FileMagic.prepareToCheckMagic(inp);
-        FileMagic fm = FileMagic.valueOf(is);
-
-        switch (fm) {
-            case OLE2:
-                POIFSFileSystem fs = new POIFSFileSystem(is);
-                return create(fs, password);
-            case OOXML:
-                initXssf();
-                return createXssfByStream.apply(is);
-            default:
-                throw new IOException("Your InputStream was neither an OLE2 stream, nor an OOXML stream");
+        byte[] emptyFileCheck = new byte[1];
+        is.mark(emptyFileCheck.length);
+        if (is.read(emptyFileCheck) < emptyFileCheck.length) {
+            throw new EmptyFileException();
         }
+        is.reset();
+
+        final FileMagic fm = FileMagic.valueOf(is);
+        if (FileMagic.OOXML == fm) {
+            return wp(fm, w -> w.create(is));
+        }
+
+        if (FileMagic.OLE2 != fm) {
+            throw new IOException("Can't open workbook - unsupported file type: "+fm);
+        }
+
+        POIFSFileSystem poifs = new POIFSFileSystem(is);
+        boolean isOOXML = poifs.getRoot().hasEntry(ENCRYPTION_INFO_ENTRY);
+
+        return wp(isOOXML ? FileMagic.OOXML : fm, w -> w.create(poifs.getRoot(), password));
     }
 

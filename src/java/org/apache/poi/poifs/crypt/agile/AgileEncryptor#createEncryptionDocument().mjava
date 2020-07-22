@@ -1,0 +1,56 @@
+    protected EncryptionDocument createEncryptionDocument() {
+        AgileEncryptionVerifier ver = (AgileEncryptionVerifier)getEncryptionInfo().getVerifier();
+        AgileEncryptionHeader header = (AgileEncryptionHeader)getEncryptionInfo().getHeader();
+
+        EncryptionDocument ed = new EncryptionDocument();
+        KeyData keyData = new KeyData();
+        ed.setKeyData(keyData);
+
+        KeyEncryptor keyEnc = new KeyEncryptor();
+        ed.getKeyEncryptors().add(keyEnc);
+
+        PasswordKeyEncryptor keyPass = new PasswordKeyEncryptor();
+        keyEnc.setPasswordKeyEncryptor(keyPass);
+
+        keyPass.setSpinCount(ver.getSpinCount());
+
+        keyData.setSaltSize(header.getBlockSize());
+        keyPass.setSaltSize(ver.getBlockSize());
+
+        keyData.setBlockSize(header.getBlockSize());
+        keyPass.setBlockSize(ver.getBlockSize());
+
+        keyData.setKeyBits(header.getKeySize());
+        keyPass.setKeyBits(ver.getKeySize());
+
+        keyData.setHashSize(header.getHashAlgorithm().hashSize);
+        keyPass.setHashSize(ver.getHashAlgorithm().hashSize);
+
+        // header and verifier have to have the same cipher algorithm
+        if (!header.getCipherAlgorithm().xmlId.equals(ver.getCipherAlgorithm().xmlId)) {
+            throw new EncryptedDocumentException("Cipher algorithm of header and verifier have to match");
+        }
+
+        keyData.setCipherAlgorithm(header.getCipherAlgorithm());
+        keyPass.setCipherAlgorithm(header.getCipherAlgorithm());
+
+        keyData.setCipherChaining(header.getChainingMode());
+        keyPass.setCipherChaining(header.getChainingMode());
+
+        keyData.setHashAlgorithm(header.getHashAlgorithm());
+        keyPass.setHashAlgorithm(ver.getHashAlgorithm());
+
+        keyData.setSaltValue(header.getKeySalt());
+        keyPass.setSaltValue(ver.getSalt());
+        keyPass.setEncryptedVerifierHashInput(ver.getEncryptedVerifier());
+        keyPass.setEncryptedVerifierHashValue(ver.getEncryptedVerifierHash());
+        keyPass.setEncryptedKeyValue(ver.getEncryptedKey());
+
+        DataIntegrity hmacData = new DataIntegrity();
+        ed.setDataIntegrity(hmacData);
+        hmacData.setEncryptedHmacKey(header.getEncryptedHmacKey());
+        hmacData.setEncryptedHmacValue(header.getEncryptedHmacValue());
+
+        return ed;
+    }
+

@@ -1,0 +1,50 @@
+    protected AgileEncryptionHeader(EncryptionDocument ed) {
+        KeyData keyData;
+        try {
+            keyData = ed.getKeyData();
+            if (keyData == null) {
+                throw new NullPointerException("keyData not set");
+            }
+        } catch (Exception e) {
+            throw new EncryptedDocumentException("Unable to parse keyData");
+        }
+
+        int keyBits = keyData.getKeyBits();
+
+        CipherAlgorithm ca = keyData.getCipherAlgorithm();
+        setCipherAlgorithm(ca);
+        setCipherProvider(ca.provider);
+
+        setKeySize(keyBits);
+        setFlags(0);
+        setSizeExtra(0);
+        setCspName(null);
+        setBlockSize(keyData.getBlockSize());
+
+        setChainingMode(keyData.getCipherChaining());
+
+        if (getChainingMode() != ChainingMode.cbc && getChainingMode() != ChainingMode.cfb) {
+            throw new EncryptedDocumentException("Unsupported chaining mode - "+ keyData.getCipherChaining());
+        }
+
+        int hashSize = keyData.getHashSize();
+
+        HashAlgorithm ha = keyData.getHashAlgorithm();
+        setHashAlgorithm(ha);
+
+        if (getHashAlgorithm().hashSize != hashSize) {
+            throw new EncryptedDocumentException("Unsupported hash algorithm: " +
+                    keyData.getHashAlgorithm() + " @ " + hashSize + " bytes");
+        }
+
+        int saltLength = keyData.getSaltSize();
+        setKeySalt(keyData.getSaltValue());
+        if (getKeySalt().length != saltLength) {
+            throw new EncryptedDocumentException("Invalid salt length");
+        }
+
+        DataIntegrity di = ed.getDataIntegrity();
+        setEncryptedHmacKey(di.getEncryptedHmacKey());
+        setEncryptedHmacValue(di.getEncryptedHmacValue());
+    }
+
