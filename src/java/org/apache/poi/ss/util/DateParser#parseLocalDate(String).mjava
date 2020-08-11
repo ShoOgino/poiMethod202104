@@ -1,0 +1,29 @@
+    /**
+     * Parses a date from a string.
+     * 
+     * @param strVal a string with a date pattern.
+     * @return a date parsed from argument.
+     * @throws EvaluationException exception upon parsing.
+     */
+    public static LocalDate parseLocalDate(String strVal) throws EvaluationException {
+        for (Format format : Format.values()) {
+            Matcher matcher = format.pattern.matcher(strVal);
+            if (matcher.find()) {
+                MatchResult matchResult = matcher.toMatchResult();
+                List<String> groups = new ArrayList<>();
+                for (int i = 1; i <= matchResult.groupCount(); ++i) {
+                    groups.add(matchResult.group(i));
+                }
+                int year = format.hasYear
+                    ? Integer.parseInt(groups.get(format.yearIndex))
+                    : LocalDate.now(LocaleUtil.getUserTimeZone().toZoneId()).getYear();
+                int month = parseMonth(groups.get(format.monthIndex));
+                int day = Integer.parseInt(groups.get(format.dayIndex));
+                return LocalDate.of(year, month, day);
+
+            }
+        }
+
+        throw new EvaluationException(ErrorEval.VALUE_INVALID);
+    }
+
