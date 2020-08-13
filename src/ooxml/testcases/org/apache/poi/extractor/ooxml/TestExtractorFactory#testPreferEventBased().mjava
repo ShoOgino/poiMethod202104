@@ -22,60 +22,44 @@
         assertTrue(ExtractorFactory.getThreadPrefersEventExtractors());
         assertNull(ExtractorFactory.getAllThreadsPreferEventExtractors());
 
+        try {
+            // Check we get the right extractors now
+            try (POITextExtractor extractor = ExtractorFactory.createExtractor(new POIFSFileSystem(new FileInputStream(xls)))) {
+                assertTrue(extractor instanceof EventBasedExcelExtractor);
+            }
+            try (POITextExtractor extractor = ExtractorFactory.createExtractor(new POIFSFileSystem(new FileInputStream(xls)))) {
+                assertTrue(extractor.getText().length() > 200);
+            }
 
-        // Check we get the right extractors now
-        POITextExtractor extractor = ExtractorFactory.createExtractor(new POIFSFileSystem(new FileInputStream(xls)));
-        assertTrue(
-                extractor
-                instanceof EventBasedExcelExtractor
-        );
-        extractor.close();
-        extractor = ExtractorFactory.createExtractor(new POIFSFileSystem(new FileInputStream(xls)));
-        assertTrue(
-                extractor.getText().length() > 200
-        );
-        extractor.close();
+            try (POITextExtractor extractor = xmlFactory.create(OPCPackage.open(xlsx.toString(), PackageAccess.READ))) {
+                assertTrue(extractor instanceof XSSFEventBasedExcelExtractor);
+            }
 
-        extractor = ExtractorFactory.createExtractor(OPCPackage.open(xlsx.toString(), PackageAccess.READ));
-        assertTrue(extractor instanceof XSSFEventBasedExcelExtractor);
-        extractor.close();
+            try (POITextExtractor extractor = xmlFactory.create(OPCPackage.open(xlsx.toString(), PackageAccess.READ))) {
+                assertTrue(extractor.getText().length() > 200);
+            }
+        } finally {
+            // Put back to normal
+            ExtractorFactory.setThreadPrefersEventExtractors(false);
+        }
 
-        extractor = ExtractorFactory.createExtractor(OPCPackage.open(xlsx.toString(), PackageAccess.READ));
-        assertTrue(
-                extractor.getText().length() > 200
-        );
-        extractor.close();
-
-
-        // Put back to normal
-        ExtractorFactory.setThreadPrefersEventExtractors(false);
         assertFalse(ExtractorFactory.getPreferEventExtractor());
         assertFalse(ExtractorFactory.getThreadPrefersEventExtractors());
         assertNull(ExtractorFactory.getAllThreadsPreferEventExtractors());
 
         // And back
-        extractor = ExtractorFactory.createExtractor(new POIFSFileSystem(new FileInputStream(xls)));
-        assertTrue(
-                extractor
-                instanceof ExcelExtractor
-        );
-        extractor.close();
-        extractor = ExtractorFactory.createExtractor(new POIFSFileSystem(new FileInputStream(xls)));
-        assertTrue(
-                extractor.getText().length() > 200
-        );
-        extractor.close();
+        try (POITextExtractor extractor = ExtractorFactory.createExtractor(new POIFSFileSystem(new FileInputStream(xls)))) {
+            assertTrue(extractor instanceof ExcelExtractor);
+        }
+        try (POITextExtractor extractor = ExtractorFactory.createExtractor(new POIFSFileSystem(new FileInputStream(xls)))) {
+            assertTrue(extractor.getText().length() > 200);
+        }
 
-        extractor = ExtractorFactory.createExtractor(OPCPackage.open(xlsx.toString(), PackageAccess.READ));
-        assertTrue(
-                extractor
-                instanceof XSSFExcelExtractor
-        );
-        extractor.close();
-        extractor = ExtractorFactory.createExtractor(OPCPackage.open(xlsx.toString()));
-        assertTrue(
-                extractor.getText().length() > 200
-        );
-        extractor.close();
+        try (POITextExtractor extractor = xmlFactory.create(OPCPackage.open(xlsx.toString(), PackageAccess.READ))) {
+            assertTrue(extractor instanceof XSSFExcelExtractor);
+        }
+        try (POITextExtractor extractor = xmlFactory.create(OPCPackage.open(xlsx.toString()))) {
+            assertTrue(extractor.getText().length() > 200);
+        }
     }
 

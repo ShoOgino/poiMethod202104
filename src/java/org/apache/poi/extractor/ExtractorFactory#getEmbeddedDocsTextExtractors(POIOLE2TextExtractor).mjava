@@ -1,0 +1,66 @@
+        /**
+         * Returns an array of text extractors, one for each of
+         *  the embedded documents in the file (if there are any).
+         * If there are no embedded documents, you'll get back an
+         *  empty array. Otherwise, you'll get one open
+         *  {@link POITextExtractor} for each embedded file.
+         *
+         * @param ext The extractor to look at for embedded documents
+         *
+         * @return An array of resulting extractors. Empty if no embedded documents are found.
+         *
+         * @throws IOException If converting the {@link DirectoryNode} into a HSSFWorkbook fails
+         * @throws OldFileFormatException If the {@link DirectoryNode} points to a format of
+         *      an unsupported version of Excel.
+         * @throws IllegalArgumentException If creating the Extractor fails
+         */
+    public static POITextExtractor[] getEmbeddedDocsTextExtractors(POIOLE2TextExtractor ext) throws IOException {
+        if (ext == null) {
+            throw new IllegalStateException("extractor must be given");
+        }
+
+        // All the embedded directories we spotted
+        List<Entry> dirs = new ArrayList<>();
+        // For anything else not directly held in as a POIFS directory
+        List<InputStream> nonPOIFS = new ArrayList<>();
+
+        // Find all the embedded directories
+        DirectoryEntry root = ext.getRoot();
+        if(root == null) {
+            throw new IllegalStateException("The extractor didn't know which POIFS it came from!");
+        }
+
+        if(ext instanceof ExcelExtractor) {
+            // These are in MBD... under the root
+            StreamSupport.stream(root.spliterator(), false)
+                .filter(entry -> entry.getName().startsWith("MBD"))
+                .forEach(dirs::add);
+        } else {
+            for (ExtractorProvider prov : Singleton.INSTANCE.provider) {
+                if (prov.accepts(FileMagic.OLE2)) {
+                    prov.identifyEmbeddedResources(ext, dirs, nonPOIFS);
+                    break;
+                }
+            }
+        }
+
+        // Create the extractors
+        if(dirs.size() == 0 && nonPOIFS.size() == 0){
+            return new POITextExtractor[0];
+        }
+
+        ArrayList<POITextExtractor> textExtractors = new ArrayList<>();
+        for (Entry dir : dirs) {
+            textExtractors.add(createExtractor((DirectoryNode) dir));
+        }
+        for (InputStream stream : nonPOIFS) {
+            try {
+                textExtractors.add(createExtractor(stream));
+            } catch (IOException e) {
+                // Ignore, just means it didn't contain a format we support as yet
+                LOGGER.log(POILogger.INFO, "Format not supported yet", e.getLocalizedMessage());
+            }
+        }
+        return textExtractors.toArray(new POITextExtractor[0]);
+    }
+

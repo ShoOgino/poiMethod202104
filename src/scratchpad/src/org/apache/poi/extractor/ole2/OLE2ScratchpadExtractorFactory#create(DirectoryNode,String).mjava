@@ -1,0 +1,61 @@
+    /**
+     * Look for certain entries in the stream, to figure it
+     * out what format is desired
+     * Note - doesn't check for core-supported formats!
+     * Note - doesn't check for OOXML-supported formats
+     *
+     * @param poifsDir the directory node to be inspected
+     * @return the format specific text extractor
+     *
+     * @throws IOException when the format specific extraction fails because of invalid entires
+     */
+    public POITextExtractor create(DirectoryNode poifsDir, String password) throws IOException {
+        final String oldPW = Biff8EncryptionKey.getCurrentUserPassword();
+        try {
+            Biff8EncryptionKey.setCurrentUserPassword(password);
+            if (poifsDir.hasEntry("WordDocument")) {
+                // Old or new style word document?
+                try {
+                    return new WordExtractor(poifsDir);
+                } catch (OldWordFileFormatException e) {
+                    return new Word6Extractor(poifsDir);
+                }
+            }
+
+            if (poifsDir.hasEntry(HSLFSlideShow.POWERPOINT_DOCUMENT)) {
+                return new SlideShowExtractor<HSLFShape, HSLFTextParagraph>(SlideShowFactory.create(poifsDir));
+            }
+
+            if (poifsDir.hasEntry("VisioDocument")) {
+                return new VisioTextExtractor(poifsDir);
+            }
+
+            if (poifsDir.hasEntry("Quill")) {
+                return new PublisherTextExtractor(poifsDir);
+            }
+
+            final String[] outlookEntryNames = new String[]{
+                    // message bodies, saved as plain text (PtypString)
+                    // The first short (0x1000, 0x0047, 0x0037) refer to the Property ID (see [MS-OXPROPS].pdf)
+                    // the second short (0x001e, 0x001f, 0x0102) refer to the type of data stored in this entry
+                    // https://msdn.microsoft.com/endatatypes.Ex-us/library/cc433490(v=exchg.80).aspx
+                    // @see org.apache.poi.hsmf.Types.MAPIType
+                    "__substg1.0_1000001E", //PidTagBody ASCII
+                    "__substg1.0_1000001F", //PidTagBody Unicode
+                    "__substg1.0_0047001E", //PidTagMessageSubmissionId ASCII
+                    "__substg1.0_0047001F", //PidTagMessageSubmissionId Unicode
+                    "__substg1.0_0037001E", //PidTagSubject ASCII
+                    "__substg1.0_0037001F", //PidTagSubject Unicode
+            };
+            for (String entryName : outlookEntryNames) {
+                if (poifsDir.hasEntry(entryName)) {
+                    return new OutlookTextExtractor(poifsDir);
+                }
+            }
+        } finally {
+            Biff8EncryptionKey.setCurrentUserPassword(oldPW);
+        }
+
+        return null;
+    }
+

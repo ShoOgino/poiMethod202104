@@ -1,0 +1,25 @@
+    public POITextExtractor create(InputStream inp, String password) throws IOException {
+        InputStream is = FileMagic.prepareToCheckMagic(inp);
+
+        if (FileMagic.valueOf(is) != FileMagic.OOXML) {
+            return ExtractorFactory.createExtractor(is, password);
+        }
+
+        OPCPackage pkg = null;
+        try {
+            pkg = OPCPackage.open(is);
+            POIXMLTextExtractor ex = create(pkg);
+            if (ex == null) {
+                pkg.revert();
+            }
+            return ex;
+        } catch (InvalidFormatException e) {
+            throw new IOException(e);
+        } catch (RuntimeException | IOException e) {
+            if (pkg != null) {
+                pkg.revert();
+            }
+            throw e;
+        }
+    }
+

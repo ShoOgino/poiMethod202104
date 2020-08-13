@@ -1,0 +1,23 @@
+    @Override
+    public POITextExtractor create(File f, String password) throws IOException {
+        if (FileMagic.valueOf(f) != FileMagic.OOXML) {
+            return ExtractorFactory.createExtractor(f, password);
+        }
+
+
+        OPCPackage pkg = null;
+        try {
+            pkg = OPCPackage.open(f.toString(), PackageAccess.READ);
+            POIXMLTextExtractor ex = create(pkg);
+            if (ex == null) {
+                pkg.revert();
+            }
+            return ex;
+        } catch (InvalidFormatException ife) {
+            throw new IOException(ife);
+        } catch (IOException e) {
+            pkg.revert();
+            throw e;
+        }
+    }
+

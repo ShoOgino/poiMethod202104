@@ -1,0 +1,23 @@
+    @Override
+    public POITextExtractor create(DirectoryNode poifsDir, String password) throws IOException {
+        final String oldPW = Biff8EncryptionKey.getCurrentUserPassword();
+        try {
+            Biff8EncryptionKey.setCurrentUserPassword(password);
+
+            // Look for certain entries in the stream, to figure it out from
+            for (String workbookName : WORKBOOK_DIR_ENTRY_NAMES) {
+                if (poifsDir.hasEntry(workbookName)) {
+                    return ExtractorFactory.getPreferEventExtractor() ? new EventBasedExcelExtractor(poifsDir) : new ExcelExtractor(poifsDir);
+                }
+            }
+
+            if (poifsDir.hasEntry(InternalWorkbook.OLD_WORKBOOK_DIR_ENTRY_NAME)) {
+                return new OldExcelExtractor(poifsDir);
+            }
+        } finally {
+            Biff8EncryptionKey.setCurrentUserPassword(oldPW);
+        }
+
+        return null;
+    }
+

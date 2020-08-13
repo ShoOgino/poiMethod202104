@@ -1,0 +1,24 @@
+    public static POITextExtractor createExtractor(InputStream input, String password) throws IOException {
+        final InputStream is = FileMagic.prepareToCheckMagic(input);
+        byte[] emptyFileCheck = new byte[1];
+        is.mark(emptyFileCheck.length);
+        if (is.read(emptyFileCheck) < emptyFileCheck.length) {
+            throw new EmptyFileException();
+        }
+        is.reset();
+
+        final FileMagic fm = FileMagic.valueOf(is);
+        if (FileMagic.OOXML == fm) {
+            return wp(fm, w -> w.create(is, password));
+        }
+
+        if (FileMagic.OLE2 != fm) {
+            throw new IOException("Can't create extractor - unsupported file type: "+fm);
+        }
+
+        POIFSFileSystem poifs = new POIFSFileSystem(is);
+        boolean isOOXML = poifs.getRoot().hasEntry(ENCRYPTION_INFO_ENTRY);
+
+        return wp(isOOXML ? FileMagic.OOXML : fm, w -> w.create(poifs.getRoot(), password));
+    }
+

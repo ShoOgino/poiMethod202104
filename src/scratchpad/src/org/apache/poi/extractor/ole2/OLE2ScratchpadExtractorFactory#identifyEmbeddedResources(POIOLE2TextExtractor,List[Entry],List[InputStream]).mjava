@@ -8,10 +8,9 @@
      * @param ext the extractor holding the directory to start parsing
      * @param dirs a list to be filled with directory references holding embedded
      * @param nonPOIFS a list to be filled with streams which aren't based on POIFS entries
-     *
-     * @throws IOException when the format specific extraction fails because of invalid entires
      */
-    public static void identifyEmbeddedResources(POIOLE2TextExtractor ext, List<Entry> dirs, List<InputStream> nonPOIFS) throws IOException {
+    @Override
+    public void identifyEmbeddedResources(POIOLE2TextExtractor ext, List<Entry> dirs, List<InputStream> nonPOIFS) {
         // Find all the embedded directories
         DirectoryEntry root = ext.getRoot();
         if (root == null) {
@@ -20,25 +19,16 @@
 
         if (ext instanceof ExcelExtractor) {
             // These are in MBD... under the root
-            Iterator<Entry> it = root.getEntries();
-            while (it.hasNext()) {
-                Entry entry = it.next();
-                if (entry.getName().startsWith("MBD")) {
-                    dirs.add(entry);
-                }
-            }
+            StreamSupport.stream(root.spliterator(), false)
+                .filter(entry -> entry.getName().startsWith("MBD"))
+                .forEach(dirs::add);
         } else if (ext instanceof WordExtractor) {
             // These are in ObjectPool -> _... under the root
             try {
-                DirectoryEntry op = (DirectoryEntry)
-                        root.getEntry("ObjectPool");
-                Iterator<Entry> it = op.getEntries();
-                while(it.hasNext()) {
-                    Entry entry = it.next();
-                    if(entry.getName().startsWith("_")) {
-                        dirs.add(entry);
-                    }
-                }
+                DirectoryEntry op = (DirectoryEntry) root.getEntry("ObjectPool");
+                StreamSupport.stream(op.spliterator(), false)
+                    .filter(entry -> entry.getName().startsWith("_"))
+                    .forEach(dirs::add);
             } catch(FileNotFoundException e) {
                 logger.log(POILogger.INFO, "Ignoring FileNotFoundException while extracting Word document", e.getLocalizedMessage());
                 // ignored here
