@@ -1,0 +1,19 @@
+    @Override
+    public XMLSlideShow create(InputStream inp, String password) throws IOException {
+        InputStream bufInp = FileMagic.prepareToCheckMagic(inp);
+        FileMagic fm = FileMagic.valueOf(bufInp);
+
+        if (fm == FileMagic.OLE2) {
+            try (POIFSFileSystem poifs = new POIFSFileSystem(bufInp);
+                 InputStream stream = DocumentFactoryHelper.getDecryptedStream(poifs.getRoot(), password)) {
+                return create(stream);
+            }
+        }
+
+        if (fm == FileMagic.OOXML) {
+            return create(bufInp);
+        }
+
+        return null;
+    }
+

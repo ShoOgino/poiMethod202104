@@ -1,6 +1,6 @@
     /**
      * Creates the XMLSlideShow from the given File, which must exist and be readable.
-     * <p>Note that in order to properly release resources theSlideShow should be closed after use.
+     * <p>Note that in order to properly release resources the SlideShow should be closed after use.
      *
      *  @param file The file to read data from.
      *  @param readOnly If the SlideShow should be opened in read-only mode to avoid writing back
@@ -12,8 +12,16 @@
      *  @throws EncryptedDocumentException If the wrong password is given for a protected file
      */
     @SuppressWarnings("resource")
-    public static XMLSlideShow createSlideShow(File file, boolean readOnly)
-    throws IOException {
+    public XMLSlideShow create(File file, String password, boolean readOnly) throws IOException {
+        FileMagic fm = FileMagic.valueOf(file);
+
+        if (fm == FileMagic.OLE2) {
+            try (POIFSFileSystem poifs = new POIFSFileSystem(file, true);
+                 InputStream stream = DocumentFactoryHelper.getDecryptedStream(poifs.getRoot(), password)) {
+                return create(stream);
+            }
+        }
+
         try {
             OPCPackage pkg = OPCPackage.open(file, readOnly ? PackageAccess.READ : PackageAccess.READ_WRITE);
             return createSlideShow(pkg);

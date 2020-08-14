@@ -1,0 +1,46 @@
+    /**
+     * Creates the appropriate HSLFSlideShow / XSLFSlideShow from
+     *  the given InputStream, which may be password protected.
+     *
+     * <p>Your input stream MUST either support mark/reset, or
+     *  be wrapped as a {@link BufferedInputStream}!
+     *  Note that using an {@link InputStream} has a higher memory footprint
+     *  than using a {@link File}.</p>
+     *
+     * <p>Note that in order to properly release resources the
+     *  SlideShow should be closed after use. Note also that loading
+     *  from an InputStream requires more memory than loading
+     *  from a File, so prefer {@link #create(File)} where possible.</p>
+     *
+     *  @param inp The {@link InputStream} to read data from.
+     *  @param password The password that should be used or null if no password is necessary.
+     *
+     *  @return The created SlideShow
+     *
+     *  @throws IOException if an error occurs while reading the data
+     *  @throws EncryptedDocumentException If the wrong password is given for a protected file
+     */
+    public static SlideShow<?,?> create(InputStream inp, String password) throws IOException, EncryptedDocumentException {
+        InputStream is = FileMagic.prepareToCheckMagic(inp);
+        byte[] emptyFileCheck = new byte[1];
+        is.mark(emptyFileCheck.length);
+        if (is.read(emptyFileCheck) < emptyFileCheck.length) {
+            throw new EmptyFileException();
+        }
+        is.reset();
+
+        final FileMagic fm = FileMagic.valueOf(is);
+        if (FileMagic.OOXML == fm) {
+            return wp(fm, w -> w.create(is));
+        }
+
+        if (FileMagic.OLE2 != fm) {
+            throw new IOException("Can't open SlideShow - unsupported file type: "+fm);
+        }
+
+        POIFSFileSystem poifs = new POIFSFileSystem(is);
+        boolean isOOXML = poifs.getRoot().hasEntry(ENCRYPTION_INFO_ENTRY);
+
+        return wp(isOOXML ? FileMagic.OOXML : fm, w -> w.create(poifs.getRoot(), password));
+    }
+
