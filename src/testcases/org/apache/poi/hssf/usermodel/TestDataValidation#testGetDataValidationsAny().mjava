@@ -1,47 +1,45 @@
 	@Test
     public void testGetDataValidationsAny() throws Exception {
-        HSSFWorkbook wb = new HSSFWorkbook();
-        HSSFSheet sheet = wb.createSheet();
-        List<HSSFDataValidation> list = sheet.getDataValidations();
-        assertEquals(0, list.size());
+        try (HSSFWorkbook wb = new HSSFWorkbook()) {
+            HSSFSheet sheet = wb.createSheet();
+            List<HSSFDataValidation> list = sheet.getDataValidations();
+            assertEquals(0, list.size());
 
-        DataValidationHelper dataValidationHelper = sheet.getDataValidationHelper();
-        DataValidationConstraint constraint = dataValidationHelper.createNumericConstraint(ValidationType.ANY,
-                OperatorType.IGNORED, null, null);
-        CellRangeAddressList addressList = new CellRangeAddressList(1, 2, 3, 4);
-        DataValidation validation = dataValidationHelper.createValidation(constraint, addressList);
-        validation.setEmptyCellAllowed(true);
-        validation.createErrorBox("error-title", "error-text");
-        validation.createPromptBox("prompt-title", "prompt-text");
-        sheet.addValidationData(validation);
+            DataValidationHelper dvh = sheet.getDataValidationHelper();
+            DataValidationConstraint constraint = dvh.createNumericConstraint(ValidationType.ANY, OperatorType.IGNORED, null, null);
+            CellRangeAddressList addressList = new CellRangeAddressList(1, 2, 3, 4);
+            DataValidation validation = dvh.createValidation(constraint, addressList);
+            validation.setEmptyCellAllowed(true);
+            validation.createErrorBox("error-title", "error-text");
+            validation.createPromptBox("prompt-title", "prompt-text");
+            sheet.addValidationData(validation);
 
-        list = sheet.getDataValidations(); // <-- works
-        assertEquals(1, list.size());
+            list = sheet.getDataValidations(); // <-- works
+            assertEquals(1, list.size());
 
-        HSSFDataValidation dv = list.get(0);
-        {
-            CellRangeAddressList regions = dv.getRegions();
-            assertEquals(1, regions.countRanges());
+            HSSFDataValidation dv = list.get(0);
+            {
+                CellRangeAddressList regions = dv.getRegions();
+                assertEquals(1, regions.countRanges());
 
-            CellRangeAddress address = regions.getCellRangeAddress(0);
-            assertEquals(1, address.getFirstRow());
-            assertEquals(2, address.getLastRow());
-            assertEquals(3, address.getFirstColumn());
-            assertEquals(4, address.getLastColumn());
+                CellRangeAddress address = regions.getCellRangeAddress(0);
+                assertEquals(1, address.getFirstRow());
+                assertEquals(2, address.getLastRow());
+                assertEquals(3, address.getFirstColumn());
+                assertEquals(4, address.getLastColumn());
+            }
+            assertTrue(dv.getEmptyCellAllowed());
+            assertFalse(dv.getSuppressDropDownArrow());
+            assertTrue(dv.getShowErrorBox());
+            assertEquals("error-title", dv.getErrorBoxTitle());
+            assertEquals("error-text", dv.getErrorBoxText());
+            assertTrue(dv.getShowPromptBox());
+            assertEquals("prompt-title", dv.getPromptBoxTitle());
+            assertEquals("prompt-text", dv.getPromptBoxText());
+
+            DataValidationConstraint c = dv.getValidationConstraint();
+            assertEquals(ValidationType.ANY, c.getValidationType());
+            assertEquals(OperatorType.IGNORED, c.getOperator());
         }
-        assertTrue(dv.getEmptyCellAllowed());
-        assertFalse(dv.getSuppressDropDownArrow());
-        assertTrue(dv.getShowErrorBox());
-        assertEquals("error-title", dv.getErrorBoxTitle());
-        assertEquals("error-text", dv.getErrorBoxText());
-        assertTrue(dv.getShowPromptBox());
-        assertEquals("prompt-title", dv.getPromptBoxTitle());
-        assertEquals("prompt-text", dv.getPromptBoxText());
-
-        DataValidationConstraint c = dv.getValidationConstraint();
-        assertEquals(ValidationType.ANY, c.getValidationType());
-        assertEquals(OperatorType.IGNORED, c.getOperator());
-        
-        wb.close();
     }
 

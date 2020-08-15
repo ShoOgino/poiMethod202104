@@ -1,25 +1,16 @@
 	private static void extractFunctionData(FunctionDataCollector fdc, InputStream is) {
-		XMLReader xr;
+		SAXParserFactory sf = XMLHelper.getSaxParserFactory();
+		SAXParser xr;
 
 		try {
 			// First up, try the default one
-			xr = XMLReaderFactory.createXMLReader();
-		} catch (SAXException e) {
-			// Try one for java 1.4
-			System.setProperty("org.xml.sax.driver", "org.apache.crimson.parser.XMLReaderImpl");
-			try {
-				xr = XMLReaderFactory.createXMLReader();
-			} catch (SAXException e2) {
-				throw new RuntimeException(e2);
-			}
+			xr = sf.newSAXParser();
+		} catch (SAXException | ParserConfigurationException e) {
+			throw new RuntimeException(e);
 		}
-		xr.setContentHandler(new EFFDocHandler(fdc));
 
-		InputSource inSrc = new InputSource(is);
-
-		try {
-			xr.parse(inSrc);
-			is.close();
+		try (InputStream is2 = is) {
+			xr.parse(is2, new EFFDocHandler(fdc));
 		} catch (IOException | SAXException e) {
 			throw new RuntimeException(e);
 		}
