@@ -8,40 +8,41 @@
      */
     @Test
     public void createSheetWithLongNames() throws IOException {
-        Workbook wb1 = _testDataProvider.createWorkbook();
+        try (Workbook wb1 = _testDataProvider.createWorkbook()) {
 
-        String sheetName1 = "My very long sheet name which is longer than 31 chars";
-        String truncatedSheetName1 = sheetName1.substring(0, 31);
-        Sheet sh1 = wb1.createSheet(sheetName1);
-        assertEquals(truncatedSheetName1, sh1.getSheetName());
-        assertSame(sh1, wb1.getSheet(truncatedSheetName1));
-        // now via wb.setSheetName
-        wb1.setSheetName(0, sheetName1);
-        assertEquals(truncatedSheetName1, sh1.getSheetName());
-        assertSame(sh1, wb1.getSheet(truncatedSheetName1));
+            String sheetName1 = "My very long sheet name which is longer than 31 chars";
+            String truncatedSheetName1 = sheetName1.substring(0, 31);
+            Sheet sh1 = wb1.createSheet(sheetName1);
+            assertEquals(truncatedSheetName1, sh1.getSheetName());
+            assertSame(sh1, wb1.getSheet(truncatedSheetName1));
+            // now via wb.setSheetName
+            wb1.setSheetName(0, sheetName1);
+            assertEquals(truncatedSheetName1, sh1.getSheetName());
+            assertSame(sh1, wb1.getSheet(truncatedSheetName1));
 
-        String sheetName2 = "My very long sheet name which is longer than 31 chars " +
-                "and sheetName2.substring(0, 31) == sheetName1.substring(0, 31)";
-        try {
-            /*Sheet sh2 =*/ wb1.createSheet(sheetName2);
-            fail("expected exception");
-        } catch (IllegalArgumentException e) {
-            // expected during successful test
-            assertEquals("The workbook already contains a sheet named 'My very long sheet name which is longer than 31 chars and sheetName2.substring(0, 31) == sheetName1.substring(0, 31)'", e.getMessage());
+            String sheetName2 = "My very long sheet name which is longer than 31 chars " +
+                    "and sheetName2.substring(0, 31) == sheetName1.substring(0, 31)";
+            try {
+                /*Sheet sh2 =*/
+                wb1.createSheet(sheetName2);
+                fail("expected exception");
+            } catch (IllegalArgumentException e) {
+                // expected during successful test
+                assertEquals("The workbook already contains a sheet named 'My very long sheet name which is longer than 31 chars and sheetName2.substring(0, 31) == sheetName1.substring(0, 31)'", e.getMessage());
+            }
+
+            String sheetName3 = "POI allows creating sheets with names longer than 31 characters";
+            String truncatedSheetName3 = sheetName3.substring(0, 31);
+            Sheet sh3 = wb1.createSheet(sheetName3);
+            assertEquals(truncatedSheetName3, sh3.getSheetName());
+            assertSame(sh3, wb1.getSheet(truncatedSheetName3));
+
+            //serialize and read again
+            try (Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1)) {
+                assertEquals(2, wb2.getNumberOfSheets());
+                assertEquals(0, wb2.getSheetIndex(truncatedSheetName1));
+                assertEquals(1, wb2.getSheetIndex(truncatedSheetName3));
+            }
         }
-
-        String sheetName3 = "POI allows creating sheets with names longer than 31 characters";
-        String truncatedSheetName3 = sheetName3.substring(0, 31);
-        Sheet sh3 = wb1.createSheet(sheetName3);
-        assertEquals(truncatedSheetName3, sh3.getSheetName());
-        assertSame(sh3, wb1.getSheet(truncatedSheetName3));
-
-        //serialize and read again
-        Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1);
-        wb1.close();
-        assertEquals(2, wb2.getNumberOfSheets());
-        assertEquals(0, wb2.getSheetIndex(truncatedSheetName1));
-        assertEquals(1, wb2.getSheetIndex(truncatedSheetName3));
-        wb2.close();
     }
 

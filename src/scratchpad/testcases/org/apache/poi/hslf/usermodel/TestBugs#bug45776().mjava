@@ -3,30 +3,31 @@
      */
     @Test
     public void bug45776() throws IOException {
-        HSLFSlideShow ppt = open("45776.ppt");
+        DateFormat df = new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.ROOT);
+        try (HSLFSlideShow ppt = open("45776.ppt")) {
 
-        // get slides
-        for (HSLFSlide slide : ppt.getSlides()) {
-            for (HSLFShape shape : slide.getShapes()) {
-                if (!(shape instanceof HSLFTextBox)) {
-                    continue;
+            // get slides
+            for (HSLFSlide slide : ppt.getSlides()) {
+                for (HSLFShape shape : slide.getShapes()) {
+                    if (!(shape instanceof HSLFTextBox)) {
+                        continue;
+                    }
+                    HSLFTextBox tb = (HSLFTextBox) shape;
+                    // work with TextBox
+                    String str = tb.getText();
+
+                    if (!str.contains("$$DATE$$")) {
+                        continue;
+                    }
+                    str = str.replace("$$DATE$$", df.format(new Date()));
+                    tb.setText(str);
+
+                    List<HSLFTextParagraph> tr = tb.getTextParagraphs();
+                    assertEquals(str.length() + 1, tr.get(0).getParagraphStyle().getCharactersCovered());
+                    assertEquals(str.length() + 1, tr.get(0).getTextRuns().get(0).getCharacterStyle().getCharactersCovered());
                 }
-                HSLFTextBox tb = (HSLFTextBox) shape;
-                // work with TextBox
-                String str = tb.getText();
-
-                if (!str.contains("$$DATE$$")) {
-                    continue;
-                }
-                str = str.replace("$$DATE$$", new Date().toString());
-                tb.setText(str);
-
-                List<HSLFTextParagraph> tr = tb.getTextParagraphs();
-                assertEquals(str.length()+1,tr.get(0).getParagraphStyle().getCharactersCovered());
-                assertEquals(str.length()+1,tr.get(0).getTextRuns().get(0).getCharacterStyle().getCharactersCovered());
             }
+
         }
-        
-        ppt.close();
     }
 
