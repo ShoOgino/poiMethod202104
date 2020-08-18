@@ -1,0 +1,13 @@
+	private void handleNonOOXML(String file, Class<? extends UnsupportedFileFormatException> exception, String... messageParts) throws IOException {
+		try (InputStream stream = xlsSamples.openResourceAsStream(file)) {
+			ThrowingRunnable[] trs = {
+				() -> OPCPackage.open(stream),
+				() -> OPCPackage.open(xlsSamples.getFile(file))
+			};
+			for (ThrowingRunnable tr : trs) {
+				Exception ex = assertThrows("Shouldn't be able to open "+file, exception, tr);
+				Stream.of(messageParts).forEach(mp -> assertTrue(ex.getMessage().contains(mp)));
+			}
+		}
+	}
+

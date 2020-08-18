@@ -1,53 +1,52 @@
     @Test
     public void getCellComments() throws IOException {
-        Workbook workbook = _testDataProvider.createWorkbook();
-        Sheet sheet = workbook.createSheet("TEST");
+        try (Workbook wb1 = _testDataProvider.createWorkbook()) {
+            Sheet sheet = wb1.createSheet("TEST");
 
-        // a sheet with no cell comments should return an empty map (not null or raise NPE).
-        assertTrue(sheet.getCellComments().isEmpty());
+            // a sheet with no cell comments should return an empty map (not null or raise NPE).
+            assertTrue(sheet.getCellComments().isEmpty());
 
-        Drawing<?> dg = sheet.createDrawingPatriarch();
-        ClientAnchor anchor = workbook.getCreationHelper().createClientAnchor();
-        
-        int nRows = 5;
-        int nCols = 6;
-        
-        for (int r=0; r<nRows; r++) {
-            sheet.createRow(r);
-            // Create columns in reverse order
-            for (int c=nCols-1; c>=0; c--) {
-                // When the comment box is visible, have it show in a 1x3 space
-                anchor.setCol1(c);
-                anchor.setCol2(c);
-                anchor.setRow1(r);
-                anchor.setRow2(r);
-                
-                // Create the comment and set the text-author
-                Comment comment = dg.createCellComment(anchor);
-                Cell cell = sheet.getRow(r).createCell(c);
-                comment.setAuthor("Author " + r);
-                RichTextString text = workbook.getCreationHelper().createRichTextString("Test comment at row=" + r + ", column=" + c);
-                comment.setString(text);
-                
-                // Assign the comment to the cell
-                cell.setCellComment(comment);
+            Drawing<?> dg = sheet.createDrawingPatriarch();
+            ClientAnchor anchor = wb1.getCreationHelper().createClientAnchor();
+
+            int nRows = 5;
+            int nCols = 6;
+
+            for (int r = 0; r < nRows; r++) {
+                sheet.createRow(r);
+                // Create columns in reverse order
+                for (int c = nCols - 1; c >= 0; c--) {
+                    // When the comment box is visible, have it show in a 1x3 space
+                    anchor.setCol1(c);
+                    anchor.setCol2(c);
+                    anchor.setRow1(r);
+                    anchor.setRow2(r);
+
+                    // Create the comment and set the text-author
+                    Comment comment = dg.createCellComment(anchor);
+                    Cell cell = sheet.getRow(r).createCell(c);
+                    comment.setAuthor("Author " + r);
+                    RichTextString text = wb1.getCreationHelper().createRichTextString("Test comment at row=" + r + ", column=" + c);
+                    comment.setString(text);
+
+                    // Assign the comment to the cell
+                    cell.setCellComment(comment);
+                }
+            }
+
+            try (Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1)) {
+                Sheet sh = wb2.getSheet("TEST");
+                Map<CellAddress, ? extends Comment> cellComments = sh.getCellComments();
+                assertEquals(nRows * nCols, cellComments.size());
+
+                for (Entry<CellAddress, ? extends Comment> e : cellComments.entrySet()) {
+                    CellAddress ref = e.getKey();
+                    Comment aComment = e.getValue();
+                    assertEquals("Author " + ref.getRow(), aComment.getAuthor());
+                    String text = "Test comment at row=" + ref.getRow() + ", column=" + ref.getColumn();
+                    assertEquals(text, aComment.getString().getString());
+                }
             }
         }
-        
-        Workbook wb = _testDataProvider.writeOutAndReadBack(workbook);
-        Sheet sh = wb.getSheet("TEST");
-        Map<CellAddress, ? extends Comment> cellComments = sh.getCellComments();
-        assertEquals(nRows*nCols, cellComments.size());
-        
-        for (Entry<CellAddress, ? extends Comment> e : cellComments.entrySet()) {
-            CellAddress ref = e.getKey();
-            Comment aComment = e.getValue();
-            assertEquals("Author " + ref.getRow(), aComment.getAuthor());
-            String text = "Test comment at row=" + ref.getRow() + ", column=" + ref.getColumn();
-            assertEquals(text, aComment.getString().getString());
-        }
-        
-        workbook.close();
-        wb.close();
     }
 

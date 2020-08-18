@@ -5,14 +5,15 @@
 
             //getting a sheet by invalid index or non-existing name
             assertNull(wb.getSheet("Sheet1"));
-            try {
-                wb.getSheetAt(0);
-                fail("should have thrown exceptiuon due to invalid sheet index");
-            } catch (IllegalArgumentException e) {
-                // expected during successful test
-                // no negative index in the range message
-                assertFalse(e.getMessage().contains("-1"));
-            }
+            IllegalArgumentException ex = assertThrows(
+                "should have thrown exception due to invalid sheet index",
+                IllegalArgumentException.class,
+                () -> wb.getSheetAt(0)
+            );
+            // expected during successful test no negative index in the range message
+            assertFalse(ex.getMessage().contains("-1"));
+
+            assertThrows(IllegalArgumentException.class, () -> wb.getSheetAt(0));
 
             Sheet sheet0 = wb.createSheet();
             Sheet sheet1 = wb.createSheet();
@@ -29,25 +30,24 @@
             assertEquals("Sheet3", fetchedSheet.getSheetName());
             assertEquals(3, wb.getNumberOfSheets());
             assertSame(originalSheet, fetchedSheet);
-            try {
-                wb.createSheet("sHeeT3");
-                fail("should have thrown exceptiuon due to duplicate sheet name");
-            } catch (IllegalArgumentException e) {
-                // expected during successful test
-                assertEquals("The workbook already contains a sheet named 'sHeeT3'", e.getMessage());
-            }
+            ex = assertThrows(
+                "should have thrown exception due to duplicate sheet name",
+                IllegalArgumentException.class,
+                () -> wb.createSheet("sHeeT3")
+            );
+            // expected during successful test
+            assertEquals("The workbook already contains a sheet named 'sHeeT3'", ex.getMessage());
 
             //names cannot be blank or contain any of /\*?[]
             String[] invalidNames = {"", "Sheet/", "Sheet\\",
                     "Sheet?", "Sheet*", "Sheet[", "Sheet]", "'Sheet'",
                     "My:Sheet"};
             for (String sheetName : invalidNames) {
-                try {
-                    wb.createSheet(sheetName);
-                    fail("should have thrown exception due to invalid sheet name: " + sheetName);
-                } catch (IllegalArgumentException e) {
-                    // expected during successful test
-                }
+                assertThrows(
+                    "should have thrown exception due to invalid sheet name: " + sheetName,
+                    IllegalArgumentException.class,
+                    () -> wb.createSheet(sheetName)
+                );
             }
             //still have 3 sheets
             assertEquals(3, wb.getNumberOfSheets());

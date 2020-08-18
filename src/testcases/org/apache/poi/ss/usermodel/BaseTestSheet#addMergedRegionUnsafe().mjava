@@ -6,43 +6,41 @@
      */
     @Test
     public void addMergedRegionUnsafe() throws IOException {
-        Workbook wb = _testDataProvider.createWorkbook();
-        Sheet sh = wb.createSheet();
-        CellRangeAddress region1 = CellRangeAddress.valueOf("A1:B2");
-        CellRangeAddress region2 = CellRangeAddress.valueOf("B2:C3");
-        CellRangeAddress region3 = CellRangeAddress.valueOf("C3:D4");
-        CellRangeAddress region4 = CellRangeAddress.valueOf("J10:K11");
-        assumeTrue(region1.intersects(region2));
-        assumeTrue(region2.intersects(region3));
+        try (Workbook wb = _testDataProvider.createWorkbook()) {
+            Sheet sh = wb.createSheet();
+            CellRangeAddress region1 = CellRangeAddress.valueOf("A1:B2");
+            CellRangeAddress region2 = CellRangeAddress.valueOf("B2:C3");
+            CellRangeAddress region3 = CellRangeAddress.valueOf("C3:D4");
+            CellRangeAddress region4 = CellRangeAddress.valueOf("J10:K11");
+            assumeTrue(region1.intersects(region2));
+            assumeTrue(region2.intersects(region3));
 
-        assertEquals(0, sh.addMergedRegionUnsafe(region1));
-        assertTrue(sh.getMergedRegions().contains(region1));
+            assertEquals(0, sh.addMergedRegionUnsafe(region1));
+            assertTrue(sh.getMergedRegions().contains(region1));
 
-        // adding a duplicate or overlapping merged region should not
-        // raise an exception with the unsafe version of addMergedRegion.
+            // adding a duplicate or overlapping merged region should not
+            // raise an exception with the unsafe version of addMergedRegion.
 
-        assertEquals(1, sh.addMergedRegionUnsafe(region2));
+            assertEquals(1, sh.addMergedRegionUnsafe(region2));
 
-        // the safe version of addMergedRegion should throw when trying to add a merged region that overlaps an existing region
-        assertTrue(sh.getMergedRegions().contains(region2));
-        try {
-            sh.addMergedRegion(region3);
-            fail("Expected IllegalStateException. region3 overlaps already added merged region2.");
-        } catch (final IllegalStateException e) {
-            // expected
+            // the safe version of addMergedRegion should throw when trying to add a merged region that overlaps an existing region
+            assertTrue(sh.getMergedRegions().contains(region2));
+            assertThrows(
+                "region3 overlaps already added merged region2.",
+                IllegalStateException.class,
+                () -> sh.addMergedRegion(region3)
+            );
             assertFalse(sh.getMergedRegions().contains(region3));
-        }
-        // addMergedRegion should not re-validate previously-added merged regions
-        assertEquals(2, sh.addMergedRegion(region4));
 
-        // validation methods should detect a problem with previously added merged regions (runs in O(n^2) time)
-        try {
-            sh.validateMergedRegions();
-            fail("Expected validation to fail. Sheet contains merged regions A1:B2 and B2:C3, which overlap at B2.");
-        } catch (final IllegalStateException e) {
-            // expected
-        }
+            // addMergedRegion should not re-validate previously-added merged regions
+            assertEquals(2, sh.addMergedRegion(region4));
 
-        wb.close();
+            // validation methods should detect a problem with previously added merged regions (runs in O(n^2) time)
+            assertThrows(
+                "Sheet contains merged regions A1:B2 and B2:C3, which overlap at B2.",
+                IllegalStateException.class,
+                sh::validateMergedRegions
+            );
+        }
     }
 
