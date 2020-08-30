@@ -26,7 +26,9 @@
                 graphicsCtx.fill(dstBounds);
                 break;
             default:
+            case SRCAND:
             case SRCCOPY:
+            case SRCINVERT:
                 if (img == null) {
                     return;
                 }
@@ -55,7 +57,20 @@
                 // the difference is, that clippings are 0-based, whereas the srcBounds are absolute in the user-space
                 // of the referenced image and can be also negative
                 Composite old = graphicsCtx.getComposite();
-                graphicsCtx.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER));
+                int newComp;
+                switch (prop.getRasterOp()) {
+                    default:
+                    case SRCCOPY:
+                        newComp = AlphaComposite.SRC_OVER;
+                        break;
+                    case SRCINVERT:
+                        newComp = AlphaComposite.SRC_IN;
+                        break;
+                    case SRCAND:
+                        newComp = AlphaComposite.SRC;
+                        break;
+                }
+                graphicsCtx.setComposite(AlphaComposite.getInstance(newComp));
 
                 boolean useDeviceBounds = (img instanceof HwmfImageRenderer);
 
