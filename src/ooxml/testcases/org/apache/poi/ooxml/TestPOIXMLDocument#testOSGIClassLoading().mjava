@@ -3,19 +3,17 @@
         // the schema type loader is cached per thread in POIXMLTypeLoader.
         // So create a new Thread and change the context class loader (which would normally be used)
         // to not contain the OOXML classes
-        Runnable run = new Runnable() {
-            public void run() {
-                InputStream is = POIDataSamples.getSlideShowInstance().openResourceAsStream("table_test.pptx");
-                XMLSlideShow ppt = null;
-                try {
-                    ppt = new XMLSlideShow(is);
-                    ppt.getSlides().get(0).getShapes();
-                } catch (IOException e) {
-                    fail("failed to load XMLSlideShow");
-                } finally {
-                    IOUtils.closeQuietly(ppt);
-                    IOUtils.closeQuietly(is);
-                }
+        Runnable run = () -> {
+            InputStream is = POIDataSamples.getSlideShowInstance().openResourceAsStream("table_test.pptx");
+            XMLSlideShow ppt = null;
+            try {
+                ppt = new XMLSlideShow(is);
+                ppt.getSlides().get(0).getShapes();
+            } catch (IOException e) {
+                fail("failed to load XMLSlideShow");
+            } finally {
+                IOUtils.closeQuietly(ppt);
+                IOUtils.closeQuietly(is);
             }
         };
 
@@ -31,14 +29,14 @@
                 ta[i].setUncaughtExceptionHandler(uh);
                 ta[i].start();
             }
-            for (int i=0; i<ta.length; i++) {
+            for (Thread thread : ta) {
                 try {
-                    ta[i].join();
+                    thread.join();
                 } catch (InterruptedException e) {
                     fail("failed to join thread");
                 }
             }
         }
-        assertFalse(uh.hasException());
+        assertFalse("Should not have an exception now, but had " + uh.e, uh.hasException());
     }
 
