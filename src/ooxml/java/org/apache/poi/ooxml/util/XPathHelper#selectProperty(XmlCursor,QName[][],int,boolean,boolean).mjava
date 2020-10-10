@@ -1,8 +1,8 @@
-    private XmlCursor selectProperty(final XmlCursor cur, final QName[][] path, final int offset, final boolean reparseAlternate, final boolean isAlternate)
-    throws XmlException {
+    private static XmlCursor selectProperty(final XmlCursor cur, final QName[][] path, final int offset, final boolean reparseAlternate, final boolean isAlternate)
+            throws XmlException {
         // first try the direct children
         for (QName qn : path[offset]) {
-            if (cur.toChild(qn)) {
+            for (boolean found = cur.toChild(qn); found; found = cur.toNextSibling(qn)) {
                 if (offset == path.length-1) {
                     return cur;
                 }
@@ -21,16 +21,16 @@
 
         // otherwise check first the choice then the fallback content
         XmlObject xo = cur.getObject();
-        AlternateContent alterCont;
-        if (xo instanceof AlternateContent) {
-            alterCont = (AlternateContent)xo;
+        AlternateContentDocument.AlternateContent alterCont;
+        if (xo instanceof AlternateContentDocument.AlternateContent) {
+            alterCont = (AlternateContentDocument.AlternateContent)xo;
         } else {
             // Pesky XmlBeans bug - see Bugzilla #49934
             // it never happens when using the full ooxml-schemas jar but may happen with the abridged poi-ooxml-schemas
             if (!reparseAlternate) {
                 throw new XmlException(OSGI_ERROR
-                    .replace("<CLASS>", "AlternateContent")
-                    .replace("<XSB>", "alternatecontentelement")
+                                               .replace("<CLASS>", "AlternateContent")
+                                               .replace("<XSB>", "alternatecontentelement")
                 );
             }
             try {
@@ -44,7 +44,7 @@
         final int choices = alterCont.sizeOfChoiceArray();
         for (int i=0; i<choices; i++) {
             // TODO: check [Requires] attribute of [Choice] element, if we can handle the content
-            AlternateContent.Choice choice = alterCont.getChoiceArray(i);
+            AlternateContentDocument.AlternateContent.Choice choice = alterCont.getChoiceArray(i);
             XmlCursor cCur = choice.newCursor();
             XmlCursor innerCur = null;
             try {

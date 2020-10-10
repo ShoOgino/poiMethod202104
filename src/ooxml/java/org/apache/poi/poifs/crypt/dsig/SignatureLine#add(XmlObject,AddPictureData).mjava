@@ -1,0 +1,55 @@
+    protected void add(XmlObject signatureContainer, AddPictureData addPictureData) {
+        byte[] inputImage;
+        try {
+            inputImage = generateImage(false, false);
+
+            CTGroup grp = CTGroup.Factory.newInstance();
+            grp.addNewShape();
+
+            XmlCursor contCur = signatureContainer.newCursor();
+            contCur.toEndToken();
+            XmlCursor otherC = grp.newCursor();
+            otherC.copyXmlContents(contCur);
+            otherC.dispose();
+            contCur.toPrevSibling();
+            signatureShape = (CTShape)contCur.getObject();
+            contCur.dispose();
+
+            signatureShape.setAlt("Microsoft Office Signature Line...");
+            signatureShape.setStyle("width:191.95pt;height:96.05pt");
+//            signatureShape.setStyle("position:absolute;margin-left:100.8pt;margin-top:43.2pt;width:192pt;height:96pt;z-index:1");
+            signatureShape.setType("rect");
+
+            String relationId = addPictureData.addPictureData(inputImage, PictureType.PNG);
+            CTImageData imgData = signatureShape.addNewImagedata();
+            setRelationId(imgData, relationId);
+            imgData.setTitle("");
+
+            CTSignatureLine xsl = signatureShape.addNewSignatureline();
+            if (suggestedSigner != null) {
+                xsl.setSuggestedsigner(suggestedSigner);
+            }
+            if (suggestedSigner2 != null) {
+                xsl.setSuggestedsigner2(suggestedSigner2);
+            }
+            if (suggestedSignerEmail != null) {
+                xsl.setSuggestedsigneremail(suggestedSignerEmail);
+            }
+            if (setupId == null) {
+                setupId = new ClassID("{"+ UUID.randomUUID().toString()+"}");
+            }
+            xsl.setId(setupId.toString());
+            xsl.setAllowcomments(STTrueFalse.T);
+            xsl.setIssignatureline(STTrueFalse.T);
+            xsl.setProvid("{00000000-0000-0000-0000-000000000000}");
+            xsl.setExt(STExt.EDIT);
+            xsl.setSigninginstructionsset(STTrueFalse.T);
+            XmlCursor cur = xsl.newCursor();
+            cur.setAttributeText(new QName(MS_OFFICE_URN, "signinginstructions"), signingInstructions);
+            cur.dispose();
+        } catch (IOException | InvalidFormatException e) {
+            // shouldn't happen ...
+            throw new POIXMLException("Can't generate signature line image", e);
+        }
+    }
+

@@ -1,0 +1,61 @@
+    @Test
+    public void testSignatureImage() throws Exception {
+        initKeyPair();
+
+        List<Supplier<SignatureLine>> lines = Arrays.asList(XSSFSignatureLine::new, XWPFSignatureLine::new);
+        for (Supplier<SignatureLine> sup : lines) {
+            SignatureLine line = sup.get();
+            line.setSuggestedSigner("Jack Sparrow");
+            line.setSuggestedSigner2("Captain");
+            line.setSuggestedSignerEmail("jack.bl@ck.perl");
+            line.setInvalidStamp("Bungling!");
+            line.setPlainSignature(testdata.readFile("jack-sign.emf"));
+
+            String[] ext = { "" };
+            BiFunction<SignatureLine,String[],POIXMLDocument> init =
+                (line instanceof XSSFSignatureLine)
+                ? this::initSignatureImageXSSF
+                : this::initSignatureImageXWPF;
+
+            File signDoc;
+            try (POIXMLDocument xmlDoc = init.apply(line,ext)) {
+                signDoc = TempFile.createTempFile("visual-signature", ext[0]);
+                try (FileOutputStream fos = new FileOutputStream(signDoc)) {
+                    xmlDoc.write(fos);
+                }
+            }
+
+            try (OPCPackage pkg = OPCPackage.open(signDoc, PackageAccess.READ_WRITE)) {
+                SignatureConfig sic = new SignatureConfig();
+                sic.setKey(keyPair.getPrivate());
+                sic.setSigningCertificateChain(Collections.singletonList(x509));
+
+                line.updateSignatureConfig(sic);
+
+                sic.setDigestAlgo(HashAlgorithm.sha1);
+                SignatureInfo si = new SignatureInfo();
+                si.setOpcPackage(pkg);
+                si.setSignatureConfig(sic);
+                // hash > sha1 doesn't work in excel viewer ...
+                si.confirmSignature();
+            }
+
+            XmlDocumentPackageInit reinit =
+                (line instanceof XSSFSignatureLine)
+                ? this::initSignatureImageXSSF
+                : this::initSignatureImageXWPF;
+
+            try (OPCPackage pkg = OPCPackage.open(signDoc, PackageAccess.READ)) {
+                SignatureLine line2 = sup.get();
+                try (POIXMLDocument doc = reinit.init(line2, pkg)) {
+                    line2.parse();
+                    assertEquals(line.getSuggestedSigner(), line2.getSuggestedSigner());
+                    assertEquals(line.getSuggestedSigner2(), line2.getSuggestedSigner2());
+                    assertEquals(line.getSuggestedSignerEmail(), line2.getSuggestedSignerEmail());
+                }
+
+                pkg.revert();
+            }
+        }
+    }
+

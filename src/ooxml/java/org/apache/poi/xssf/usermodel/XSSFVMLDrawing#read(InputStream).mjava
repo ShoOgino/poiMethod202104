@@ -11,41 +11,31 @@
         } catch (SAXException e) {
             throw new XmlException(e.getMessage(), e);
         }
-        XmlObject root = XmlObject.Factory.parse(doc, DEFAULT_XML_OPTIONS);
 
-        _qnames = new ArrayList<>();
-        _items = new ArrayList<>();
-        for(XmlObject obj : root.selectPath("$this/xml/*")) {
-            Node nd = obj.getDomNode();
-            QName qname = new QName(nd.getNamespaceURI(), nd.getLocalName());
-            if (qname.equals(QNAME_SHAPE_LAYOUT)) {
-                _items.add(CTShapeLayout.Factory.parse(obj.xmlText(), DEFAULT_XML_OPTIONS));
-            } else if (qname.equals(QNAME_SHAPE_TYPE)) {
-                CTShapetype st = CTShapetype.Factory.parse(obj.xmlText(), DEFAULT_XML_OPTIONS);
-                _items.add(st);
-                _shapeTypeId = st.getId();
-            } else if (qname.equals(QNAME_SHAPE)) {
-                CTShape shape = CTShape.Factory.parse(obj.xmlText(), DEFAULT_XML_OPTIONS);
-                String id = shape.getId();
-                if(id != null) {
-                    Matcher m = ptrn_shapeId.matcher(id);
-                    if(m.find()) {
-                        _shapeId = Math.max(_shapeId, Integer.parseInt(m.group(1)));
+        XmlOptions xopt = new XmlOptions(DEFAULT_XML_OPTIONS);
+        xopt.setLoadSubstituteNamespaces(Collections.singletonMap("", QNAME_VMLDRAWING.getNamespaceURI()));
+
+        root = XmlDocument.Factory.parse(doc, xopt);
+        XmlCursor cur = root.getXml().newCursor();
+
+        try {
+            for (boolean found = cur.toFirstChild(); found; found = cur.toNextSibling()) {
+                XmlObject xo = cur.getObject();
+                if (xo instanceof CTShapetype) {
+                    _shapeTypeId = ((CTShapetype)xo).getId();
+                } else if (xo instanceof CTShape) {
+                    CTShape shape = (CTShape)xo;
+                    String id = shape.getId();
+                    if(id != null) {
+                        Matcher m = ptrn_shapeId.matcher(id);
+                        if(m.find()) {
+                            _shapeId = Math.max(_shapeId, Integer.parseInt(m.group(1)));
+                        }
                     }
                 }
-                _items.add(shape);
-            } else {
-                Document doc2;
-                try {
-                    InputSource is2 = new InputSource(new StringReader(obj.xmlText()));
-                    doc2 = DocumentHelper.readDocument(is2);
-                } catch (SAXException e) {
-                    throw new XmlException(e.getMessage(), e);
-                }
-                
-                _items.add(XmlObject.Factory.parse(doc2, DEFAULT_XML_OPTIONS));
             }
-            _qnames.add(qname);
+        } finally {
+            cur.dispose();
         }
     }
 
