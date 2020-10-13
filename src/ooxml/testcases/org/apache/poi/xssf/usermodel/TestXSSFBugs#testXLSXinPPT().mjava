@@ -1,0 +1,38 @@
+    @Test
+    public void testXLSXinPPT() throws Exception {
+        try (HSLFSlideShow ppt = new HSLFSlideShow(
+                HSLFTestDataSamples.openSampleFileStream("testPPT_oleWorkbook.ppt"))) {
+            assertEquals(1, ppt.getEmbeddedObjects().length);
+
+            HSLFObjectData data = ppt.getEmbeddedObjects()[0];
+            assertEquals(null, data.getFileName());
+
+            // Will be OOXML wrapped in OLE2, not directly SpreadSheet
+            POIFSFileSystem fs = new POIFSFileSystem(data.getInputStream());
+            assertEquals(true, fs.getRoot().hasEntry("Package"));
+            assertEquals(false, fs.getRoot().hasEntry("Workbook"));
+
+            // Can fetch Package to get OOXML
+            DocumentInputStream dis = new DocumentInputStream((DocumentEntry)fs.getRoot().getEntry("Package"));
+            try (OPCPackage pkg = OPCPackage.open(dis)) {
+                XSSFWorkbook wb = new XSSFWorkbook(pkg);
+                assertEquals(1, wb.getNumberOfSheets());
+                wb.close();
+            }
+
+            // Via the XSSF Factory
+            XSSFWorkbookFactory xssfFactory = new XSSFWorkbookFactory();
+            try (XSSFWorkbook wb = xssfFactory.create(fs.getRoot(), null)) {
+                assertEquals(1, wb.getNumberOfSheets());
+            }
+
+            // Or can open via the normal Factory, as stream or OLE2
+            try (Workbook wb = WorkbookFactory.create(fs)) {
+                assertEquals(1, wb.getNumberOfSheets());
+            }
+            try (Workbook wb = WorkbookFactory.create(data.getInputStream())) {
+                assertEquals(1, wb.getNumberOfSheets());
+            }
+        }
+    }
+
