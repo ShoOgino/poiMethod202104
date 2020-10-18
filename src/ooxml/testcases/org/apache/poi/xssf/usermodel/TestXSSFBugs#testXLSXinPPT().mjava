@@ -1,23 +1,27 @@
     @Test
     public void testXLSXinPPT() throws Exception {
-        try (HSLFSlideShow ppt = new HSLFSlideShow(
-                HSLFTestDataSamples.openSampleFileStream("testPPT_oleWorkbook.ppt"))) {
-            assertEquals(1, ppt.getEmbeddedObjects().length);
+        try (SlideShow<?,?> ppt = SlideShowFactory.create(
+                POIDataSamples.getSlideShowInstance().openResourceAsStream("testPPT_oleWorkbook.ppt"))) {
 
-            HSLFObjectData data = ppt.getEmbeddedObjects()[0];
-            assertEquals(null, data.getFileName());
+            Slide<?, ?> slide = ppt.getSlides().get(1);
+            ObjectShape<?,?> oleShape = (ObjectShape<?,?>)slide.getShapes().get(2);
+
+            org.apache.poi.sl.usermodel.ObjectData data = oleShape.getObjectData();
+            assertNull(data.getFileName());
 
             // Will be OOXML wrapped in OLE2, not directly SpreadSheet
             POIFSFileSystem fs = new POIFSFileSystem(data.getInputStream());
-            assertEquals(true, fs.getRoot().hasEntry("Package"));
-            assertEquals(false, fs.getRoot().hasEntry("Workbook"));
+            assertTrue(fs.getRoot().hasEntry(OOXML_PACKAGE));
+            assertFalse(fs.getRoot().hasEntry("Workbook"));
+
 
             // Can fetch Package to get OOXML
-            DocumentInputStream dis = new DocumentInputStream((DocumentEntry)fs.getRoot().getEntry("Package"));
-            try (OPCPackage pkg = OPCPackage.open(dis)) {
-                XSSFWorkbook wb = new XSSFWorkbook(pkg);
+            DirectoryNode root = fs.getRoot();
+            DocumentEntry docEntry = (DocumentEntry) root.getEntry(OOXML_PACKAGE);
+            try (DocumentInputStream dis = new DocumentInputStream(docEntry);
+                 OPCPackage pkg = OPCPackage.open(dis);
+                 XSSFWorkbook wb = new XSSFWorkbook(pkg)) {
                 assertEquals(1, wb.getNumberOfSheets());
-                wb.close();
             }
 
             // Via the XSSF Factory
@@ -26,15 +30,14 @@
                 assertEquals(1, wb.getNumberOfSheets());
             }
 
+
             // Or can open via the normal Factory, as stream or OLE2
-            /* this part test is currently broken - https://bz.apache.org/bugzilla/show_bug.cgi?id=64817
             try (Workbook wb = WorkbookFactory.create(fs)) {
                 assertEquals(1, wb.getNumberOfSheets());
             }
             try (Workbook wb = WorkbookFactory.create(data.getInputStream())) {
                 assertEquals(1, wb.getNumberOfSheets());
             }
-             */
         }
     }
 
