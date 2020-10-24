@@ -16,33 +16,27 @@
             }
 
             //try the general case, where module.offset is accurate
-            InputStream decompressed = null;
-            InputStream compressed = new DocumentInputStream(documentNode);
-            try {
+            try (InputStream compressed = new DocumentInputStream(documentNode)) {
                 // we know the offset already, so decompress immediately on-the-fly
                 trySkip(compressed, module.offset);
-                decompressed = new RLEDecompressingInputStream(compressed);
-                module.read(decompressed);
+                try (InputStream decompressed = new RLEDecompressingInputStream(compressed)) {
+                    module.read(decompressed);
+                }
                 return;
             } catch (IllegalArgumentException | IllegalStateException e) {
-            } finally {
-                IOUtils.closeQuietly(compressed);
-                IOUtils.closeQuietly(decompressed);
             }
 
             //bad module.offset, try brute force
-            compressed = new DocumentInputStream(documentNode);
+            ;
             byte[] decompressedBytes;
-            try {
+            try (InputStream compressed = new DocumentInputStream(documentNode)) {
                 decompressedBytes = findCompressedStreamWBruteForce(compressed);
-            } finally {
-                IOUtils.closeQuietly(compressed);
             }
 
             if (decompressedBytes != null) {
                 module.read(new ByteArrayInputStream(decompressedBytes));
             }
         }
-        
+
     }
 
