@@ -5,25 +5,14 @@
      */
     public Rectangle2D getBounds() {
         Rectangle2D dim = getHeader().getFrameRectangle();
-        double x = dim.getX(), y = dim.getY();
-        double width = dim.getWidth(), height = dim.getHeight();
-        if (dim.isEmpty() || Math.rint(width) == 0 || Math.rint(height) == 0) {
-            for (HemfRecord r : getRecords()) {
-                if (r instanceof HemfWindowing.EmfSetWindowExtEx) {
-                    HemfWindowing.EmfSetWindowExtEx extEx = (HemfWindowing.EmfSetWindowExtEx)r;
-                    Dimension2D d = extEx.getSize();
-                    width = d.getWidth();
-                    height = d.getHeight();
-                    // keep searching - sometimes there's another record
-                }
-                if (r instanceof HemfWindowing.EmfSetWindowOrgEx) {
-                    HemfWindowing.EmfSetWindowOrgEx orgEx = (HemfWindowing.EmfSetWindowOrgEx)r;
-                    x = orgEx.getX();
-                    y = orgEx.getY();
-                }
+        boolean isInvalid = ReluctantRectangle2D.isEmpty(dim);
+        if (isInvalid) {
+            Rectangle2D lastDim = new ReluctantRectangle2D();
+            getInnerBounds(lastDim, new ReluctantRectangle2D());
+            if (!lastDim.isEmpty()) {
+                return lastDim;
             }
         }
-
-        return new Rectangle2D.Double(x, y, width, height);
+        return dim;
     }
 

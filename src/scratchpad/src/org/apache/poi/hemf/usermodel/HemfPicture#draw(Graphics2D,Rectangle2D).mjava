@@ -3,18 +3,31 @@
         final AffineTransform at = ctx.getTransform();
         try {
             Rectangle2D emfBounds = getHeader().getBoundsRectangle();
+            Rectangle2D winBounds = new ReluctantRectangle2D();
+            Rectangle2D viewBounds = new ReluctantRectangle2D();
+            getInnerBounds(winBounds, viewBounds);
 
-            // scale output bounds to image bounds
+            Boolean forceHeader = (Boolean)ctx.getRenderingHint(Drawable.EMF_FORCE_HEADER_BOUNDS);
+            if (forceHeader == null) {
+                forceHeader = false;
+            }
+            // this is a compromise ... sometimes winBounds are totally off :(
+            // but mostly they fit better than the header bounds
+            Rectangle2D b =
+                !viewBounds.isEmpty() && !forceHeader
+                ? viewBounds
+                : !winBounds.isEmpty() && !forceHeader
+                ? winBounds
+                : emfBounds;
+
             ctx.translate(graphicsBounds.getCenterX(), graphicsBounds.getCenterY());
-            ctx.scale(graphicsBounds.getWidth()/emfBounds.getWidth(), graphicsBounds.getHeight()/emfBounds.getHeight());
-            ctx.translate(-emfBounds.getCenterX(), -emfBounds.getCenterY());
+            ctx.scale(
+                graphicsBounds.getWidth()/b.getWidth(),
+                graphicsBounds.getHeight()/b.getHeight()
+            );
+            ctx.translate(-b.getCenterX(),-b.getCenterY());
 
-            HemfGraphics g = new HemfGraphics(ctx, emfBounds);
-            HemfDrawProperties prop = g.getProperties();
-            prop.setWindowOrg(emfBounds.getX(), emfBounds.getY());
-            prop.setWindowExt(emfBounds.getWidth(), emfBounds.getHeight());
-            prop.setViewportOrg(emfBounds.getX(), emfBounds.getY());
-            prop.setViewportExt(emfBounds.getWidth(), emfBounds.getHeight());
+            HemfGraphics g = new HemfGraphics(ctx, b);
 
             for (HemfRecord r : getRecords()) {
                 try {
