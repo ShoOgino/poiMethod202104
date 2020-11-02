@@ -17,19 +17,19 @@
             final int width = Math.max((int)Math.rint(dim.getWidth()),1);
             final int height = Math.max((int)Math.rint(dim.getHeight()),1);
 
-            for (int slideNo : slidenum) {
-                proxy.setSlideNo(slideNo);
-                if (!quiet) {
-                    String title = proxy.getTitle();
-                    System.out.println("Rendering slide " + slideNo + (title == null ? "" : ": " + title.trim()));
-                }
+            try (OutputFormat outputFormat = getOutput()) {
+                for (int slideNo : slidenum) {
+                    proxy.setSlideNo(slideNo);
+                    if (!quiet) {
+                        String title = proxy.getTitle();
+                        System.out.println("Rendering slide " + slideNo + (title == null ? "" : ": " + title.trim()));
+                    }
 
-                dumpRecords(proxy);
+                    dumpRecords(proxy);
 
-                extractEmbedded(proxy, slideNo);
+                    extractEmbedded(proxy, slideNo);
 
-                try (OutputFormat outputFormat = ("svg".equals(format)) ? new SVGFormat(textAsShapes) : new BitmapFormat(format)) {
-                    Graphics2D graphics = outputFormat.getGraphics2D(width, height);
+                    Graphics2D graphics = outputFormat.addSlide(width, height);
 
                     // default rendering options
                     graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -49,9 +49,12 @@
                     // draw stuff
                     proxy.draw(graphics);
 
-                    outputFormat.writeOut(proxy, new File(outdir, calcOutFile(proxy, slideNo)));
+                    outputFormat.writeSlide(proxy, new File(outdir, calcOutFile(proxy, slideNo)));
                 }
+
+                outputFormat.writeDocument(proxy, new File(outdir, calcOutFile(proxy, 0)));
             }
+
         } catch (NoScratchpadException e) {
             usage("'"+file.getName()+"': Format not supported - try to include poi-scratchpad.jar into the CLASSPATH.");
             return;
