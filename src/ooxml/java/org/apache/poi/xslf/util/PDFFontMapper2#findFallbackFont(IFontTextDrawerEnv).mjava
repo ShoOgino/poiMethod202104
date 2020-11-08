@@ -1,0 +1,44 @@
+    private PDFont findFallbackFont(IFontTextDrawerEnv env) throws IOException
+    {
+        /*
+         * We search for the right font in the system folders... We try to use
+         * LucidaSansRegular and if not found Arial, because this fonts often exists. We
+         * use the Java default font as fallback.
+         *
+         * Normally this method is only used and called if a default font misses some
+         * special characters, e.g. Hebrew or Arabic characters.
+         */
+        String javaHome = System.getProperty("java.home", ".");
+        String javaFontDir = javaHome + "/lib/fonts";
+        String windir = System.getenv("WINDIR");
+        if (windir == null)
+            windir = javaFontDir;
+        File[] paths = new File[] { new File(new File(windir), "fonts"),
+                new File(System.getProperty("user.dir", ".")), new File("/Library/Fonts"),
+                new File("/usr/share/fonts/truetype"), new File("/usr/share/fonts/truetype/dejavu"),
+                new File("/usr/share/fonts/truetype/liberation"),
+                new File("/usr/share/fonts/truetype/noto"), new File(javaFontDir) };
+        File foundFontFile = null;
+        for (String fontFileName : new String[] { "LucidaSansRegular.ttf", "arial.ttf", "Arial.ttf",
+                "DejaVuSans.ttf", "LiberationMono-Regular.ttf", "NotoSerif-Regular.ttf" })
+        {
+            for (File path : paths)
+            {
+                File arialFile = new File(path, fontFileName);
+                if (arialFile.exists())
+                {
+                    foundFontFile = arialFile;
+                    break;
+                }
+            }
+            if (foundFontFile != null)
+                break;
+        }
+        /*
+         * If we did not find any font, we can't do anything :(
+         */
+        if (foundFontFile == null)
+            return null;
+        return PDType0Font.load(env.getDocument(), foundFontFile);
+    }
+

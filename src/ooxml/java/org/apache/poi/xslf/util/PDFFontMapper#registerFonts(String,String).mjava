@@ -1,0 +1,44 @@
+    private void registerFonts(String fontDir, String fontTtf) {
+        if (fontDir == null) {
+            String OS = System.getProperty("os.name", "generic").toLowerCase(Locale.ROOT);
+            if (OS.contains("mac") || OS.contains("darwin")) {
+                fontDir = FONTDIRS_MAC;
+            } else if (OS.contains("win")) {
+                fontDir = FONTDIRS_WIN;
+            } else {
+                fontDir = FONTDIRS_UNX;
+            }
+        }
+
+        String fd = fontDir.replace("$HOME", System.getProperty("user.home"));
+        final LinkedList<File> dirs = new LinkedList<>();
+        Stream.of(fd.split(";")).map(File::new).filter(File::isDirectory).forEach(dirs::add);
+
+        Pattern p = Pattern.compile(fontTtf == null ? DEFAULT_TTF_PATTERN : fontTtf);
+
+        while (!dirs.isEmpty()) {
+            File[] ttfs = dirs.removeFirst().listFiles((f, n) -> {
+                File f2 = new File(f, n);
+                if (f2.isDirectory()) {
+                    dirs.add(f2);
+                    return false;
+                } else {
+                    return p.matcher(n).matches();
+                }
+            });
+
+            if (ttfs == null) {
+                continue;
+            }
+
+            for (File f : ttfs) {
+                try {
+                    Font font = Font.createFont(Font.TRUETYPE_FONT, f);
+                    fonts.put(font.getFontName(Locale.ROOT), f);
+                } catch (IOException|FontFormatException ignored) {
+                }
+
+            }
+        }
+    }
+

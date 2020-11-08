@@ -8,9 +8,18 @@
 
         DrawFactory fact = DrawFactory.getInstance(graphics);
         StringBuilder text = new StringBuilder();
-        AttributedString at = getAttributedString(graphics, text);
 
-        AttributedCharacterIterator it = at.getIterator();
+        List<AttributedStringData> attList = getAttributedString(graphics, text);
+        AttributedString as = new AttributedString(text.toString());
+        AttributedString asNoCR = new AttributedString(text.toString().replaceAll("[\\r\\n]", " "));
+
+        for (AttributedStringData asd : attList) {
+            as.addAttribute(asd.attribute, asd.value, asd.beginIndex, asd.endIndex);
+            asNoCR.addAttribute(asd.attribute, asd.value, asd.beginIndex, asd.endIndex);
+        }
+
+        AttributedCharacterIterator it = as.getIterator();
+        AttributedCharacterIterator itNoCR = asNoCR.getIterator();
         LineBreakMeasurer measurer = new LineBreakMeasurer(it, graphics.getFontRenderContext());
         for (;;) {
             int startIndex = measurer.getPosition();
@@ -59,7 +68,7 @@
                 }
             }
 
-            AttributedString str = new AttributedString(it, startIndex, endIndex);
+            AttributedString str = new AttributedString(itNoCR, startIndex, endIndex);
             DrawTextFragment line = fact.getTextFragment(layout, str);
             lines.add(line);
 
