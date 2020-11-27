@@ -13,7 +13,8 @@
             return;
         }
 
-        String textString = trimText(font, isUnicode, text, length);
+        final Charset charset = getCharset(font, isUnicode);
+        String textString = trimText(charset, text, length);
         if (textString.isEmpty()) {
             return;
         }
@@ -33,7 +34,12 @@
 
         final double angle = Math.toRadians(-font.getEscapement()/10.);
 
-        final Point2D dst = getRotatedOffset(angle, frc, as);
+        // TODO: find out when to use asian align
+        boolean useAsianAlign = (opts == null) &&
+            textString.codePoints().anyMatch(Character::isIdeographic) &&
+            charset.displayName(Locale.ROOT). startsWith("GB");
+
+        final Point2D dst = getRotatedOffset(angle, frc, as, useAsianAlign);
         final Shape clipShape = graphicsCtx.getClip();
 
         try {
