@@ -1,0 +1,46 @@
+    public static void main(String[] args) throws IOException {
+        BufferedImage pattern = getPattern();
+        BufferedImage source = getSource();
+
+        BufferedImage dest = new BufferedImage(
+                (int)(BOX * COLS * SCALE),
+                (int)(BOX *(Math.max(OPS.length/COLS,1) + HEADER)* SCALE),
+                BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = dest.createGraphics();
+
+        g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 10));
+
+        g.setTransform(INIT_AT);
+        g.setColor(Color.BLACK);
+
+        for (int i=0; i<3; i++) {
+            String str = new String[]{"Dest:","Source:","Pattern:"}[i];
+            TextLayout t = new TextLayout(str, g.getFont(), g.getFontRenderContext());
+            Rectangle2D b = t.getBounds();
+            g.drawString(str, (float)(((i*2+0.95)*BOX - b.getWidth())), (float)(0.55 * BOX));
+        }
+
+        g.translate(BOX, 0);
+        fillDest(g);
+        g.translate(2*BOX, 0);
+        g.drawImage(source, 0, 0, null);
+        g.translate(2*BOX, 0);
+        g.setPaint(new TexturePaint(pattern, RECT));
+        g.fill(RECT);
+
+        int idx=0;
+        for (HwmfTernaryRasterOp op : OPS) {
+            g.setTransform(INIT_AT);
+            g.translate(0, HEADER * BOX);
+            g.translate(BOX*(idx%COLS), BOX*(idx/COLS));
+
+            fillDest(g);
+            fillPattern(g, op, pattern, source);
+            fillLabel(g, op);
+            idx++;
+        }
+
+        g.dispose();
+        ImageIO.write(dest, "PNG", new File("rop3.png"));
+    }
+

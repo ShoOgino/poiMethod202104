@@ -1,0 +1,44 @@
+    public String calcCmd() {
+        // taken from https://wiki.winehq.org/Ternary_Raster_Ops
+
+        // bit 0-4: Specify the order of arguments to the raster operation
+        String argOrder = ARG_ORDER[this.opValue & 0x001F];
+        assert(argOrder != null);
+
+        // The boolean operators, 1st (6-7 bit), 2nd (8-9 bit), 3rd (a-b bit), 4th (c-d bit), 5th (e-f bit)
+        int nbrOfOps = 0;
+        int[] opArr = new int[5];
+        for (int i=0, bit=6; i<opArr.length; i++, bit+=2) {
+            if ((opArr[i] = (this.opValue >>> bit) & 0x03) != 0) {
+                nbrOfOps = i+1;
+            }
+        }
+
+        StringBuilder sbArg = new StringBuilder(), sbOp = new StringBuilder();
+        sbArg.append(argOrder.charAt(0));
+        for (int opIdx=0,argIdx=1; opIdx < nbrOfOps; opIdx++) {
+            char opCh = OPS.charAt(opArr[opIdx]);
+            char ch = argOrder.charAt(argIdx);
+            sbOp.append(opCh);
+            if (ch == '.') {
+                sbArg.insert(argIdx, sbOp.charAt(0));
+                sbOp.deleteCharAt(0);
+            }
+            if (opCh == 'n') {
+                continue;
+            }
+            sbArg.append(ch == '.' ? argOrder.charAt(++argIdx) : ch);
+            argIdx++;
+        }
+        sbArg.append(sbOp);
+
+        // bit 5: Used to apply the NOT operator to the results of the other operations
+        // if 0, there are a ODD number of operations, even number otherwise
+        if ((nbrOfOps % 2) == ((this.opValue >>> 0x05) & 1)) {
+            sbArg.append('n');
+        }
+
+        String ret = sbArg.toString();
+        return ret.startsWith("DDx") ? "DDx".equals(ret) ? "0" : "1" : ret;
+    }
+

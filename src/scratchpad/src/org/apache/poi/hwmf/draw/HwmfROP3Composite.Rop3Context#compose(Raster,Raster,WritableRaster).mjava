@@ -1,0 +1,29 @@
+        @Override
+        public void compose(Raster src, Raster dstIn, WritableRaster dstOut) {
+            int w = Math.min(src.getWidth(), dstIn.getWidth());
+            int h = Math.min(src.getHeight(), dstIn.getHeight());
+
+            int startX = (int)startPnt.getX();
+            int startY = (int)startPnt.getY();
+            int offsetY = dstIn.getSampleModelTranslateY();
+            int offsetX = dstIn.getSampleModelTranslateX();
+
+            final int[] srcPixels = new int[w];
+            final int[] dstPixels = new int[w];
+            final int[] patPixels = hasPattern ? new int[w] : null;
+
+            for (int y = 0; y < h; y++) {
+                dstIn.getDataElements(0, y, w, 1, dstPixels);
+                src.getDataElements(0, y, w, 1, srcPixels);
+
+                fillPattern(patPixels, y, startX, startY, offsetX, offsetY);
+
+                rop3.process(stack, dstPixels, srcPixels, patPixels);
+                assert(stack.size() == 1);
+
+                int[] dstOutPixels = stack.pop();
+
+                dstOut.setDataElements(0, y, w, 1, dstOutPixels);
+            }
+        }
+
