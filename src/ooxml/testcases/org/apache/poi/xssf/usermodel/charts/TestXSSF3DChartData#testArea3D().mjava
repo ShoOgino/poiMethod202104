@@ -1,0 +1,36 @@
+    @Test
+    public void testArea3D() throws IOException {
+        // This test currently doesn't produce a valid area 3d chart and is only used to test accessors
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            XSSFSheet sheet = (XSSFSheet) new SheetBuilder(wb, plotData).build();
+            XSSFDrawing drawing = sheet.createDrawingPatriarch();
+            XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 1, 1, 10, 30);
+
+            Map<ChartTypes, Consumer<XDDFChartData>> map = new HashMap<>();
+            map.put(ChartTypes.AREA3D, this::handleArea3D);
+            map.put(ChartTypes.BAR3D, this::handleBar3D);
+            map.put(ChartTypes.LINE3D, this::handleLine3D);
+
+            for (Map.Entry<ChartTypes, Consumer<XDDFChartData>> me : map.entrySet()) {
+
+                XSSFChart chart = drawing.createChart(anchor);
+
+                XDDFCategoryAxis bottomAxis = chart.createCategoryAxis(AxisPosition.BOTTOM);
+                XDDFValueAxis leftAxis = chart.createValueAxis(AxisPosition.LEFT);
+
+                XDDFDataSource<String> xs = XDDFDataSourcesFactory.fromStringCellRange(sheet, CellRangeAddress.valueOf("A1:J1"));
+                XDDFNumericalDataSource<Double> ys = XDDFDataSourcesFactory.fromNumericCellRange(sheet, CellRangeAddress.valueOf("A2:J2"));
+
+                XDDFChartData data = chart.createData(me.getKey(), bottomAxis, leftAxis);
+                XDDFChartData.Series series = data.addSeries(xs, ys);
+
+                assertNotNull(series);
+                assertEquals(1, data.getSeriesCount());
+                assertEquals(series, data.getSeries(0));
+                chart.plot(data);
+
+                me.getValue().accept(data);
+            }
+        }
+    }
+
