@@ -1,30 +1,32 @@
     @Test
     public void bug47904() throws IOException {
-        HSLFSlideShow ppt1 = new HSLFSlideShow();
-        HSLFSlideMaster sm = ppt1.getSlideMasters().get(0);
-        HSLFAutoShape as = (HSLFAutoShape)sm.getPlaceholder(Placeholder.TITLE);
-        HSLFTextParagraph tp = as.getTextParagraphs().get(0);
-        HSLFTextRun tr = tp.getTextRuns().get(0);
-        tr.setFontFamily("Tahoma");
-        tr.setShadowed(true);
-        tr.setFontSize(44.);
-        tr.setFontColor(Color.red);
-        tp.setTextAlign(TextAlign.RIGHT);
-        HSLFTextBox tb = ppt1.createSlide().addTitle();
-        tb.setText("foobaa");
+        try (HSLFSlideShow ppt1 = new HSLFSlideShow()) {
+            HSLFSlideMaster sm = ppt1.getSlideMasters().get(0);
+            HSLFAutoShape as = (HSLFAutoShape) sm.getPlaceholder(Placeholder.TITLE);
+            HSLFTextParagraph tp = as.getTextParagraphs().get(0);
+            HSLFTextRun tr = tp.getTextRuns().get(0);
+            tr.setFontFamily("Tahoma");
+            tr.setShadowed(true);
+            tr.setFontSize(44.);
+            tr.setFontColor(Color.red);
+            tp.setTextAlign(TextAlign.RIGHT);
+            HSLFTextBox tb = ppt1.createSlide().addTitle();
+            tb.setText("foobaa");
 
-        HSLFSlideShow ppt2 = HSLFTestDataSamples.writeOutAndReadBack(ppt1);
-        ppt1.close();
-
-        HSLFTextShape ts = (HSLFTextShape)ppt2.getSlides().get(0).getShapes().get(0);
-        tp = ts.getTextParagraphs().get(0);
-        tr = tp.getTextRuns().get(0);
-        assertEquals(44., tr.getFontSize(), 0);
-        assertEquals("Tahoma", tr.getFontFamily());
-        Color colorAct = DrawPaint.applyColorTransform(tr.getFontColor().getSolidColor());
-        assertEquals(Color.red, colorAct);
-        assertEquals(TextAlign.RIGHT, tp.getTextAlign());
-        assertEquals("foobaa", tr.getRawText());
-        ppt2.close();
+            try (HSLFSlideShow ppt2 = writeOutAndReadBack(ppt1)) {
+                HSLFTextShape ts = (HSLFTextShape) ppt2.getSlides().get(0).getShapes().get(0);
+                tp = ts.getTextParagraphs().get(0);
+                tr = tp.getTextRuns().get(0);
+                assertNotNull(tr);
+                assertNotNull(tr.getFontSize());
+                assertEquals(44., tr.getFontSize(), 0);
+                assertEquals("Tahoma", tr.getFontFamily());
+                assertNotNull(tr.getFontColor());
+                Color colorAct = DrawPaint.applyColorTransform(tr.getFontColor().getSolidColor());
+                assertEquals(Color.red, colorAct);
+                assertEquals(TextAlign.RIGHT, tp.getTextAlign());
+                assertEquals("foobaa", tr.getRawText());
+            }
+        }
     }
 

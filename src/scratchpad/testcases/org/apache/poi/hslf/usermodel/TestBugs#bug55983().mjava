@@ -1,36 +1,37 @@
     @Test
     public void bug55983() throws IOException {
-        HSLFSlideShow ppt1 = new HSLFSlideShow();
-        HSLFSlide sl = ppt1.createSlide();
-        sl.getBackground().getFill().setForegroundColor(Color.blue);
-        HSLFFreeformShape fs = sl.createFreeform();
-        Ellipse2D.Double el = new Ellipse2D.Double(0,0,300,200);
-        fs.setAnchor(new Rectangle2D.Double(100,100,300,200));
-        fs.setPath(new Path2D.Double(el));
-        Color cExp = new Color(50,100,150,200);
-        fs.setFillColor(cExp);
+        try (HSLFSlideShow ppt1 = new HSLFSlideShow()) {
+            HSLFSlide sl = ppt1.createSlide();
+            assertNotNull(sl.getBackground());
+            HSLFFill fill = sl.getBackground().getFill();
+            assertNotNull(fill);
+            fill.setForegroundColor(Color.blue);
+            HSLFFreeformShape fs = sl.createFreeform();
+            Ellipse2D.Double el = new Ellipse2D.Double(0, 0, 300, 200);
+            fs.setAnchor(new Rectangle2D.Double(100, 100, 300, 200));
+            fs.setPath(new Path2D.Double(el));
+            Color cExp = new Color(50, 100, 150, 200);
+            fs.setFillColor(cExp);
 
-        HSLFSlideShow ppt2 = HSLFTestDataSamples.writeOutAndReadBack(ppt1);
-        ppt1.close();
+            try (HSLFSlideShow ppt2 = writeOutAndReadBack(ppt1)) {
+                sl = ppt2.getSlides().get(0);
+                fs = (HSLFFreeformShape) sl.getShapes().get(0);
+                Color cAct = fs.getFillColor();
+                assertEquals(cExp.getRed(), cAct.getRed());
+                assertEquals(cExp.getGreen(), cAct.getGreen());
+                assertEquals(cExp.getBlue(), cAct.getBlue());
+                assertEquals(cExp.getAlpha(), cAct.getAlpha(), 1);
 
-        sl = ppt2.getSlides().get(0);
-        fs = (HSLFFreeformShape)sl.getShapes().get(0);
-        Color cAct = fs.getFillColor();
-        assertEquals(cExp.getRed(), cAct.getRed());
-        assertEquals(cExp.getGreen(), cAct.getGreen());
-        assertEquals(cExp.getBlue(), cAct.getBlue());
-        assertEquals(cExp.getAlpha(), cAct.getAlpha(), 1);
-
-        PaintStyle ps = fs.getFillStyle().getPaint();
-        assertTrue(ps instanceof SolidPaint);
-        ColorStyle cs = ((SolidPaint)ps).getSolidColor();
-        cAct = cs.getColor();
-        assertEquals(cExp.getRed(), cAct.getRed());
-        assertEquals(cExp.getGreen(), cAct.getGreen());
-        assertEquals(cExp.getBlue(), cAct.getBlue());
-        assertEquals(255, cAct.getAlpha());
-        assertEquals(cExp.getAlpha()*100000./255., cs.getAlpha(), 1);
-
-        ppt2.close();
+                PaintStyle ps = fs.getFillStyle().getPaint();
+                assertTrue(ps instanceof SolidPaint);
+                ColorStyle cs = ((SolidPaint) ps).getSolidColor();
+                cAct = cs.getColor();
+                assertEquals(cExp.getRed(), cAct.getRed());
+                assertEquals(cExp.getGreen(), cAct.getGreen());
+                assertEquals(cExp.getBlue(), cAct.getBlue());
+                assertEquals(255, cAct.getAlpha());
+                assertEquals(cExp.getAlpha() * 100000. / 255., cs.getAlpha(), 1);
+            }
+        }
     }
 

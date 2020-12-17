@@ -4,34 +4,33 @@
      */
     @Test
     public void bug43781() throws IOException {
-        HSLFSlideShow ppt = open("43781.ppt");
+        try (HSLFSlideShow ppt = open("43781.ppt")) {
+            // Check the first slide
+            HSLFSlide slide = ppt.getSlides().get(0);
+            List<List<HSLFTextParagraph>> slTr = slide.getTextParagraphs();
 
-        // Check the first slide
-        HSLFSlide slide = ppt.getSlides().get(0);
-        List<List<HSLFTextParagraph>> slTr = slide.getTextParagraphs();
+            // Has 3 text paragraphs, two from slide text (empty title / filled body), one from drawing
+            assertEquals(3, slTr.size());
+            assertFalse(slTr.get(0).get(0).isDrawingBased());
+            assertFalse(slTr.get(1).get(0).isDrawingBased());
+            assertTrue(slTr.get(2).get(0).isDrawingBased());
+            assertEquals("", HSLFTextParagraph.getRawText(slTr.get(0)));
+            assertEquals("First run", HSLFTextParagraph.getRawText(slTr.get(1)));
+            assertEquals("Second run", HSLFTextParagraph.getRawText(slTr.get(2)));
 
-        // Has 3 text paragraphs, two from slide text (empty title / filled body), one from drawing
-        assertEquals(3, slTr.size());
-        assertFalse(slTr.get(0).get(0).isDrawingBased());
-        assertFalse(slTr.get(1).get(0).isDrawingBased());
-        assertTrue(slTr.get(2).get(0).isDrawingBased());
-        assertEquals("", HSLFTextParagraph.getRawText(slTr.get(0)));
-        assertEquals("First run", HSLFTextParagraph.getRawText(slTr.get(1)));
-        assertEquals("Second run", HSLFTextParagraph.getRawText(slTr.get(2)));
+            // Check the shape based text runs
+            List<HSLFTextParagraph> lst = new ArrayList<>();
+            for (HSLFShape shape : slide.getShapes()) {
+                if (shape instanceof HSLFTextShape) {
+                    List<HSLFTextParagraph> textRun = ((HSLFTextShape) shape).getTextParagraphs();
+                    lst.addAll(textRun);
+                }
 
-        // Check the shape based text runs
-        List<HSLFTextParagraph> lst = new ArrayList<>();
-        for (HSLFShape shape : slide.getShapes()) {
-            if (shape instanceof HSLFTextShape){
-                List<HSLFTextParagraph> textRun = ((HSLFTextShape)shape).getTextParagraphs();
-                lst.addAll(textRun);
             }
 
+            // There are two shapes in the ppt
+            assertEquals(2, lst.size());
+            assertEquals("First runSecond run", HSLFTextParagraph.getRawText(lst));
         }
-
-        // There are two shapes in the ppt
-        assertEquals(2, lst.size());
-        assertEquals("First runSecond run", HSLFTextParagraph.getRawText(lst));
-        ppt.close();
     }
 

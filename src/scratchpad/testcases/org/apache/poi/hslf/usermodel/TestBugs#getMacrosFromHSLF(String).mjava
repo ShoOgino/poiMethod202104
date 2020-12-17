@@ -1,15 +1,11 @@
     //It isn't pretty, but it works...
     private Map<String, String> getMacrosFromHSLF(String fileName) throws IOException {
-        InputStream is = null;
-        POIFSFileSystem poifs = null;
-        try {
-            is = new FileInputStream(POIDataSamples.getSlideShowInstance().getFile(fileName));
-            poifs = new POIFSFileSystem(is);
+        try (InputStream is = new FileInputStream(POIDataSamples.getSlideShowInstance().getFile(fileName));
+             POIFSFileSystem poifs = new POIFSFileSystem(is);
+             HSLFSlideShow ppt = new HSLFSlideShow(poifs)) {
             //TODO: should we run the VBAMacroReader on this poifs?
             //TBD: We know that ppt typically don't store macros in the regular place,
             //but _can_ they?
-
-            HSLFSlideShow ppt = new HSLFSlideShow(poifs);
 
             //get macro persist id
             DocInfoListContainer list = (DocInfoListContainer)ppt.getDocumentRecord().findFirstOfType(RecordTypes.List.typeID);
@@ -23,12 +19,6 @@
                     }
                 }
             }
-
-            ppt.close();
-
-        } finally {
-            IOUtils.closeQuietly(poifs);
-            IOUtils.closeQuietly(is);
         }
         return null;
     }

@@ -1,0 +1,48 @@
+    @Test
+    public void bug57796() throws IOException {
+        assumeFalse(xslfOnly);
+
+        try (SlideShow<?,?> ppt = SlideShowFactory.create(slTests.getFile("WithLinks.ppt"))) {
+            Slide<?,?> slide = ppt.getSlides().get(0);
+            TextShape<?,?> shape = (TextShape<?,?>) slide.getShapes().get(1);
+            TextRun r = shape.getTextParagraphs().get(1).getTextRuns().get(0);
+            Hyperlink<?,?> hlRun = r.getHyperlink();
+            assertNotNull(hlRun);
+            assertEquals("http://jakarta.apache.org/poi/", hlRun.getAddress());
+            assertEquals("http://jakarta.apache.org/poi/", hlRun.getLabel());
+            assertEquals(HyperlinkType.URL, hlRun.getType());
+
+            final List<Object> strings = new ArrayList<>();
+
+            DummyGraphics2d dgfx = new DummyGraphics2d(new NullPrintStream()) {
+                @Override
+                public void drawString(AttributedCharacterIterator iterator, float x, float y) {
+                    // For the test file, common sl draws textruns one by one and not mixed
+                    // so we evaluate the whole iterator
+                    Map<Attribute, Object> attributes = null;
+                    StringBuilder sb = new StringBuilder();
+
+                    for (char c = iterator.first();
+                         c != CharacterIterator.DONE;
+                         c = iterator.next()) {
+                        sb.append(c);
+                        attributes = iterator.getAttributes();
+                    }
+
+                    if ("Jakarta HSSF".equals(sb.toString())) {
+                        // this is a test for a manually modified ppt, for real hyperlink label
+                        // one would need to access the screen tip record
+                        Attribute[] obj = { HYPERLINK_HREF, HYPERLINK_LABEL };
+                        assertNotNull(attributes);
+                        Stream.of(obj).map(attributes::get).forEach(strings::add);
+                    }
+                }
+            };
+
+            ppt.getSlides().get(1).draw(dgfx);
+            assertEquals(2, strings.size());
+            assertEquals("http://jakarta.apache.org/poi/hssf/", strings.get(0));
+            assertEquals("Open Jakarta POI HSSF module test  ", strings.get(1));
+        }
+    }
+

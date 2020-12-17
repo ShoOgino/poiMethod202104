@@ -1,37 +1,37 @@
     @Test
     public void bug56260() throws IOException {
-        HSLFSlideShow ppt = open("56260.ppt");
-        List<HSLFSlide> _slides = ppt.getSlides();
-        assertEquals(13, _slides.size());
+        try (HSLFSlideShow ppt = open("56260.ppt")) {
+            List<HSLFSlide> _slides = ppt.getSlides();
+            assertEquals(13, _slides.size());
 
-        // Check the number of TextHeaderAtoms on Slide 1
-        Document dr = ppt.getDocumentRecord();
-        SlideListWithText slidesSLWT = dr.getSlideSlideListWithText();
-        SlideAtomsSet s1 = slidesSLWT.getSlideAtomsSets()[0];
+            // Check the number of TextHeaderAtoms on Slide 1
+            Document dr = ppt.getDocumentRecord();
+            SlideListWithText slidesSLWT = dr.getSlideSlideListWithText();
+            assertNotNull(slidesSLWT);
+            SlideAtomsSet s1 = slidesSLWT.getSlideAtomsSets()[0];
 
-        int tha = 0;
-        for ( org.apache.poi.hslf.record.Record r : s1.getSlideRecords()) {
-            if (r instanceof TextHeaderAtom) {
-                tha++;
+            int tha = 0;
+            for (org.apache.poi.hslf.record.Record r : s1.getSlideRecords()) {
+                if (r instanceof TextHeaderAtom) {
+                    tha++;
+                }
             }
-        }
-        assertEquals(2, tha);
+            assertEquals(2, tha);
 
-        // Check to see that we have a pair next to each other
-        assertEquals(TextHeaderAtom.class, s1.getSlideRecords()[0].getClass());
-        assertEquals(TextHeaderAtom.class, s1.getSlideRecords()[1].getClass());
+            // Check to see that we have a pair next to each other
+            assertEquals(TextHeaderAtom.class, s1.getSlideRecords()[0].getClass());
+            assertEquals(TextHeaderAtom.class, s1.getSlideRecords()[1].getClass());
 
 
-        // Check the number of text runs based on the slide (not textbox)
-        // Will have skipped the empty one
-        int str = 0;
-        for (List<HSLFTextParagraph> tr : _slides.get(0).getTextParagraphs()) {
-            if (! tr.get(0).isDrawingBased()) {
-                str++;
+            // Check the number of text runs based on the slide (not textbox)
+            // Will have skipped the empty one
+            int str = 0;
+            for (List<HSLFTextParagraph> tr : _slides.get(0).getTextParagraphs()) {
+                if (!tr.get(0).isDrawingBased()) {
+                    str++;
+                }
             }
+            assertEquals(2, str);
         }
-        assertEquals(2, str);
-
-        ppt.close();
     }
 

@@ -1,35 +1,32 @@
     @Test
     public void bug45124() throws IOException {
-        HSLFSlideShow ppt = open("bug45124.ppt");
-        Slide<?,?> slide1 = ppt.getSlides().get(1);
+        try (HSLFSlideShow ppt = open("bug45124.ppt")) {
+            Slide<?, ?> slide1 = ppt.getSlides().get(1);
 
-        TextBox<?,?> res = slide1.createTextBox();
-        res.setAnchor(new java.awt.Rectangle(60, 150, 700, 100));
-        res.setText("I am italic-false, bold-true inserted text");
+            TextBox<?, ?> res = slide1.createTextBox();
+            res.setAnchor(new java.awt.Rectangle(60, 150, 700, 100));
+            res.setText("I am italic-false, bold-true inserted text");
 
+            TextParagraph<?, ?, ?> tp = res.getTextParagraphs().get(0);
+            TextRun rt = tp.getTextRuns().get(0);
+            rt.setItalic(false);
+            assertTrue(rt.isBold());
 
-        TextParagraph<?,?,?> tp = res.getTextParagraphs().get(0);
-        TextRun rt = tp.getTextRuns().get(0);
-        rt.setItalic(false);
-        assertTrue(rt.isBold());
+            tp.setBulletStyle(Color.red, 'A');
 
-        tp.setBulletStyle(Color.red, 'A');
+            try (SlideShow<?, ?> ppt2 = writeOutAndReadBack(ppt)) {
+                res = (TextBox<?, ?>) ppt2.getSlides().get(1).getShapes().get(1);
+                tp = res.getTextParagraphs().get(0);
+                rt = tp.getTextRuns().get(0);
 
-        SlideShow<?,?> ppt2 = HSLFTestDataSamples.writeOutAndReadBack(ppt);
-        ppt.close();
-
-        res = (TextBox<?,?>)ppt2.getSlides().get(1).getShapes().get(1);
-        tp = res.getTextParagraphs().get(0);
-        rt = tp.getTextRuns().get(0);
-
-        assertFalse(rt.isItalic());
-        assertTrue(rt.isBold());
-        PaintStyle ps = tp.getBulletStyle().getBulletFontColor();
-        assertTrue(ps instanceof SolidPaint);
-        Color actColor = DrawPaint.applyColorTransform(((SolidPaint)ps).getSolidColor());
-        assertEquals(Color.red, actColor);
-        assertEquals("A", tp.getBulletStyle().getBulletCharacter());
-
-        ppt2.close();
+                assertFalse(rt.isItalic());
+                assertTrue(rt.isBold());
+                PaintStyle ps = tp.getBulletStyle().getBulletFontColor();
+                assertTrue(ps instanceof SolidPaint);
+                Color actColor = DrawPaint.applyColorTransform(((SolidPaint) ps).getSolidColor());
+                assertEquals(Color.red, actColor);
+                assertEquals("A", tp.getBulletStyle().getBulletCharacter());
+            }
+        }
     }
 

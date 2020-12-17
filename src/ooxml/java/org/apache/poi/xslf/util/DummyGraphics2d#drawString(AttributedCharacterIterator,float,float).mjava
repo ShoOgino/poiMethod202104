@@ -1,0 +1,44 @@
+    public void drawString(AttributedCharacterIterator iterator, float x, float y) {
+        final int startIdx = iterator.getIndex();
+
+        final Map<Attribute, Map<Integer,Object>> attMap = new HashMap<>();
+        StringBuilder sb = new StringBuilder();
+        for (char ch = iterator.current(); ch != AttributedCharacterIterator.DONE; ch = iterator.next()) {
+            sb.append(ch);
+            iterator.getAttributes().forEach((k,v) ->
+                 attMap.computeIfAbsent(k, (k2) -> new LinkedHashMap<>()).put(iterator.getIndex(), v)
+            );
+        }
+
+        String l = "AttributedString as = new AttributedString(\""+sb+"\");\n";
+        sb.setLength(0);
+        sb.append(l);
+
+        for (Map.Entry<Attribute, Map<Integer,Object>> me : attMap.entrySet()) {
+            int startPos = -2, lastPos = -2;
+            Object lastObj = null;
+            for (Map.Entry<Integer,Object> mo : me.getValue().entrySet()) {
+                int pos = mo.getKey();
+                Object obj = mo.getValue();
+                if (lastPos < pos-1 || obj != lastObj) {
+                    if (startPos >= 0) {
+                        Attribute at = me.getKey();
+                        sb.append("as.addAttribute("+mapAttribute(me.getKey())+","+mapAttribute(lastObj)+","+startPos+","+(lastPos+1)+");\n");
+                    }
+                    startPos = pos;
+                }
+                lastPos = pos;
+                lastObj = obj;
+            }
+            if (lastObj != null) {
+                sb.append("as.addAttribute("+mapAttribute(me.getKey())+","+mapAttribute(lastObj)+","+startPos+","+(lastPos+1)+");\n");
+            }
+        }
+
+        sb.append("g.drawString(as.getIterator(),"+x+"f,"+y+"f);");
+        log.println( sb.toString() );
+
+        iterator.setIndex(startIdx);
+        g2D.drawString( iterator, x, y );
+    }
+
