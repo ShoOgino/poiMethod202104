@@ -1,41 +1,36 @@
-   /**
-    * Craft a nasty file with a loop, and ensure we don't get stuck
-    */
-   @Test
-   public void testReadFailsOnLoop() throws Exception {
-      POIFSFileSystem fs = new POIFSFileSystem(_inst.getFile("BlockSize512.zvi"));
+    /**
+     * Craft a nasty file with a loop, and ensure we don't get stuck
+     */
+    @Test
+    public void testReadFailsOnLoop() throws Exception {
+        POIFSFileSystem fs = new POIFSFileSystem(_inst.getFile("BlockSize512.zvi"));
 
-      // Hack the FAT so that it goes 0->1->2->0
-      fs.setNextBlock(0, 1);
-      fs.setNextBlock(1, 2);
-      fs.setNextBlock(2, 0);
+        // Hack the FAT so that it goes 0->1->2->0
+        fs.setNextBlock(0, 1);
+        fs.setNextBlock(1, 2);
+        fs.setNextBlock(2, 0);
 
-      // Now try to read
-      POIFSStream stream = new POIFSStream(fs, 0);
-      Iterator<ByteBuffer> i = stream.getBlockIterator();
-      assertTrue(i.hasNext());
+        // Now try to read
+        POIFSStream stream = new POIFSStream(fs, 0);
+        Iterator<ByteBuffer> i = stream.getBlockIterator();
+        assertTrue(i.hasNext());
 
-      // 1st read works
-      i.next();
-      assertTrue(i.hasNext());
+        // 1st read works
+        i.next();
+        assertTrue(i.hasNext());
 
-      // 2nd read works
-      i.next();
-      assertTrue(i.hasNext());
+        // 2nd read works
+        i.next();
+        assertTrue(i.hasNext());
 
-      // 3rd read works
-      i.next();
-      assertTrue(i.hasNext());
+        // 3rd read works
+        i.next();
+        assertTrue(i.hasNext());
 
-      // 4th read blows up as it loops back to 0
-      try {
-         i.next();
-         fail("Loop should have been detected but wasn't!");
-      } catch(RuntimeException e) {
-         // Good, it was detected
-      }
-      assertTrue(i.hasNext());
+        // 4th read blows up as it loops back to 0
+        assertThrows(RuntimeException.class, i::next, "Loop should have been detected but wasn't!");
+        assertTrue(i.hasNext());
 
-      fs.close();
-   }
+        fs.close();
+    }
 

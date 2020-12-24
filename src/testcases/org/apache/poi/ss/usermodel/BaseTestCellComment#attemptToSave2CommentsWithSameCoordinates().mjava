@@ -1,23 +1,25 @@
     @Test
     public void attemptToSave2CommentsWithSameCoordinates() throws IOException {
-        Workbook wb = _testDataProvider.createWorkbook();
-        Sheet sh = wb.createSheet();
-        CreationHelper factory = wb.getCreationHelper();
-        Drawing<?> patriarch = sh.createDrawingPatriarch();
-        patriarch.createCellComment(factory.createClientAnchor());
-        
-        try {
+        try (Workbook wb = _testDataProvider.createWorkbook()) {
+            Sheet sh = wb.createSheet();
+            CreationHelper factory = wb.getCreationHelper();
+            Drawing<?> patriarch = sh.createDrawingPatriarch();
             patriarch.createCellComment(factory.createClientAnchor());
-            _testDataProvider.writeOutAndReadBack(wb);
-            fail("Should not be able to create a corrupted workbook with multiple cell comments in one cell");
-        } catch (IllegalStateException e) {
-            // HSSFWorkbooks fail when writing out workbook
-            assertEquals("found multiple cell comments for cell $A$1", e.getMessage());
-        } catch (IllegalArgumentException e) {
-            // XSSFWorkbooks fail when creating and setting the cell address of the comment
-            assertEquals("Multiple cell comments in one cell are not allowed, cell: A1", e.getMessage());
-        } finally {
-            wb.close();
+
+            RuntimeException e = assertThrows(RuntimeException.class, () -> {
+                patriarch.createCellComment(factory.createClientAnchor());
+                _testDataProvider.writeOutAndReadBack(wb);
+            }, "Should not be able to create a corrupted workbook with multiple cell comments in one cell");
+
+            if (wb instanceof HSSFWorkbook) {
+                // HSSFWorkbooks fail when writing out workbook
+                assertTrue(e instanceof IllegalStateException);
+                assertEquals("found multiple cell comments for cell $A$1", e.getMessage());
+            } else {
+                // XSSFWorkbooks fail when creating and setting the cell address of the comment
+                assertTrue(e instanceof IllegalArgumentException);
+                assertEquals("Multiple cell comments in one cell are not allowed, cell: A1", e.getMessage());
+            }
         }
     }
 

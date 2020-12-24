@@ -1,29 +1,27 @@
 	@Test
 	public void testEntitiesInCoreProps_56164() throws Exception {
-        InputStream is = OpenXML4JTestDataSamples.openSampleStream("CorePropertiesHasEntities.ooxml");
-        OPCPackage p = OPCPackage.open(is);
-        is.close();
+        try (InputStream is = OpenXML4JTestDataSamples.openSampleStream("CorePropertiesHasEntities.ooxml");
+        OPCPackage p = OPCPackage.open(is)) {
 
-        // Should have 3 root relationships
-        boolean foundDocRel = false, foundCorePropRel = false, foundExtPropRel = false;
-        for (PackageRelationship pr : p.getRelationships()) {
-            if (pr.getRelationshipType().equals(PackageRelationshipTypes.CORE_DOCUMENT))
-                foundDocRel = true;
-            if (pr.getRelationshipType().equals(PackageRelationshipTypes.CORE_PROPERTIES))
-                foundCorePropRel = true;
-            if (pr.getRelationshipType().equals(PackageRelationshipTypes.EXTENDED_PROPERTIES))
-                foundExtPropRel = true;
+            // Should have 3 root relationships
+            boolean foundDocRel = false, foundCorePropRel = false, foundExtPropRel = false;
+            for (PackageRelationship pr : p.getRelationships()) {
+                if (pr.getRelationshipType().equals(PackageRelationshipTypes.CORE_DOCUMENT))
+                    foundDocRel = true;
+                if (pr.getRelationshipType().equals(PackageRelationshipTypes.CORE_PROPERTIES))
+                    foundCorePropRel = true;
+                if (pr.getRelationshipType().equals(PackageRelationshipTypes.EXTENDED_PROPERTIES))
+                    foundExtPropRel = true;
+            }
+            assertTrue(foundDocRel, "Core Doc Relationship not found in " + p.getRelationships());
+            assertTrue(foundCorePropRel, "Core Props Relationship not found in " + p.getRelationships());
+            assertTrue(foundExtPropRel, "Ext Props Relationship not found in " + p.getRelationships());
+
+            // Get the Core Properties
+            PackagePropertiesPart props = (PackagePropertiesPart) p.getPackageProperties();
+
+            // used to resolve a value but now we ignore DTD entities for security reasons
+            assertEquals(isOldXercesActive(), props.getCreatorProperty().isPresent());
         }
-        assertTrue("Core/Doc Relationship not found in " + p.getRelationships(), foundDocRel);
-        assertTrue("Core Props Relationship not found in " + p.getRelationships(), foundCorePropRel);
-        assertTrue("Ext Props Relationship not found in " + p.getRelationships(), foundExtPropRel);
-
-        // Get the Core Properties
-        PackagePropertiesPart props = (PackagePropertiesPart)p.getPackageProperties();
-        
-        // used to resolve a value but now we ignore DTD entities for security reasons
-        assertEquals(isOldXercesActive(), props.getCreatorProperty().isPresent());
-
-        p.close();
     }
 

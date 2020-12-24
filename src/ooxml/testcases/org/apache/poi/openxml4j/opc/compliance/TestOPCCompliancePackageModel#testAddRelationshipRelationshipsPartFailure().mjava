@@ -7,22 +7,15 @@
      * relationship as invalid.
      */
     @Test
-    public void testAddRelationshipRelationshipsPartFailure() {
-        OPCPackage pkg = OPCPackage.create("DELETEIFEXISTS.docx");
-        PackagePartName name1 = null;
-        try {
-            name1 = PackagingURIHelper
-                    .createPartName("/test/_rels/document.xml.rels");
-        } catch (InvalidFormatException e) {
-            fail("This exception should never happen !");
-        }
+    public void testAddRelationshipRelationshipsPartFailure() throws IOException, InvalidFormatException {
+        try (OPCPackage pkg = OPCPackage.create(TESTFILE)) {
+            PackagePartName name1 = PackagingURIHelper.createPartName("/test/_rels/document.xml.rels");
 
-        try {
-            pkg.addRelationship(name1, TargetMode.INTERNAL,
-                    PackageRelationshipTypes.CORE_DOCUMENT);
-        } catch (InvalidOperationException e) {
-            return;
+            assertThrows(InvalidOperationException.class,
+                () -> pkg.addRelationship(name1, TargetMode.INTERNAL, PackageRelationshipTypes.CORE_DOCUMENT),
+                "The Relationships part shall not have relationships to any other part [M1.25]"
+            );
+            pkg.revert();
         }
-        fail("Fail test -> M1.25: The Relationships part shall not have relationships to any other part");
     }
 

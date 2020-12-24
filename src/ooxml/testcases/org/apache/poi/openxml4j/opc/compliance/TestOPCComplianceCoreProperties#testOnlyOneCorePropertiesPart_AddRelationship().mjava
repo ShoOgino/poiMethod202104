@@ -2,26 +2,16 @@
      * Test M4.1 rule.
      */
     @Test
-    public void testOnlyOneCorePropertiesPart_AddRelationship() {
-        InputStream is = openComplianceSampleStream("OPCCompliance_CoreProperties_OnlyOneCorePropertiesPart.docx");
-        OPCPackage pkg;
-        try {
-            pkg = OPCPackage.open(is);
-        } catch (InvalidFormatException | IOException e) {
-            throw new RuntimeException(e);
-        }
-        URI partUri = createURI("/docProps/core2.xml");
-        try {
-            pkg.addRelationship(PackagingURIHelper.createPartName(partUri), TargetMode.INTERNAL,
-                    PackageRelationshipTypes.CORE_PROPERTIES);
-            // no longer fail on compliance error
-            //fail("expected OPC compliance exception was not thrown");
-        } catch (InvalidFormatException e) {
-            throw new RuntimeException(e);
-        } catch (InvalidOperationException e) {
-            // expected during successful test
+    public void testOnlyOneCorePropertiesPart_AddRelationship() throws IOException, InvalidFormatException {
+        try (InputStream is = openComplianceSampleStream("OPCCompliance_CoreProperties_OnlyOneCorePropertiesPart.docx")) {
+            OPCPackage pkg = OPCPackage.open(is);
+            URI partUri = createURI("/docProps/core2.xml");
+            InvalidOperationException e = assertThrows(InvalidOperationException.class, () ->
+                    pkg.addRelationship(PackagingURIHelper.createPartName(partUri), TargetMode.INTERNAL, PackageRelationshipTypes.CORE_PROPERTIES),
+                "expected OPC compliance exception was not thrown"
+            );
             assertEquals("OPC Compliance error [M4.1]: can't add another core properties part ! Use the built-in package method instead.", e.getMessage());
+            pkg.revert();
         }
-        pkg.revert();
     }
 

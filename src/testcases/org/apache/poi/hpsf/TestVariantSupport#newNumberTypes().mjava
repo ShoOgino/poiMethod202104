@@ -17,8 +17,7 @@
                 {Variant.VT_R4, -999.99f},
                 {Variant.VT_R8, -999.99d},
         };
-        
-        HSSFWorkbook wb = new HSSFWorkbook();
+
         POIFSFileSystem poifs = new POIFSFileSystem();
         DocumentSummaryInformation dsi = PropertySetFactory.newDocumentSummaryInformation();
         CustomProperties cpList = new CustomProperties();
@@ -26,7 +25,7 @@
             int type = (Integer)o[0];
             Property p = new Property(PropertyIDMap.PID_MAX+type, type, o[1]);
             cpList.put("testprop"+type, new CustomProperty(p, "testprop"+type));
-            
+
         }
         dsi.setCustomProperties(cpList);
         dsi.write(poifs.getRoot(), DocumentSummaryInformation.DEFAULT_STREAM_NAME);
@@ -35,14 +34,15 @@
         poifs.close();
         poifs = new POIFSFileSystem(new ByteArrayInputStream(bos.toByteArray()));
         dsi = (DocumentSummaryInformation)PropertySetFactory.create(poifs.getRoot(), DocumentSummaryInformation.DEFAULT_STREAM_NAME);
+        assertNotNull(dsi);
         cpList = dsi.getCustomProperties();
         int i=0;
         for (Object[] o : exp) {
             Object obj = cpList.get("testprop"+o[0]);
             if (o[1] instanceof byte[]) {
-                assertArrayEquals("property "+i, (byte[])o[1], (byte[])obj);
+                assertArrayEquals((byte[])o[1], (byte[])obj, "property "+i);
             } else {
-                assertEquals("property "+i, o[1], obj);
+                assertEquals(o[1], obj, "property "+i);
             }
             i++;
         }

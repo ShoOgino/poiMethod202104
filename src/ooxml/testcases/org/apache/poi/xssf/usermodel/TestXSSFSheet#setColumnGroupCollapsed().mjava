@@ -6,117 +6,116 @@
      */
     @Test
     public void setColumnGroupCollapsed() throws IOException {
-        XSSFWorkbook wb1 = new XSSFWorkbook();
-        XSSFSheet sheet1 = wb1.createSheet();
+        try (XSSFWorkbook wb1 = new XSSFWorkbook()) {
+            XSSFSheet sheet1 = wb1.createSheet();
 
-        CTCols cols = sheet1.getCTWorksheet().getColsArray(0);
-        assertEquals(0, cols.sizeOfColArray());
+            CTCols cols = sheet1.getCTWorksheet().getColsArray(0);
+            assertEquals(0, cols.sizeOfColArray());
 
-        sheet1.groupColumn( 4, 7 );
+            sheet1.groupColumn(4, 7);
 
-        assertEquals(1, cols.sizeOfColArray());
-        checkColumnGroup(cols.getColArray(0), 4, 7); // false, true
+            assertEquals(1, cols.sizeOfColArray());
+            checkColumnGroup(cols.getColArray(0), 4, 7); // false, true
 
-        sheet1.groupColumn( 9, 12 );
+            sheet1.groupColumn(9, 12);
 
-        assertEquals(2, cols.sizeOfColArray());
-        checkColumnGroup(cols.getColArray(0), 4, 7); // false, true
-        checkColumnGroup(cols.getColArray(1), 9, 12); // false, true
+            assertEquals(2, cols.sizeOfColArray());
+            checkColumnGroup(cols.getColArray(0), 4, 7); // false, true
+            checkColumnGroup(cols.getColArray(1), 9, 12); // false, true
 
-        sheet1.groupColumn( 10, 11 );
+            sheet1.groupColumn(10, 11);
 
-        assertEquals(4, cols.sizeOfColArray());
-        checkColumnGroup(cols.getColArray(0), 4, 7); // false, true
-        checkColumnGroup(cols.getColArray(1), 9, 9); // false, true
-        checkColumnGroup(cols.getColArray(2), 10, 11); // false, true
-        checkColumnGroup(cols.getColArray(3), 12, 12); // false, true
+            assertEquals(4, cols.sizeOfColArray());
+            checkColumnGroup(cols.getColArray(0), 4, 7); // false, true
+            checkColumnGroup(cols.getColArray(1), 9, 9); // false, true
+            checkColumnGroup(cols.getColArray(2), 10, 11); // false, true
+            checkColumnGroup(cols.getColArray(3), 12, 12); // false, true
 
-        // collapse columns - 1
-        sheet1.setColumnGroupCollapsed( 5, true );
+            // collapse columns - 1
+            sheet1.setColumnGroupCollapsed(5, true);
 
-        // FIXME: we grew a column?
-        assertEquals(5, cols.sizeOfColArray());
-        checkColumnGroupIsCollapsed(cols.getColArray(0), 4, 7); // true, true
-        checkColumnGroup(cols.getColArray(1), 8, 8); // false, true
-        checkColumnGroup(cols.getColArray(2), 9, 9); // false, true
-        checkColumnGroup(cols.getColArray(3), 10, 11); // false, true
-        checkColumnGroup(cols.getColArray(4), 12, 12); // false, true
-
-
-        // expand columns - 1
-        sheet1.setColumnGroupCollapsed( 5, false );
-        assertEquals(5, cols.sizeOfColArray());
-
-        checkColumnGroupIsExpanded(cols.getColArray(0), 4, 7); // false, true
-        checkColumnGroup(cols.getColArray(1), 8, 8, false, false);
-        checkColumnGroup(cols.getColArray(2), 9, 9); // false, true
-        checkColumnGroup(cols.getColArray(3), 10, 11); // false, true
-        checkColumnGroup(cols.getColArray(4), 12, 12); // false, true
+            // FIXME: we grew a column?
+            assertEquals(5, cols.sizeOfColArray());
+            checkColumnGroupIsCollapsed(cols.getColArray(0), 4, 7); // true, true
+            checkColumnGroup(cols.getColArray(1), 8, 8); // false, true
+            checkColumnGroup(cols.getColArray(2), 9, 9); // false, true
+            checkColumnGroup(cols.getColArray(3), 10, 11); // false, true
+            checkColumnGroup(cols.getColArray(4), 12, 12); // false, true
 
 
-        //collapse - 2
-        sheet1.setColumnGroupCollapsed( 9, true );
-        // it grew again?
-        assertEquals(6, cols.sizeOfColArray());
-        checkColumnGroup(cols.getColArray(0), 4, 7); // false, true
-        checkColumnGroup(cols.getColArray(1), 8, 8, false, false);
-        checkColumnGroupIsCollapsed(cols.getColArray(2), 9, 9); // true, true
-        checkColumnGroupIsCollapsed(cols.getColArray(3), 10, 11); // true, true
-        checkColumnGroupIsCollapsed(cols.getColArray(4), 12, 12); // true, true
-        // why was this column group added?
-        checkColumnGroup(cols.getColArray(5), 13, 13); // false, true
+            // expand columns - 1
+            sheet1.setColumnGroupCollapsed(5, false);
+            assertEquals(5, cols.sizeOfColArray());
+
+            checkColumnGroupIsExpanded(cols.getColArray(0), 4, 7); // false, true
+            checkColumnGroup(cols.getColArray(1), 8, 8, false, false);
+            checkColumnGroup(cols.getColArray(2), 9, 9); // false, true
+            checkColumnGroup(cols.getColArray(3), 10, 11); // false, true
+            checkColumnGroup(cols.getColArray(4), 12, 12); // false, true
 
 
-        //expand - 2
-        sheet1.setColumnGroupCollapsed( 9, false );
-        assertEquals(6, cols.sizeOfColArray());
-
-        //outline level 2: the line under ==> collapsed==True
-        assertEquals(2, cols.getColArray(3).getOutlineLevel());
-        assertTrue(cols.getColArray(4).isSetCollapsed());
-
-        checkColumnGroup(cols.getColArray(0), 4, 7);
-        checkColumnGroup(cols.getColArray(1), 8, 8, false, false);
-        checkColumnGroup(cols.getColArray(2), 9, 9); // false, true
-        checkColumnGroupIsCollapsed(cols.getColArray(3), 10, 11); // true, true
-        checkColumnGroup(cols.getColArray(4), 12, 12); // false, true
-        checkColumnGroup(cols.getColArray(5), 13, 13, false, false);
-
-        //DOCUMENTARE MEGLIO IL DISCORSO DEL LIVELLO
-        //collapse - 3
-        sheet1.setColumnGroupCollapsed( 10, true );
-        assertEquals(6, cols.sizeOfColArray());
-        checkColumnGroup(cols.getColArray(0), 4, 7);
-        checkColumnGroup(cols.getColArray(1), 8, 8, false, false);
-        checkColumnGroup(cols.getColArray(2), 9, 9); // false, true
-        checkColumnGroupIsCollapsed(cols.getColArray(3), 10, 11); // true, true
-        checkColumnGroup(cols.getColArray(4), 12, 12); // false, true
-        checkColumnGroup(cols.getColArray(5), 13, 13, false, false);
+            //collapse - 2
+            sheet1.setColumnGroupCollapsed(9, true);
+            // it grew again?
+            assertEquals(6, cols.sizeOfColArray());
+            checkColumnGroup(cols.getColArray(0), 4, 7); // false, true
+            checkColumnGroup(cols.getColArray(1), 8, 8, false, false);
+            checkColumnGroupIsCollapsed(cols.getColArray(2), 9, 9); // true, true
+            checkColumnGroupIsCollapsed(cols.getColArray(3), 10, 11); // true, true
+            checkColumnGroupIsCollapsed(cols.getColArray(4), 12, 12); // true, true
+            // why was this column group added?
+            checkColumnGroup(cols.getColArray(5), 13, 13); // false, true
 
 
-        //expand - 3
-        sheet1.setColumnGroupCollapsed( 10, false );
-        assertEquals(6, cols.sizeOfColArray());
-        assertFalse(cols.getColArray(0).getHidden());
-        assertFalse(cols.getColArray(5).getHidden());
-        assertFalse(cols.getColArray(4).isSetCollapsed());
+            //expand - 2
+            sheet1.setColumnGroupCollapsed(9, false);
+            assertEquals(6, cols.sizeOfColArray());
 
-//      write out and give back
-        // Save and re-load
-        XSSFWorkbook wb2 = XSSFTestDataSamples.writeOutAndReadBack(wb1);
-        wb1.close();
-        sheet1 = wb2.getSheetAt(0);
-        // FIXME: forgot to reassign!
-        //cols = sheet1.getCTWorksheet().getColsArray(0);
+            //outline level 2: the line under ==> collapsed==True
+            assertEquals(2, cols.getColArray(3).getOutlineLevel());
+            assertTrue(cols.getColArray(4).isSetCollapsed());
 
-        assertEquals(6, cols.sizeOfColArray());
-        checkColumnGroup(cols.getColArray(0), 4, 7); // false, true
-        checkColumnGroup(cols.getColArray(1), 8, 8, false, false);
-        checkColumnGroup(cols.getColArray(2), 9, 9); // false, true
-        checkColumnGroup(cols.getColArray(3), 10, 11); // false, true
-        checkColumnGroup(cols.getColArray(4), 12, 12, false, false);
-        checkColumnGroup(cols.getColArray(5), 13, 13, false, false);
+            checkColumnGroup(cols.getColArray(0), 4, 7);
+            checkColumnGroup(cols.getColArray(1), 8, 8, false, false);
+            checkColumnGroup(cols.getColArray(2), 9, 9); // false, true
+            checkColumnGroupIsCollapsed(cols.getColArray(3), 10, 11); // true, true
+            checkColumnGroup(cols.getColArray(4), 12, 12); // false, true
+            checkColumnGroup(cols.getColArray(5), 13, 13, false, false);
 
-        wb2.close();
+            //DOCUMENTARE MEGLIO IL DISCORSO DEL LIVELLO
+            //collapse - 3
+            sheet1.setColumnGroupCollapsed(10, true);
+            assertEquals(6, cols.sizeOfColArray());
+            checkColumnGroup(cols.getColArray(0), 4, 7);
+            checkColumnGroup(cols.getColArray(1), 8, 8, false, false);
+            checkColumnGroup(cols.getColArray(2), 9, 9); // false, true
+            checkColumnGroupIsCollapsed(cols.getColArray(3), 10, 11); // true, true
+            checkColumnGroup(cols.getColArray(4), 12, 12); // false, true
+            checkColumnGroup(cols.getColArray(5), 13, 13, false, false);
+
+
+            //expand - 3
+            sheet1.setColumnGroupCollapsed(10, false);
+            assertEquals(6, cols.sizeOfColArray());
+            assertFalse(cols.getColArray(0).getHidden());
+            assertFalse(cols.getColArray(5).getHidden());
+            assertFalse(cols.getColArray(4).isSetCollapsed());
+
+            // write out and give back
+            // Save and re-load
+            try (XSSFWorkbook wb2 = XSSFTestDataSamples.writeOutAndReadBack(wb1)) {
+                sheet1 = wb2.getSheetAt(0);
+                // FIXME: forgot to reassign!
+                //cols = sheet1.getCTWorksheet().getColsArray(0);
+
+                assertEquals(6, cols.sizeOfColArray());
+                checkColumnGroup(cols.getColArray(0), 4, 7); // false, true
+                checkColumnGroup(cols.getColArray(1), 8, 8, false, false);
+                checkColumnGroup(cols.getColArray(2), 9, 9); // false, true
+                checkColumnGroup(cols.getColArray(3), 10, 11); // false, true
+                checkColumnGroup(cols.getColArray(4), 12, 12, false, false);
+                checkColumnGroup(cols.getColArray(5), 13, 13, false, false);
+            }
+        }
     }
 

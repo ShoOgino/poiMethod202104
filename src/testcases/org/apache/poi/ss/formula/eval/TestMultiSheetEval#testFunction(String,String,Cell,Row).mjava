@@ -1,0 +1,48 @@
+	@ParameterizedTest
+	@MethodSource("data")
+	public void testFunction(String testName, String functionName, Cell expected, Row testRow) {
+
+		Cell c = testRow.getCell(SS.COLUMN_INDEX_ACTUAL_VALUE);
+		if (c == null || c.getCellType() != CellType.FORMULA) {
+			// missing test data
+			assertTrue(testRow.getRowNum() >= SS.START_FUNCTIONS_ROW_INDEX);
+			assertTrue(funcs.contains(functionName.toUpperCase(Locale.ROOT)), "unsupported function");
+			return;
+		}
+
+		CellValue actual = evaluator.evaluate(c);
+
+		assertNotNull(expected, "Bad setup data expected value is null");
+		assertNotNull(actual, "actual value was null");
+
+		final CellType cellType = expected.getCellType();
+
+		switch (cellType) {
+			case BLANK:
+				assertEquals(CellType.BLANK, actual.getCellType());
+				break;
+			case BOOLEAN:
+				assertEquals(CellType.BOOLEAN, actual.getCellType());
+				assertEquals(expected.getBooleanCellValue(), actual.getBooleanValue());
+				break;
+			case ERROR:
+				assertEquals(CellType.ERROR, actual.getCellType());
+				assertEquals(ErrorEval.getText(expected.getErrorCellValue()), ErrorEval.getText(actual.getErrorValue()));
+				break;
+			case FORMULA: // will never be used, since we will call method after formula evaluation
+				fail("Cannot expect formula as result of formula evaluation.");
+				break;
+			case NUMERIC:
+				assertEquals(CellType.NUMERIC, actual.getCellType());
+				TestMathX.assertDouble("", expected.getNumericCellValue(), actual.getNumberValue(), TestMathX.POS_ZERO, TestMathX.DIFF_TOLERANCE_FACTOR);
+				break;
+			case STRING:
+				assertEquals(CellType.STRING, actual.getCellType());
+				assertEquals(expected.getRichStringCellValue().getString(), actual.getStringValue());
+				break;
+			default:
+				fail("Unexpected cell type: " + cellType);
+				break;
+		}
+	}
+

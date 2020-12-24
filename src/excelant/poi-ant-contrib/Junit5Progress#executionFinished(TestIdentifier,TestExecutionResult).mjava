@@ -1,0 +1,27 @@
+    @Override
+    public void executionFinished(TestIdentifier testIdentifier, TestExecutionResult testExecutionResult) {
+        if ("[engine:junit-jupiter]".equals(testIdentifier.getParentId().orElse(""))) {
+            int totalTestsInClass = numSucceededInCurrentClass + numAbortedInCurrentClass
+                + numFailedInCurrentClass + numSkippedInCurrentClass;
+            Duration duration = Duration.between(startCurrentClass, Instant.now());
+            double numSeconds = duration.toNanos() / (double) 1_000_000_000;
+            String output = String.format("Tests run: %d, Failures: %d, Aborted: %d, Skipped: %d, Time elapsed: %f sec",
+                totalTestsInClass, numFailedInCurrentClass, numAbortedInCurrentClass,
+                numSkippedInCurrentClass, numSeconds);
+            println(output);
+
+        }
+        // don't count containers since looking for legacy JUnit 4 counting style
+        if (testIdentifier.getType() == Type.TEST) {
+            if (testExecutionResult.getStatus() == Status.SUCCESSFUL) {
+                numSucceededInCurrentClass++;
+            } else if (testExecutionResult.getStatus() == Status.ABORTED) {
+                println("  ABORTED: " + testIdentifier.getDisplayName());
+                numAbortedInCurrentClass++;
+            } else if (testExecutionResult.getStatus() == Status.FAILED) {
+                println("  FAILED: " + testIdentifier.getDisplayName());
+                numFailedInCurrentClass++;
+            }
+        }
+    }
+

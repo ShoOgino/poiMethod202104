@@ -1,39 +1,31 @@
     protected void baseTestCellBounds(int maxCellNum) throws IOException {
-        Workbook wb1 = _testDataProvider.createWorkbook();
-        Sheet sheet = wb1.createSheet();
+        try (Workbook wb1 = _testDataProvider.createWorkbook()) {
+            Sheet sheet = wb1.createSheet();
 
-        Row row = sheet.createRow(0);
-        //Test low cell bound
-        try {
-            row.createCell(-1);
-            fail("expected exception");
-        } catch (IllegalArgumentException e) {
-            // expected during successful test
+            Row row1 = sheet.createRow(0);
+            //Test low cell bound
+            IllegalArgumentException e;
+            e = assertThrows(IllegalArgumentException.class, () -> row1.createCell(-1));
             assertTrue(e.getMessage().startsWith("Invalid column index (-1)"));
-        }
 
-        //Test high cell bound
-        try {
-            row.createCell(maxCellNum + 1);
-            fail("expected exception");
-        } catch (IllegalArgumentException e) {
-            // expected during successful test
-            assertTrue(e.getMessage().startsWith("Invalid column index ("+(maxCellNum+1)+")"));
+            //Test high cell bound
+            e = assertThrows(IllegalArgumentException.class, () -> row1.createCell(maxCellNum + 1));
+            assertTrue(e.getMessage().startsWith("Invalid column index (" + (maxCellNum + 1) + ")"));
+
+            for (int i = 0; i < maxCellNum; i++) {
+                row1.createCell(i);
+            }
+            assertEquals(maxCellNum, row1.getPhysicalNumberOfCells());
+
+            try (Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1)) {
+                sheet = wb2.getSheetAt(0);
+                Row row2 = sheet.getRow(0);
+                assertEquals(maxCellNum, row2.getPhysicalNumberOfCells());
+                for (int i = 0; i < maxCellNum; i++) {
+                    Cell cell = row2.getCell(i);
+                    assertEquals(i, cell.getColumnIndex());
+                }
+            }
         }
-        for(int i=0; i < maxCellNum; i++){
-            row.createCell(i);
-        }
-        assertEquals(maxCellNum, row.getPhysicalNumberOfCells());
-        Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1);
-        wb1.close();
-        
-        sheet = wb2.getSheetAt(0);
-        row = sheet.getRow(0);
-        assertEquals(maxCellNum, row.getPhysicalNumberOfCells());
-        for(int i=0; i < maxCellNum; i++){
-            Cell cell = row.getCell(i);
-            assertEquals(i, cell.getColumnIndex());
-        }
-        wb2.close();
     }
 

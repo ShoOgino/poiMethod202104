@@ -1,38 +1,29 @@
     @Test
     public void bug56468() throws IOException, InterruptedException {
-        XSSFWorkbook wb = new XSSFWorkbook();
-        XSSFSheet sheet = wb.createSheet();
-        XSSFRow row = sheet.createRow(0);
-        XSSFCell cell = row.createCell(0);
-        cell.setCellValue("Hi");
-        sheet.setRepeatingRows(new CellRangeAddress(0, 0, 0, 0));
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            XSSFSheet sheet = wb.createSheet();
+            XSSFRow row = sheet.createRow(0);
+            XSSFCell cell = row.createCell(0);
+            cell.setCellValue("Hi");
+            sheet.setRepeatingRows(new CellRangeAddress(0, 0, 0, 0));
 
-        // small hack to try to make this test stable, previously it failed whenever the two written ZIP files had different file-creation
-        // dates stored.
-        // We try to do a loop until the current second changes in order to avoid problems with some date information that is written to the ZIP and thus
-        // causes differences
-        long start = System.currentTimeMillis() / 1000;
-        while (System.currentTimeMillis() / 1000 == start) {
-            Thread.sleep(10);
+            // small hack to try to make this test stable, previously it failed whenever the two written ZIP files had
+            // different file-creation dates stored. We try to do a loop until the current second changes in order to
+            // avoid problems with some date information that is written to the ZIP and thus causes differences
+            long start = System.currentTimeMillis() / 1000;
+            while (System.currentTimeMillis() / 1000 == start) {
+                Thread.sleep(10);
+            }
+
+            ByteArrayOutputStream bos = new ByteArrayOutputStream(8096);
+            wb.write(bos);
+            byte[] firstSave = bos.toByteArray();
+            bos.reset();
+            wb.write(bos);
+            byte[] secondSave = bos.toByteArray();
+
+            assertArrayEquals(firstSave, secondSave,
+                "Had: \n" + Arrays.toString(firstSave) + " and \n" + Arrays.toString(secondSave));
         }
-
-        ByteArrayOutputStream bos = new ByteArrayOutputStream(8096);
-        wb.write(bos);
-        byte[] firstSave = bos.toByteArray();
-        bos.reset();
-        wb.write(bos);
-        byte[] secondSave = bos.toByteArray();
-
-        /*OutputStream stream = new FileOutputStream("C:\\temp\\poi.xlsx");
-        try {
-            wb.write(stream);
-        } finally {
-            stream.close();
-        }*/
-
-        assertArrayEquals("Had: \n" + Arrays.toString(firstSave) + " and \n" + Arrays.toString(secondSave),
-                firstSave, secondSave);
-
-        wb.close();
     }
 

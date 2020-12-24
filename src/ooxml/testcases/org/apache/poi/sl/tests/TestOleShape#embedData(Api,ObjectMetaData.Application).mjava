@@ -1,0 +1,24 @@
+    @ParameterizedTest
+    @MethodSource("data")
+    public void embedData(Api api, ObjectMetaData.Application app) throws IOException, ReflectiveOperationException {
+        final ByteArrayInputStream pptBytes;
+        try (SlideShow<?,?> ppt = createSlideShow(api)) {
+            final PictureData picData = ppt.addPicture(pictureFile,  PictureType.EMF);
+            final Slide<?,?> slide = ppt.createSlide();
+            final ObjectShape<?,?> oleShape = slide.createOleShape(picData);
+            oleShape.setAnchor(new Rectangle2D.Double(100,100,100,100));
+            try (OutputStream os = oleShape.updateObjectData(app, null)) {
+                fillOleData(app, os);
+            }
+            final ByteArrayOutputStream bos = new ByteArrayOutputStream(50000);
+            ppt.write(bos);
+            pptBytes = new ByteArrayInputStream(bos.toByteArray());
+        }
+        try (SlideShow<?,?> ppt = SlideShowFactory.create(pptBytes)) {
+            final ObjectShape<?,?> oleShape = (ObjectShape<?,?>)ppt.getSlides().get(0).getShapes().get(0);
+            try (InputStream bis = oleShape.readObjectData()) {
+                validateOleData(app, bis);
+            }
+        }
+    }
+

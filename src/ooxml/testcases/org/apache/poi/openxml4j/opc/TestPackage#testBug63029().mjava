@@ -6,7 +6,7 @@
 		Files.copy(testFile, tmpFile);
 
 		int numPartsBefore = 0;
-		String md5Before = Files.hash(tmpFile, Hashing.md5()).toString();
+		String md5Before = Files.asByteSource(tmpFile).hash(Hashing.sha256()).toString();
 
 		RuntimeException ex = null;
 		try(OPCPackage pkg = OPCPackage.open(tmpFile, PackageAccess.READ_WRITE))
@@ -22,11 +22,11 @@
 			ex = e;
 		}
 		// verify there was an exception while closing the file
-		assertNotNull("Fail to save: an error occurs while saving the package : Bugzilla 63029", ex);
+		assertNotNull(ex, "Fail to save: an error occurs while saving the package : Bugzilla 63029");
 		assertEquals("Fail to save: an error occurs while saving the package : Bugzilla 63029", ex.getMessage());
 
 		// assert that md5 after closing is the same, i.e. the source is left intact
-		String md5After = Files.hash(tmpFile, Hashing.md5()).toString();
+		String md5After = Files.asByteSource(tmpFile).hash(Hashing.sha256()).toString();
 		assertEquals(md5Before, md5After);
 
 		// try to read the source file once again

@@ -1,34 +1,28 @@
     @Test
     public void testNamedRangeThatLooksLikeCell() throws IOException {
-        HSSFWorkbook wb = new HSSFWorkbook();
-        HSSFSheet sheet = wb.createSheet("Sheet1");
-        HSSFName name = wb.createName();
-        name.setRefersToFormula("Sheet1!B1");
-        name.setNameName("pfy1");
+        try (HSSFWorkbook wb = new HSSFWorkbook()) {
+            HSSFSheet sheet = wb.createSheet("Sheet1");
+            HSSFName name = wb.createName();
+            name.setRefersToFormula("Sheet1!B1");
+            name.setNameName("pfy1");
 
-        Ptg[] ptgs;
-        try {
-            ptgs = HSSFFormulaParser.parse("count(pfy1)", wb);
-        } catch (IllegalArgumentException e) {
-            if (e.getMessage().equals("Specified colIx (1012) is out of range")) {
-                fail("Identified bug 45354");
+            Ptg[] ptgs;
+            try {
+                ptgs = HSSFFormulaParser.parse("count(pfy1)", wb);
+            } catch (IllegalArgumentException e) {
+                if (e.getMessage().equals("Specified colIx (1012) is out of range")) {
+                    fail("Identified bug 45354");
+                }
+                throw e;
             }
-            wb.close();
-            throw e;
-        }
-        confirmTokenClasses(ptgs, NamePtg.class, FuncVarPtg.class);
+            confirmTokenClasses(ptgs, NamePtg.class, FuncVarPtg.class);
 
-        HSSFCell cell = sheet.createRow(0).createCell(0);
-        cell.setCellFormula("count(pfy1)");
-        assertEquals("COUNT(pfy1)", cell.getCellFormula());
-        try {
-            cell.setCellFormula("count(pf1)");
-            fail("Expected formula parse execption");
-        } catch (FormulaParseException e) {
-            confirmParseException(e,
-                    "Specified named range 'pf1' does not exist in the current workbook.");
+            HSSFCell cell = sheet.createRow(0).createCell(0);
+            cell.setCellFormula("count(pfy1)");
+            assertEquals("COUNT(pfy1)", cell.getCellFormula());
+            FormulaParseException e = assertThrows(FormulaParseException.class, () -> cell.setCellFormula("count(pf1)"));
+            confirmParseException(e, "Specified named range 'pf1' does not exist in the current workbook.");
+            cell.setCellFormula("count(fp1)"); // plain cell ref, col is in range
         }
-        cell.setCellFormula("count(fp1)"); // plain cell ref, col is in range
-        wb.close();
     }
 

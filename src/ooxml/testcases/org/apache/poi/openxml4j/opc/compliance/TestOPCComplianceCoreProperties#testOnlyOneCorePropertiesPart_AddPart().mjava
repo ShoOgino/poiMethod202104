@@ -2,20 +2,16 @@
      * Test M4.1 rule.
      */
     @Test
-    public void testOnlyOneCorePropertiesPart_AddPart() throws InvalidFormatException {
+    public void testOnlyOneCorePropertiesPart_AddPart() throws InvalidFormatException, IOException {
         String sampleFileName = "OPCCompliance_CoreProperties_OnlyOneCorePropertiesPart.docx";
-        OPCPackage pkg = OPCPackage.open(POIDataSamples.getOpenXML4JInstance().getFile(sampleFileName).getPath());
+        try (OPCPackage pkg = OPCPackage.open(POIDataSamples.getOpenXML4JInstance().getFile(sampleFileName).getPath())) {
 
-        URI partUri = createURI("/docProps/core2.xml");
-        try {
-            pkg.createPart(PackagingURIHelper.createPartName(partUri),
-                    ContentTypes.CORE_PROPERTIES_PART);
-            // no longer fail on compliance error
-            //fail("expected OPC compliance exception was not thrown");
-        } catch (InvalidOperationException e) {
-            // expected during successful test
+            URI partUri = createURI("/docProps/core2.xml");
+            InvalidOperationException e = assertThrows(InvalidOperationException.class, () ->
+                    pkg.createPart(PackagingURIHelper.createPartName(partUri), ContentTypes.CORE_PROPERTIES_PART),
+                "expected OPC compliance exception was not thrown");
             assertEquals("OPC Compliance error [M4.1]: you try to add more than one core properties relationship in the package !", e.getMessage());
+            pkg.revert();
         }
-        pkg.revert();
     }
 

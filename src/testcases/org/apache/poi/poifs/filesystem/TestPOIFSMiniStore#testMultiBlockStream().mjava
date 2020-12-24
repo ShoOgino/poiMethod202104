@@ -1,61 +1,61 @@
-   @Test
-   public void testMultiBlockStream() throws Exception {
-       byte[] data1B = new byte[63];
-       byte[] data2B = new byte[64+14];
-       for (int i=0; i<data1B.length; i++) {
-           data1B[i] = (byte)(i+2);
-       }
-       for (int i=0; i<data2B.length; i++) {
-           data2B[i] = (byte)(i+4);
-       }
+    @Test
+    public void testMultiBlockStream() throws Exception {
+        byte[] data1B = new byte[63];
+        byte[] data2B = new byte[64 + 14];
+        for (int i = 0; i < data1B.length; i++) {
+            data1B[i] = (byte) (i + 2);
+        }
+        for (int i = 0; i < data2B.length; i++) {
+            data2B[i] = (byte) (i + 4);
+        }
 
-       // New filesystem and store to use
-       POIFSFileSystem fs = new POIFSFileSystem();
+        // New filesystem and store to use
+        POIFSFileSystem fs = new POIFSFileSystem();
 
-       // Initially has Properties + BAT but nothing else
-       assertEquals(POIFSConstants.END_OF_CHAIN,     fs.getNextBlock(0));
-       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(1));
-       assertEquals(POIFSConstants.UNUSED_BLOCK,     fs.getNextBlock(2));
+        // Initially has Properties + BAT but nothing else
+        assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(0));
+        assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(1));
+        assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(2));
 
-       // Store the 2 block one, should use 2 mini blocks, and request
-       // the use of 2 big blocks
-       POIFSMiniStore ministore = fs.getMiniStore();
-       fs.getRoot().createDocument("mini2", new ByteArrayInputStream(data2B));
+        // Store the 2 block one, should use 2 mini blocks, and request
+        // the use of 2 big blocks
+        POIFSMiniStore ministore = fs.getMiniStore();
+        fs.getRoot().createDocument("mini2", new ByteArrayInputStream(data2B));
 
-       // Check
-       assertEquals(POIFSConstants.END_OF_CHAIN,     fs.getNextBlock(0));
-       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(1));
-       assertEquals(POIFSConstants.END_OF_CHAIN,     fs.getNextBlock(2)); // SBAT
-       assertEquals(POIFSConstants.END_OF_CHAIN,     fs.getNextBlock(3)); // Mini
-       assertEquals(POIFSConstants.UNUSED_BLOCK,     fs.getNextBlock(4));
+        // Check
+        assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(0));
+        assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(1));
+        assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(2)); // SBAT
+        assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(3)); // Mini
+        assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(4));
 
-       // First 2 Mini blocks will be used
-       assertEquals(2, ministore.getFreeBlock());
+        // First 2 Mini blocks will be used
+        assertEquals(2, ministore.getFreeBlock());
 
-       // Add one more mini-stream, and check
-       fs.getRoot().createDocument("mini1", new ByteArrayInputStream(data1B));
+        // Add one more mini-stream, and check
+        fs.getRoot().createDocument("mini1", new ByteArrayInputStream(data1B));
 
-       assertEquals(POIFSConstants.END_OF_CHAIN,     fs.getNextBlock(0));
-       assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(1));
-       assertEquals(POIFSConstants.END_OF_CHAIN,     fs.getNextBlock(2)); // SBAT
-       assertEquals(POIFSConstants.END_OF_CHAIN,     fs.getNextBlock(3)); // Mini
-       assertEquals(POIFSConstants.UNUSED_BLOCK,     fs.getNextBlock(4));
+        assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(0));
+        assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(1));
+        assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(2)); // SBAT
+        assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(3)); // Mini
+        assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(4));
 
-       // One more mini-block will be used
-       assertEquals(3, ministore.getFreeBlock());
+        // One more mini-block will be used
+        assertEquals(3, ministore.getFreeBlock());
 
-       // Check the contents too
-       byte[] r1 = new byte[data1B.length];
-       DocumentInputStream dis = fs.createDocumentInputStream("mini1");
-       IOUtils.readFully(dis, r1);
-       dis.close();
-       assertArrayEquals(data1B, r1);
+        // Check the contents too
+        byte[] r1 = new byte[data1B.length];
+        DocumentInputStream dis = fs.createDocumentInputStream("mini1");
+        IOUtils.readFully(dis, r1);
+        dis.close();
+        assertArrayEquals(data1B, r1);
 
-       byte[] r2 = new byte[data2B.length];
-       dis = fs.createDocumentInputStream("mini2");
-       IOUtils.readFully(dis, r2);
-       dis.close();
-       assertArrayEquals(data2B, r2);
-       fs.close();
-   }
+        byte[] r2 = new byte[data2B.length];
+        dis = fs.createDocumentInputStream("mini2");
+        IOUtils.readFully(dis, r2);
+        dis.close();
+        assertArrayEquals(data2B, r2);
+        fs.close();
+    }
 

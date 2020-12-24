@@ -1,26 +1,25 @@
     @Test
     public void testRangeFuncOperand_bug46951() throws IOException {
-        HSSFWorkbook wb = new HSSFWorkbook();
-        Ptg[] ptgs;
-        try {
-            ptgs = HSSFFormulaParser.parse("SUM(C1:OFFSET(C1,0,B1))", wb);
-        } catch (RuntimeException e) {
-            if (e.getMessage().equals("Specified named range 'OFFSET' does not exist in the current workbook.")) {
-                fail("Identified bug 46951");
+        try (HSSFWorkbook wb = new HSSFWorkbook()) {
+            Ptg[] ptgs;
+            try {
+                ptgs = HSSFFormulaParser.parse("SUM(C1:OFFSET(C1,0,B1))", wb);
+            } catch (RuntimeException e) {
+                if (e.getMessage().equals("Specified named range 'OFFSET' does not exist in the current workbook.")) {
+                    fail("Identified bug 46951");
+                }
+                throw e;
             }
-            wb.close();
-            throw e;
+            confirmTokenClasses(ptgs,
+                MemFuncPtg.class, // [len=23]
+                RefPtg.class, // [C1]
+                RefPtg.class, // [C1]
+                IntPtg.class, // [0]
+                RefPtg.class, // [B1]
+                FuncVarPtg.class, // [OFFSET nArgs=3]
+                RangePtg.class, //
+                AttrPtg.class // [sum ]
+            );
         }
-        confirmTokenClasses(ptgs,
-            MemFuncPtg.class, // [len=23]
-            RefPtg.class, // [C1]
-            RefPtg.class, // [C1]
-            IntPtg.class, // [0]
-            RefPtg.class, // [B1]
-            FuncVarPtg.class, // [OFFSET nArgs=3]
-            RangePtg.class, //
-            AttrPtg.class // [sum ]
-        );
-        wb.close();
     }
 

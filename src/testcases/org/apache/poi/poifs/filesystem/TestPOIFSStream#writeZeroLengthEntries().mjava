@@ -1,99 +1,99 @@
-   @Test
-   public void writeZeroLengthEntries() throws IOException {
-      POIFSFileSystem fs1 = new POIFSFileSystem();
-      DirectoryNode testDir = fs1.getRoot();
-      DocumentEntry miniDoc;
-      DocumentEntry normDoc;
-      DocumentEntry emptyDoc;
+    @Test
+    public void writeZeroLengthEntries() throws IOException {
+        POIFSFileSystem fs1 = new POIFSFileSystem();
+        DirectoryNode testDir = fs1.getRoot();
+        DocumentEntry miniDoc;
+        DocumentEntry normDoc;
+        DocumentEntry emptyDoc;
 
-      // Add mini and normal sized entries to start
-      byte[] mini2 = new byte[] { -42, 0, -1, -2, -3, -4, -42 };
-      testDir.createDocument("Mini2", new ByteArrayInputStream(mini2));
+        // Add mini and normal sized entries to start
+        byte[] mini2 = new byte[]{-42, 0, -1, -2, -3, -4, -42};
+        testDir.createDocument("Mini2", new ByteArrayInputStream(mini2));
 
-      // Add to the main stream
-      byte[] main4106 = new byte[4106];
-      main4106[0] = 41;
-      main4106[4105] = 42;
-      testDir.createDocument("Normal4106", new ByteArrayInputStream(main4106));
+        // Add to the main stream
+        byte[] main4106 = new byte[4106];
+        main4106[0] = 41;
+        main4106[4105] = 42;
+        testDir.createDocument("Normal4106", new ByteArrayInputStream(main4106));
 
-      // Now add some empty ones
-      byte[] empty = new byte[0];
-      testDir.createDocument("empty-1", new ByteArrayInputStream(empty));
-      testDir.createDocument("empty-2", new ByteArrayInputStream(empty));
-      testDir.createDocument("empty-3", new ByteArrayInputStream(empty));
+        // Now add some empty ones
+        byte[] empty = new byte[0];
+        testDir.createDocument("empty-1", new ByteArrayInputStream(empty));
+        testDir.createDocument("empty-2", new ByteArrayInputStream(empty));
+        testDir.createDocument("empty-3", new ByteArrayInputStream(empty));
 
-      // Check
-      miniDoc = (DocumentEntry)testDir.getEntry("Mini2");
-      assertContentsMatches(mini2, miniDoc);
+        // Check
+        miniDoc = (DocumentEntry) testDir.getEntry("Mini2");
+        assertContentsMatches(mini2, miniDoc);
 
-      normDoc = (DocumentEntry)testDir.getEntry("Normal4106");
-      assertContentsMatches(main4106, normDoc);
+        normDoc = (DocumentEntry) testDir.getEntry("Normal4106");
+        assertContentsMatches(main4106, normDoc);
 
-      emptyDoc = (DocumentEntry)testDir.getEntry("empty-1");
-      assertContentsMatches(empty, emptyDoc);
+        emptyDoc = (DocumentEntry) testDir.getEntry("empty-1");
+        assertContentsMatches(empty, emptyDoc);
 
-      emptyDoc = (DocumentEntry)testDir.getEntry("empty-2");
-      assertContentsMatches(empty, emptyDoc);
+        emptyDoc = (DocumentEntry) testDir.getEntry("empty-2");
+        assertContentsMatches(empty, emptyDoc);
 
-      emptyDoc = (DocumentEntry)testDir.getEntry("empty-3");
-      assertContentsMatches(empty, emptyDoc);
+        emptyDoc = (DocumentEntry) testDir.getEntry("empty-3");
+        assertContentsMatches(empty, emptyDoc);
 
-      // Look at the properties entry, and check the empty ones
-      //  have zero size and no start block
-      PropertyTable props = fs1._get_property_table();
-      Iterator<Property> propsIt = props.getRoot().getChildren();
+        // Look at the properties entry, and check the empty ones
+        //  have zero size and no start block
+        PropertyTable props = fs1._get_property_table();
+        Iterator<Property> propsIt = props.getRoot().getChildren();
 
-      Property prop = propsIt.next();
-      assertEquals("Mini2", prop.getName());
-      assertEquals(0, prop.getStartBlock());
-      assertEquals(7, prop.getSize());
+        Property prop = propsIt.next();
+        assertEquals("Mini2", prop.getName());
+        assertEquals(0, prop.getStartBlock());
+        assertEquals(7, prop.getSize());
 
-      prop = propsIt.next();
-      assertEquals("Normal4106", prop.getName());
-      assertEquals(4, prop.getStartBlock()); // BAT, Props, SBAT, MIni
-      assertEquals(4106, prop.getSize());
+        prop = propsIt.next();
+        assertEquals("Normal4106", prop.getName());
+        assertEquals(4, prop.getStartBlock()); // BAT, Props, SBAT, MIni
+        assertEquals(4106, prop.getSize());
 
-      prop = propsIt.next();
-      assertEquals("empty-1", prop.getName());
-      assertEquals(POIFSConstants.END_OF_CHAIN, prop.getStartBlock());
-      assertEquals(0, prop.getSize());
+        prop = propsIt.next();
+        assertEquals("empty-1", prop.getName());
+        assertEquals(POIFSConstants.END_OF_CHAIN, prop.getStartBlock());
+        assertEquals(0, prop.getSize());
 
-      prop = propsIt.next();
-      assertEquals("empty-2", prop.getName());
-      assertEquals(POIFSConstants.END_OF_CHAIN, prop.getStartBlock());
-      assertEquals(0, prop.getSize());
+        prop = propsIt.next();
+        assertEquals("empty-2", prop.getName());
+        assertEquals(POIFSConstants.END_OF_CHAIN, prop.getStartBlock());
+        assertEquals(0, prop.getSize());
 
-      prop = propsIt.next();
-      assertEquals("empty-3", prop.getName());
-      assertEquals(POIFSConstants.END_OF_CHAIN, prop.getStartBlock());
-      assertEquals(0, prop.getSize());
+        prop = propsIt.next();
+        assertEquals("empty-3", prop.getName());
+        assertEquals(POIFSConstants.END_OF_CHAIN, prop.getStartBlock());
+        assertEquals(0, prop.getSize());
 
 
-      // Save and re-check
-      POIFSFileSystem fs2 = writeOutAndReadBack(fs1);
-      fs1.close();
-      testDir = fs2.getRoot();
+        // Save and re-check
+        POIFSFileSystem fs2 = writeOutAndReadBack(fs1);
+        fs1.close();
+        testDir = fs2.getRoot();
 
-      miniDoc = (DocumentEntry)testDir.getEntry("Mini2");
-      assertContentsMatches(mini2, miniDoc);
+        miniDoc = (DocumentEntry) testDir.getEntry("Mini2");
+        assertContentsMatches(mini2, miniDoc);
 
-      normDoc = (DocumentEntry)testDir.getEntry("Normal4106");
-      assertContentsMatches(main4106, normDoc);
+        normDoc = (DocumentEntry) testDir.getEntry("Normal4106");
+        assertContentsMatches(main4106, normDoc);
 
-      emptyDoc = (DocumentEntry)testDir.getEntry("empty-1");
-      assertContentsMatches(empty, emptyDoc);
+        emptyDoc = (DocumentEntry) testDir.getEntry("empty-1");
+        assertContentsMatches(empty, emptyDoc);
 
-      emptyDoc = (DocumentEntry)testDir.getEntry("empty-2");
-      assertContentsMatches(empty, emptyDoc);
+        emptyDoc = (DocumentEntry) testDir.getEntry("empty-2");
+        assertContentsMatches(empty, emptyDoc);
 
-      emptyDoc = (DocumentEntry)testDir.getEntry("empty-3");
-      assertContentsMatches(empty, emptyDoc);
+        emptyDoc = (DocumentEntry) testDir.getEntry("empty-3");
+        assertContentsMatches(empty, emptyDoc);
 
-      // Check that a mini-stream was assigned, with one block used
-      assertEquals(3, testDir.getProperty().getStartBlock());
-      assertEquals(64, testDir.getProperty().getSize());
+        // Check that a mini-stream was assigned, with one block used
+        assertEquals(3, testDir.getProperty().getStartBlock());
+        assertEquals(64, testDir.getProperty().getSize());
 
-      // All done
-      fs2.close();
-   }
+        // All done
+        fs2.close();
+    }
 

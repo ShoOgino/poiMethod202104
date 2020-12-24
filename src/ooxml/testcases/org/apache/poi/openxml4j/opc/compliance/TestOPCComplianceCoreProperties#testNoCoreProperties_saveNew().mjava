@@ -5,44 +5,42 @@
     @Test
     public void testNoCoreProperties_saveNew() throws Exception {
         String sampleFileName = "OPCCompliance_NoCoreProperties.xlsx";
-        OPCPackage pkg = OPCPackage.open(POIDataSamples.getOpenXML4JInstance().getFile(sampleFileName).getPath());
-
-        // Verify it has empty properties
-        assertEquals(0, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
-        assertNotNull(pkg.getPackageProperties());
-        assertNotNull(pkg.getPackageProperties().getLanguageProperty());
-        assertFalse(pkg.getPackageProperties().getLanguageProperty().isPresent());
-
-        // Save and re-load
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        pkg.save(baos);
-        ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-        pkg.revert();
 
-        pkg = OPCPackage.open(bais);
+        try (OPCPackage pkg = OPCPackage.open(POIDataSamples.getOpenXML4JInstance().getFile(sampleFileName).getPath())) {
+            // Verify it has empty properties
+            assertEquals(0, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
+            assertNotNull(pkg.getPackageProperties());
+            assertNotNull(pkg.getPackageProperties().getLanguageProperty());
+            assertFalse(pkg.getPackageProperties().getLanguageProperty().isPresent());
 
-        // An Empty Properties part has been added in the save/load
-        assertEquals(1, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
-        assertNotNull(pkg.getPackageProperties());
-        assertNotNull(pkg.getPackageProperties().getLanguageProperty());
-        assertFalse(pkg.getPackageProperties().getLanguageProperty().isPresent());
-        pkg.close();
+            // Save and re-load
+            pkg.save(baos);
+            pkg.revert();
+        }
+
+        try (OPCPackage pkg = OPCPackage.open(new ByteArrayInputStream(baos.toByteArray()))) {
+            // An Empty Properties part has been added in the save/load
+            assertEquals(1, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
+            assertNotNull(pkg.getPackageProperties());
+            assertNotNull(pkg.getPackageProperties().getLanguageProperty());
+            assertFalse(pkg.getPackageProperties().getLanguageProperty().isPresent());
+        }
 
         // Open a new copy of it
-        pkg = OPCPackage.open(POIDataSamples.getOpenXML4JInstance().getFile(sampleFileName).getPath());
+        try (OPCPackage pkg = OPCPackage.open(POIDataSamples.getOpenXML4JInstance().getFile(sampleFileName).getPath())) {
+            // Save and re-load, without having touched the properties yet
+            baos.reset();
+            pkg.save(baos);
+            pkg.revert();
+        }
 
-        // Save and re-load, without having touched the properties yet
-        baos = new ByteArrayOutputStream();
-        pkg.save(baos);
-        pkg.revert();
-
-        bais = new ByteArrayInputStream(baos.toByteArray());
-        pkg = OPCPackage.open(bais);
-
-        // Check that this too added empty properties without error
-        assertEquals(1, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
-        assertNotNull(pkg.getPackageProperties());
-        assertNotNull(pkg.getPackageProperties().getLanguageProperty());
-        assertFalse(pkg.getPackageProperties().getLanguageProperty().isPresent());
+        try (OPCPackage pkg = OPCPackage.open(new ByteArrayInputStream(baos.toByteArray()))) {
+            // Check that this too added empty properties without error
+            assertEquals(1, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
+            assertNotNull(pkg.getPackageProperties());
+            assertNotNull(pkg.getPackageProperties().getLanguageProperty());
+            assertFalse(pkg.getPackageProperties().getLanguageProperty().isPresent());
+        }
     }
 

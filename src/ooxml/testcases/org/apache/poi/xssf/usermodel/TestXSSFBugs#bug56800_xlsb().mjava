@@ -5,33 +5,16 @@
     @Test
     public void bug56800_xlsb() throws IOException {
         // Can be opened at the OPC level
-        OPCPackage pkg = XSSFTestDataSamples.openSamplePackage("Simple.xlsb");
+        try (OPCPackage pkg = XSSFTestDataSamples.openSamplePackage("Simple.xlsb")) {
+            // XSSF Workbook gives helpful error
+            assertThrows(XLSBUnsupportedException.class, () -> new XSSFWorkbook(pkg), ".xlsb files not supported");
 
-        // XSSF Workbook gives helpful error
-        try {
-            new XSSFWorkbook(pkg).close();
-            fail(".xlsb files not supported");
-        } catch (XLSBUnsupportedException e) {
-            // Good, detected and warned
-        }
-
-        // Workbook Factory gives helpful error on package
-        try {
-            XSSFWorkbookFactory.createWorkbook(pkg).close();
-            fail(".xlsb files not supported");
-        } catch (XLSBUnsupportedException e) {
-            // Good, detected and warned
+            // Workbook Factory gives helpful error on package
+            assertThrows(XLSBUnsupportedException.class, () -> XSSFWorkbookFactory.createWorkbook(pkg), ".xlsb files not supported");
         }
 
         // Workbook Factory gives helpful error on file
         File xlsbFile = HSSFTestDataSamples.getSampleFile("Simple.xlsb");
-        try {
-            WorkbookFactory.create(xlsbFile).close();
-            fail(".xlsb files not supported");
-        } catch (XLSBUnsupportedException e) {
-            // Good, detected and warned
-        }
-
-        pkg.close();
+        assertThrows(XLSBUnsupportedException.class, () -> WorkbookFactory.create(xlsbFile), ".xlsb files not supported");
     }
 

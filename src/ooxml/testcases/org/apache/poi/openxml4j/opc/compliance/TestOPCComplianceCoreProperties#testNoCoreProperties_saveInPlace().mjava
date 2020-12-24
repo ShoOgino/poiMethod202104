@@ -8,37 +8,34 @@
 
         // Copy this into a temp file, so we can play with it
         File tmp = TempFile.createTempFile("poi-test", ".opc");
-        FileOutputStream out = new FileOutputStream(tmp);
-        InputStream in = POIDataSamples.getOpenXML4JInstance().openResourceAsStream(sampleFileName);
-        IOUtils.copy(
-                in,
-                out);
-        out.close();
-        in.close();
+        try (FileOutputStream out = new FileOutputStream(tmp);
+            InputStream in = POIDataSamples.getOpenXML4JInstance().openResourceAsStream(sampleFileName)) {
+            IOUtils.copy(in, out);
+        }
 
         // Open it from that temp file
-        OPCPackage pkg = OPCPackage.open(tmp);
+        try (OPCPackage pkg = OPCPackage.open(tmp)) {
 
-        // Empty properties
-        assertEquals(0, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
-        assertNotNull(pkg.getPackageProperties());
-        assertNotNull(pkg.getPackageProperties().getLanguageProperty());
-        assertFalse(pkg.getPackageProperties().getLanguageProperty().isPresent());
+            // Empty properties
+            assertEquals(0, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
+            assertNotNull(pkg.getPackageProperties());
+            assertNotNull(pkg.getPackageProperties().getLanguageProperty());
+            assertFalse(pkg.getPackageProperties().getLanguageProperty().isPresent());
 
-        // Save and close
-        pkg.close();
+            // Save and close
+        }
 
         // Re-open and check
-        pkg = OPCPackage.open(tmp);
+        try (OPCPackage pkg = OPCPackage.open(tmp)) {
+            // An Empty Properties part has been added in the save/load
+            assertEquals(1, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
+            assertNotNull(pkg.getPackageProperties());
+            assertNotNull(pkg.getPackageProperties().getLanguageProperty());
+            assertFalse(pkg.getPackageProperties().getLanguageProperty().isPresent());
 
-        // An Empty Properties part has been added in the save/load
-        assertEquals(1, pkg.getPartsByContentType(ContentTypes.CORE_PROPERTIES_PART).size());
-        assertNotNull(pkg.getPackageProperties());
-        assertNotNull(pkg.getPackageProperties().getLanguageProperty());
-        assertFalse(pkg.getPackageProperties().getLanguageProperty().isPresent());
-
-        // Finish and tidy
-        pkg.revert();
+            // Finish and tidy
+            pkg.revert();
+        }
         assertTrue(tmp.delete());
     }
 

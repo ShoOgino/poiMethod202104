@@ -1,55 +1,38 @@
     /**
      * Creates the appropriate kind of Workbook, but
-     *  checking the mime magic at the start of the
-     *  InputStream, then creating what's required.
+     * checking the mime magic at the start of the
+     * InputStream, then creating what's required.
      */
     @Test
     public void testCreateGeneric() throws Exception {
-        Workbook wb;
-
         // InputStream -> either
-        wb = WorkbookFactory.create(
-                HSSFTestDataSamples.openSampleFileStream(xls)
-        );
-        assertNotNull(wb);
-        assertTrue(wb instanceof HSSFWorkbook);
-        assertCloseDoesNotModifyFile(xls, wb);
+        try (Workbook wb = WorkbookFactory.create(HSSFTestDataSamples.openSampleFileStream(xls))) {
+            assertNotNull(wb);
+            assertTrue(wb instanceof HSSFWorkbook);
+        }
 
-        wb = WorkbookFactory.create(
-                HSSFTestDataSamples.openSampleFileStream(xlsx)
-        );
-        assertNotNull(wb);
-        assertTrue(wb instanceof XSSFWorkbook);
-        assertCloseDoesNotModifyFile(xlsx, wb);
+        try (Workbook wb = WorkbookFactory.create(HSSFTestDataSamples.openSampleFileStream(xlsx))) {
+            assertNotNull(wb);
+            assertTrue(wb instanceof XSSFWorkbook);
+        }
 
         // File -> either
-        wb = WorkbookFactory.create(
-                HSSFTestDataSamples.getSampleFile(xls)
-        );
-        assertNotNull(wb);
-        assertTrue(wb instanceof HSSFWorkbook);
-        assertCloseDoesNotModifyFile(xls, wb);
+        try (Workbook wb = WorkbookFactory.create(HSSFTestDataSamples.getSampleFile(xls))) {
+            assertNotNull(wb);
+            assertTrue(wb instanceof HSSFWorkbook);
+            assertCloseDoesNotModifyFile(xls, wb);
+        }
 
-        wb = WorkbookFactory.create(
-                HSSFTestDataSamples.getSampleFile(xlsx)
-        );
-        assertNotNull(wb);
-        assertTrue(wb instanceof XSSFWorkbook);
-        assertCloseDoesNotModifyFile(xlsx, wb);
+        try (Workbook wb = WorkbookFactory.create(HSSFTestDataSamples.getSampleFile(xlsx))) {
+            assertNotNull(wb);
+            assertTrue(wb instanceof XSSFWorkbook);
+            assertCloseDoesNotModifyFile(xlsx, wb);
+        }
 
         // Invalid type -> exception
         final byte[] before = HSSFTestDataSamples.getTestDataFileContent(txt);
-        try {
-            try (InputStream stream = HSSFTestDataSamples.openSampleFileStream(txt)) {
-                wb = WorkbookFactory.create(stream);
-                assertNotNull(wb);
-            }
-            fail();
-        } catch(IOException e) {
-            // Good
-        }
+        assertThrows(IOException.class, () -> WorkbookFactory.create(new File(txt)));
         final byte[] after = HSSFTestDataSamples.getTestDataFileContent(txt);
-        assertArrayEquals("Invalid type file was modified after trying to open the file as a spreadsheet",
-                before, after);
+        assertArrayEquals(before, after, "Invalid type file was modified after trying to open the file as a spreadsheet");
     }
 

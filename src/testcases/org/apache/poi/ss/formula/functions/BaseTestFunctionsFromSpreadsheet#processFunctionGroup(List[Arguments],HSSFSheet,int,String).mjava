@@ -1,0 +1,46 @@
+    private static void processFunctionGroup(List<Arguments> data, HSSFSheet sheet, final int startRowIndex, String filename) {
+        HSSFFormulaEvaluator evaluator = new HSSFFormulaEvaluator(sheet.getWorkbook());
+
+        int precisionColumnIndex = -1;
+        HSSFRow precisionRow = sheet.getWorkbook().getSheetAt(0).getRow(11);
+        HSSFCell precisionCell = precisionRow == null ? null : precisionRow.getCell(0);
+        if(precisionCell != null && precisionCell.getCellType() == CellType.NUMERIC){
+            precisionColumnIndex = (int)precisionCell.getNumericCellValue();
+        }
+
+
+        String currentGroupComment = "";
+        final int maxRows = sheet.getLastRowNum()+1;
+        for(int rowIndex=startRowIndex; rowIndex<maxRows; rowIndex++) {
+            HSSFRow r = sheet.getRow(rowIndex);
+            if(r == null) {
+                continue;
+            }
+            String newMarkerValue = getCellTextValue(r, SS.COLUMN_INDEX_MARKER, "marker");
+            if(SS.TEST_CASES_END_MARKER.equalsIgnoreCase(newMarkerValue)) {
+                // normal exit point
+                return;
+            }
+            if(SS.SKIP_CURRENT_TEST_CASE_MARKER.equalsIgnoreCase(newMarkerValue)) {
+                // currently disabled test case row
+                continue;
+            }
+            if(newMarkerValue != null) {
+                currentGroupComment = newMarkerValue;
+            }
+            HSSFCell evalCell = r.getCell(SS.COLUMN_INDEX_EVALUATION);
+            if (evalCell == null || evalCell.getCellType() != CellType.FORMULA) {
+                continue;
+            }
+            String rowComment = getCellTextValue(r, SS.COLUMN_ROW_COMMENT, "row comment");
+
+            String testName = (currentGroupComment+'\n'+rowComment).replace("null", "").trim().replace("\n", " - ");
+            if (testName.isEmpty()) {
+                testName = evalCell.getCellFormula();
+            }
+
+            data.add(Arguments.of(testName, filename, sheet, rowIndex, evaluator, precisionColumnIndex));
+        }
+        fail("Missing end marker '" + SS.TEST_CASES_END_MARKER + "' on sheet '" + sheet.getSheetName() + "'");
+    }
+

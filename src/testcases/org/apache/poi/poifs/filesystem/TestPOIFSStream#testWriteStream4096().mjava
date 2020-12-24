@@ -1,56 +1,56 @@
-   /**
-    * Replaces data in an existing stream, with a bit
-    *  more data than before, in a 4096 byte block file
-    */
-   @Test
-   public void testWriteStream4096() throws Exception {
-      POIFSFileSystem fs = new POIFSFileSystem(_inst.openResourceAsStream("BlockSize4096.zvi"));
+    /**
+     * Replaces data in an existing stream, with a bit
+     * more data than before, in a 4096 byte block file
+     */
+    @Test
+    public void testWriteStream4096() throws Exception {
+        POIFSFileSystem fs = new POIFSFileSystem(_inst.openResourceAsStream("BlockSize4096.zvi"));
 
-      // 0 -> 1 -> 2 -> end
-      assertEquals(1, fs.getNextBlock(0));
-      assertEquals(2, fs.getNextBlock(1));
-      assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(2));
-      assertEquals(4, fs.getNextBlock(3));
+        // 0 -> 1 -> 2 -> end
+        assertEquals(1, fs.getNextBlock(0));
+        assertEquals(2, fs.getNextBlock(1));
+        assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(2));
+        assertEquals(4, fs.getNextBlock(3));
 
-      // First free one is at 15
-      assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(14));
-      assertEquals(POIFSConstants.UNUSED_BLOCK,     fs.getNextBlock(15));
-
-
-      // Write a 5 block file
-      byte[] data = new byte[4096*5];
-      for(int i=0; i<data.length; i++) {
-         data[i] = (byte)(i%256);
-      }
-      POIFSStream stream = new POIFSStream(fs, 0);
-      stream.updateContents(data);
+        // First free one is at 15
+        assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(14));
+        assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(15));
 
 
-      // Check it
-      assertEquals(1, fs.getNextBlock(0));
-      assertEquals(2, fs.getNextBlock(1));
-      assertEquals(15, fs.getNextBlock(2)); // Jumps
-      assertEquals(4, fs.getNextBlock(3));  // Next stream
-      assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(14));
-      assertEquals(16,                              fs.getNextBlock(15)); // Continues
-      assertEquals(POIFSConstants.END_OF_CHAIN,     fs.getNextBlock(16)); // Ends
-      assertEquals(POIFSConstants.UNUSED_BLOCK,     fs.getNextBlock(17)); // Free
+        // Write a 5 block file
+        byte[] data = new byte[4096 * 5];
+        for (int i = 0; i < data.length; i++) {
+            data[i] = (byte) (i % 256);
+        }
+        POIFSStream stream = new POIFSStream(fs, 0);
+        stream.updateContents(data);
 
-      // Check the contents too
-      Iterator<ByteBuffer> it = stream.getBlockIterator();
-      int count = 0;
-      while(it.hasNext()) {
-         ByteBuffer b = it.next();
-         data = new byte[512];
-         b.get(data);
-         for(int i=0; i<data.length; i++) {
-            byte exp = (byte)(i%256);
-            assertEquals(exp, data[i]);
-         }
-         count++;
-      }
-      assertEquals(5, count);
 
-      fs.close();
-   }
+        // Check it
+        assertEquals(1, fs.getNextBlock(0));
+        assertEquals(2, fs.getNextBlock(1));
+        assertEquals(15, fs.getNextBlock(2)); // Jumps
+        assertEquals(4, fs.getNextBlock(3));  // Next stream
+        assertEquals(POIFSConstants.FAT_SECTOR_BLOCK, fs.getNextBlock(14));
+        assertEquals(16, fs.getNextBlock(15)); // Continues
+        assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(16)); // Ends
+        assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(17)); // Free
+
+        // Check the contents too
+        Iterator<ByteBuffer> it = stream.getBlockIterator();
+        int count = 0;
+        while (it.hasNext()) {
+            ByteBuffer b = it.next();
+            data = new byte[512];
+            b.get(data);
+            for (int i = 0; i < data.length; i++) {
+                byte exp = (byte) (i % 256);
+                assertEquals(exp, data[i]);
+            }
+            count++;
+        }
+        assertEquals(5, count);
+
+        fs.close();
+    }
 

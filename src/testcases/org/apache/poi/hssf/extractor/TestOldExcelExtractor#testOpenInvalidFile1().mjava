@@ -1,6 +1,14 @@
-    @Test(expected=OfficeXmlFileException.class)
+    @Test
     public void testOpenInvalidFile1() throws IOException {
         // a file that exists, but is a different format
-        createExtractor("WithVariousData.xlsx").close();
+        assertThrows(OfficeXmlFileException.class, () -> createExtractor("WithVariousData.xlsx").close());
+
+        // a completely different type of file
+        assertThrows(RecordFormatException.class, () -> createExtractor("48936-strings.txt").close());
+
+        // a POIFS file which is not a Workbook
+        try (InputStream is = POIDataSamples.getDocumentInstance().openResourceAsStream("47304.doc")) {
+            assertThrows(FileNotFoundException.class, () -> new OldExcelExtractor(is).close());
+        }
     }
 

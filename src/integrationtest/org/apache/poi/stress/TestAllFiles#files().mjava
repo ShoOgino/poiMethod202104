@@ -1,5 +1,4 @@
-    @Parameters(name="{index}: {0} using {1}")
-    public static Iterable<Object[]> files() {
+    public static Stream<Arguments> files() {
         DirectoryScanner scanner = new DirectoryScanner();
         scanner.setBasedir(ROOT_DIR);
         scanner.setExcludes(SCAN_EXCLUDES);
@@ -8,7 +7,7 @@
 
         System.out.println("Handling " + scanner.getIncludedFiles().length + " files");
 
-        List<Object[]> files = new ArrayList<>();
+        List<Arguments> files = new ArrayList<>();
         for(String file : scanner.getIncludedFiles()) {
             file = file.replace('\\', '/'); // ... failures/handlers lookup doesn't work on windows otherwise
             if (IGNORED.contains(file)) {
@@ -16,24 +15,24 @@
                 continue;
             }
             FileHandler handler = HANDLERS.get(getExtension(file));
-            files.add(new Object[] { file, handler });
+            files.add(Arguments.of( file, handler ));
 
             // for some file-types also run OPCFileHandler
             if(handler instanceof XSSFFileHandler ||
                 handler instanceof XWPFFileHandler ||
                 handler instanceof XSLFFileHandler ||
                 handler instanceof XDGFFileHandler) {
-                files.add(new Object[] { file, new OPCFileHandler() });
+                files.add(Arguments.of( file, new OPCFileHandler() ));
             }
 
             if (handler instanceof HSSFFileHandler ||
                 handler instanceof HSLFFileHandler ||
                 handler instanceof HWPFFileHandler ||
                 handler instanceof HDGFFileHandler) {
-                files.add(new Object[] { file, new HPSFFileHandler() });
+                files.add(Arguments.of( file, new HPSFFileHandler() ));
             }
         }
 
-        return files;
+        return files.stream();
     }
 

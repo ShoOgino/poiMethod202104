@@ -3,46 +3,40 @@
      */
     @Test
     public void tika705() throws Exception {
-       XMLSlideShow ss = openSampleDocument("with_japanese.pptx");
+        XMLSlideShow ss = openSampleDocument("with_japanese.pptx");
 
-       // Should have one slide
-       assertEquals(1, ss.getSlides().size());
-       XSLFSlide slide = ss.getSlides().get(0);
+        // Should have one slide
+        assertEquals(1, ss.getSlides().size());
+        XSLFSlide slide = ss.getSlides().get(0);
 
-       // Check the relations from this
-       Collection<RelationPart> rels = slide.getRelationParts();
+        // Check the relations from this
+        Collection<RelationPart> rels = slide.getRelationParts();
 
-       // Should have 6 relations:
-       //   1 external hyperlink (skipped from list)
-       //   4 internal hyperlinks
-       //   1 slide layout
-       assertEquals(5, rels.size());
-       int layouts = 0;
-       int hyperlinks = 0;
-       for(RelationPart p : rels) {
-          if(p.getRelationship().getRelationshipType().equals(XSLFRelation.HYPERLINK.getRelation())) {
-             hyperlinks++;
-          } else if(p.getDocumentPart() instanceof XSLFSlideLayout) {
-             layouts++;
-          }
-       }
-       assertEquals(1, layouts);
-       assertEquals(4, hyperlinks);
+        // Should have 6 relations:
+        //   1 external hyperlink (skipped from list)
+        //   4 internal hyperlinks
+        //   1 slide layout
+        assertEquals(5, rels.size());
+        int layouts = 0;
+        int hyperlinks = 0;
+        for (RelationPart p : rels) {
+            if (p.getRelationship().getRelationshipType().equals(XSLFRelation.HYPERLINK.getRelation())) {
+                hyperlinks++;
+            } else if (p.getDocumentPart() instanceof XSLFSlideLayout) {
+                layouts++;
+            }
+        }
+        assertEquals(1, layouts);
+        assertEquals(4, hyperlinks);
 
-       // Hyperlinks should all be to #_ftn1 or #ftnref1
-       for(RelationPart p : rels) {
-          if(p.getRelationship().getRelationshipType().equals(XSLFRelation.HYPERLINK.getRelation())) {
-             URI target = p.getRelationship().getTargetURI();
-
-              //noinspection StatementWithEmptyBody
-              if(target.getFragment().equals("_ftn1") ||
-                target.getFragment().equals("_ftnref1")) {
-                // Good
-             } else {
-                fail("Invalid target " + target.getFragment() + " on " + target);
-             }
-          }
-       }
-       ss.close();
+        // Hyperlinks should all be to #_ftn1 or #ftnref1
+        for (RelationPart p : rels) {
+            if (p.getRelationship().getRelationshipType().equals(XSLFRelation.HYPERLINK.getRelation())) {
+                URI target = p.getRelationship().getTargetURI();
+                String frag = target.getFragment();
+                assertTrue(frag.equals("_ftn1") || frag.equals("_ftnref1"), "Invalid target " + frag + " on " + target);
+            }
+        }
+        ss.close();
     }
 

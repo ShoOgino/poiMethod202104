@@ -1,0 +1,31 @@
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testAgileEncryptionModes(CipherAlgorithm ca, HashAlgorithm ha, ChainingMode cm) throws Exception {
+        int maxKeyLen = Cipher.getMaxAllowedKeyLength(ca.jceId);
+        assumeTrue(maxKeyLen >= ca.defaultKeySize, "Please install JCE Unlimited Strength Jurisdiction Policy files");
+
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+
+        POIFSFileSystem fsEnc = new POIFSFileSystem();
+        EncryptionInfo infoEnc = new EncryptionInfo(EncryptionMode.agile, ca, ha, -1, -1, cm);
+        Encryptor enc = infoEnc.getEncryptor();
+        enc.confirmPassword("foobaa");
+        OutputStream os = enc.getDataStream(fsEnc);
+        os.write(testData);
+        os.close();
+        bos.reset();
+        fsEnc.writeFilesystem(bos);
+        fsEnc.close();
+
+        POIFSFileSystem fsDec = new POIFSFileSystem(new ByteArrayInputStream(bos.toByteArray()));
+        EncryptionInfo infoDec = new EncryptionInfo(fsDec);
+        Decryptor dec = infoDec.getDecryptor();
+        boolean passed = dec.verifyPassword("foobaa");
+        assertTrue(passed);
+        InputStream is = dec.getDataStream(fsDec);
+        byte[] actualData = IOUtils.toByteArray(is);
+        is.close();
+        fsDec.close();
+        assertArrayEquals(testData, actualData, "Failed roundtrip - "+ca+"-"+ha+"-"+cm);
+    }
+

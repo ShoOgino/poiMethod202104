@@ -6,12 +6,7 @@
     public void testBufferRead() throws IOException {
         DocumentInputStream stream = new DocumentInputStream(_workbook_n);
         // Need to give a byte array to read
-        try {
-            stream.read(null);
-            fail("Should have caught NullPointerException");
-        } catch (NullPointerException ignored) {
-            // as expected
-        }
+        assertThrows(NullPointerException.class, () -> stream.read(null));
 
         // test reading zero length buffer
         assertEquals(0, stream.read(new byte[0]));
@@ -22,12 +17,10 @@
         while (available(stream) >= buffer.length) {
             assertEquals(_buffer_size, stream.read(buffer));
             for (byte element : buffer) {
-                assertEquals("in main loop, byte " + offset,
-                        _workbook_data[offset], element);
+                assertEquals(_workbook_data[offset], element, "in main loop, byte " + offset);
                 offset++;
             }
-            assertEquals("offset " + offset, _workbook_size - offset,
-                    available(stream));
+            assertEquals(_workbook_size - offset, available(stream), "offset " + offset);
         }
         assertEquals(_workbook_size % _buffer_size, available(stream));
         Arrays.fill(buffer, (byte) 0);
@@ -35,21 +28,16 @@
 
         assertEquals(_workbook_size % _buffer_size, count);
         for (int j = 0; j < count; j++) {
-            assertEquals("past main loop, byte " + offset,
-                    _workbook_data[offset], buffer[j]);
+            assertEquals(_workbook_data[offset], buffer[j], "past main loop, byte " + offset);
             offset++;
         }
         assertEquals(_workbook_size, offset);
         for (int j = count; j < buffer.length; j++) {
-            assertEquals("checking remainder, byte " + j, 0, buffer[j]);
+            assertEquals(0, buffer[j], "checking remainder, byte " + j);
         }
         assertEquals(-1, stream.read(buffer));
         stream.close();
-        try {
-            stream.read(buffer);
-            fail("Should have caught IOException");
-        } catch (IOException ignored) {
-            // as expected
-        }
+
+        assertThrows(IOException.class, () -> stream.read(buffer));
     }
 

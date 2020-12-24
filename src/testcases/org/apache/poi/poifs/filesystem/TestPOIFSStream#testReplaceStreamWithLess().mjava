@@ -1,42 +1,42 @@
-   /**
-    * Writes less data than before, some blocks will need
-    *  to be freed
-    */
-   @Test
-   public void testReplaceStreamWithLess() throws Exception {
-      try (InputStream is = _inst.openResourceAsStream("BlockSize512.zvi");
-           POIFSFileSystem fs = new POIFSFileSystem(is)) {
+    /**
+     * Writes less data than before, some blocks will need
+     * to be freed
+     */
+    @Test
+    public void testReplaceStreamWithLess() throws Exception {
+        try (InputStream is = _inst.openResourceAsStream("BlockSize512.zvi");
+             POIFSFileSystem fs = new POIFSFileSystem(is)) {
 
-          byte[] data = new byte[512];
-          for (int i = 0; i < data.length; i++) {
-              data[i] = (byte) (i % 256);
-          }
+            byte[] data = new byte[512];
+            for (int i = 0; i < data.length; i++) {
+                data[i] = (byte) (i % 256);
+            }
 
-          // 97 -> 98 -> end
-          assertEquals(98, fs.getNextBlock(97));
-          assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(98));
+            // 97 -> 98 -> end
+            assertEquals(98, fs.getNextBlock(97));
+            assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(98));
 
-          // Create a 2 block stream, will become a 1 block one
-          POIFSStream stream = new POIFSStream(fs, 97);
-          stream.updateContents(data);
+            // Create a 2 block stream, will become a 1 block one
+            POIFSStream stream = new POIFSStream(fs, 97);
+            stream.updateContents(data);
 
-          // 97 should now be the end, and 98 free
-          assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(97));
-          assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(98));
+            // 97 should now be the end, and 98 free
+            assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(97));
+            assertEquals(POIFSConstants.UNUSED_BLOCK, fs.getNextBlock(98));
 
-          // Check the reading of blocks
-          Iterator<ByteBuffer> it = stream.getBlockIterator();
-          assertTrue(it.hasNext());
-          ByteBuffer b = it.next();
-          assertFalse(it.hasNext());
+            // Check the reading of blocks
+            Iterator<ByteBuffer> it = stream.getBlockIterator();
+            assertTrue(it.hasNext());
+            ByteBuffer b = it.next();
+            assertFalse(it.hasNext());
 
-          // Now check the contents
-          data = new byte[512];
-          b.get(data);
-          for (int i = 0; i < data.length; i++) {
-              byte exp = (byte) (i % 256);
-              assertEquals(exp, data[i]);
-          }
-      }
-   }
+            // Now check the contents
+            data = new byte[512];
+            b.get(data);
+            for (int i = 0; i < data.length; i++) {
+                byte exp = (byte) (i % 256);
+                assertEquals(exp, data[i]);
+            }
+        }
+    }
 

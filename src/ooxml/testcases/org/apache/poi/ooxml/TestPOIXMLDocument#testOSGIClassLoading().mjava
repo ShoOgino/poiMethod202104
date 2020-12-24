@@ -1,21 +1,18 @@
     @Test
-    public void testOSGIClassLoading() {
+    public void testOSGIClassLoading() throws IOException {
+        byte[] data;
+        try (InputStream is = POIDataSamples.getSlideShowInstance().openResourceAsStream("table_test.pptx")) {
+            data = IOUtils.toByteArray(is);
+        }
+
         // the schema type loader is cached per thread in POIXMLTypeLoader.
         // So create a new Thread and change the context class loader (which would normally be used)
         // to not contain the OOXML classes
-        Runnable run = () -> {
-            InputStream is = POIDataSamples.getSlideShowInstance().openResourceAsStream("table_test.pptx");
-            XMLSlideShow ppt = null;
-            try {
-                ppt = new XMLSlideShow(is);
-                ppt.getSlides().get(0).getShapes();
-            } catch (IOException e) {
-                fail("failed to load XMLSlideShow");
-            } finally {
-                IOUtils.closeQuietly(ppt);
-                IOUtils.closeQuietly(is);
-            }
-        };
+        Runnable run = () -> assertDoesNotThrow(() -> {
+            try (XMLSlideShow ppt = new XMLSlideShow(new ByteArrayInputStream(data))) {
+                assertNotNull(ppt.getSlides().get(0).getShapes());
+            }}
+        );
 
         ClassLoader cl = getClass().getClassLoader();
         UncaughtHandler uh = new UncaughtHandler();
@@ -30,13 +27,9 @@
                 ta[i].start();
             }
             for (Thread thread : ta) {
-                try {
-                    thread.join();
-                } catch (InterruptedException e) {
-                    fail("failed to join thread");
-                }
+                assertDoesNotThrow((Executable) thread::join, "failed to join thread");
             }
         }
-        assertFalse("Should not have an exception now, but had " + uh.e, uh.hasException());
+        assertFalse(uh.hasException(), "Should not have an exception now, but had " + uh.e);
     }
 

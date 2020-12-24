@@ -2,32 +2,28 @@
      * <p>Read all files from a POI filesystem which are property set streams
      * and returns them as an array of {@link org.apache.poi.hpsf.PropertySet}
      * instances.</p>
-     * 
+     *
      * @param poiFs The name of the POI filesystem as seen by the
      * operating system. (This is the "filename".)
      *
      * @return The property sets. The elements are ordered in the same way
      * as the files in the POI filesystem.
-     * 
+     *
      * @exception IOException if an I/O exception occurs
      */
     static List<POIFile> readPropertySets(final File poiFs) throws IOException {
         final List<POIFile> files = new ArrayList<>(7);
         final POIFSReader r = new POIFSReader();
-        final POIFSReaderListener pfl = event -> {
-            try {
-                final POIFile f = new POIFile();
-                f.setName(event.getName());
-                f.setPath(event.getPath());
-                final InputStream in = event.getStream();
-                if (PropertySet.isPropertySetStream(in)) {
-                    f.setBytes(IOUtils.toByteArray(in));
-                    files.add(f);
-                }
-            } catch (Exception ex) {
-                fail(ex.getMessage());
+        final POIFSReaderListener pfl = event -> assertDoesNotThrow(() -> {
+            final POIFile f = new POIFile();
+            f.setName(event.getName());
+            f.setPath(event.getPath());
+            final InputStream in = event.getStream();
+            if (PropertySet.isPropertySetStream(in)) {
+                f.setBytes(IOUtils.toByteArray(in));
+                files.add(f);
             }
-        };
+        });
 
         /* Register the listener for all POI files. */
         r.registerListener(pfl);

@@ -1,17 +1,20 @@
-	private static void openInvalidFile(final String name, final boolean useStream) throws IOException, InvalidFormatException {
-		ZipPackage pkgTest = null;
+	private static void openInvalidFile(final String name, final boolean useStream) throws IOException {
+		ZipPackage[] pkgTest = { null };
 		try (final InputStream is = (useStream) ? xlsSamples.openResourceAsStream(name) : null) {
-			try (final ZipPackage pkg = (useStream) ? new ZipPackage(is, PackageAccess.READ) : new ZipPackage(xlsSamples.getFile(name), PackageAccess.READ)) {
-				pkgTest = pkg;
-				assertNotNull(pkg.getZipArchive());
-				assertFalse(pkg.getZipArchive().isClosed());
-				pkg.getParts();
-				fail("Shouldn't work");
-			}
+			assertThrows(NotOfficeXmlFileException.class, () -> {
+				try (final ZipPackage pkg = (useStream)
+					? new ZipPackage(is, PackageAccess.READ)
+					: new ZipPackage(xlsSamples.getFile(name), PackageAccess.READ)) {
+					pkgTest[0] = pkg;
+					assertNotNull(pkg.getZipArchive());
+					assertFalse(pkg.getZipArchive().isClosed());
+					pkg.getParts();
+				}
+			});
 		} finally {
-			if (pkgTest != null) {
-				assertNotNull(pkgTest.getZipArchive());
-				assertTrue(pkgTest.getZipArchive().isClosed());
+			if (pkgTest[0] != null) {
+				assertNotNull(pkgTest[0].getZipArchive());
+				assertTrue(pkgTest[0].getZipArchive().isClosed());
 			}
 		}
 	}

@@ -1,24 +1,21 @@
     @Test
     public void testDeletedReference() throws Exception {
-        HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook("24207.xls");
-        assertEquals(2, wb.getNumberOfNames());
+        try (HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook("24207.xls")) {
+            assertEquals(2, wb.getNumberOfNames());
 
-        HSSFName name1 = wb.getNameAt(0);
-        assertEquals("a", name1.getNameName());
-        assertEquals("Sheet1!$A$1", name1.getRefersToFormula());
-        wb.getCreationHelper().createAreaReference(name1.getRefersToFormula());
-        assertTrue("Successfully constructed first reference", true);
+            HSSFName name1 = wb.getNameAt(0);
+            assertEquals("a", name1.getNameName());
+            assertEquals("Sheet1!$A$1", name1.getRefersToFormula());
+            wb.getCreationHelper().createAreaReference(name1.getRefersToFormula());
 
-        HSSFName name2 = wb.getNameAt(1);
-        assertEquals("b", name2.getNameName());
-        assertEquals("Sheet1!#REF!", name2.getRefersToFormula());
-        assertTrue(name2.isDeleted());
-        try {
-            wb.getCreationHelper().createAreaReference(name2.getRefersToFormula());
-            fail("attempt to supply an invalid reference to AreaReference constructor results in exception");
-        } catch (IllegalArgumentException e) { // TODO - use a stronger typed exception for this condition
-            // expected during successful test
+            HSSFName name2 = wb.getNameAt(1);
+            assertEquals("b", name2.getNameName());
+            assertEquals("Sheet1!#REF!", name2.getRefersToFormula());
+            assertTrue(name2.isDeleted());
+            // TODO - use a stronger typed exception for this condition
+            assertThrows(IllegalArgumentException.class, () ->
+                wb.getCreationHelper().createAreaReference(name2.getRefersToFormula()),
+                "attempt to supply an invalid reference to AreaReference constructor results in exception");
         }
-        wb.close();
     }
 

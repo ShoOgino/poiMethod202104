@@ -1,274 +1,274 @@
-   /**
-    * Read a file, write it and read it again.
-    * Then, alter+add some streams, write and read
-    */
-   @Test
-   public void readWriteRead() throws Exception {
-      SummaryInformation sinf;
-      DocumentSummaryInformation dinf;
-      DirectoryEntry root, testDir;
-
-      for(POIFSFileSystem fs1 : get512and4kFileAndInput()) {
-         // Check we can find the entries we expect
-         root = fs1.getRoot();
-         assertEquals(5, root.getEntryCount());
-         assertThat(root.getEntryNames(), hasItem("Thumbnail"));
-         assertThat(root.getEntryNames(), hasItem("Image"));
-         assertThat(root.getEntryNames(), hasItem("Tags"));
-         assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
-         assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
-
-
-         // Write out, re-load
-         POIFSFileSystem fs2 = writeOutAndReadBack(fs1);
-         fs1.close();
-
-         // Check they're still there
-         root = fs2.getRoot();
-         assertEquals(5, root.getEntryCount());
-         assertThat(root.getEntryNames(), hasItem("Thumbnail"));
-         assertThat(root.getEntryNames(), hasItem("Image"));
-         assertThat(root.getEntryNames(), hasItem("Tags"));
-         assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
-         assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
-
-
-         // Check the contents of them - parse the summary block and check
-         sinf = (SummaryInformation)PropertySetFactory.create(new DocumentInputStream(
-                 (DocumentEntry)root.getEntry(SummaryInformation.DEFAULT_STREAM_NAME)));
-         assertEquals(131333, sinf.getOSVersion());
-
-         dinf = (DocumentSummaryInformation)PropertySetFactory.create(new DocumentInputStream(
-                 (DocumentEntry)root.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME)));
-         assertEquals(131333, dinf.getOSVersion());
-
-
-         // Add a test mini stream
-         testDir = root.createDirectory("Testing 123");
-         testDir.createDirectory("Testing 456");
-         testDir.createDirectory("Testing 789");
-         byte[] mini = new byte[] { 42, 0, 1, 2, 3, 4, 42 };
-         testDir.createDocument("Mini", new ByteArrayInputStream(mini));
-
-
-         // Write out, re-load
-         POIFSFileSystem fs3 = writeOutAndReadBack(fs2);
-         fs2.close();
-
-         root = fs3.getRoot();
-         testDir = (DirectoryEntry)root.getEntry("Testing 123");
-         assertEquals(6, root.getEntryCount());
-         assertThat(root.getEntryNames(), hasItem("Thumbnail"));
-         assertThat(root.getEntryNames(), hasItem("Image"));
-         assertThat(root.getEntryNames(), hasItem("Tags"));
-         assertThat(root.getEntryNames(), hasItem("Testing 123"));
-         assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
-         assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
-
-
-         // Check old and new are there
-         sinf = (SummaryInformation)PropertySetFactory.create(new DocumentInputStream(
-                 (DocumentEntry)root.getEntry(SummaryInformation.DEFAULT_STREAM_NAME)));
-         assertEquals(131333, sinf.getOSVersion());
-
-         dinf = (DocumentSummaryInformation)PropertySetFactory.create(new DocumentInputStream(
-                 (DocumentEntry)root.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME)));
-         assertEquals(131333, dinf.getOSVersion());
-
-         assertContentsMatches(mini, (DocumentEntry)testDir.getEntry("Mini"));
-
-
-         // Write out and read once more, just to be sure
-         POIFSFileSystem fs4 = writeOutAndReadBack(fs3);
-         fs3.close();
-
-         root = fs4.getRoot();
-         testDir = (DirectoryEntry)root.getEntry("Testing 123");
-         assertEquals(6, root.getEntryCount());
-         assertThat(root.getEntryNames(), hasItem("Thumbnail"));
-         assertThat(root.getEntryNames(), hasItem("Image"));
-         assertThat(root.getEntryNames(), hasItem("Tags"));
-         assertThat(root.getEntryNames(), hasItem("Testing 123"));
-         assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
-         assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
-
-         sinf = (SummaryInformation)PropertySetFactory.create(new DocumentInputStream(
-                 (DocumentEntry)root.getEntry(SummaryInformation.DEFAULT_STREAM_NAME)));
-         assertEquals(131333, sinf.getOSVersion());
-
-         dinf = (DocumentSummaryInformation)PropertySetFactory.create(new DocumentInputStream(
-                 (DocumentEntry)root.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME)));
-         assertEquals(131333, dinf.getOSVersion());
+    /**
+     * Read a file, write it and read it again.
+     * Then, alter+add some streams, write and read
+     */
+    @Test
+    public void readWriteRead() throws Exception {
+        SummaryInformation sinf;
+        DocumentSummaryInformation dinf;
+        DirectoryEntry root, testDir;
+
+        for (POIFSFileSystem fs1 : get512and4kFileAndInput()) {
+            // Check we can find the entries we expect
+            root = fs1.getRoot();
+            assertEquals(5, root.getEntryCount());
+            assertThat(root.getEntryNames(), hasItem("Thumbnail"));
+            assertThat(root.getEntryNames(), hasItem("Image"));
+            assertThat(root.getEntryNames(), hasItem("Tags"));
+            assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
+            assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
+
+
+            // Write out, re-load
+            POIFSFileSystem fs2 = writeOutAndReadBack(fs1);
+            fs1.close();
+
+            // Check they're still there
+            root = fs2.getRoot();
+            assertEquals(5, root.getEntryCount());
+            assertThat(root.getEntryNames(), hasItem("Thumbnail"));
+            assertThat(root.getEntryNames(), hasItem("Image"));
+            assertThat(root.getEntryNames(), hasItem("Tags"));
+            assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
+            assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
+
+
+            // Check the contents of them - parse the summary block and check
+            sinf = (SummaryInformation) PropertySetFactory.create(new DocumentInputStream(
+                (DocumentEntry) root.getEntry(SummaryInformation.DEFAULT_STREAM_NAME)));
+            assertEquals(131333, sinf.getOSVersion());
+
+            dinf = (DocumentSummaryInformation) PropertySetFactory.create(new DocumentInputStream(
+                (DocumentEntry) root.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME)));
+            assertEquals(131333, dinf.getOSVersion());
+
+
+            // Add a test mini stream
+            testDir = root.createDirectory("Testing 123");
+            testDir.createDirectory("Testing 456");
+            testDir.createDirectory("Testing 789");
+            byte[] mini = new byte[]{42, 0, 1, 2, 3, 4, 42};
+            testDir.createDocument("Mini", new ByteArrayInputStream(mini));
+
+
+            // Write out, re-load
+            POIFSFileSystem fs3 = writeOutAndReadBack(fs2);
+            fs2.close();
+
+            root = fs3.getRoot();
+            testDir = (DirectoryEntry) root.getEntry("Testing 123");
+            assertEquals(6, root.getEntryCount());
+            assertThat(root.getEntryNames(), hasItem("Thumbnail"));
+            assertThat(root.getEntryNames(), hasItem("Image"));
+            assertThat(root.getEntryNames(), hasItem("Tags"));
+            assertThat(root.getEntryNames(), hasItem("Testing 123"));
+            assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
+            assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
+
+
+            // Check old and new are there
+            sinf = (SummaryInformation) PropertySetFactory.create(new DocumentInputStream(
+                (DocumentEntry) root.getEntry(SummaryInformation.DEFAULT_STREAM_NAME)));
+            assertEquals(131333, sinf.getOSVersion());
+
+            dinf = (DocumentSummaryInformation) PropertySetFactory.create(new DocumentInputStream(
+                (DocumentEntry) root.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME)));
+            assertEquals(131333, dinf.getOSVersion());
+
+            assertContentsMatches(mini, (DocumentEntry) testDir.getEntry("Mini"));
+
+
+            // Write out and read once more, just to be sure
+            POIFSFileSystem fs4 = writeOutAndReadBack(fs3);
+            fs3.close();
+
+            root = fs4.getRoot();
+            testDir = (DirectoryEntry) root.getEntry("Testing 123");
+            assertEquals(6, root.getEntryCount());
+            assertThat(root.getEntryNames(), hasItem("Thumbnail"));
+            assertThat(root.getEntryNames(), hasItem("Image"));
+            assertThat(root.getEntryNames(), hasItem("Tags"));
+            assertThat(root.getEntryNames(), hasItem("Testing 123"));
+            assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
+            assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
+
+            sinf = (SummaryInformation) PropertySetFactory.create(new DocumentInputStream(
+                (DocumentEntry) root.getEntry(SummaryInformation.DEFAULT_STREAM_NAME)));
+            assertEquals(131333, sinf.getOSVersion());
+
+            dinf = (DocumentSummaryInformation) PropertySetFactory.create(new DocumentInputStream(
+                (DocumentEntry) root.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME)));
+            assertEquals(131333, dinf.getOSVersion());
 
-         assertContentsMatches(mini, (DocumentEntry)testDir.getEntry("Mini"));
+            assertContentsMatches(mini, (DocumentEntry) testDir.getEntry("Mini"));
 
 
-         // Add a full stream, delete a full stream
-         byte[] main4096 = new byte[4096];
-         main4096[0] = -10;
-         main4096[4095] = -11;
-         testDir.createDocument("Normal4096", new ByteArrayInputStream(main4096));
+            // Add a full stream, delete a full stream
+            byte[] main4096 = new byte[4096];
+            main4096[0] = -10;
+            main4096[4095] = -11;
+            testDir.createDocument("Normal4096", new ByteArrayInputStream(main4096));
 
-         root.getEntry("Tags").delete();
+            root.getEntry("Tags").delete();
 
 
-         // Write out, re-load
-         POIFSFileSystem fs5 = writeOutAndReadBack(fs4);
-         fs4.close();
+            // Write out, re-load
+            POIFSFileSystem fs5 = writeOutAndReadBack(fs4);
+            fs4.close();
 
-         // Check it's all there
-         root = fs5.getRoot();
-         testDir = (DirectoryEntry)root.getEntry("Testing 123");
-         assertEquals(5, root.getEntryCount());
-         assertThat(root.getEntryNames(), hasItem("Thumbnail"));
-         assertThat(root.getEntryNames(), hasItem("Image"));
-         assertThat(root.getEntryNames(), hasItem("Testing 123"));
-         assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
-         assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
+            // Check it's all there
+            root = fs5.getRoot();
+            testDir = (DirectoryEntry) root.getEntry("Testing 123");
+            assertEquals(5, root.getEntryCount());
+            assertThat(root.getEntryNames(), hasItem("Thumbnail"));
+            assertThat(root.getEntryNames(), hasItem("Image"));
+            assertThat(root.getEntryNames(), hasItem("Testing 123"));
+            assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
+            assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
 
 
-         // Check old and new are there
-         sinf = (SummaryInformation)PropertySetFactory.create(new DocumentInputStream(
-                 (DocumentEntry)root.getEntry(SummaryInformation.DEFAULT_STREAM_NAME)));
-         assertEquals(131333, sinf.getOSVersion());
+            // Check old and new are there
+            sinf = (SummaryInformation) PropertySetFactory.create(new DocumentInputStream(
+                (DocumentEntry) root.getEntry(SummaryInformation.DEFAULT_STREAM_NAME)));
+            assertEquals(131333, sinf.getOSVersion());
 
-         dinf = (DocumentSummaryInformation)PropertySetFactory.create(new DocumentInputStream(
-                 (DocumentEntry)root.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME)));
-         assertEquals(131333, dinf.getOSVersion());
+            dinf = (DocumentSummaryInformation) PropertySetFactory.create(new DocumentInputStream(
+                (DocumentEntry) root.getEntry(DocumentSummaryInformation.DEFAULT_STREAM_NAME)));
+            assertEquals(131333, dinf.getOSVersion());
 
-         assertContentsMatches(mini, (DocumentEntry)testDir.getEntry("Mini"));
-         assertContentsMatches(main4096, (DocumentEntry)testDir.getEntry("Normal4096"));
+            assertContentsMatches(mini, (DocumentEntry) testDir.getEntry("Mini"));
+            assertContentsMatches(main4096, (DocumentEntry) testDir.getEntry("Normal4096"));
 
 
-         // Delete a directory, and add one more
-         testDir.getEntry("Testing 456").delete();
-         testDir.createDirectory("Testing ABC");
+            // Delete a directory, and add one more
+            testDir.getEntry("Testing 456").delete();
+            testDir.createDirectory("Testing ABC");
 
 
-         // Save
-         POIFSFileSystem fs6 = writeOutAndReadBack(fs5);
-         fs5.close();
+            // Save
+            POIFSFileSystem fs6 = writeOutAndReadBack(fs5);
+            fs5.close();
 
-         // Check
-         root = fs6.getRoot();
-         testDir = (DirectoryEntry)root.getEntry("Testing 123");
+            // Check
+            root = fs6.getRoot();
+            testDir = (DirectoryEntry) root.getEntry("Testing 123");
 
-         assertEquals(5, root.getEntryCount());
-         assertThat(root.getEntryNames(), hasItem("Thumbnail"));
-         assertThat(root.getEntryNames(), hasItem("Image"));
-         assertThat(root.getEntryNames(), hasItem("Testing 123"));
-         assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
-         assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
+            assertEquals(5, root.getEntryCount());
+            assertThat(root.getEntryNames(), hasItem("Thumbnail"));
+            assertThat(root.getEntryNames(), hasItem("Image"));
+            assertThat(root.getEntryNames(), hasItem("Testing 123"));
+            assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
+            assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
 
-         assertEquals(4, testDir.getEntryCount());
-         assertThat(testDir.getEntryNames(), hasItem("Mini"));
-         assertThat(testDir.getEntryNames(), hasItem("Normal4096"));
-         assertThat(testDir.getEntryNames(), hasItem("Testing 789"));
-         assertThat(testDir.getEntryNames(), hasItem("Testing ABC"));
+            assertEquals(4, testDir.getEntryCount());
+            assertThat(testDir.getEntryNames(), hasItem("Mini"));
+            assertThat(testDir.getEntryNames(), hasItem("Normal4096"));
+            assertThat(testDir.getEntryNames(), hasItem("Testing 789"));
+            assertThat(testDir.getEntryNames(), hasItem("Testing ABC"));
 
 
-         // Add another mini stream
-         byte[] mini2 = new byte[] { -42, 0, -1, -2, -3, -4, -42 };
-         testDir.createDocument("Mini2", new ByteArrayInputStream(mini2));
+            // Add another mini stream
+            byte[] mini2 = new byte[]{-42, 0, -1, -2, -3, -4, -42};
+            testDir.createDocument("Mini2", new ByteArrayInputStream(mini2));
 
-         // Save, load, check
-         POIFSFileSystem fs7 = writeOutAndReadBack(fs6);
-         fs6.close();
+            // Save, load, check
+            POIFSFileSystem fs7 = writeOutAndReadBack(fs6);
+            fs6.close();
 
-         root = fs7.getRoot();
-         testDir = (DirectoryEntry)root.getEntry("Testing 123");
+            root = fs7.getRoot();
+            testDir = (DirectoryEntry) root.getEntry("Testing 123");
 
-         assertEquals(5, root.getEntryCount());
-         assertThat(root.getEntryNames(), hasItem("Thumbnail"));
-         assertThat(root.getEntryNames(), hasItem("Image"));
-         assertThat(root.getEntryNames(), hasItem("Testing 123"));
-         assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
-         assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
+            assertEquals(5, root.getEntryCount());
+            assertThat(root.getEntryNames(), hasItem("Thumbnail"));
+            assertThat(root.getEntryNames(), hasItem("Image"));
+            assertThat(root.getEntryNames(), hasItem("Testing 123"));
+            assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
+            assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
 
-         assertEquals(5, testDir.getEntryCount());
-         assertThat(testDir.getEntryNames(), hasItem("Mini"));
-         assertThat(testDir.getEntryNames(), hasItem("Mini2"));
-         assertThat(testDir.getEntryNames(), hasItem("Normal4096"));
-         assertThat(testDir.getEntryNames(), hasItem("Testing 789"));
-         assertThat(testDir.getEntryNames(), hasItem("Testing ABC"));
+            assertEquals(5, testDir.getEntryCount());
+            assertThat(testDir.getEntryNames(), hasItem("Mini"));
+            assertThat(testDir.getEntryNames(), hasItem("Mini2"));
+            assertThat(testDir.getEntryNames(), hasItem("Normal4096"));
+            assertThat(testDir.getEntryNames(), hasItem("Testing 789"));
+            assertThat(testDir.getEntryNames(), hasItem("Testing ABC"));
 
-         assertContentsMatches(mini, (DocumentEntry)testDir.getEntry("Mini"));
-         assertContentsMatches(mini2, (DocumentEntry)testDir.getEntry("Mini2"));
-         assertContentsMatches(main4096, (DocumentEntry)testDir.getEntry("Normal4096"));
+            assertContentsMatches(mini, (DocumentEntry) testDir.getEntry("Mini"));
+            assertContentsMatches(mini2, (DocumentEntry) testDir.getEntry("Mini2"));
+            assertContentsMatches(main4096, (DocumentEntry) testDir.getEntry("Normal4096"));
 
 
-         // Delete a mini stream, add one more
-         testDir.getEntry("Mini").delete();
+            // Delete a mini stream, add one more
+            testDir.getEntry("Mini").delete();
 
-         byte[] mini3 = new byte[] { 42, 0, 42, 0, 42, 0, 42 };
-         testDir.createDocument("Mini3", new ByteArrayInputStream(mini3));
+            byte[] mini3 = new byte[]{42, 0, 42, 0, 42, 0, 42};
+            testDir.createDocument("Mini3", new ByteArrayInputStream(mini3));
 
 
-         // Save, load, check
-         POIFSFileSystem fs8 = writeOutAndReadBack(fs7);
-         fs7.close();
+            // Save, load, check
+            POIFSFileSystem fs8 = writeOutAndReadBack(fs7);
+            fs7.close();
 
-         root = fs8.getRoot();
-         testDir = (DirectoryEntry)root.getEntry("Testing 123");
+            root = fs8.getRoot();
+            testDir = (DirectoryEntry) root.getEntry("Testing 123");
 
-         assertEquals(5, root.getEntryCount());
-         assertThat(root.getEntryNames(), hasItem("Thumbnail"));
-         assertThat(root.getEntryNames(), hasItem("Image"));
-         assertThat(root.getEntryNames(), hasItem("Testing 123"));
-         assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
-         assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
+            assertEquals(5, root.getEntryCount());
+            assertThat(root.getEntryNames(), hasItem("Thumbnail"));
+            assertThat(root.getEntryNames(), hasItem("Image"));
+            assertThat(root.getEntryNames(), hasItem("Testing 123"));
+            assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
+            assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
 
-         assertEquals(5, testDir.getEntryCount());
-         assertThat(testDir.getEntryNames(), hasItem("Mini2"));
-         assertThat(testDir.getEntryNames(), hasItem("Mini3"));
-         assertThat(testDir.getEntryNames(), hasItem("Normal4096"));
-         assertThat(testDir.getEntryNames(), hasItem("Testing 789"));
-         assertThat(testDir.getEntryNames(), hasItem("Testing ABC"));
+            assertEquals(5, testDir.getEntryCount());
+            assertThat(testDir.getEntryNames(), hasItem("Mini2"));
+            assertThat(testDir.getEntryNames(), hasItem("Mini3"));
+            assertThat(testDir.getEntryNames(), hasItem("Normal4096"));
+            assertThat(testDir.getEntryNames(), hasItem("Testing 789"));
+            assertThat(testDir.getEntryNames(), hasItem("Testing ABC"));
 
-         assertContentsMatches(mini2, (DocumentEntry)testDir.getEntry("Mini2"));
-         assertContentsMatches(mini3, (DocumentEntry)testDir.getEntry("Mini3"));
-         assertContentsMatches(main4096, (DocumentEntry)testDir.getEntry("Normal4096"));
+            assertContentsMatches(mini2, (DocumentEntry) testDir.getEntry("Mini2"));
+            assertContentsMatches(mini3, (DocumentEntry) testDir.getEntry("Mini3"));
+            assertContentsMatches(main4096, (DocumentEntry) testDir.getEntry("Normal4096"));
 
 
-         // Change some existing streams
-         POIFSDocument mini2Doc = new POIFSDocument((DocumentNode)testDir.getEntry("Mini2"));
-         mini2Doc.replaceContents(new ByteArrayInputStream(mini));
+            // Change some existing streams
+            POIFSDocument mini2Doc = new POIFSDocument((DocumentNode) testDir.getEntry("Mini2"));
+            mini2Doc.replaceContents(new ByteArrayInputStream(mini));
 
-         byte[] main4106 = new byte[4106];
-         main4106[0] = 41;
-         main4106[4105] = 42;
-         POIFSDocument mainDoc = new POIFSDocument((DocumentNode)testDir.getEntry("Normal4096"));
-         mainDoc.replaceContents(new ByteArrayInputStream(main4106));
+            byte[] main4106 = new byte[4106];
+            main4106[0] = 41;
+            main4106[4105] = 42;
+            POIFSDocument mainDoc = new POIFSDocument((DocumentNode) testDir.getEntry("Normal4096"));
+            mainDoc.replaceContents(new ByteArrayInputStream(main4106));
 
 
-         // Re-check
-         POIFSFileSystem fs9 = writeOutAndReadBack(fs8);
-         fs8.close();
+            // Re-check
+            POIFSFileSystem fs9 = writeOutAndReadBack(fs8);
+            fs8.close();
 
-         root = fs9.getRoot();
-         testDir = (DirectoryEntry)root.getEntry("Testing 123");
+            root = fs9.getRoot();
+            testDir = (DirectoryEntry) root.getEntry("Testing 123");
 
-         assertEquals(5, root.getEntryCount());
-         assertThat(root.getEntryNames(), hasItem("Thumbnail"));
-         assertThat(root.getEntryNames(), hasItem("Image"));
-         assertThat(root.getEntryNames(), hasItem("Testing 123"));
-         assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
-         assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
+            assertEquals(5, root.getEntryCount());
+            assertThat(root.getEntryNames(), hasItem("Thumbnail"));
+            assertThat(root.getEntryNames(), hasItem("Image"));
+            assertThat(root.getEntryNames(), hasItem("Testing 123"));
+            assertThat(root.getEntryNames(), hasItem("\u0005DocumentSummaryInformation"));
+            assertThat(root.getEntryNames(), hasItem("\u0005SummaryInformation"));
 
-         assertEquals(5, testDir.getEntryCount());
-         assertThat(testDir.getEntryNames(), hasItem("Mini2"));
-         assertThat(testDir.getEntryNames(), hasItem("Mini3"));
-         assertThat(testDir.getEntryNames(), hasItem("Normal4096"));
-         assertThat(testDir.getEntryNames(), hasItem("Testing 789"));
-         assertThat(testDir.getEntryNames(), hasItem("Testing ABC"));
+            assertEquals(5, testDir.getEntryCount());
+            assertThat(testDir.getEntryNames(), hasItem("Mini2"));
+            assertThat(testDir.getEntryNames(), hasItem("Mini3"));
+            assertThat(testDir.getEntryNames(), hasItem("Normal4096"));
+            assertThat(testDir.getEntryNames(), hasItem("Testing 789"));
+            assertThat(testDir.getEntryNames(), hasItem("Testing ABC"));
 
-         assertContentsMatches(mini, (DocumentEntry)testDir.getEntry("Mini2"));
-         assertContentsMatches(mini3, (DocumentEntry)testDir.getEntry("Mini3"));
-         assertContentsMatches(main4106, (DocumentEntry)testDir.getEntry("Normal4096"));
+            assertContentsMatches(mini, (DocumentEntry) testDir.getEntry("Mini2"));
+            assertContentsMatches(mini3, (DocumentEntry) testDir.getEntry("Mini3"));
+            assertContentsMatches(main4106, (DocumentEntry) testDir.getEntry("Normal4096"));
 
 
-         // All done
-         fs9.close();
-      }
-   }
+            // All done
+            fs9.close();
+        }
+    }
 

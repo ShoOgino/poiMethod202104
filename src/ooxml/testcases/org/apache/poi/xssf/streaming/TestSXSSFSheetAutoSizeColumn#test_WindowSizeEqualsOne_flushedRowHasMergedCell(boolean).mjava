@@ -1,0 +1,40 @@
+    // fails only for useMergedCell=true
+    @ParameterizedTest
+    @MethodSource("data")
+    public void test_WindowSizeEqualsOne_flushedRowHasMergedCell(boolean useMergedCells) {
+        workbook = new SXSSFWorkbook(null, 1); // Window size 1 so only last row will be in memory
+        sheet = workbook.createSheet();
+        sheet.trackAllColumnsForAutoSizing();
+
+        Cell a1 = createRowWithCellValues(sheet, 0, LONG_CELL_VALUE);
+
+        assumeRequiredFontsAreInstalled(workbook, a1);
+        assertEquals(0, sheet.addMergedRegion(CellRangeAddress.valueOf("A1:B1")));
+
+        createRowWithCellValues(sheet, 1, SHORT_CELL_VALUE, SHORT_CELL_VALUE);
+
+        /*
+         *    A      B
+         * 1 LONGMERGED
+         * 2 SHORT SHORT
+         */
+
+        sheet.autoSizeColumn(0, useMergedCells);
+        sheet.autoSizeColumn(1, useMergedCells);
+
+        if (useMergedCells) {
+            // Excel and LibreOffice behavior: ignore merged cells for auto-sizing.
+            // POI behavior: evenly distribute the column width among the merged columns.
+            //               each column must be auto-sized in order for the column widths
+            //               to add up to the best fit width.
+            final int colspan = 2;
+            final int expectedWidth = (10000 + 1000)/colspan; //average of 1_000 and 10_000
+            final int minExpectedWidth = expectedWidth / 2;
+            final int maxExpectedWidth = expectedWidth * 3 / 2;
+            assertColumnWidthStrictlyWithinRange(sheet.getColumnWidth(0), minExpectedWidth, maxExpectedWidth); //short
+        } else {
+            assertColumnWidthStrictlyWithinRange(sheet.getColumnWidth(0), COLUMN_WIDTH_THRESHOLD_BETWEEN_SHORT_AND_LONG, MAX_COLUMN_WIDTH); //long
+        }
+        assertColumnWidthStrictlyWithinRange(sheet.getColumnWidth(1), 0, COLUMN_WIDTH_THRESHOLD_BETWEEN_SHORT_AND_LONG); //short
+    }
+

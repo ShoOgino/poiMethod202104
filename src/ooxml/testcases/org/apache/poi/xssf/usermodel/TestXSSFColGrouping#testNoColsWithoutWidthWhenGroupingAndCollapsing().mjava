@@ -4,30 +4,30 @@
      */
 	@Test
 	public void testNoColsWithoutWidthWhenGroupingAndCollapsing() throws IOException {
-		XSSFWorkbook wb1 = new XSSFWorkbook();
-		XSSFSheet sheet = wb1.createSheet("test");
+		try (XSSFWorkbook wb1 = new XSSFWorkbook()) {
+            XSSFSheet sheet = wb1.createSheet("test");
 
-        sheet.setColumnWidth(4, 5000);
-        sheet.setColumnWidth(5, 5000);
+            sheet.setColumnWidth(4, 5000);
+            sheet.setColumnWidth(5, 5000);
 
-        sheet.groupColumn((short) 4, (short) 5);
+            sheet.groupColumn((short) 4, (short) 5);
 
-        sheet.setColumnGroupCollapsed(4, true);
+            sheet.setColumnGroupCollapsed(4, true);
 
-        CTCols cols = sheet.getCTWorksheet().getColsArray(0);
-        logger.log(POILogger.DEBUG, "test52186_2/cols:" + cols);
+            CTCols cols = sheet.getCTWorksheet().getColsArray(0);
+            logger.log(POILogger.DEBUG, "test52186_2/cols:" + cols);
 
-        XSSFWorkbook wb2 = XSSFTestDataSamples.writeOutAndReadBack(wb1, "testNoColsWithoutWidthWhenGroupingAndCollapsing");
-        sheet = wb2.getSheet("test");
+            try (XSSFWorkbook wb2 = XSSFTestDataSamples.writeOutAndReadBack(wb1, "testNoColsWithoutWidthWhenGroupingAndCollapsing")) {
+                sheet = wb2.getSheet("test");
 
-        for (int i = 4; i <= 5; i++) {
-        	assertEquals("Unexpected width of column "+ i, 5000, sheet.getColumnWidth(i));
+                for (int i = 4; i <= 5; i++) {
+                    assertEquals(5000, sheet.getColumnWidth(i), "Unexpected width of column " + i);
+                }
+                cols = sheet.getCTWorksheet().getColsArray(0);
+                for (CTCol col : cols.getColArray()) {
+                    assertTrue(col.isSetWidth(), "Col width attribute is unset: " + col);
+                }
+            }
         }
-        cols = sheet.getCTWorksheet().getColsArray(0);
-        for (CTCol col : cols.getColArray()) {
-			assertTrue("Col width attribute is unset: " + col, col.isSetWidth());
-		}
-        wb2.close();
-        wb1.close();
     }
 

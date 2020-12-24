@@ -1,28 +1,18 @@
     @Test
     public void overrideRowsInTemplate() throws IOException {
-        XSSFWorkbook template = new XSSFWorkbook();
-        template.createSheet().createRow(1);
-
-        Workbook wb = new SXSSFWorkbook(template);
-        try {
-            Sheet sheet = wb.getSheetAt(0);
-
-            try {
-                sheet.createRow(1);
-                fail("expected exception");
-            } catch (Throwable e){
+        try (XSSFWorkbook template = new XSSFWorkbook()) {
+            template.createSheet().createRow(1);
+            try (Workbook wb = new SXSSFWorkbook(template);) {
+                Sheet sheet = wb.getSheetAt(0);
+                Throwable e;
+                e = assertThrows(Throwable.class, () -> sheet.createRow(1));
                 assertEquals("Attempting to write a row[1] in the range [0,1] that is already written to disk.", e.getMessage());
-            }
-            try {
-                sheet.createRow(0);
-                fail("expected exception");
-            } catch (Throwable e){
+
+                e = assertThrows(Throwable.class, () -> sheet.createRow(0));
                 assertEquals("Attempting to write a row[0] in the range [0,1] that is already written to disk.", e.getMessage());
+
+                sheet.createRow(2);
             }
-            sheet.createRow(2);
-        } finally {
-            wb.close();
-            template.close();
         }
     }
 

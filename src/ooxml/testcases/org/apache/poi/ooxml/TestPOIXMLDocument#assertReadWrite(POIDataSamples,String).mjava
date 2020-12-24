@@ -1,0 +1,56 @@
+    private void assertReadWrite(POIDataSamples samples, String filename) throws Exception {
+        try (InputStream is = samples.openResourceAsStream(filename);
+            OPCPackage pkg1 = PackageHelper.open(is)){
+            File tmp = TempFile.createTempFile("poi-ooxml", ".tmp");
+            try (FileOutputStream out = new FileOutputStream(tmp);
+                OPCParser doc = new OPCParser(pkg1)) {
+                doc.parse(new TestFactory());
+                traverse(doc);
+                doc.write(out);
+                out.close();
+
+                // Should not be able to write to an output stream that has been closed
+                // FIXME: A better exception class (IOException?) and message should be raised
+                // indicating that the document could not be written because the output stream is closed.
+                // see {@link org.apache.poi.openxml4j.opc.ZipPackage#saveImpl(java.io.OutputStream)}
+                OpenXML4JRuntimeException e = assertThrows(OpenXML4JRuntimeException.class, () -> doc.write(out),
+                    "Should not be able to write to an output stream that has been closed.");
+                assertTrue(e.getMessage().matches("Fail to save: an error occurs while saving the package : " +
+                    "The part .+ failed to be saved in the stream with marshaller .+"));
+
+                // Should not be able to write a document that has been closed
+                doc.close();
+                IOException e2 = assertThrows(IOException.class, () -> doc.write(new NullOutputStream()),
+                    "Should not be able to write a document that has been closed.");
+                assertEquals("Cannot write data, document seems to have been closed already", e2.getMessage());
+
+                // Should be able to close a document multiple times, though subsequent closes will have no effect.
+            }
+
+
+            try (OPCPackage pkg2 = OPCPackage.open(tmp.getAbsolutePath());
+                 OPCParser doc = new OPCParser(pkg1)) {
+                doc.parse(new TestFactory());
+                traverse(doc);
+
+                assertEquals(pkg1.getRelationships().size(), pkg2.getRelationships().size());
+
+                ArrayList<PackagePart> l1 = pkg1.getParts();
+                ArrayList<PackagePart> l2 = pkg2.getParts();
+
+                assertEquals(l1.size(), l2.size());
+                for (int i = 0; i < l1.size(); i++) {
+                    PackagePart p1 = l1.get(i);
+                    PackagePart p2 = l2.get(i);
+
+                    assertEquals(p1.getContentType(), p2.getContentType());
+                    assertEquals(p1.hasRelationships(), p2.hasRelationships());
+                    if (p1.hasRelationships()) {
+                        assertEquals(p1.getRelationships().size(), p2.getRelationships().size());
+                    }
+                    assertEquals(p1.getPartName(), p2.getPartName());
+                }
+            }
+        }
+    }
+

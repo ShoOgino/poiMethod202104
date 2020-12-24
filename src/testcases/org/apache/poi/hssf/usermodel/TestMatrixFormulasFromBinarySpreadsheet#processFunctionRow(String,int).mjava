@@ -1,0 +1,61 @@
+    @ParameterizedTest
+    @MethodSource("data")
+    public void processFunctionRow(String targetFunctionName, int formulasRowIdx) {
+
+       int endColNum = Navigator.START_RESULT_COL_INDEX + Navigator.COL_OFF_EXPECTED_RESULT;
+
+       for (int rowNum = formulasRowIdx; rowNum < formulasRowIdx + Navigator.ROW_OFF_NEXT_OP - 1; rowNum++) {
+           for (int colNum = Navigator.START_RESULT_COL_INDEX; colNum < endColNum; colNum++) {
+               Row r = sheet.getRow(rowNum);
+
+               /* mainly to escape row failures on MDETERM which only returns a scalar */
+               if (r == null) {
+                   continue;
+               }
+
+               Cell c = sheet.getRow(rowNum).getCell(colNum);
+
+               if (c == null || c.getCellType() != CellType.FORMULA) {
+                   continue;
+               }
+
+               CellValue actValue = evaluator.evaluate(c);
+               Cell expValue = sheet.getRow(rowNum).getCell(colNum + Navigator.COL_OFF_EXPECTED_RESULT);
+
+               String msg = String.format(Locale.ROOT, "Function '%s': Formula: %s @ %d:%d"
+                       , targetFunctionName, c.getCellFormula(), rowNum, colNum);
+
+               assertNotNull(expValue, msg + " - Bad setup data expected value is null");
+               assertNotNull(actValue, msg + " - actual value was null");
+
+               final CellType cellType = expValue.getCellType();
+               switch (cellType) {
+                   case BLANK:
+                       assertEquals(CellType.BLANK, actValue.getCellType(), msg);
+                       break;
+                   case BOOLEAN:
+                       assertEquals(CellType.BOOLEAN, actValue.getCellType(), msg);
+                       assertEquals(expValue.getBooleanCellValue(), actValue.getBooleanValue(), msg);
+                       break;
+                   case ERROR:
+                       assertEquals(CellType.ERROR, actValue.getCellType(), msg);
+                       assertEquals(ErrorEval.getText(expValue.getErrorCellValue()), ErrorEval.getText(actValue.getErrorValue()), msg);
+                       break;
+                   case FORMULA: // will never be used, since we will call method after formula evaluation
+                       fail("Cannot expect formula as result of formula evaluation: " + msg);
+                       break;
+                   case NUMERIC:
+                       assertEquals(CellType.NUMERIC, actValue.getCellType(), msg);
+                       TestMathX.assertDouble(msg, expValue.getNumericCellValue(), actValue.getNumberValue(), TestMathX.POS_ZERO, TestMathX.DIFF_TOLERANCE_FACTOR);
+                       break;
+                   case STRING:
+                       assertEquals(CellType.STRING, actValue.getCellType(), msg);
+                       assertEquals(expValue.getRichStringCellValue().getString(), actValue.getStringValue(), msg);
+                       break;
+                   default:
+                       fail("Unexpected cell type: " + cellType);
+               }
+           }
+       }
+   }
+

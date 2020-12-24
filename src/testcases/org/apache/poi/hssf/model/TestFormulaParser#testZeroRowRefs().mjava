@@ -11,23 +11,16 @@
         String leadingZeroCellRef = "B000001"; // this should get parsed as "B1"
         HSSFWorkbook wb = new HSSFWorkbook();
 
-        try {
-            HSSFFormulaParser.parse(badCellRef, wb);
-            fail("Identified bug 47312b - Shouldn't be able to parse cell ref '"
-                    + badCellRef + "'.");
-        } catch (FormulaParseException e) {
-            // expected during successful test
-            confirmParseException(e, "Specified named range '"
-                    + badCellRef + "' does not exist in the current workbook.");
-        }
+        FormulaParseException e = assertThrows(FormulaParseException.class, () -> HSSFFormulaParser.parse(badCellRef, wb),
+            "Identified bug 47312b - Shouldn't be able to parse cell ref '" + badCellRef + "'.");
+        confirmParseException(e, "Specified named range '" + badCellRef + "' does not exist in the current workbook.");
 
         Ptg[] ptgs;
         try {
             ptgs = HSSFFormulaParser.parse(leadingZeroCellRef, wb);
             assertEquals("B1", ptgs[0].toFormulaString());
-        } catch (FormulaParseException e) {
-            confirmParseException(e, "Specified named range '"
-                    + leadingZeroCellRef + "' does not exist in the current workbook.");
+        } catch (FormulaParseException e2) {
+            confirmParseException(e2, "Specified named range '" + leadingZeroCellRef + "' does not exist in the current workbook.");
             // close but no cigar
             fail("Identified bug 47312c - '" + leadingZeroCellRef + "' should parse as 'B1'.");
         }

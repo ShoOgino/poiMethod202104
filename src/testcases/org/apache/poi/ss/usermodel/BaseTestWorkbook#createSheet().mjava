@@ -6,9 +6,9 @@
             //getting a sheet by invalid index or non-existing name
             assertNull(wb.getSheet("Sheet1"));
             IllegalArgumentException ex = assertThrows(
-                "should have thrown exception due to invalid sheet index",
                 IllegalArgumentException.class,
-                () -> wb.getSheetAt(0)
+                () -> wb.getSheetAt(0),
+                "should have thrown exception due to invalid sheet index"
             );
             // expected during successful test no negative index in the range message
             assertFalse(ex.getMessage().contains("-1"));
@@ -24,16 +24,15 @@
             //fetching sheets by name is case-insensitive
             Sheet originalSheet = wb.createSheet("Sheet3");
             Sheet fetchedSheet = wb.getSheet("sheet3");
-            if (fetchedSheet == null) {
-                fail("Identified bug 44892");
-            }
+            assertNotNull(fetchedSheet, "Identified bug 44892");
+
             assertEquals("Sheet3", fetchedSheet.getSheetName());
             assertEquals(3, wb.getNumberOfSheets());
             assertSame(originalSheet, fetchedSheet);
             ex = assertThrows(
-                "should have thrown exception due to duplicate sheet name",
                 IllegalArgumentException.class,
-                () -> wb.createSheet("sHeeT3")
+                () -> wb.createSheet("sHeeT3"),
+                "should have thrown exception due to duplicate sheet name"
             );
             // expected during successful test
             assertEquals("The workbook already contains a sheet named 'sHeeT3'", ex.getMessage());
@@ -44,9 +43,9 @@
                     "My:Sheet"};
             for (String sheetName : invalidNames) {
                 assertThrows(
-                    "should have thrown exception due to invalid sheet name: " + sheetName,
                     IllegalArgumentException.class,
-                    () -> wb.createSheet(sheetName)
+                    () -> wb.createSheet(sheetName),
+                    "should have thrown exception due to invalid sheet name: " + sheetName
                 );
             }
             //still have 3 sheets
@@ -56,28 +55,12 @@
             wb.setSheetName(2, "I changed!");
 
             //try to assign an invalid name to the 2nd sheet
-            try {
-                wb.setSheetName(1, "[I'm invalid]");
-                fail("should have thrown exceptiuon due to invalid sheet name");
-            } catch (IllegalArgumentException e) {
-                // expected during successful test
-            }
+            assertThrows(IllegalArgumentException.class, () -> wb.setSheetName(1, "[I'm invalid]"));
 
             //try to assign an invalid name to the 2nd sheet
-            try {
-                wb.createSheet(null);
-                fail("should have thrown exceptiuon due to invalid sheet name");
-            } catch (IllegalArgumentException e) {
-                // expected during successful test
-            }
+            assertThrows(IllegalArgumentException.class, () -> wb.createSheet(null));
 
-            try {
-                wb.setSheetName(2, null);
-
-                fail("should have thrown exceptiuon due to invalid sheet name");
-            } catch (IllegalArgumentException e) {
-                // expected during successful test
-            }
+            assertThrows(IllegalArgumentException.class, () -> wb.setSheetName(2, null));
 
             //check
             assertEquals(0, wb.getSheetIndex("sheet0"));

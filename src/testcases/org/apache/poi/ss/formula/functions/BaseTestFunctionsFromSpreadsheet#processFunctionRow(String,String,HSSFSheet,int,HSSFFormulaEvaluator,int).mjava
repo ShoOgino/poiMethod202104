@@ -1,0 +1,55 @@
+    @ParameterizedTest
+    @MethodSource("data")
+    public void processFunctionRow(
+        String testName, String filename, HSSFSheet sheet, int formulasRowIdx, HSSFFormulaEvaluator evaluator, int precisionColumnIndex
+    ) throws Exception {
+        HSSFRow r = sheet.getRow(formulasRowIdx);
+        HSSFCell evalCell = r.getCell(SS.COLUMN_INDEX_EVALUATION);
+        HSSFCell expectedCell = r.getCell(SS.COLUMN_INDEX_EXPECTED_RESULT);
+        HSSFCell precisionCell = r.getCell(precisionColumnIndex);
+
+        CellReference cr = new CellReference(sheet.getSheetName(), formulasRowIdx, evalCell.getColumnIndex(), false, false);
+        String msg = String.format(Locale.ROOT, "In %s %s {=%s} '%s'"
+            , filename, cr.formatAsString(), evalCell.getCellFormula(), testName);
+
+        CellValue actualValue = evaluator.evaluate(evalCell);
+
+        assertNotNull(expectedCell, msg + " - Bad setup data expected value is null");
+        assertNotNull(actualValue, msg + " - actual value was null");
+
+        if (expectedCell.getCellType() == CellType.ERROR) {
+            int expectedErrorCode = expectedCell.getErrorCellValue();
+            assertEquals(CellType.ERROR, actualValue.getCellType(), msg);
+            assertEquals(ErrorEval.getText(expectedErrorCode), actualValue.formatAsString(), msg);
+            assertEquals(expectedErrorCode, actualValue.getErrorValue(), msg);
+            assertEquals(ErrorEval.getText(expectedErrorCode), ErrorEval.getText(actualValue.getErrorValue()), msg);
+            return;
+        }
+
+        // unexpected error
+        assertNotEquals(CellType.ERROR, actualValue.getCellType(), msg);
+        assertNotEquals(msg, formatValue(expectedCell), ErrorEval.getText(actualValue.getErrorValue()));
+
+        // wrong type error
+        assertEquals(expectedCell.getCellType(), actualValue.getCellType(), msg);
+
+        final CellType expectedCellType = expectedCell.getCellType();
+        switch (expectedCellType) {
+            case BOOLEAN:
+                assertEquals(expectedCell.getBooleanCellValue(), actualValue.getBooleanValue(), msg);
+                break;
+            case FORMULA: // will never be used, since we will call method after formula evaluation
+                fail("Cannot expect formula as result of formula evaluation: " + msg);
+            case NUMERIC:
+                double precision = precisionCell != null && precisionCell.getCellType() == CellType.NUMERIC
+                        ? precisionCell.getNumericCellValue() : 0.0;
+                assertEquals(expectedCell.getNumericCellValue(), actualValue.getNumberValue(), precision);
+                break;
+            case STRING:
+                assertEquals(expectedCell.getRichStringCellValue().getString(), actualValue.getStringValue(), msg);
+                break;
+            default:
+                fail("Unexpected cell type: " + expectedCellType);
+        }
+    }
+

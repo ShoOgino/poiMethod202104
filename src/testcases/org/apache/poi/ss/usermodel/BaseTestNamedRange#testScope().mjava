@@ -1,47 +1,36 @@
     @Test
     public final void testScope() throws Exception {
-        Workbook wb = _testDataProvider.createWorkbook();
-        wb.createSheet();
-        wb.createSheet();
+        try (Workbook wb = _testDataProvider.createWorkbook()) {
+            wb.createSheet();
+            wb.createSheet();
 
-        Name name;
-
-        name = wb.createName();
-        name.setNameName("aaa");
-        name = wb.createName();
-        try {
-            name.setNameName("aaa");
-            fail("Expected exception");
-        } catch(Exception e){
+            wb.createName().setNameName("aaa");
+            Exception e = assertThrows(Exception.class, () -> wb.createName().setNameName("aaa"));
             assertEquals("The workbook already contains this name: aaa", e.getMessage());
-        }
 
-        name = wb.createName();
-        name.setSheetIndex(0);
-        name.setNameName("aaa");
-        name = wb.createName();
-        name.setSheetIndex(0);
-        try {
-            name.setNameName("aaa");
-            fail("Expected exception");
-        } catch(Exception e){
+            Name name1 = wb.createName();
+            name1.setSheetIndex(0);
+            name1.setNameName("aaa");
+
+            e = assertThrows(Exception.class, () -> {
+                Name name2 = wb.createName();
+                name2.setSheetIndex(0);
+                name2.setNameName("aaa");
+            });
             assertEquals("The sheet already contains this name: aaa", e.getMessage());
-        }
 
-        name = wb.createName();
-        name.setSheetIndex(1);
-        name.setNameName("aaa");
-        name = wb.createName();
-        name.setSheetIndex(1);
-        try {
-            name.setNameName("aaa");
-            fail("Expected exception");
-        } catch(Exception e){
+            name1 = wb.createName();
+            name1.setSheetIndex(1);
+            name1.setNameName("aaa");
+
+            e = assertThrows(Exception.class, () -> {
+                Name name2 = wb.createName();
+                name2.setSheetIndex(1);
+                name2.setNameName("aaa");
+            });
             assertEquals("The sheet already contains this name: aaa", e.getMessage());
-        }
 
-        assertEquals(3, wb.getNames("aaa").size());
-        
-        wb.close();
+            assertEquals(3, wb.getNames("aaa").size());
+        }
     }
 

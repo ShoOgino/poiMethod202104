@@ -5,19 +5,14 @@
      */
     @Test
     public void testAddPackageAlreadyAddFailure2() throws Exception {
-        OPCPackage pkg = OPCPackage.create("DELETEIFEXISTS.docx");
-        PackagePartName partName = null;
-        try {
-            partName = PackagingURIHelper.createPartName("/word/document.xml");
-        } catch (InvalidFormatException e) {
-            throw new Exception(e.getMessage());
-        }
-        pkg.createPart(partName, ContentTypes.XML);
-        try {
+        try (OPCPackage pkg = OPCPackage.create(TESTFILE)) {
+            PackagePartName partName = PackagingURIHelper.createPartName("/word/document.xml");
             pkg.createPart(partName, ContentTypes.XML);
-        } catch (InvalidOperationException e) {
-            return;
+            assertThrows(InvalidOperationException.class, () -> pkg.createPart(partName, ContentTypes.XML),
+                "Packages shall not contain equivalent part names and package implementers shall neither create nor " +
+                    "recognize packages with equivalent part names. [M1.12]"
+            );
+            pkg.revert();
         }
-        fail("Packages shall not contain equivalent part names and package implementers shall neither create nor recognize packages with equivalent part names. [M1.12]");
     }
 

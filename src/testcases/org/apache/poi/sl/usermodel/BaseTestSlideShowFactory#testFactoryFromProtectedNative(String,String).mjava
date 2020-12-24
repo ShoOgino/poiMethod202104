@@ -1,19 +1,17 @@
     @SuppressWarnings("resource")
     protected static void testFactoryFromProtectedNative(String protectedFile, String password) throws Exception {
+        assertTrue(protectedFile.endsWith(".ppt") || protectedFile.endsWith(".pptx"),
+            "Unrecognized file extension: " + protectedFile);
+
         SlideShow<?,?> ss;
         // Encryption layer is a BIFF8 binary format that can be read by POIFSFileSystem,
         // used for both HSLF and XSLF
 
         // from protected POIFS
-        if (protectedFile.endsWith(".ppt") || protectedFile.endsWith(".pptx")) {
-            POIFSFileSystem poifs = new POIFSFileSystem(fromFile(protectedFile));
+        try (POIFSFileSystem poifs = new POIFSFileSystem(fromFile(protectedFile))) {
             ss = SlideShowFactory.create(poifs.getRoot(), password);
             assertNotNull(ss);
-            poifs.close();
-            assertCloseDoesNotModifyFile(protectedFile, ss);
         }
-        else {
-            fail("Unrecognized file extension: " + protectedFile);
-        }
+        assertCloseDoesNotModifyFile(protectedFile, ss);
     }
 

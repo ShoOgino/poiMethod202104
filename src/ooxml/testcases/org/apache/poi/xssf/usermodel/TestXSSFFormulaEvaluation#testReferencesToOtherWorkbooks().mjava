@@ -37,73 +37,55 @@
 
             // Try to evaluate without references, won't work
             // (At least, not unit we fix bug #56752 that is)
-            try {
-                evaluator.evaluate(cXSL_cell);
-                fail("Without a fix for #56752, shouldn't be able to evaluate a " +
-                        "reference to a non-provided linked workbook");
-            } catch (Exception e) {
-                // expected here
-            }
+            assertThrows(Exception.class, () -> evaluator.evaluate(cXSL_cell),
+                "Without a fix for #56752, shouldn't be able to evaluate a reference to a non-provided linked workbook");
 
             // Setup the environment
             Map<String, FormulaEvaluator> evaluators = new HashMap<>();
             evaluators.put("ref2-56737.xlsx", evaluator);
-            Workbook wbEval1 = _testDataProvider.openSampleWorkbook("56737.xlsx");
-            evaluators.put("56737.xlsx",
-                    wbEval1.getCreationHelper().createFormulaEvaluator());
-            Workbook wbEval2 = HSSFTestDataSamples.openSampleWorkbook("56737.xls");
-            evaluators.put("56737.xls",
-                    wbEval2.getCreationHelper().createFormulaEvaluator());
-            evaluator.setupReferencedWorkbooks(evaluators);
+            try (Workbook wbEval1 = _testDataProvider.openSampleWorkbook("56737.xlsx");
+                 Workbook wbEval2 = HSSFTestDataSamples.openSampleWorkbook("56737.xls")) {
+                evaluators.put("56737.xlsx", wbEval1.getCreationHelper().createFormulaEvaluator());
+                evaluators.put("56737.xls", wbEval2.getCreationHelper().createFormulaEvaluator());
+                evaluator.setupReferencedWorkbooks(evaluators);
 
-            // Try evaluating all of them, ensure we don't blow up
-            for (Row r : s) {
-                for (Cell c : r) {
-                    evaluator.evaluate(c);
+                // Try evaluating all of them, ensure we don't blow up
+                for (Row r : s) {
+                    for (Cell c : r) {
+                        evaluator.evaluate(c);
+                    }
                 }
+                // And evaluate the other way too
+                evaluator.evaluateAll();
+
+                // Static evaluator won't work, as no references passed in
+                assertThrows(Exception.class, () -> XSSFFormulaEvaluator.evaluateAllFormulaCells(wb),
+                    "Static method lacks references, shouldn't work");
+
+                // Evaluate specific cells and check results
+                assertEquals("\"Hello!\"", evaluator.evaluate(cXSLX_cell).formatAsString());
+                assertEquals("\"Test A1\"", evaluator.evaluate(cXSLX_sNR).formatAsString());
+                assertEquals("142.0", evaluator.evaluate(cXSLX_gNR).formatAsString());
+
+                assertEquals("\"Hello!\"", evaluator.evaluate(cXSL_cell).formatAsString());
+                assertEquals("\"Test A1\"", evaluator.evaluate(cXSL_sNR).formatAsString());
+                assertEquals("142.0", evaluator.evaluate(cXSL_gNR).formatAsString());
+
+
+                // Add another formula referencing these workbooks
+                Cell cXSL_cell2 = rXSL.createCell(40);
+                cXSL_cell2.setCellFormula("[56737.xls]Uses!$C$1");
+                // TODO Shouldn't it become [2] like the others?
+                assertEquals("[56737.xls]Uses!$C$1", cXSL_cell2.getCellFormula());
+                assertEquals("\"Hello!\"", evaluator.evaluate(cXSL_cell2).formatAsString());
+
+
+                // Now add a formula that refers to yet another (different) workbook
+                // Won't work without the workbook being linked
+                Cell cXSLX_nw_cell = rXSLX.createCell(42);
+                assertThrows(Exception.class, () -> cXSLX_nw_cell.setCellFormula("[alt.xlsx]Sheet1!$A$1"),
+                    "New workbook not linked, shouldn't be able to add");
             }
-            // And evaluate the other way too
-            evaluator.evaluateAll();
-
-            // Static evaluator won't work, as no references passed in
-            try {
-                XSSFFormulaEvaluator.evaluateAllFormulaCells(wb);
-                fail("Static method lacks references, shouldn't work");
-            } catch (Exception e) {
-                // expected here
-            }
-
-
-            // Evaluate specific cells and check results
-            assertEquals("\"Hello!\"", evaluator.evaluate(cXSLX_cell).formatAsString());
-            assertEquals("\"Test A1\"", evaluator.evaluate(cXSLX_sNR).formatAsString());
-            assertEquals("142.0", evaluator.evaluate(cXSLX_gNR).formatAsString());
-
-            assertEquals("\"Hello!\"", evaluator.evaluate(cXSL_cell).formatAsString());
-            assertEquals("\"Test A1\"", evaluator.evaluate(cXSL_sNR).formatAsString());
-            assertEquals("142.0", evaluator.evaluate(cXSL_gNR).formatAsString());
-
-
-            // Add another formula referencing these workbooks
-            Cell cXSL_cell2 = rXSL.createCell(40);
-            cXSL_cell2.setCellFormula("[56737.xls]Uses!$C$1");
-            // TODO Shouldn't it become [2] like the others?
-            assertEquals("[56737.xls]Uses!$C$1", cXSL_cell2.getCellFormula());
-            assertEquals("\"Hello!\"", evaluator.evaluate(cXSL_cell2).formatAsString());
-
-
-            // Now add a formula that refers to yet another (different) workbook
-            // Won't work without the workbook being linked
-            Cell cXSLX_nw_cell = rXSLX.createCell(42);
-            try {
-                cXSLX_nw_cell.setCellFormula("[alt.xlsx]Sheet1!$A$1");
-                fail("New workbook not linked, shouldn't be able to add");
-            } catch (Exception e) {
-                // expected here
-            }
-
-            wbEval1.close();
-            wbEval2.close();
 
             // Link and re-try
             try (Workbook alt = new XSSFWorkbook()) {
@@ -117,10 +99,8 @@
             assertEquals("[alt.xlsx]Sheet1!$A$1", cXSLX_nw_cell.getCellFormula());
 
             // Evaluate it, without a link to that workbook
-            try {
-                evaluator.evaluate(cXSLX_nw_cell);
-                fail("No cached value and no link to workbook, shouldn't evaluate");
-            } catch(Exception e) {}
+            assertThrows(Exception.class, () -> evaluator.evaluate(cXSLX_nw_cell),
+                "No cached value and no link to workbook, shouldn't evaluate");
 
             // Add a link, check it does
             evaluators.put("alt.xlsx", alt.getCreationHelper().createFormulaEvaluator());

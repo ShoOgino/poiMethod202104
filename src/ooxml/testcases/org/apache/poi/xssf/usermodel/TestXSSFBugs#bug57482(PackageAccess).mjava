@@ -1,0 +1,51 @@
+    /**
+     * A .xlsx file with no Shared Strings table should open fine
+     * in read-only mode
+     */
+    @ParameterizedTest
+    @EnumSource(value = PackageAccess.class, names = {"READ_WRITE", "READ"})
+    public void bug57482(PackageAccess access) throws IOException, InvalidFormatException {
+        File file = HSSFTestDataSamples.getSampleFile("57482-OnlyNumeric.xlsx");
+        try (OPCPackage pkg = OPCPackage.open(file, access);
+             XSSFWorkbook wb1 = new XSSFWorkbook(pkg)) {
+            // Try to open it and read the contents
+
+            assertNotNull(wb1.getSharedStringSource());
+            assertEquals(0, wb1.getSharedStringSource().getCount());
+
+            DataFormatter fmt = new DataFormatter();
+            XSSFSheet s = wb1.getSheetAt(0);
+            assertEquals("1", fmt.formatCellValue(s.getRow(0).getCell(0)));
+            assertEquals("11", fmt.formatCellValue(s.getRow(0).getCell(1)));
+            assertEquals("5", fmt.formatCellValue(s.getRow(4).getCell(0)));
+
+            // Add a text cell
+            s.getRow(0).createCell(3).setCellValue("Testing");
+            assertEquals("Testing", fmt.formatCellValue(s.getRow(0).getCell(3)));
+
+            // Try to write-out and read again, should only work
+            //  in read-write mode, not read-only mode
+            try (XSSFWorkbook wb2 = XSSFTestDataSamples.writeOutAndReadBack(wb1)) {
+                if (access == PackageAccess.READ) {
+                    fail("Shouln't be able to write from read-only mode");
+                }
+
+                // Check again
+                s = wb2.getSheetAt(0);
+                assertEquals("1", fmt.formatCellValue(s.getRow(0).getCell(0)));
+                assertEquals("11", fmt.formatCellValue(s.getRow(0).getCell(1)));
+                assertEquals("5", fmt.formatCellValue(s.getRow(4).getCell(0)));
+                assertEquals("Testing", fmt.formatCellValue(s.getRow(0).getCell(3)));
+
+                wb2.getPackage().revert();
+            } catch (InvalidOperationException e) {
+                if (access == PackageAccess.READ_WRITE) {
+                    // Shouldn't occur in write-mode
+                    throw e;
+                }
+            }
+
+            pkg.revert();
+        }
+    }
+

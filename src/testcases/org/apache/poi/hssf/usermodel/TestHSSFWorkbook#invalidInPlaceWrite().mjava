@@ -1,38 +1,20 @@
     @Test
     public void invalidInPlaceWrite() throws Exception {
-        HSSFWorkbook wb;
-
         // Can't work for new files
-        wb = new HSSFWorkbook();
-        try {
-            wb.write();
-            fail("Shouldn't work for new files");
-        } catch (IllegalStateException e) {
-            // expected here
+        try (HSSFWorkbook wb = new HSSFWorkbook()) {
+            assertThrows(IllegalStateException.class, wb::write, "Shouldn't work for new files");
         }
-        wb.close();
 
         // Can't work for InputStream opened files
-        wb = new HSSFWorkbook(
-            POIDataSamples.getSpreadSheetInstance().openResourceAsStream("SampleSS.xls"));
-        try {
-            wb.write();
-            fail("Shouldn't work for InputStream");
-        } catch (IllegalStateException e) {
-            // expected here
+        try (InputStream is = samples.openResourceAsStream("SampleSS.xls");
+            HSSFWorkbook wb = new HSSFWorkbook(is)) {
+            assertThrows(IllegalStateException.class, wb::write, "Shouldn't work for InputStream");
         }
-        wb.close();
 
         // Can't work for Read-Only files
-        POIFSFileSystem fs = new POIFSFileSystem(
-                POIDataSamples.getSpreadSheetInstance().getFile("SampleSS.xls"), true);
-        wb = new HSSFWorkbook(fs);
-        try {
-            wb.write();
-            fail("Shouldn't work for Read Only");
-        } catch (IllegalStateException e) {
-            // expected here
+        try (POIFSFileSystem fs = new POIFSFileSystem(samples.getFile("SampleSS.xls"), true);
+             HSSFWorkbook wb = new HSSFWorkbook(fs)) {
+            assertThrows(IllegalStateException.class, wb::write, "Shouldn't work for Read Only");
         }
-        wb.close();
     }
 

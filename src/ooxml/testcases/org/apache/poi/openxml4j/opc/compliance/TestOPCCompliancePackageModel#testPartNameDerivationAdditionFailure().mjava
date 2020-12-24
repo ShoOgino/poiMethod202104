@@ -4,23 +4,16 @@
      * [M1.11]
      */
     @Test
-    public void testPartNameDerivationAdditionFailure() {
-        OPCPackage pkg = OPCPackage.create("TODELETEIFEXIST.docx");
-        try {
-            PackagePartName name = PackagingURIHelper
-                    .createPartName("/word/document.xml");
-            PackagePartName nameDerived = PackagingURIHelper
-                    .createPartName("/word/document.xml/image1.gif");
+    public void testPartNameDerivationAdditionFailure() throws InvalidFormatException, IOException {
+        try (OPCPackage pkg = OPCPackage.create(TESTFILE)) {
+            PackagePartName name = PackagingURIHelper.createPartName("/word/document.xml");
+            PackagePartName nameDerived = PackagingURIHelper.createPartName("/word/document.xml/image1.gif");
             pkg.createPart(name, ContentTypes.XML);
-            pkg.createPart(nameDerived, ContentTypes.EXTENSION_GIF);
-        } catch (InvalidOperationException e) {
+
+            assertThrows(InvalidOperationException.class, () -> pkg.createPart(nameDerived, ContentTypes.EXTENSION_GIF),
+                "A package implementer shall neither create nor recognize a part with a part name derived from another " +
+                "part name by appending segments to it. [M1.11]");
             pkg.revert();
-            return;
-        } catch (InvalidFormatException e) {
-            fail(e.getMessage());
         }
-        fail("A package implementer shall neither create nor recognize a part with a"
-                + " part name derived from another part name by appending segments to it."
-                + " [M1.11]");
     }
 

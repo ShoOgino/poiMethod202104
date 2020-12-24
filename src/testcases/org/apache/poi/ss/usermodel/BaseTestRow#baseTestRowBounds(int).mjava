@@ -1,29 +1,17 @@
     protected void baseTestRowBounds(int maxRowNum) throws IOException {
-        Workbook workbook = _testDataProvider.createWorkbook();
-        Sheet sheet = workbook.createSheet();
-        //Test low row bound
-        sheet.createRow(0);
-        //Test low row bound exception
-        try {
-            sheet.createRow(-1);
-            fail("expected exception");
-        } catch (IllegalArgumentException e) {
-            // expected during successful test
-            assertTrue("Did not find expected error message, had: " + e, 
-                    e.getMessage().startsWith("Invalid row number (-1)"));
-        }
+        try (Workbook workbook = _testDataProvider.createWorkbook()) {
+            Sheet sheet = workbook.createSheet();
+            //Test low row bound
+            sheet.createRow(0);
+            //Test low row bound exception
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> sheet.createRow(-1));
+            assertTrue(e.getMessage().startsWith("Invalid row number (-1)"));
 
-        //Test high row bound
-        sheet.createRow(maxRowNum);
-        //Test high row bound exception
-        try {
-            sheet.createRow(maxRowNum + 1);
-            fail("expected exception");
-        } catch (IllegalArgumentException e) {
-            // expected during successful test
-            assertEquals("Invalid row number ("+(maxRowNum + 1)+") outside allowable range (0.."+maxRowNum+")", e.getMessage());
+            //Test high row bound
+            sheet.createRow(maxRowNum);
+            //Test high row bound exception
+            e = assertThrows(IllegalArgumentException.class, () -> sheet.createRow(maxRowNum + 1));
+            assertEquals("Invalid row number (" + (maxRowNum + 1) + ") outside allowable range (0.." + maxRowNum + ")", e.getMessage());
         }
-        
-        workbook.close();
     }
 

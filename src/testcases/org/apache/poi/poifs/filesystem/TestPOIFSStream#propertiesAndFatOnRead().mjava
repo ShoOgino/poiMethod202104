@@ -1,147 +1,131 @@
-   @Test
-   public void propertiesAndFatOnRead() throws IOException {
-      POIFSFileSystem fsA, fsB;
+    @Test
+    public void propertiesAndFatOnRead() throws IOException {
+        POIFSFileSystem fsA, fsB;
 
-      // With a simple 512 block file
-      fsA = new POIFSFileSystem(_inst.getFile("BlockSize512.zvi"));
-      fsB = new POIFSFileSystem(_inst.openResourceAsStream("BlockSize512.zvi"));
-      for(POIFSFileSystem fs : new POIFSFileSystem[] {fsA,fsB}) {
-         // Check the FAT was properly processed:
-         // Verify we only got one block
-         fs.getBATBlockAndIndex(0);
-         fs.getBATBlockAndIndex(1);
-         try {
-            fs.getBATBlockAndIndex(140);
-            fail("Should only be one BAT, but a 2nd was found");
-         } catch(IndexOutOfBoundsException e) {
-            // expected here
-         }
+        // With a simple 512 block file
+        fsA = new POIFSFileSystem(_inst.getFile("BlockSize512.zvi"));
+        fsB = new POIFSFileSystem(_inst.openResourceAsStream("BlockSize512.zvi"));
+        for (POIFSFileSystem fs : new POIFSFileSystem[]{fsA, fsB}) {
+            // Check the FAT was properly processed:
+            // Verify we only got one block
+            fs.getBATBlockAndIndex(0);
+            fs.getBATBlockAndIndex(1);
+            assertThrows(IndexOutOfBoundsException.class, () -> fs.getBATBlockAndIndex(140),
+                "Should only be one BAT, but a 2nd was found");
 
-         // Verify a few next offsets
-         // 97 -> 98 -> END
-         assertEquals(98, fs.getNextBlock(97));
-         assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(98));
+            // Verify a few next offsets
+            // 97 -> 98 -> END
+            assertEquals(98, fs.getNextBlock(97));
+            assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(98));
 
 
-         // Check the properties
-         PropertyTable props = fs._get_property_table();
-         assertEquals(90, props.getStartBlock());
-         assertEquals(7, props.countBlocks());
+            // Check the properties
+            PropertyTable props = fs._get_property_table();
+            assertEquals(90, props.getStartBlock());
+            assertEquals(7, props.countBlocks());
 
-         // Root property tells us about the Mini Stream
-         RootProperty root = props.getRoot();
-         assertEquals("Root Entry", root.getName());
-         assertEquals(11564, root.getSize());
-         assertEquals(0, root.getStartBlock());
+            // Root property tells us about the Mini Stream
+            RootProperty root = props.getRoot();
+            assertEquals("Root Entry", root.getName());
+            assertEquals(11564, root.getSize());
+            assertEquals(0, root.getStartBlock());
 
-         // Check its children too
-         Property prop;
-         Iterator<Property> pi = root.getChildren();
-         prop = pi.next();
-         assertEquals("Thumbnail", prop.getName());
-         prop = pi.next();
-         assertEquals("\u0005DocumentSummaryInformation", prop.getName());
-         prop = pi.next();
-         assertEquals("\u0005SummaryInformation", prop.getName());
-         prop = pi.next();
-         assertEquals("Image", prop.getName());
-         prop = pi.next();
-         assertEquals("Tags", prop.getName());
-         assertFalse(pi.hasNext());
-
-
-         // Check the SBAT (Small Blocks FAT) was properly processed
-         POIFSMiniStore ministore = fs.getMiniStore();
-
-         // Verify we only got two SBAT blocks
-         ministore.getBATBlockAndIndex(0);
-         ministore.getBATBlockAndIndex(128);
-         try {
-            ministore.getBATBlockAndIndex(256);
-            fail("Should only be two SBATs, but a 3rd was found");
-         } catch(IndexOutOfBoundsException e) {
-            // expected here
-         }
-
-         // Verify a few offsets: 0->50 is a stream
-         for(int i=0; i<50; i++) {
-            assertEquals(i+1, ministore.getNextBlock(i));
-         }
-         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(50));
-
-         fs.close();
-      }
-
-      // Now with a simple 4096 block file
-      fsA = new POIFSFileSystem(_inst.getFile("BlockSize4096.zvi"));
-      fsB = new POIFSFileSystem(_inst.openResourceAsStream("BlockSize4096.zvi"));
-      for(POIFSFileSystem fs : new POIFSFileSystem[] {fsA,fsB}) {
-         // Check the FAT was properly processed
-         // Verify we only got one block
-         fs.getBATBlockAndIndex(0);
-         fs.getBATBlockAndIndex(1);
-         try {
-            fs.getBATBlockAndIndex(1040);
-            fail("Should only be one BAT, but a 2nd was found");
-         } catch(IndexOutOfBoundsException e) {
-            // expected here
-         }
-
-         // Verify a few next offsets
-         // 0 -> 1 -> 2 -> END
-         assertEquals(1, fs.getNextBlock(0));
-         assertEquals(2, fs.getNextBlock(1));
-         assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(2));
+            // Check its children too
+            Property prop;
+            Iterator<Property> pi = root.getChildren();
+            prop = pi.next();
+            assertEquals("Thumbnail", prop.getName());
+            prop = pi.next();
+            assertEquals("\u0005DocumentSummaryInformation", prop.getName());
+            prop = pi.next();
+            assertEquals("\u0005SummaryInformation", prop.getName());
+            prop = pi.next();
+            assertEquals("Image", prop.getName());
+            prop = pi.next();
+            assertEquals("Tags", prop.getName());
+            assertFalse(pi.hasNext());
 
 
-         // Check the properties
-         PropertyTable props = fs._get_property_table();
-         assertEquals(12, props.getStartBlock());
-         assertEquals(1, props.countBlocks());
+            // Check the SBAT (Small Blocks FAT) was properly processed
+            POIFSMiniStore ministore = fs.getMiniStore();
 
-         // Root property tells us about the Mini Stream
-         RootProperty root = props.getRoot();
-         assertEquals("Root Entry", root.getName());
-         assertEquals(11564, root.getSize());
-         assertEquals(0, root.getStartBlock());
+            // Verify we only got two SBAT blocks
+            ministore.getBATBlockAndIndex(0);
+            ministore.getBATBlockAndIndex(128);
+            assertThrows(IndexOutOfBoundsException.class, () -> ministore.getBATBlockAndIndex(256),
+                "Should only be two SBATs, but a 3rd was found");
 
-         // Check its children too
-         Property prop;
-         Iterator<Property> pi = root.getChildren();
-         prop = pi.next();
-         assertEquals("Thumbnail", prop.getName());
-         prop = pi.next();
-         assertEquals("\u0005DocumentSummaryInformation", prop.getName());
-         prop = pi.next();
-         assertEquals("\u0005SummaryInformation", prop.getName());
-         prop = pi.next();
-         assertEquals("Image", prop.getName());
-         prop = pi.next();
-         assertEquals("Tags", prop.getName());
-         assertFalse(pi.hasNext());
+            // Verify a few offsets: 0->50 is a stream
+            for (int i = 0; i < 50; i++) {
+                assertEquals(i + 1, ministore.getNextBlock(i));
+            }
+            assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(50));
+
+            fs.close();
+        }
+
+        // Now with a simple 4096 block file
+        fsA = new POIFSFileSystem(_inst.getFile("BlockSize4096.zvi"));
+        fsB = new POIFSFileSystem(_inst.openResourceAsStream("BlockSize4096.zvi"));
+        for (POIFSFileSystem fs : new POIFSFileSystem[]{fsA, fsB}) {
+            // Check the FAT was properly processed
+            // Verify we only got one block
+            fs.getBATBlockAndIndex(0);
+            fs.getBATBlockAndIndex(1);
+            assertThrows(IndexOutOfBoundsException.class, () -> fs.getBATBlockAndIndex(1040),
+                "Should only be one BAT, but a 2nd was found");
+
+            // Verify a few next offsets
+            // 0 -> 1 -> 2 -> END
+            assertEquals(1, fs.getNextBlock(0));
+            assertEquals(2, fs.getNextBlock(1));
+            assertEquals(POIFSConstants.END_OF_CHAIN, fs.getNextBlock(2));
 
 
-         // Check the SBAT (Small Blocks FAT) was properly processed
-         POIFSMiniStore ministore = fs.getMiniStore();
+            // Check the properties
+            PropertyTable props = fs._get_property_table();
+            assertEquals(12, props.getStartBlock());
+            assertEquals(1, props.countBlocks());
 
-         // Verify we only got one SBAT block
-         ministore.getBATBlockAndIndex(0);
-         ministore.getBATBlockAndIndex(128);
-         ministore.getBATBlockAndIndex(1023);
-         try {
-            ministore.getBATBlockAndIndex(1024);
-            fail("Should only be one SBAT, but a 2nd was found");
-         } catch(IndexOutOfBoundsException e) {
-            // expected here
-         }
+            // Root property tells us about the Mini Stream
+            RootProperty root = props.getRoot();
+            assertEquals("Root Entry", root.getName());
+            assertEquals(11564, root.getSize());
+            assertEquals(0, root.getStartBlock());
 
-         // Verify a few offsets: 0->50 is a stream
-         for(int i=0; i<50; i++) {
-            assertEquals(i+1, ministore.getNextBlock(i));
-         }
-         assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(50));
+            // Check its children too
+            Property prop;
+            Iterator<Property> pi = root.getChildren();
+            prop = pi.next();
+            assertEquals("Thumbnail", prop.getName());
+            prop = pi.next();
+            assertEquals("\u0005DocumentSummaryInformation", prop.getName());
+            prop = pi.next();
+            assertEquals("\u0005SummaryInformation", prop.getName());
+            prop = pi.next();
+            assertEquals("Image", prop.getName());
+            prop = pi.next();
+            assertEquals("Tags", prop.getName());
+            assertFalse(pi.hasNext());
 
-         fs.close();
-      }
-   }
+
+            // Check the SBAT (Small Blocks FAT) was properly processed
+            POIFSMiniStore ministore = fs.getMiniStore();
+
+            // Verify we only got one SBAT block
+            ministore.getBATBlockAndIndex(0);
+            ministore.getBATBlockAndIndex(128);
+            ministore.getBATBlockAndIndex(1023);
+            assertThrows(IndexOutOfBoundsException.class, () -> ministore.getBATBlockAndIndex(1024),
+                "Should only be one SBAT, but a 2nd was found");
+
+            // Verify a few offsets: 0->50 is a stream
+            for (int i = 0; i < 50; i++) {
+                assertEquals(i + 1, ministore.getNextBlock(i));
+            }
+            assertEquals(POIFSConstants.END_OF_CHAIN, ministore.getNextBlock(50));
+
+            fs.close();
+        }
+    }
 
