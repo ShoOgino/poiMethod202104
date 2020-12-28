@@ -1,0 +1,41 @@
+    /**
+     * Test embedded docs text extraction. For now, only
+     *  does poifs embedded, but will do ooxml ones
+     *  at some point.
+     */
+    @ParameterizedTest
+    @MethodSource("testEmbeddedData")
+    public void testEmbedded(String format, File file, String expected) throws Exception {
+        int numWord = 0, numXls = 0, numPpt = 0, numMsg = 0, numWordX = 0;
+
+        try (final POIOLE2TextExtractor ext = (POIOLE2TextExtractor) createExtractor(file)) {
+            final POITextExtractor[] embeds = ExtractorFactory.getEmbeddedDocsTextExtractors(ext);
+
+            for (POITextExtractor embed : embeds) {
+                assertTrue(embed.getText().length() > 20);
+                switch (embed.getClass().getSimpleName()) {
+                    case "SlideShowExtractor":
+                        numPpt++;
+                        break;
+                    case "ExcelExtractor":
+                        numXls++;
+                        break;
+                    case "WordExtractor":
+                        numWord++;
+                        break;
+                    case "OutlookTextExtractor":
+                        numMsg++;
+                        break;
+                    case "XWPFWordExtractor":
+                        numWordX++;
+                        break;
+                }
+            }
+
+            final String actual = embeds.length+"-"+numWord+"-"+numXls+"-"+numPpt+"-"+numMsg+"-"+numWordX;
+            assertEquals(expected, actual, "invalid number of embeddings - "+format);
+        }
+
+
+    }
+

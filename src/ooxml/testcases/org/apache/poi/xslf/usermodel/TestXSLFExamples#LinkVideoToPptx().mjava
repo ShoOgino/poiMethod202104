@@ -1,14 +1,13 @@
     @Test
     public void LinkVideoToPptx() throws IOException, URISyntaxException {
-            String videoFileName = "file_example_MP4_640_3MG.mp4";
-            File previewJpg = POIDataSamples.getDocumentInstance().getFile("abstract1.jpg");
+        String videoFileName = "file_example_MP4_640_3MG.mp4";
+        File previewJpg = POIDataSamples.getDocumentInstance().getFile("abstract1.jpg");
 
-            XMLSlideShow pptx = new XMLSlideShow();
-
+        try (XMLSlideShow pptx = new XMLSlideShow()) {
             XSLFSlide slide1 = pptx.createSlide();
 
             PackagePart pp = slide1.getPackagePart();
-            URI mp4uri = new URI("./"+videoFileName);
+            URI mp4uri = new URI("./" + videoFileName);
             PackageRelationship prsEmbed1 = pp.addRelationship(mp4uri, TargetMode.EXTERNAL, "http://schemas.microsoft.com/office/2007/relationships/media");
             PackageRelationship prsExec1 = pp.addRelationship(mp4uri, TargetMode.EXTERNAL, "http://schemas.openxmlformats.org/officeDocument/2006/relationships/video");
 
@@ -17,7 +16,7 @@
             XSLFPictureShape pic1 = slide1.createPicture(snap);
             pic1.setAnchor(new Rectangle(100, 100, 500, 400));
 
-            CTPicture xpic1 = (CTPicture)pic1.getXmlObject();
+            CTPicture xpic1 = (CTPicture) pic1.getXmlObject();
             CTHyperlink link1 = xpic1.getNvPicPr().getCNvPr().addNewHlinkClick();
             link1.setId("");
             link1.setAction("ppaction://media");
@@ -56,10 +55,10 @@
             ctn.addNewStCondLst().addNewCond().setDelay(STTLTimeIndefinite.INDEFINITE);
             cmedia.addNewTgtEl().addNewSpTgt().setSpid(pic1.getShapeId());
 
-
-            // write to file - use FileOutputStream instead
-            try (ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-                pptx.write(bos);
+            try (XMLSlideShow ppt2 = XSLFTestDataSamples.writeOutAndReadBack(pptx)) {
+                XSLFShape sh = ppt2.getSlides().get(0).getShapes().get(0);
+                assertTrue(sh instanceof XSLFPictureShape);
             }
+        }
     }
 
