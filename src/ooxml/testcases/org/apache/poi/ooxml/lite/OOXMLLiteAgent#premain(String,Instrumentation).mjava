@@ -1,4 +1,22 @@
-    public static void premain(String agentArgs, Instrumentation inst) {
-        inst.addTransformer(new LoggingTransformer(agentArgs));
+    public static void premain(String agentArgs, Instrumentation inst) throws IOException {
+        String[] args = (agentArgs == null ? "" : agentArgs).split("\\|", 2);
+        String logBase = args.length >= 1 ? args[0] : "ooxml-lite-report";
+
+        XsbLogger.load(logBase+".xsb");
+
+        ClazzLogger log = new ClazzLogger();
+        log.load(logBase+".clazz");
+        log.setPattern(args.length >= 2 ? args[1] : ".*/schemas/.*");
+        inst.addTransformer(log);
+
+        new AgentBuilder.Default()
+        // .with(AgentBuilder.Listener.StreamWriting.toSystemOut())
+            .type(named("org.apache.xmlbeans.impl.schema.SchemaTypeSystemImpl$XsbReader"))
+            .transform((builder, type, cl, m) ->
+                builder
+                .constructor(ElementMatchers.any())
+                .intercept(MethodDelegation.to(XsbLogger.class).andThen(SuperMethodCall.INSTANCE))
+            )
+            .installOn(inst);
     }
 
