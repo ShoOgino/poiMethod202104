@@ -11,17 +11,24 @@
        short[] newPos = new short[workbook.getWorkbook().getNumExFormats()];
        boolean[] isUsed = new boolean[newPos.length];
        boolean[] zapRecords = new boolean[newPos.length];
+
+	   // to speed up the optimisation for workbooks with a large number of
+	   // styles we perform the isUserDefined() check only once as it is
+	   // costly according to some profiling
+	   boolean[] userDefined = new boolean[newPos.length];
+
+	   // Get each style record, so we can do deletes
+	   //  without getting confused
+	   ExtendedFormatRecord[] xfrs = new ExtendedFormatRecord[newPos.length];
+
        for(int i=0; i<newPos.length; i++) {
            isUsed[i] = false;
            newPos[i] = (short)i;
            zapRecords[i] = false;
-       }
 
-       // Get each style record, so we can do deletes
-       //  without getting confused
-       ExtendedFormatRecord[] xfrs = new ExtendedFormatRecord[newPos.length];
-       for(int i=0; i<newPos.length; i++) {
-           xfrs[i] = workbook.getWorkbook().getExFormatAt(i);
+		   userDefined[i] = isUserDefined(workbook, i);
+
+		   xfrs[i] = workbook.getWorkbook().getExFormatAt(i);
        }
 
 	   // Loop over each style, seeing if it is the same
@@ -33,12 +40,13 @@
 		   // Check this one for being a duplicate
 		   //  of an earlier one
 		   int earlierDuplicate = -1;
-		   for (int j = 0; j < i && earlierDuplicate == -1; j++) {
+		   for (int j = 0; j < i; j++) {
 			   ExtendedFormatRecord xfCheck = workbook.getWorkbook().getExFormatAt(j);
 			   if (xfCheck.equals(xfrs[i]) &&
-					   // newer duplicate user defined styles
-					   !isUserDefined(workbook, j)) {
+					   // never duplicate user defined styles
+					   !userDefined[j]) {
 				   earlierDuplicate = j;
+				   break;
 			   }
 		   }
 
