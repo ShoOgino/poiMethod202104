@@ -4,8 +4,8 @@
      */
     @Test
     public void bug15375() throws Exception {
-        try (HSSFWorkbook wb = openSampleWorkbook("15375.xls")) {
-            HSSFSheet sheet = wb.getSheetAt(0);
+        try (HSSFWorkbook wb1 = openSampleWorkbook("15375.xls")) {
+            HSSFSheet sheet = wb1.getSheetAt(0);
 
             HSSFRow row = sheet.getRow(5);
             HSSFCell cell = row.getCell(3);
@@ -19,12 +19,14 @@
             // change existing numeric cell value
 
             HSSFRow oRow = sheet.getRow(14);
-            HSSFCell oCell = oRow.getCell(4);
-            oCell.setCellValue(75);
-            oCell = oRow.getCell(5);
-            setCellText(oCell, "0.3");
+            oRow.getCell(4).setCellValue(75);
+            setCellText(oRow.getCell(5), "0.3");
 
-            writeOutAndReadBack(wb).close();
+            try (HSSFWorkbook wb2 = writeOutAndReadBack(wb1)) {
+                HSSFRow oRow2 = wb2.getSheetAt(0).getRow(14);
+                assertEquals(75, oRow2.getCell(4).getNumericCellValue());
+                assertEquals("0.3", oRow2.getCell(5).getStringCellValue());
+            }
         }
     }
 
