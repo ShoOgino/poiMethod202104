@@ -1,0 +1,35 @@
+    @ParameterizedTest
+    @MethodSource("files")
+    public void testFile(File file) throws Exception {
+        try (InputStream stream = new FileInputStream(file)) {
+            if (file.getName().endsWith(".docx")) {
+                try (XWPFDocument doc = new XWPFDocument(stream)) {
+                    assertNotNull(doc);
+                }
+            } else if (file.getName().endsWith(".xlsx")) {
+                try (XSSFWorkbook xls = new XSSFWorkbook(stream)) {
+                    assertNotNull(xls);
+                    extractEmbedded(xls);
+                }
+            } else if (file.getName().endsWith(".pptx")) {
+                try (XMLSlideShow ppt = new XMLSlideShow(stream)) {
+                    assertNotNull(ppt);
+                    renderSlides(ppt);
+                }
+            } else {
+                throw new IllegalArgumentException("Don't know how to handle file " + file);
+            }
+        } catch (Exception e) {
+            Assumptions.assumeFalse(FAILING.contains(file.getName()),
+                    "File " + file + " is expected to fail");
+
+            throw e;
+        }
+
+        try (InputStream stream = new FileInputStream(file)) {
+            try (POITextExtractor extractor = ExtractorFactory.createExtractor(stream)) {
+                assertNotNull(extractor.getText());
+            }
+        }
+    }
+
