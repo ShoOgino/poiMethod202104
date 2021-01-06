@@ -1,21 +1,24 @@
     protected void read(InputStream is) throws IOException, XmlException {
-        Document doc;
-        try {
-            /*
-             * This is a seriously sick fix for the fact that some .xlsx files contain raw bits
-             * of HTML, without being escaped or properly turned into XML.
-             * The result is that they contain things like &gt;br&lt;, which breaks the XML parsing.
-             * This very sick InputStream wrapper attempts to spot these go past, and fix them.
-             */
-            doc = DocumentHelper.readDocument(new ReplacingInputStream(is, "<br>", "<br/>"));
-        } catch (SAXException e) {
-            throw new XmlException(e.getMessage(), e);
-        }
-
         XmlOptions xopt = new XmlOptions(DEFAULT_XML_OPTIONS);
         xopt.setLoadSubstituteNamespaces(Collections.singletonMap("", QNAME_VMLDRAWING.getNamespaceURI()));
+        xopt.setDocumentType(XmlDocument.type);
 
-        root = XmlDocument.Factory.parse(doc, xopt);
+        /*
+         * This is a seriously sick fix for the fact that some .xlsx files contain raw bits
+         * of HTML, without being escaped or properly turned into XML.
+         * The result is that they contain things like &gt;br&lt;, which breaks the XML parsing.
+         * This very sick InputStream wrapper attempts to spot these go past, and fix them.
+         *
+         * Furthermore some documents contain a default namespace of
+         * http://schemas.openxmlformats.org/spreadsheetml/2006/main for the namespace-less "xml" document type.
+         * this definition is wrong and removed.
+         */
+        root = XmlDocument.Factory.parse(
+            new ReplacingInputStream(
+            new ReplacingInputStream(is, "<br>", "<br/>"),
+            " xmlns=\""+NS_SPREADSHEETML+"\"", "")
+            , xopt);
+
         XmlCursor cur = root.getXml().newCursor();
 
         try {
