@@ -8,7 +8,6 @@
 		int numPartsBefore = 0;
 		String md5Before = Files.asByteSource(tmpFile).hash(Hashing.sha256()).toString();
 
-		RuntimeException ex = null;
 		try(OPCPackage pkg = OPCPackage.open(tmpFile, PackageAccess.READ_WRITE))
 		{
 			numPartsBefore = pkg.getParts().size();
@@ -17,13 +16,13 @@
 			pkg.addMarshaller("poi/junit", (part, out) -> {
 				throw new RuntimeException("Bugzilla 63029");
 			});
+
 			pkg.createPart(createPartName("/poi/test.xml"), "poi/junit");
-		} catch (RuntimeException e){
-			ex = e;
+
+			RuntimeException ex = assertThrows(RuntimeException.class, pkg::close);
+			// verify there was an exception while closing the file
+			assertEquals("Fail to save: an error occurs while saving the package : Bugzilla 63029", ex.getMessage());
 		}
-		// verify there was an exception while closing the file
-		assertNotNull(ex, "Fail to save: an error occurs while saving the package : Bugzilla 63029");
-		assertEquals("Fail to save: an error occurs while saving the package : Bugzilla 63029", ex.getMessage());
 
 		// assert that md5 after closing is the same, i.e. the source is left intact
 		String md5After = Files.asByteSource(tmpFile).hash(Hashing.sha256()).toString();
