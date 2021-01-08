@@ -1,62 +1,62 @@
     /**
      * Tests that we can define fonts to a new
-     *  file, save, load, and still see them
+     * file, save, load, and still see them
      */
     @Test
     public final void testCreateSave() throws IOException {
-        Workbook wb1 = _testDataProvider.createWorkbook();
-        Sheet s1 = wb1.createSheet();
-        Row r1 = s1.createRow(0);
-        Cell r1c1 = r1.createCell(0);
-        r1c1.setCellValue(2.2);
+        try (Workbook wb1 = _testDataProvider.createWorkbook()) {
+            Sheet s1 = wb1.createSheet();
+            Row r1 = s1.createRow(0);
+            Cell r1c1 = r1.createCell(0);
+            r1c1.setCellValue(2.2);
 
-        int num0 = wb1.getNumberOfFonts();
+            int num0 = wb1.getNumberOfFonts();
 
-        Font font=wb1.createFont();
-        font.setBold(true);
-        font.setStrikeout(true);
-        font.setColor(IndexedColors.YELLOW.getIndex());
-        font.setFontName("Courier");
-        int font1Idx = font.getIndex();
-        wb1.createCellStyle().setFont(font);
-        assertEquals(num0 + 1, wb1.getNumberOfFonts());
+            Font font = wb1.createFont();
+            font.setBold(true);
+            font.setStrikeout(true);
+            font.setColor(IndexedColors.YELLOW.getIndex());
+            font.setFontName("Courier");
+            int font1Idx = font.getIndex();
+            wb1.createCellStyle().setFont(font);
+            assertEquals(num0 + 1, wb1.getNumberOfFonts());
 
-        CellStyle cellStyleTitle=wb1.createCellStyle();
-        cellStyleTitle.setFont(font);
-        r1c1.setCellStyle(cellStyleTitle);
+            CellStyle cellStyleTitle = wb1.createCellStyle();
+            cellStyleTitle.setFont(font);
+            r1c1.setCellStyle(cellStyleTitle);
 
-        // Save and re-load
-        Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1);
-        wb1.close();
-        s1 = wb2.getSheetAt(0);
+            // Save and re-load
+            try (Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1)) {
+                s1 = wb2.getSheetAt(0);
 
-        assertEquals(num0 + 1, wb2.getNumberOfFonts());
-        int idx = s1.getRow(0).getCell(0).getCellStyle().getFontIndex();
-        Font fnt = wb2.getFontAt(idx);
-        assertNotNull(fnt);
-        assertEquals(IndexedColors.YELLOW.getIndex(), fnt.getColor());
-        assertEquals("Courier", fnt.getFontName());
+                assertEquals(num0 + 1, wb2.getNumberOfFonts());
+                int idx = s1.getRow(0).getCell(0).getCellStyle().getFontIndex();
+                Font fnt = wb2.getFontAt(idx);
+                assertNotNull(fnt);
+                assertEquals(IndexedColors.YELLOW.getIndex(), fnt.getColor());
+                assertEquals("Courier", fnt.getFontName());
 
-        // Now add an orphaned one
-        Font font2 = wb2.createFont();
-        font2.setItalic(true);
-        font2.setFontHeightInPoints((short)15);
-        int font2Idx = font2.getIndex();
-        wb2.createCellStyle().setFont(font2);
-        assertEquals(num0 + 2, wb2.getNumberOfFonts());
+                // Now add an orphaned one
+                Font font2 = wb2.createFont();
+                font2.setItalic(true);
+                font2.setFontHeightInPoints((short) 15);
+                int font2Idx = font2.getIndex();
+                wb2.createCellStyle().setFont(font2);
+                assertEquals(num0 + 2, wb2.getNumberOfFonts());
 
-        // Save and re-load
-        Workbook wb3 = _testDataProvider.writeOutAndReadBack(wb2);
-        wb2.close();
-        s1 = wb3.getSheetAt(0);
-        assertNotNull(s1);
+                // Save and re-load
+                try (Workbook wb3 = _testDataProvider.writeOutAndReadBack(wb2)) {
+                    s1 = wb3.getSheetAt(0);
+                    assertNotNull(s1);
 
-        assertEquals(num0 + 2, wb3.getNumberOfFonts());
-        assertNotNull(wb3.getFontAt(font1Idx));
-        assertNotNull(wb3.getFontAt(font2Idx));
+                    assertEquals(num0 + 2, wb3.getNumberOfFonts());
+                    assertNotNull(wb3.getFontAt(font1Idx));
+                    assertNotNull(wb3.getFontAt(font2Idx));
 
-        assertEquals(15, wb3.getFontAt(font2Idx).getFontHeightInPoints());
-        assertTrue(wb3.getFontAt(font2Idx).getItalic());
-        wb3.close();
+                    assertEquals(15, wb3.getFontAt(font2Idx).getFontHeightInPoints());
+                    assertTrue(wb3.getFontAt(font2Idx).getItalic());
+                }
+            }
+        }
     }
 

@@ -5,12 +5,13 @@
      * This test, based on common test files for HSSF and XSSF, checks
      *  that we can correctly evaluate these
      */
-    @Test
-    public void testMultiSheetAreasHSSFandXSSF() throws IOException {
-        Workbook wb1 = HSSFTestDataSamples.openSampleWorkbook("55906-MultiSheetRefs.xls");
-        Workbook wb2 = XSSFTestDataSamples.openSampleWorkbook("55906-MultiSheetRefs.xlsx");
+    @ParameterizedTest
+    @ValueSource(strings = {"55906-MultiSheetRefs.xls","55906-MultiSheetRefs.xlsx"})
+    public void testMultiSheetAreasHSSFandXSSF(String sampleFileName) throws Exception {
+        Function<String, Workbook> fun = sampleFileName.endsWith("x")
+            ? XSSFTestDataSamples::openSampleWorkbook : HSSFTestDataSamples::openSampleWorkbook;
 
-        for (Workbook wb : new Workbook[]{wb1,wb2}) {
+        try (Workbook wb = fun.apply(sampleFileName)) {
             FormulaEvaluator evaluator = wb.getCreationHelper().createFormulaEvaluator();
             Sheet s1 = wb.getSheetAt(0);
 
@@ -43,8 +44,5 @@
             assertEquals("COUNT(Sheet1:Sheet3!$A$1:$B$2)", countFA.getCellFormula());
             assertEquals("4.0", evaluator.evaluate(countFA).formatAsString());
         }
-
-        wb2.close();
-        wb1.close();
     }
 
