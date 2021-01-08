@@ -1,25 +1,21 @@
     @Test
     public void testClassCast_bug44861() throws Exception {
-        HSSFWorkbook wb = HSSFTestDataSamples.openSampleWorkbook("44861.xls");
+        try (HSSFWorkbook wb = openSampleWorkbook("44861.xls")) {
+            // Check direct
+            HSSFFormulaEvaluator.evaluateAllFormulaCells(wb);
 
-        // Check direct
-        HSSFFormulaEvaluator.evaluateAllFormulaCells(wb);
+            // And via calls
+            for (Sheet s : wb) {
+                HSSFFormulaEvaluator eval = new HSSFFormulaEvaluator(wb);
 
-        // And via calls
-        int numSheets = wb.getNumberOfSheets();
-        for (int i = 0; i < numSheets; i++) {
-            HSSFSheet s = wb.getSheetAt(i);
-            HSSFFormulaEvaluator eval = new HSSFFormulaEvaluator(wb);
-
-            for (Iterator<Row> rows = s.rowIterator(); rows.hasNext();) {
-                HSSFRow r = (HSSFRow)rows.next();
-                for (Iterator<Cell> cells = r.cellIterator(); cells.hasNext();) {
-                    HSSFCell c = (HSSFCell)cells.next();
-                    eval.evaluateFormulaCell(c);
+                for (Row r : s) {
+                    for (Cell c : r) {
+                        CellType ct = eval.evaluateFormulaCell(c);
+                        assertNotNull(ct);
+                    }
                 }
             }
-        }
 
-        wb.close();
+        }
     }
 

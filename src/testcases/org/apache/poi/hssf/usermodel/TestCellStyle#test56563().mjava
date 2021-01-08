@@ -1,18 +1,22 @@
     @Test
-    public void test56563() throws Throwable {
-        CellFormatBugExample threadA = new CellFormatBugExample("56563a.xls");
-        threadA.start();
-        CellFormatBugExample threadB = new CellFormatBugExample("56563b.xls");
-        threadB.start();
-
-        threadA.join();
-        threadB.join();
-
-        if(threadA.getException() != null) {
-            throw threadA.getException();
-        }
-        if(threadB.getException() != null) {
-            throw threadB.getException();
-        }
+    public void test56563() {
+        Stream.of("56563a.xls", "56563b.xls").parallel().forEach(fileName -> assertDoesNotThrow(() -> {
+            Random rand = new Random();
+            for(int i=0; i<10; i++) {
+                Thread.sleep(rand.nextInt(300));
+                try (Workbook wb = openSample(fileName)) {
+                    for (Row row : wb.getSheetAt(0)) {
+                        for (Cell cell : row) {
+                            cell.getCellStyle().getDataFormatString();
+                            if (cell.getCellType() == CellType.NUMERIC) {
+                                boolean isDate = DateUtil.isCellDateFormatted(cell);
+                                int cid = cell.getColumnIndex();
+                                assertFalse(cid > 0 && isDate, "cell " + cid + " is not a date.");
+                            }
+                        }
+                    }
+                }
+            }
+        }));
     }
 
