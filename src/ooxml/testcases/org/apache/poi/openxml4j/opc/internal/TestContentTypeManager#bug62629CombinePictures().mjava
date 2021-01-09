@@ -2,16 +2,48 @@
     void bug62629CombinePictures() throws Exception {
         // this file has incorrect default content-types which caused problems in Apache POI
         // we now handle this broken file more gracefully
-        XSSFWorkbook book = XSSFTestDataSamples.openSampleWorkbook("62629_target.xlsm");
-        XSSFWorkbook b = XSSFTestDataSamples.openSampleWorkbook("62629_toMerge.xlsx");
-        for (int i = 0; i < b.getNumberOfSheets(); i++) {
-            XSSFSheet sheet = book.createSheet(b.getSheetName(i));
-            copyPictures(sheet, b.getSheetAt(i));
-        }
+        try (XSSFWorkbook targetWB = openSampleWorkbook("62629_target.xlsm");
+            XSSFWorkbook mergeWB = openSampleWorkbook("62629_toMerge.xlsx")) {
+            for (Sheet b_sheet : mergeWB) {
+                XSSFSheet sheet = targetWB.createSheet(b_sheet.getSheetName());
 
-        XSSFWorkbook wbBack = XSSFTestDataSamples.writeOutAndReadBack(book);
-        wbBack.close();
-        book.close();
-        b.close();
+                XSSFDrawing drawingOld = (XSSFDrawing)b_sheet.createDrawingPatriarch();
+                XSSFDrawing drawingNew = sheet.createDrawingPatriarch();
+                CreationHelper helper = sheet.getWorkbook().getCreationHelper();
+                List<XSSFShape> shapes = drawingOld.getShapes();
+
+                for (XSSFShape shape : shapes) {
+                    assertTrue(shape instanceof XSSFPicture);
+                    XSSFPicture pic = (XSSFPicture)shape;
+                    XSSFPictureData picData = pic.getPictureData();
+                    int pictureIndex = targetWB.addPicture(picData.getData(), picData.getPictureType());
+                    ClientAnchor oldAnchor = pic.getClientAnchor();
+                    assertNotNull(oldAnchor);
+                    ClientAnchor anchor = helper.createClientAnchor();
+                    anchor.setAnchorType(oldAnchor.getAnchorType());
+                    anchor.setDx1(oldAnchor.getDx1());
+                    anchor.setDx2(oldAnchor.getDx2());
+                    anchor.setDy1(oldAnchor.getDy1());
+                    anchor.setDy2(oldAnchor.getDy2());
+                    anchor.setCol1(oldAnchor.getCol1());
+                    anchor.setCol2(oldAnchor.getCol2());
+                    anchor.setRow1(oldAnchor.getRow1());
+                    anchor.setRow2(oldAnchor.getRow2());
+                    drawingNew.createPicture(anchor, pictureIndex);
+                }
+            }
+
+            try (XSSFWorkbook wbBack = XSSFTestDataSamples.writeOutAndReadBack(targetWB)) {
+                for (XSSFWorkbook wb : Arrays.asList(targetWB, mergeWB)) {
+                    for (Sheet sheet : wb) {
+                        XSSFSheet backSheet = wbBack.getSheet(sheet.getSheetName());
+                        assertNotNull(backSheet);
+                        XSSFDrawing origPat = (XSSFDrawing)sheet.createDrawingPatriarch();
+                        XSSFDrawing backPat = backSheet.createDrawingPatriarch();
+                        assertEquals(origPat.getShapes().size(), backPat.getShapes().size());
+                    }
+                }
+            }
+        }
     }
 

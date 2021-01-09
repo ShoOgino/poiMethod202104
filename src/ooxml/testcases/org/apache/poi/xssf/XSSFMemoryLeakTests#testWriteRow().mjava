@@ -1,23 +1,22 @@
     @Test
     void testWriteRow() throws IOException {
-        final XSSFWorkbook wb = new XSSFWorkbook();
-        final XSSFSheet sheet1 = wb.createSheet("Sheet1");
-        final XSSFRow row = sheet1.createRow(0);
-        final XSSFCell cell = row.createCell(0);
-        cell.setCellValue("hello");
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            final XSSFSheet sheet1 = wb.createSheet("Sheet1");
+            final XSSFRow row = sheet1.createRow(0);
+            final XSSFCell cell = row.createCell(0);
+            cell.setCellValue("hello");
 
-        // Cannot check the CTCell here as it is reused now and thus
-        // not freed until we free up the Cell itself
-        //verifier.addObject(ctCell);
+            // Cannot check the CTCell here as it is reused now and thus
+            // not freed until we free up the Cell itself
+            //verifier.addObject(ctCell);
 
-        try (OutputStream out = new ByteArrayOutputStream(8192)) {
-            wb.write(out);
+            try (OutputStream out = new ByteArrayOutputStream(8192)) {
+                wb.write(out);
+            }
+
+            CTCell ctCell = cell.getCTCell();
+            assertSame(cell.getCTCell(), ctCell, "The CTCell should not be replaced");
+            assertSame(row.getCTRow().getCArray(0), ctCell, "The CTCell in the row should not be replaced");
         }
-
-        CTCell ctCell = cell.getCTCell();
-        assertSame(cell.getCTCell(), ctCell, "The CTCell should not be replaced");
-        assertSame(row.getCTRow().getCArray(0), ctCell, "The CTCell in the row should not be replaced");
-
-        wb.close();
     }
 
