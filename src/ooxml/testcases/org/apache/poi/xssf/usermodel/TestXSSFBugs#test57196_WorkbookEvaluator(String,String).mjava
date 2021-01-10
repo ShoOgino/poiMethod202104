@@ -1,0 +1,44 @@
+    @ParameterizedTest
+    @CsvSource({
+        // simple formula worked
+        "DEC2HEX(O2+D2), org.apache.poi.ss.formula.eval.StringEval [0]",
+        // this already failed! Hex2Dec did not correctly handle RefEval
+        "HEX2DEC(O8), org.apache.poi.ss.formula.eval.NumberEval [0]",
+        // slightly more complex one failed
+        "HEX2DEC(O8)-O2+D2, org.apache.poi.ss.formula.eval.NumberEval [0]",
+        // more complicated failed
+        "DEC2HEX(HEX2DEC(O8)-O2+D2), org.apache.poi.ss.formula.eval.StringEval [0]",
+        // what other similar functions
+        "DEC2BIN(O8)-O2+D2, org.apache.poi.ss.formula.eval.ErrorEval [#VALUE!]",
+        // what other similar functions
+        "DEC2BIN(A1), org.apache.poi.ss.formula.eval.StringEval [0]"
+    })
+    void test57196_WorkbookEvaluator(String formula, String expValue) throws IOException {
+        String previousLogger = System.getProperty("org.apache.poi.util.POILogger");
+        try (XSSFWorkbook wb = new XSSFWorkbook()) {
+            XSSFSheet sheet = wb.createSheet("Sheet1");
+            XSSFRow row = sheet.createRow(0);
+            XSSFCell cell = row.createCell(0);
+            cell.setCellValue("0");
+            cell = row.createCell(1);
+            cell.setCellValue(0);
+            cell = row.createCell(2);
+            cell.setCellValue(0);
+
+            cell.setCellFormula(formula);
+
+            WorkbookEvaluator workbookEvaluator = new WorkbookEvaluator(XSSFEvaluationWorkbook.create(wb), null, null);
+            workbookEvaluator.setDebugEvaluationOutputForNextEval(true);
+            ValueEval ve = workbookEvaluator.evaluate(new XSSFEvaluationCell(cell));
+
+            assertEquals(expValue, ve.toString());
+        } finally {
+            if (previousLogger == null) {
+                System.clearProperty("org.apache.poi.util.POILogger");
+            } else {
+                System.setProperty("org.apache.poi.util.POILogger", previousLogger);
+            }
+            System.clearProperty("poi.log.level");
+        }
+    }
+
