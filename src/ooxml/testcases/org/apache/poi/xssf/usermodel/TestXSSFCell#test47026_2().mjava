@@ -1,11 +1,15 @@
     @Test
     void test47026_2() throws IOException {
-        Workbook wb = _testDataProvider.openSampleWorkbook("47026.xlsm");
-        Sheet sheet = wb.getSheetAt(0);
-        Row row = sheet.getRow(0);
-        Cell cell = row.getCell(0);
-        cell.setCellFormula(null);
-        cell.setCellValue("456");
-        wb.close();
+        try (Workbook wb = _testDataProvider.openSampleWorkbook("47026.xlsm")) {
+            Sheet sheet = wb.getSheetAt(0);
+            Row row = sheet.getRow(0);
+            Cell cell = row.getCell(0);
+            assertEquals(CellType.NUMERIC, cell.getCachedFormulaResultType());
+            cell.setCellFormula(null);
+            IllegalStateException e = assertThrows(IllegalStateException.class, cell::getCachedFormulaResultType);
+            assertEquals("Only formula cells have cached results", e.getMessage());
+            cell.setCellValue("456");
+            assertEquals(CellType.STRING, cell.getCellType());
+        }
     }
 

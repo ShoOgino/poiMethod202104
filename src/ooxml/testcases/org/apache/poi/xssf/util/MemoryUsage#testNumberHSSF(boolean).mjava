@@ -9,16 +9,17 @@
      * @param wb        the workbook to write to
      * @param numCols   the number of columns in a row
      */
-    public static void numberSpreadsheet(Workbook wb, int numCols) {
-        System.out.println();
-        System.out.println("Testing " + wb.getClass().getName() + " numbers");
-        printMemoryUsage("before");
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void testNumberHSSF(boolean useXSSF) throws IOException {
         int i=0, cnt=0;
-        try {
+        try (Workbook wb = WorkbookFactory.create(useXSSF)) {
+            printMemoryUsage("before");
             Sheet sh = wb.createSheet();
             for(i=0; ; i++) {
                 Row row = sh.createRow(i);
-                for(int j=0; j < numCols; j++) {
+                assertNotNull(row);
+                for(int j=0; j < NUM_COLUMNS; j++) {
                     Cell cell = row.createCell(j);
                     cell.setCellValue(j);
                     cnt++;
@@ -26,10 +27,8 @@
             }
         } catch (OutOfMemoryError er) {
             System.out.println("Failed at row=" + i + ", objects : " + cnt);
-        } catch (final Exception e) {
-            System.out.println("Unable to reach an OutOfMemoryError");
-            System.out.println(e.getClass().getName() + ": " + e.getMessage());
+        } finally {
+            printMemoryUsage("after");
         }
-        printMemoryUsage("after");
     }
 

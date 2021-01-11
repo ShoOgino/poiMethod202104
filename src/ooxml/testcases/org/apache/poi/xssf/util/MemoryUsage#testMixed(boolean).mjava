@@ -1,0 +1,31 @@
+    /**
+     * Generate a spreadsheet until OutOfMemoryError
+     * cells in even columns are numbers, cells in odd columns are strings
+     */
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void testMixed(boolean useXSSF) throws IOException {
+        int i=0, cnt=0;
+        try (Workbook wb = WorkbookFactory.create(useXSSF)) {
+            printMemoryUsage("before");
+            Sheet sh = wb.createSheet();
+            for(i=0; ; i++) {
+                Row row = sh.createRow(i);
+                for(int j=0; j < NUM_COLUMNS; j++) {
+                    Cell cell = row.createCell(j);
+                    assertNotNull(cell);
+                    if(j % 2 == 0) {
+                        cell.setCellValue(j);
+                    } else {
+                        cell.setCellValue(new CellReference(j, i).formatAsString());
+                    }
+                    cnt++;
+                }
+            }
+        } catch (OutOfMemoryError er) {
+            System.out.println("Failed at row=" + i + ", objects : " + cnt);
+        } finally {
+            printMemoryUsage("after");
+        }
+    }
+

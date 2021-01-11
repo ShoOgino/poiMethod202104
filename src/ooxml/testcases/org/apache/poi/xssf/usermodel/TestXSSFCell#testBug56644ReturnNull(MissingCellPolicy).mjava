@@ -1,0 +1,32 @@
+    @ParameterizedTest
+    @EnumSource(value = MissingCellPolicy.class)
+    void testBug56644ReturnNull(MissingCellPolicy policy) throws IOException {
+        try (Workbook wb = XSSFTestDataSamples.openSampleWorkbook("56644.xlsx")) {
+            wb.setMissingCellPolicy(policy);
+            Sheet sheet = wb.getSheet("samplelist");
+            Row row = sheet.getRow(20);
+            switch (policy) {
+                case CREATE_NULL_AS_BLANK: {
+                    Cell cell = row.getCell(2);
+                    assertNotNull(cell);
+                    assertEquals(CellType.STRING, cell.getCellType());
+                    break;
+                }
+                case RETURN_BLANK_AS_NULL: {
+                    Cell cell = row.getCell(2);
+                    assertNotNull(cell);
+                    assertEquals(CellType.STRING, cell.getCellType());
+                    cell.setBlank();
+                    cell = row.getCell(2);
+                    assertNull(cell);
+                    break;
+                }
+                case RETURN_NULL_AND_BLANK: {
+                    Cell cell = row.getCell(2);
+                    assertNotNull(cell);
+                    break;
+                }
+            }
+        }
+    }
+
