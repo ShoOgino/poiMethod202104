@@ -1,0 +1,47 @@
+    public static Stream<Arguments> allfiles(String testName) throws IOException {
+        MultiValuedMap<String, ExcInfo> exMap;
+        Map<String,String> handlerMap;
+        try (Workbook wb = WorkbookFactory.create(new File(ROOT_DIR, "spreadsheet/stress.xls"))) {
+            exMap = readExMap(wb.getSheet("Exceptions"));
+            handlerMap = readHandlerMap(wb.getSheet("Handlers"));
+        }
+
+        DirectoryScanner scanner = new DirectoryScanner();
+        scanner.setBasedir(ROOT_DIR);
+        scanner.setExcludes(SCAN_EXCLUDES);
+
+        scanner.scan();
+
+        final List<Arguments> result = new ArrayList<>(100);
+        for (String file : scanner.getIncludedFiles()) {
+            // ... failures/handlers lookup doesn't work on windows otherwise
+            final String uniFile = file.replace('\\', '/');
+
+            String firstHandler = handlerMap.entrySet().stream()
+                .filter(me -> uniFile.endsWith(me.getKey()))
+                .map(Map.Entry::getValue).findFirst().orElse("NULL");
+
+            final String[] handlerStr = { firstHandler, secondHandler(firstHandler) };
+            for (String hs : handlerStr) {
+                if ("NULL".equals(hs)) continue;
+                ExcInfo info1 = exMap.get(file).stream()
+                    .filter(e ->
+                        (e.tests == null || e.tests.contains(testName) || "IGNORE".equals(e.tests)) &&
+                        (e.handler == null || e.handler.contains(hs))
+                    ).findFirst().orElse(null);
+
+                if (info1 == null || !"IGNORE".equals(info1.tests)) {
+                    result.add(Arguments.of(
+                        file,
+                        hs,
+                        (info1 != null) ? info1.password : null,
+                        (info1 != null) ? info1.exClazz : null,
+                        (info1 != null) ? info1.exMessage : null
+                    ));
+                }
+            }
+        }
+
+        return result.stream();
+    }
+

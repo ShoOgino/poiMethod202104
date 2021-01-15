@@ -1,16 +1,18 @@
 	@Override
     public void handleFile(InputStream stream, String path) throws Exception {
-	    XMLSlideShow slide = new XMLSlideShow(stream);
-	    XSLFSlideShow slideInner = new XSLFSlideShow(slide.getPackage());
-		assertNotNull(slideInner.getPresentation());
-		assertNotNull(slideInner.getSlideMasterReferences());
-		assertNotNull(slideInner.getSlideReferences());
+	    try (XMLSlideShow slide = new XMLSlideShow(stream);
+			 XSLFSlideShow slideInner = new XSLFSlideShow(slide.getPackage())) {
+			;
+			assertNotNull(slideInner.getPresentation());
+			assertNotNull(slideInner.getSlideMasterReferences());
+			assertNotNull(slideInner.getSlideReferences());
 
-		new POIXMLDocumentHandler().handlePOIXMLDocument(slide);
+			new POIXMLDocumentHandler().handlePOIXMLDocument(slide);
 
-		handleSlideShow(slide);
-
-		slideInner.close();
-		slide.close();
+			handleSlideShow(slide);
+		} catch (POIXMLException e) {
+	    	Exception cause = (Exception)e.getCause();
+	    	throw cause == null ? e : cause;
+		}
 	}
 

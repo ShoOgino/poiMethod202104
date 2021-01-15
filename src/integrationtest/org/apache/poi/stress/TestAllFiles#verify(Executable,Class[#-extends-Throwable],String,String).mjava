@@ -1,0 +1,27 @@
+    @SuppressWarnings("unchecked")
+    private static void verify(Executable exec, Class<? extends Throwable> exClass, String exMessage, String password) {
+        // this also removes the password for non encrypted files
+        Biff8EncryptionKey.setCurrentUserPassword(password);
+        if (exClass != null && AssertionFailedError.class.isAssignableFrom(exClass)) {
+            try {
+                exec.execute();
+                fail("expected failed assertion");
+            } catch (AssertionFailedError e) {
+                assertEquals(exMessage, e.getMessage());
+            } catch (Throwable e) {
+                fail("unexpected exception", e);
+            }
+        } else if (exClass != null) {
+            Exception e = assertThrows((Class<? extends Exception>)exClass, exec);
+            String actMsg = e.getMessage();
+            if (exMessage == null) {
+                assertNull(actMsg);
+            } else {
+                assertNotNull(actMsg);
+                assertTrue(actMsg.startsWith(exMessage), "Message: "+actMsg+" - didn't start with "+exMessage);
+            }
+        } else {
+            assertDoesNotThrow(exec);
+        }
+    }
+

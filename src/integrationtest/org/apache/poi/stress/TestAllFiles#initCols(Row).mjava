@@ -1,0 +1,22 @@
+    private static List<BiConsumer<ExcInfo,String>> initCols(Row row) {
+        Map<String,BiConsumer<ExcInfo,String>> m = new HashMap<>();
+        m.put("File", (e,s) -> e.file = s);
+        m.put("Tests", (e,s) -> e.tests = s);
+        m.put("Handler", (e,s) -> e.handler = s);
+        m.put("Password", (e,s) -> e.password = s);
+        m.put("Exception Class", (e,s) -> {
+            try {
+                e.exClazz = (Class<? extends Exception>) Class.forName(s);
+            } catch (ClassNotFoundException ex) {
+                fail(ex);
+            }
+        });
+        m.put("Exception Message", (e,s) -> e.exMessage = s);
+
+        return StreamSupport
+            .stream(row.spliterator(), false)
+            .map(Cell::getStringCellValue)
+            .map(v -> m.getOrDefault(v, (e,s) -> {}))
+            .collect(Collectors.toList());
+    }
+
