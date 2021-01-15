@@ -1,0 +1,34 @@
+    @ParameterizedTest
+    @CsvSource({
+        // Bug 51834 - Opening and Writing .doc file results in corrupt document
+        // we don't have Java test for this file - it should be checked using
+        // Microsoft BFF Validator. But check read-write-read anyway. -- sergey
+        "Bug51834.doc, true",
+        // Bug 52032 - ArrayIndexOutOfBoundsException with no stack trace (broken after revision 1178063)
+        "Bug52032_1.doc, true",
+        "Bug52032_2.doc, true",
+        "Bug52032_3.doc, true",
+        // Bug 53380 - ArrayIndexOutOfBounds Exception parsing word 97 document
+        "Bug53380_1.doc, true",
+        "Bug53380_2.doc, true",
+        "Bug53380_3.doc, true",
+        "Bug53380_4.doc, true",
+        // Bug 61268 - NegativeArraySizeException parsing word 97 document
+        "Bug61268.doc, false",
+        // Regression tests - testRegressionIn315beta2
+        "cap.stanford.edu_profiles_viewbiosketch_facultyid=4009&name=m_maciver.doc, true",
+        "ca.kwsymphony.www_education_School_Concert_Seat_Booking_Form_2011-12.doc, true",
+        // Bug 33519 - HWPF fails to read a file
+        "Bug33519.doc, false"
+    })
+    void testBug51834(String file, boolean doReadBack) throws Exception {
+        try (HWPFDocument doc = openSampleFile(file)) {
+            assertNotNull(WordToTextConverter.getText(doc));
+            if (doReadBack) {
+                try (HWPFDocument doc2 = HWPFTestDataSamples.writeOutAndReadBack(doc)) {
+                    assertNotNull(WordToTextConverter.getText(doc2));
+                }
+            }
+        }
+    }
+

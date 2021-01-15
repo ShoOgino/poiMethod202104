@@ -4,28 +4,28 @@
      */
     @Test
     void test51604p3() throws Exception {
-        HWPFDocument doc = HWPFTestDataSamples.openSampleFile("Bug51604.doc");
+        try (HWPFDocument doc = openSampleFile("Bug51604.doc")) {
 
-        FileInformationBlock fib = doc.getFileInformationBlock();
-        byte[] originalData = Arrays.copyOfRange(doc.getTableStream(), fib.getFcDop(), fib.getFcDop()+fib.getLcbDop());
+            FileInformationBlock fib = doc.getFileInformationBlock();
+            byte[] originalData = Arrays.copyOfRange(doc.getTableStream(), fib.getFcDop(), fib.getFcDop() + fib.getLcbDop());
 
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        doc.getDocProperties().writeTo(outputStream);
-        final byte[] oldData = outputStream.toByteArray();
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            doc.getDocProperties().writeTo(outputStream);
+            final byte[] oldData = outputStream.toByteArray();
 
-        assertEqualsIgnoreNewline(Arrays.toString(originalData ),
-                Arrays.toString(oldData));
+            assertEqualsIgnoreNewline(Arrays.toString(originalData), Arrays.toString(oldData));
 
-        Range range = doc.getRange();
-        int numParagraph = range.numParagraphs();
-        replaceText(range, numParagraph);
+            Range range = doc.getRange();
+            int numParagraph = range.numParagraphs();
+            replaceText(range, numParagraph);
 
-        doc = HWPFTestDataSamples.writeOutAndReadBack(doc);
+            try (HWPFDocument doc2 = HWPFTestDataSamples.writeOutAndReadBack(doc)) {
+                outputStream = new ByteArrayOutputStream();
+                doc2.getDocProperties().writeTo(outputStream);
+                final byte[] newData = outputStream.toByteArray();
 
-        outputStream = new ByteArrayOutputStream();
-        doc.getDocProperties().writeTo(outputStream);
-        final byte[] newData = outputStream.toByteArray();
-
-        assertEqualsIgnoreNewline(Arrays.toString(oldData ), Arrays.toString(newData));
+                assertEqualsIgnoreNewline(Arrays.toString(oldData), Arrays.toString(newData));
+            }
+        }
     }
 
