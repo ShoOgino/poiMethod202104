@@ -1,0 +1,33 @@
+    @ParameterizedTest
+    @CsvSource({
+        // bug47261.ppt has actually 16 slides, but also non-conforming multiple document records
+        "bug47261.ppt, 1",
+        "bug56240.ppt, 105",
+        "bug58516.ppt, 5",
+        "57272_corrupted_usereditatom.ppt, 6",
+        "37625.ppt, 29",
+        // Bug 41246: AIOOB with illegal note references
+        "41246-1.ppt, 36",
+        "41246-2.ppt, 16",
+        // Bug 44770: java.lang.RuntimeException: Couldn't instantiate the class for
+        // type with id 1036 on class class org.apache.poi.hslf.record.PPDrawing
+        "44770.ppt, 19",
+        // Bug 42486:  Failure parsing a seemingly valid PPT
+        "42486.ppt, 33"
+    })
+    void testFile(String file, int slideCnt) throws IOException {
+        try (HSLFSlideShow ppt = open(file)) {
+            for (HSLFSlide slide : ppt.getSlides()) {
+                List<HSLFShape> shape = slide.getShapes();
+                assertFalse(shape.isEmpty());
+            }
+
+            assertNotNull(ppt.getSlides().get(0));
+            ppt.removeSlide(0);
+            ppt.createSlide();
+            try (HSLFSlideShow ppt2 = writeOutAndReadBack(ppt)) {
+                assertEquals(slideCnt, ppt2.getSlides().size());
+            };
+        }
+    }
+

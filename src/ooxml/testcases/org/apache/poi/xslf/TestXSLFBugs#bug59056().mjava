@@ -1,0 +1,35 @@
+    @Test
+    void bug59056() throws IOException {
+        assumeFalse(xslfOnly);
+
+        final double[][] clips = {
+            { 50.999999999999986, 51.0, 298.0, 98.0 },
+            { 51.00000000000003, 51.0, 298.0, 98.0 },
+            { 51.0, 51.0, 298.0, 98.0 },
+            { 250.02000796164992, 93.10370370370373, 78.61839367617523, 55.89629629629627 },
+            { 79.58198774450841, 53.20887318960063, 109.13118501448272, 9.40935058567127 },
+        };
+
+        DummyGraphics2d dgfx = new DummyGraphics2d(new NullPrintStream()) {
+            int idx = 0;
+            @Override
+            public void clip(java.awt.Shape s) {
+                assertTrue(s instanceof Rectangle2D);
+                Rectangle2D r = (Rectangle2D)s;
+
+                double[] clip = clips[idx++];
+                assertEquals(clip[0], r.getX(), 0.5);
+                assertEquals(clip[1], r.getY(), 0.5);
+                assertEquals(clip[2], r.getWidth(), 0.5);
+                assertEquals(clip[3], r.getHeight(), 0.5);
+            }
+        };
+
+        Rectangle2D box = new Rectangle2D.Double(51, 51, 298, 98);
+        DrawFactory df = DrawFactory.getInstance(dgfx);
+
+        try (SlideShow<?,?> ppt = SlideShowFactory.create(slTests.getFile("54541_cropped_bitmap.ppt"))) {
+            ppt.getSlides().get(0).getShapes().forEach(shape -> df.drawShape(dgfx, shape, box));
+        }
+    }
+

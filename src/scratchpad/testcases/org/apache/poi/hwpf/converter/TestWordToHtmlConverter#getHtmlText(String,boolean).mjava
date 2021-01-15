@@ -1,27 +1,23 @@
-    private static String getHtmlText(final String sampleFileName,
-            boolean emulatePictureStorage) throws Exception {
-        HWPFDocument hwpfDocument = new HWPFDocument(POIDataSamples
-                .getDocumentInstance().openResourceAsStream(sampleFileName));
-
+    private static String getHtmlText(final String sampleFileName, boolean emulatePictureStorage) throws Exception {
         Document newDocument = XMLHelper.newDocumentBuilder().newDocument();
-        WordToHtmlConverter wordToHtmlConverter = new WordToHtmlConverter(
-                newDocument);
+        WordToHtmlConverter wordToHtmlConverter = new WordToHtmlConverter(newDocument);
 
-        if (emulatePictureStorage)
-        {
-            wordToHtmlConverter.setPicturesManager((content, pictureType, suggestedName, widthInches, heightInches) -> suggestedName);
-        }
+        try (HWPFDocument hwpfDocument = new HWPFDocument(SAMPLES.openResourceAsStream(sampleFileName))) {
+            if (emulatePictureStorage) {
+                wordToHtmlConverter.setPicturesManager((content, pictureType, suggestedName, widthInches, heightInches) -> suggestedName);
+            }
 
-        wordToHtmlConverter.processDocument(hwpfDocument);
+            wordToHtmlConverter.processDocument(hwpfDocument);
 
-        StringWriter stringWriter = new StringWriter();
+            StringWriter stringWriter = new StringWriter();
 
-        Transformer transformer = XMLHelper.newTransformer();
-        transformer.setOutputProperty(OutputKeys.METHOD, "html");
-        transformer.transform(
+            Transformer transformer = XMLHelper.newTransformer();
+            transformer.setOutputProperty(OutputKeys.METHOD, "html");
+            transformer.transform(
                 new DOMSource(wordToHtmlConverter.getDocument()),
                 new StreamResult(stringWriter));
 
-        return stringWriter.toString();
+            return stringWriter.toString();
+        }
     }
 
