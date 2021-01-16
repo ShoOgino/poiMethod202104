@@ -1,0 +1,32 @@
+    @SuppressWarnings("unchecked")
+    private static void verify(String file, Executable exec, Class<? extends Throwable> exClass, String exMessage, String password) {
+        final String errPrefix = file + " - failed. ";
+        // this also removes the password for non encrypted files
+        Biff8EncryptionKey.setCurrentUserPassword(password);
+        if (exClass != null && AssertionFailedError.class.isAssignableFrom(exClass)) {
+            try {
+                exec.execute();
+                fail(errPrefix + "Expected failed assertion");
+            } catch (AssertionFailedError e) {
+                assertEquals(exMessage, e.getMessage(), errPrefix);
+            } catch (Throwable e) {
+                fail(errPrefix + "Unexpected exception", e);
+            }
+        } else if (exClass != null) {
+            Exception e = assertThrows((Class<? extends Exception>)exClass, exec);
+            String actMsg = e.getMessage();
+            if (NullPointerException.class.isAssignableFrom(exClass)) {
+                // with Java 16+ NullPointerExceptions may contain a message ... but apparently not always ?!
+                assertTrue(jreVersion >= 16 || actMsg == null, errPrefix);
+                if (actMsg != null) {
+                    assertTrue(actMsg.startsWith(exMessage), errPrefix + "Message: "+actMsg+" - didn't start with "+exMessage);
+                }
+            } else {
+                assertNotNull(actMsg, errPrefix);
+                assertTrue(actMsg.startsWith(exMessage), errPrefix + "Message: "+actMsg+" - didn't start with "+exMessage);
+            }
+        } else {
+            assertDoesNotThrow(exec, errPrefix);
+        }
+    }
+
