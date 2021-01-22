@@ -1,0 +1,37 @@
+    @ParameterizedTest
+    @ValueSource(strings = { "basic_test_ppt_file.ppt", "ParagraphStylesShorterThanCharStyles.ppt" })
+    void testWritesOutTheSame(String testfile) throws Exception {
+        try (POIFSFileSystem pfs = new POIFSFileSystem(SAMPLES.openResourceAsStream(testfile));
+             HSLFSlideShowImpl hss = new HSLFSlideShowImpl(pfs)) {
+
+            // Write out to a byte array, and to a temp file
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            hss.write(baos);
+
+            final File file = TempFile.createTempFile("TestHSLF", ".ppt");
+            final File file2 = TempFile.createTempFile("TestHSLF", ".ppt");
+            hss.write(file);
+            hss.write(file2);
+
+
+            // Build an input stream of it, and read back as a POIFS from the stream
+            ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+            try (POIFSFileSystem npfS = new POIFSFileSystem(bais);
+                // And the same on the temp file
+                POIFSFileSystem npfF = new POIFSFileSystem(file)) {
+
+                // And another where we do an in-place write
+                try (POIFSFileSystem npfRF = new POIFSFileSystem(file2, false);
+                     HSLFSlideShowImpl hssRF = new HSLFSlideShowImpl(npfRF)) {
+                    hssRF.write();
+                }
+                try (POIFSFileSystem npfRF = new POIFSFileSystem(file2)) {
+                    // Check all of them in turn
+                    for (POIFSFileSystem npf : new POIFSFileSystem[]{npfS, npfF, npfRF}) {
+                        assertSame(pfs, npf);
+                    }
+                }
+            }
+        }
+    }
+

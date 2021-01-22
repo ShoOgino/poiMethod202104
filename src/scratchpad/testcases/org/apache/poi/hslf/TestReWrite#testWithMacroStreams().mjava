@@ -1,25 +1,28 @@
     @Test
     void testWithMacroStreams() throws IOException {
-        // Check that they're apparently the same
-        assertSlideShowWritesOutTheSame(hssC, pfsC);
+        try (POIFSFileSystem pfsC = new POIFSFileSystem(SAMPLES.openResourceAsStream("WithMacros.ppt"));
+            HSLFSlideShowImpl hssC = new HSLFSlideShowImpl(pfsC)) {
+            // Check that they're apparently the same
+            assertSlideShowWritesOutTheSame(hssC, pfsC);
 
-        // Currently has a Macros stream
-        assertNotNull( pfsC.getRoot().getEntry("Macros") );
+            // Currently has a Macros stream
+            assertNotNull(pfsC.getRoot().getEntry("Macros"));
 
-        // Write out normally, will loose the macro stream
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        hssC.write(baos);
-        ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-        POIFSFileSystem pfsNew = new POIFSFileSystem(bais);
-        assertFalse(pfsNew.getRoot().hasEntry("Macros"));
-        pfsNew.close();
+            // Write out normally, will loose the macro stream
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            hssC.write(baos);
+            ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+            try (POIFSFileSystem pfsNew = new POIFSFileSystem(bais)) {
+                assertFalse(pfsNew.getRoot().hasEntry("Macros"));
+            }
 
-        // But if we write out with nodes preserved, will be there
-        baos.reset();
-        hssC.write(baos, true);
-        bais = new ByteArrayInputStream(baos.toByteArray());
-        pfsNew = new POIFSFileSystem(bais);
-        assertTrue( pfsNew.getRoot().hasEntry("Macros") );
-        pfsNew.close();
+            // But if we write out with nodes preserved, will be there
+            baos.reset();
+            hssC.write(baos, true);
+            bais = new ByteArrayInputStream(baos.toByteArray());
+            try (POIFSFileSystem pfsNew = new POIFSFileSystem(bais)) {
+                assertTrue(pfsNew.getRoot().hasEntry("Macros"));
+            }
+        }
     }
 

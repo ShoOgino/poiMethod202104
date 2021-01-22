@@ -4,9 +4,15 @@
     @Test
     void test52991() throws IOException {
         try (SlideShowExtractor<?,?> ppe = openExtractor("badzip.ppt")) {
-            for (ObjectShape<?,?> shape : ppe.getOLEShapes()) {
-                IOUtils.copy(shape.getObjectData().getInputStream(), new ByteArrayOutputStream());
+            List<? extends ObjectShape<?, ?>> shapes = ppe.getOLEShapes();
+            assertEquals(1, shapes.size());
+            MessageDigest sha2 = CryptoFunctions.getMessageDigest(HashAlgorithm.sha256);
+            try (InputStream is = shapes.get(0).getObjectData().getInputStream()) {
+                sha2.update(IOUtils.toByteArray(is));
             }
+            String exp = "lIRRfGMin6B4++WR4XvA82usdQ3ijeHBHU85j523sKY=";
+            String act = Base64.encodeBase64String(sha2.digest());
+            assertEquals(exp, act);
         }
     }
 

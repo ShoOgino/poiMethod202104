@@ -2,8 +2,8 @@
         // Create a slideshow covering it
         @SuppressWarnings("resource")
         HSLFSlideShow ss = new HSLFSlideShow(hss);
-        ss.getSlides();
-        ss.getNotes();
+        assertDoesNotThrow(ss::getSlides);
+        assertDoesNotThrow(ss::getNotes);
 
         // Now write out to a byte array
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -13,23 +13,8 @@
         ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
 
         // Use POIFS to query that lot
-        POIFSFileSystem npfs = new POIFSFileSystem(bais);
-
-        // Check that the "PowerPoint Document" sections have the same size
-        DocumentEntry oProps = (DocumentEntry)pfs.getRoot().getEntry(HSLFSlideShow.POWERPOINT_DOCUMENT);
-        DocumentEntry nProps = (DocumentEntry)npfs.getRoot().getEntry(HSLFSlideShow.POWERPOINT_DOCUMENT);
-        assertEquals(oProps.getSize(),nProps.getSize());
-
-        // Check that they contain the same data
-        byte[] _oData = new byte[oProps.getSize()];
-        byte[] _nData = new byte[nProps.getSize()];
-        pfs.createDocumentInputStream(HSLFSlideShow.POWERPOINT_DOCUMENT).read(_oData);
-        npfs.createDocumentInputStream(HSLFSlideShow.POWERPOINT_DOCUMENT).read(_nData);
-        for(int i=0; i<_oData.length; i++) {
-            if(_oData[i] != _nData[i])
-                System.out.println(i + "\t" + Integer.toHexString(i));
-            assertEquals(_oData[i], _nData[i]);
+        try (POIFSFileSystem npfs = new POIFSFileSystem(bais)) {
+            assertSame(pfs, npfs);
         }
-        npfs.close();
     }
 
