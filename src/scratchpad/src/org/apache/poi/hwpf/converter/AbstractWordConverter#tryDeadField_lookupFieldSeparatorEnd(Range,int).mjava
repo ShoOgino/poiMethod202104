@@ -1,0 +1,44 @@
+    private int[] tryDeadField_lookupFieldSeparatorEnd(Range range, int beginMark) {
+        int separatorMark = -1;
+        int endMark = -1;
+        for (int c = beginMark + 1; c < range.numCharacterRuns(); c++) {
+            CharacterRun characterRun = range.getCharacterRun(c);
+
+            String text = characterRun.text();
+            if (text.isEmpty()) {
+                continue;
+            }
+
+            final char firstByte = text.charAt(0);
+            if (firstByte == FIELD_BEGIN_MARK) {
+                int[] nested = tryDeadField_lookupFieldSeparatorEnd(
+                    range, c);
+                if (nested != null) {
+                    c = nested[1];
+                }
+                continue;
+            }
+
+            if (firstByte == FIELD_SEPARATOR_MARK) {
+                if (separatorMark != -1) {
+                    // double; incorrect format
+                    return null;
+                }
+
+                separatorMark = c;
+                continue;
+            }
+
+            if (firstByte == FIELD_END_MARK) {
+                endMark = c;
+                break;
+            }
+        }
+
+        if (separatorMark == -1 || endMark == -1) {
+            return null;
+        }
+
+        return new int[]{separatorMark, endMark};
+    }
+

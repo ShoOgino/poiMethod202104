@@ -1,63 +1,46 @@
-    protected void processParagraphes( HWPFDocumentCore wordDocument,
-            Element flow, Range range, int currentTableLevel )
-    {
+    protected void processParagraphes(HWPFDocumentCore wordDocument, Element flow, Range range, int currentTableLevel) {
         final int paragraphs = range.numParagraphs();
-        for ( int p = 0; p < paragraphs; p++ )
-        {
-            Paragraph paragraph = range.getParagraph( p );
+        for (int p = 0; p < paragraphs; p++) {
+            Paragraph paragraph = range.getParagraph(p);
 
-            if ( paragraph.isInTable()
-                    && paragraph.getTableLevel() != currentTableLevel )
-            {
-                if ( paragraph.getTableLevel() < currentTableLevel )
-                    throw new IllegalStateException(
-                            "Trying to process table cell with higher level ("
-                                    + paragraph.getTableLevel()
-                                    + ") than current table level ("
-                                    + currentTableLevel
-                                    + ") as inner table part" );
+            if (paragraph.isInTable()
+                && paragraph.getTableLevel() != currentTableLevel) {
+                if (paragraph.getTableLevel() < currentTableLevel) {
+                    throw new IllegalStateException("Trying to process table cell with higher level (" +
+                        paragraph.getTableLevel() + ") than current table level ("
+                        + currentTableLevel + ") as inner table part");
+                }
 
-                Table table = range.getTable( paragraph );
-                processTable( wordDocument, flow, table );
+                Table table = range.getTable(paragraph);
+                processTable(wordDocument, flow, table);
 
-                p += table.numParagraphs();
-                p--;
+                p += table.numParagraphs() - 1;
                 continue;
             }
 
-            if ( paragraph.text().equals( "\u000c" ) )
-            {
-                processPageBreak( wordDocument, flow );
+            if (paragraph.text().equals("\u000c")) {
+                processPageBreak(wordDocument, flow);
             }
 
             boolean processed = false;
-            if ( paragraph.isInList() )
-            {
-                try
-                {
+            if (paragraph.isInList()) {
+                try {
                     HWPFList hwpfList = paragraph.getList();
 
                     String label = AbstractWordUtils.getBulletText(
-                            numberingState, hwpfList,
-                            (char) paragraph.getIlvl() );
+                        numberingState, hwpfList,
+                        (char) paragraph.getIlvl());
 
-                    processParagraph( wordDocument, flow, currentTableLevel,
-                            paragraph, label );
+                    processParagraph(wordDocument, flow, currentTableLevel, paragraph, label);
                     processed = true;
-                }
-                catch ( Exception exc )
-                {
-                    log.log(
-                            POILogger.WARN,
-                            "Can't process paragraph as list entry, will be processed without list information",
-                            exc );
+                } catch (Exception exc) {
+                    LOG.log(POILogger.WARN, "Can't process paragraph as list entry, will be processed without list information", exc);
                 }
             }
 
-            if (!processed)
-            {
-                processParagraph( wordDocument, flow, currentTableLevel,
-                        paragraph, AbstractWordUtils.EMPTY );
+            if (!processed) {
+                processParagraph(wordDocument, flow, currentTableLevel,
+                    paragraph, AbstractWordUtils.EMPTY);
             }
         }
 

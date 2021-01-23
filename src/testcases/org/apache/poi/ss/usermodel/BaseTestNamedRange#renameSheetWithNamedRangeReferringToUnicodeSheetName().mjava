@@ -1,14 +1,25 @@
     // bug 60260: renaming a sheet with a named range referring to a unicode (non-ASCII) sheet name
     @Test
-    void renameSheetWithNamedRangeReferringToUnicodeSheetName() {
-        Workbook wb = _testDataProvider.createWorkbook();
-        wb.createSheet("Sheet\u30FB1");
+    void renameSheetWithNamedRangeReferringToUnicodeSheetName() throws IOException {
+        String unicodeName = "Sheet\u30FB201";
+        String asciiName = "Sheet 1";
+        String rangeName = "test_named_range";
+        try (Workbook wb1 = _testDataProvider.createWorkbook()) {
+            wb1.createSheet(unicodeName);
 
-        Name name = wb.createName();
-        name.setNameName("test_named_range");
-        name.setRefersToFormula("'Sheet\u30FB201'!A1:A6");
+            Name name1 = wb1.createName();
+            name1.setNameName(rangeName);
+            name1.setRefersToFormula("'"+unicodeName+"'!A1:A6");
 
-        wb.setSheetName(0, "Sheet 1");
-        IOUtils.closeQuietly(wb);
+            wb1.setSheetName(0, asciiName);
+            assertEquals(asciiName, name1.getSheetName());
+
+            try (Workbook wb2 = _testDataProvider.writeOutAndReadBack(wb1)) {
+                Name name2 = wb2.getName(rangeName);
+                assertNotNull(name2);
+                // Eventually this will be updated, but currently we don't update the sheet name
+                assertEquals(asciiName, name2.getSheetName());
+            }
+         }
     }
 

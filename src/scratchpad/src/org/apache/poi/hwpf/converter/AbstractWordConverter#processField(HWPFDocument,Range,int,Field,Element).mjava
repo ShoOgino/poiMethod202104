@@ -1,119 +1,100 @@
-    protected void processField( HWPFDocument wordDocument, Range parentRange,
-            int currentTableLevel, Field field, Element currentBlock )
-    {
-        switch ( field.getType() )
-        {
-        case 37: // page reference
-        {
-            final Range firstSubrange = field.firstSubrange( parentRange );
-            if ( firstSubrange != null )
-            {
-                String formula = firstSubrange.text();
-                Matcher matcher = PATTERN_PAGEREF.matcher( formula );
-                if ( matcher.find() )
-                {
-                    String pageref = matcher.group( 1 );
-                    processPageref( wordDocument, currentBlock,
-                            field.secondSubrange( parentRange ),
-                            currentTableLevel, pageref );
-                    return;
-                }
-            }
-            break;
-        }
-        case 58: // Embedded Object
-        {
-            if ( !field.hasSeparator() )
-            {
-                LOG.log( POILogger.WARN, parentRange, " contains ", field,
-                        " with 'Embedded Object' but without separator mark" );
-                return;
-            }
-
-            CharacterRun separator = field
-                    .getMarkSeparatorCharacterRun( parentRange );
-
-            if ( separator.isOle2() )
-            {
-                // the only supported so far
-                boolean processed = processOle2( wordDocument, separator,
-                        currentBlock );
-
-                // if we didn't output OLE - output field value
-                if ( !processed )
-                {
-                    processCharacters( wordDocument, currentTableLevel,
-                            field.secondSubrange( parentRange ), currentBlock );
-                }
-
-                return;
-            }
-
-            break;
-        }
-        case 83: // drop down
-        {
-            Range fieldContent = field.firstSubrange( parentRange );
-            CharacterRun cr = fieldContent.getCharacterRun( fieldContent
-                    .numCharacterRuns() - 1 );
-            String[] values = cr.getDropDownListValues();
-            Integer defIndex = cr.getDropDownListDefaultItemIndex();
-
-            if ( values != null && values.length > 0 )
-            {
-                processDropDownList( currentBlock, cr, values,
-                        defIndex == null ? -1 : defIndex.intValue() );
-                return;
-            }
-            break;
-        }
-        case 88: // hyperlink
-        {
-            final Range firstSubrange = field.firstSubrange( parentRange );
-            if ( firstSubrange != null )
-            {
-                String formula = firstSubrange.text();
-                Matcher matcher = PATTERN_HYPERLINK_EXTERNAL.matcher( formula );
-                if ( matcher.matches() )
-                {
-                    String hyperlink = matcher.group( 1 );
-                    processHyperlink( wordDocument, currentBlock,
-                            field.secondSubrange( parentRange ),
-                            currentTableLevel, hyperlink );
-                    return;
-                }
-                matcher.usePattern( PATTERN_HYPERLINK_LOCAL );
-                if ( matcher.matches() )
-                {
-                    String hyperlink = matcher.group( 1 );
-                    Range textRange = null;
-                    String text = matcher.group( 2 );
-                    if ( AbstractWordUtils.isNotEmpty( text ) )
-                    {
-                        textRange = new Range( firstSubrange.getStartOffset()
-                                + matcher.start( 2 ),
-                                firstSubrange.getStartOffset()
-                                        + matcher.end( 2 ), firstSubrange )
-                        {
-                            @Override
-                            public String toString()
-                            {
-                                return "Local hyperlink text";
-                            }
-                        };
+    protected void processField(HWPFDocument wordDocument, Range parentRange,
+        int currentTableLevel, Field field, Element currentBlock) {
+        switch (field.getType()) {
+            case FIELD_PAGE_REFERENCE: {
+                final Range firstSubrange = field.firstSubrange(parentRange);
+                if (firstSubrange != null) {
+                    String formula = firstSubrange.text();
+                    Matcher matcher = PATTERN_PAGEREF.matcher(formula);
+                    if (matcher.find()) {
+                        String pageref = matcher.group(1);
+                        processPageref(wordDocument, currentBlock,
+                            field.secondSubrange(parentRange),
+                            currentTableLevel, pageref);
+                        return;
                     }
-                    processPageref( wordDocument, currentBlock, textRange,
-                            currentTableLevel, hyperlink );
+                }
+                break;
+            }
+            case FIELD_EMBEDDED_OBJECT: {
+                if (!field.hasSeparator()) {
+                    LOG.log(POILogger.WARN, parentRange, " contains ", field,
+                        " with 'Embedded Object' but without separator mark");
                     return;
                 }
+
+                CharacterRun separator = field
+                    .getMarkSeparatorCharacterRun(parentRange);
+
+                if (separator.isOle2()) {
+                    // the only supported so far
+                    boolean processed = processOle2(wordDocument, separator,
+                        currentBlock);
+
+                    // if we didn't output OLE - output field value
+                    if (!processed) {
+                        processCharacters(wordDocument, currentTableLevel,
+                            field.secondSubrange(parentRange), currentBlock);
+                    }
+
+                    return;
+                }
+
+                break;
             }
-            break;
-        }
+            case FIELD_DROP_DOWN: {
+                Range fieldContent = field.firstSubrange(parentRange);
+                CharacterRun cr = fieldContent.getCharacterRun(fieldContent
+                    .numCharacterRuns() - 1);
+                String[] values = cr.getDropDownListValues();
+                Integer defIndex = cr.getDropDownListDefaultItemIndex();
+
+                if (values != null && values.length > 0) {
+                    processDropDownList(currentBlock, cr, values,
+                        defIndex == null ? -1 : defIndex);
+                    return;
+                }
+                break;
+            }
+            case FIELD_HYPERLINK: {
+                final Range firstSubrange = field.firstSubrange(parentRange);
+                if (firstSubrange != null) {
+                    String formula = firstSubrange.text();
+                    Matcher matcher = PATTERN_HYPERLINK_EXTERNAL.matcher(formula);
+                    if (matcher.matches()) {
+                        String hyperlink = matcher.group(1);
+                        processHyperlink(wordDocument, currentBlock,
+                            field.secondSubrange(parentRange),
+                            currentTableLevel, hyperlink);
+                        return;
+                    }
+                    matcher.usePattern(PATTERN_HYPERLINK_LOCAL);
+                    if (matcher.matches()) {
+                        String hyperlink = matcher.group(1);
+                        Range textRange = null;
+                        String text = matcher.group(2);
+                        if (AbstractWordUtils.isNotEmpty(text)) {
+                            textRange = new Range(firstSubrange.getStartOffset()
+                                + matcher.start(2),
+                                firstSubrange.getStartOffset()
+                                    + matcher.end(2), firstSubrange) {
+                                @Override
+                                public String toString() {
+                                    return "Local hyperlink text";
+                                }
+                            };
+                        }
+                        processPageref(wordDocument, currentBlock, textRange,
+                            currentTableLevel, hyperlink);
+                        return;
+                    }
+                }
+                break;
+            }
         }
 
-        LOG.log( POILogger.WARN, parentRange, " contains ", field,
-                " with unsupported type or format" );
-        processCharacters( wordDocument, currentTableLevel,
-                field.secondSubrange( parentRange ), currentBlock );
+        LOG.log(POILogger.WARN, parentRange, " contains ", field, " with unsupported type or format");
+        processCharacters(wordDocument, currentTableLevel,
+            field.secondSubrange(parentRange), currentBlock);
     }
 

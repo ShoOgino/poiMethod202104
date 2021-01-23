@@ -17,50 +17,54 @@
         "false, true, " + DateFormat.FULL + ", Full"
     })
     void testJavaDateFormatsInExcel(boolean dates, boolean times, int style, String styleName ) throws Exception {
+        String sheetName = (dates) ? ((times) ? "DateTimes" : "Dates") : "Times";
+        String[] headers = {
+            "locale", "DisplayName", "Excel " + styleName, "java.text.DateFormat",
+            "Equals", "Java pattern", "Excel pattern"
+        };
+
+        Locale[] locales = Arrays.stream(DateFormat.getAvailableLocales())
+            // only use locale with known LocaleIDs
+            .filter(l -> !getPrefixForLocale(l).isEmpty() || Locale.ROOT.equals(l) || l.toLanguageTag().isEmpty())
+            .sorted(Comparator.comparing(Locale::toString))
+            .toArray(Locale[]::new);
+
+
         try (Workbook workbook = new HSSFWorkbook()) {
-            String sheetName = (dates) ? ((times) ? "DateTimes" : "Dates") : "Times";
             Sheet sheet = workbook.createSheet(sheetName);
             Row header = sheet.createRow(0);
-            header.createCell(0).setCellValue("locale");
-            header.createCell(1).setCellValue("DisplayName");
-            header.createCell(2).setCellValue("Excel " + styleName);
-            header.createCell(3).setCellValue("java.text.DateFormat");
-            header.createCell(4).setCellValue("Equals");
-            header.createCell(5).setCellValue("Java pattern");
-            header.createCell(6).setCellValue("Excel pattern");
+            IntStream.range(0, headers.length).forEach(i -> header.createCell(i).setCellValue(headers[i]));
 
             int rowNum = 1;
-            for (Locale locale : DateFormat.getAvailableLocales()) {
-                Row row = sheet.createRow(rowNum++);
+            final Cell[] cell = new Cell[7];
+            final Date date = new Date();
 
-                row.createCell(0).setCellValue(locale.toString());
-                row.createCell(1).setCellValue(locale.getDisplayName(Locale.ROOT));
-
+            for (Locale locale : locales) {
                 DateFormat dateFormat = (dates)
                     ? (times ? getDateTimeInstance(style, style, locale) : getDateInstance(style, locale))
                     : getTimeInstance(style, locale);
-
-                Cell cell = row.createCell(2);
-                Date date = new Date();
-                cell.setCellValue(date);
-                CellStyle cellStyle = row.getSheet().getWorkbook().createCellStyle();
-
                 String javaDateFormatPattern = ((SimpleDateFormat) dateFormat).toPattern();
                 String excelFormatPattern = DateFormatConverter.convert(locale, javaDateFormatPattern);
 
-                DataFormat poiFormat = row.getSheet().getWorkbook().createDataFormat();
+                Row row = sheet.createRow(rowNum++);
+                IntStream.range(0, headers.length).forEach(i -> cell[i] = row.createCell(i));
+                CellStyle cellStyle = workbook.createCellStyle();
+                DataFormat poiFormat = workbook.createDataFormat();
                 cellStyle.setDataFormat(poiFormat.getFormat(excelFormatPattern));
-                row.createCell(3).setCellValue(dateFormat.format(date));
 
-                cell.setCellStyle(cellStyle);
+                cell[0].setCellValue(locale.toString());
+                cell[1].setCellValue(locale.getDisplayName(Locale.ROOT));
+                cell[2].setCellValue(date);
+                cell[2].setCellStyle(cellStyle);
+                cell[3].setCellValue(dateFormat.format(date));
 
                 // the formula returns TRUE is the formatted date in column C equals to the string in column D
-                row.createCell(4).setCellFormula("TEXT(C" + rowNum + ",G" + rowNum + ")=D" + rowNum);
-                row.createCell(5).setCellValue(javaDateFormatPattern);
-                row.createCell(6).setCellValue(excelFormatPattern);
+                cell[4].setCellFormula("TEXT(C" + rowNum + ",G" + rowNum + ")=D" + rowNum);
+                cell[5].setCellValue(javaDateFormatPattern);
+                cell[6].setCellValue(excelFormatPattern);
             }
 
-            workbook.write(new NullOutputStream());
+            assertDoesNotThrow(() -> workbook.write(new NullOutputStream()));
         }
     }
 

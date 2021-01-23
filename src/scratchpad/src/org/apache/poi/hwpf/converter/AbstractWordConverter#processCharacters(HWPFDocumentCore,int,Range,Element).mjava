@@ -1,8 +1,8 @@
-    protected boolean processCharacters( final HWPFDocumentCore wordDocument,
-            final int currentTableLevel, final Range range, final Element block )
-    {
-        if ( range == null )
+    protected boolean processCharacters(final HWPFDocumentCore wordDocument,
+        final int currentTableLevel, final Range range, final Element block) {
+        if (range == null) {
             return false;
+        }
 
         boolean haveAnyText = false;
 
@@ -13,62 +13,57 @@
          * reconstruct the structure of range -- sergey
          */
         List<Structure> structures = new LinkedList<>();
-        if ( wordDocument instanceof HWPFDocument )
-        {
+        if (wordDocument instanceof HWPFDocument) {
             final HWPFDocument doc = (HWPFDocument) wordDocument;
 
             Map<Integer, List<Bookmark>> rangeBookmarks = doc.getBookmarks()
-                    .getBookmarksStartedBetween( range.getStartOffset(),
-                            range.getEndOffset() );
+                .getBookmarksStartedBetween(range.getStartOffset(),
+                    range.getEndOffset());
 
-            if ( rangeBookmarks != null )
-            {
-                for ( List<Bookmark> lists : rangeBookmarks.values() )
-                {
-                    for ( Bookmark bookmark : lists )
-                    {
-                        if ( !bookmarkStack.contains( bookmark ) )
-                            addToStructures( structures, new Structure(
-                                    bookmark ) );
+            if (rangeBookmarks != null) {
+                for (List<Bookmark> lists : rangeBookmarks.values()) {
+                    for (Bookmark bookmark : lists) {
+                        if (!bookmarkStack.contains(bookmark)) {
+                            addToStructures(structures, new Structure(
+                                bookmark));
+                        }
                     }
                 }
             }
 
             // TODO: dead fields?
             int skipUntil = -1;
-            for ( int c = 0; c < range.numCharacterRuns(); c++ )
-            {
-                CharacterRun characterRun = range.getCharacterRun( c );
-                if ( characterRun == null )
+            for (int c = 0; c < range.numCharacterRuns(); c++) {
+                CharacterRun characterRun = range.getCharacterRun(c);
+                if (characterRun == null) {
                     throw new AssertionError();
-                if ( characterRun.getStartOffset() < skipUntil )
-                    continue;
-                String text = characterRun.text();
-                if ( text == null || text.length() == 0
-                        || text.charAt( 0 ) != FIELD_BEGIN_MARK )
-                    continue;
-
-                Field aliveField = ( (HWPFDocument) wordDocument ).getFields()
-                        .getFieldByStartOffset( FieldsDocumentPart.MAIN,
-                                characterRun.getStartOffset() );
-                if ( aliveField != null )
-                {
-                    addToStructures( structures, new Structure( aliveField ) );
                 }
-                else
-                {
+                if (characterRun.getStartOffset() < skipUntil) {
+                    continue;
+                }
+                String text = characterRun.text();
+                if (text == null || text.length() == 0
+                    || text.charAt(0) != FIELD_BEGIN_MARK) {
+                    continue;
+                }
+
+                Field aliveField = ((HWPFDocument) wordDocument).getFields()
+                    .getFieldByStartOffset(FieldsDocumentPart.MAIN,
+                        characterRun.getStartOffset());
+                if (aliveField != null) {
+                    addToStructures(structures, new Structure(aliveField));
+                } else {
                     int[] separatorEnd = tryDeadField_lookupFieldSeparatorEnd(
-                            wordDocument, range, c );
-                    if ( separatorEnd != null )
-                    {
+                        range, c);
+                    if (separatorEnd != null) {
                         addToStructures(
-                                structures,
-                                new Structure( new DeadFieldBoundaries( c,
-                                        separatorEnd[0], separatorEnd[1] ),
-                                        characterRun.getStartOffset(), range
-                                                .getCharacterRun(
-                                                        separatorEnd[1] )
-                                                .getEndOffset() ) );
+                            structures,
+                            new Structure(new DeadFieldBoundaries(c,
+                                separatorEnd[0], separatorEnd[1]),
+                                characterRun.getStartOffset(), range
+                                .getCharacterRun(
+                                    separatorEnd[1])
+                                .getEndOffset()));
                         c = separatorEnd[1];
                     }
                 }
@@ -76,261 +71,221 @@
         }
 
         structures = new ArrayList<>(structures);
-        Collections.sort( structures );
+        Collections.sort(structures);
 
         int previous = range.getStartOffset();
-        for ( Structure structure : structures )
-        {
-            if ( structure.start != previous )
-            {
-                Range subrange = new Range( previous, structure.start, range )
-                {
+        for (Structure structure : structures) {
+            if (structure.start != previous) {
+                Range subrange = new Range(previous, structure.start, range) {
                     @Override
-                    public String toString()
-                    {
+                    public String toString() {
                         return "BetweenStructuresSubrange " + super.toString();
                     }
                 };
-                processCharacters( wordDocument, currentTableLevel, subrange,
-                        block );
+                processCharacters(wordDocument, currentTableLevel, subrange,
+                    block);
             }
 
-            if ( structure.structure instanceof Bookmark )
-            {
+            if (structure.structure instanceof Bookmark) {
+                assert(wordDocument instanceof HWPFDocument);
                 // other bookmarks with same boundaries
                 List<Bookmark> bookmarks = new LinkedList<>();
-                for ( Bookmark bookmark : ( (HWPFDocument) wordDocument )
-                        .getBookmarks()
-                        .getBookmarksStartedBetween( structure.start,
-                                structure.start + 1 ).values().iterator()
-                        .next() )
-                {
-                    if ( bookmark.getStart() == structure.start
-                            && bookmark.getEnd() == structure.end )
-                    {
-                        bookmarks.add( bookmark );
+                for (Bookmark bookmark : ((HWPFDocument) wordDocument)
+                    .getBookmarks()
+                    .getBookmarksStartedBetween(structure.start,
+                        structure.start + 1).values().iterator()
+                    .next()) {
+                    if (bookmark.getStart() == structure.start
+                        && bookmark.getEnd() == structure.end) {
+                        bookmarks.add(bookmark);
                     }
                 }
 
-                bookmarkStack.addAll( bookmarks );
-                try
-                {
-                    int end = Math.min( range.getEndOffset(), structure.end );
-                    Range subrange = new Range( structure.start, end, range )
-                    {
+                bookmarkStack.addAll(bookmarks);
+                try {
+                    int end = Math.min(range.getEndOffset(), structure.end);
+                    Range subrange = new Range(structure.start, end, range) {
                         @Override
-                        public String toString()
-                        {
+                        public String toString() {
                             return "BookmarksSubrange " + super.toString();
                         }
                     };
 
-                    processBookmarks( wordDocument, block, subrange,
-                            currentTableLevel, bookmarks );
+                    processBookmarks(wordDocument, block, subrange,
+                        currentTableLevel, bookmarks);
+                } finally {
+                    bookmarkStack.removeAll(bookmarks);
                 }
-                finally
-                {
-                    bookmarkStack.removeAll( bookmarks );
-                }
-            }
-            else if ( structure.structure instanceof Field )
-            {
+            } else if (structure.structure instanceof Field) {
+                assert(wordDocument instanceof HWPFDocument);
                 Field field = (Field) structure.structure;
-                processField( (HWPFDocument) wordDocument, range,
-                        currentTableLevel, field, block );
-            }
-            else if ( structure.structure instanceof DeadFieldBoundaries )
-            {
+                processField((HWPFDocument) wordDocument, range, currentTableLevel, field, block);
+            } else if (structure.structure instanceof DeadFieldBoundaries) {
                 DeadFieldBoundaries boundaries = (DeadFieldBoundaries) structure.structure;
-                processDeadField( wordDocument, block, range,
-                        currentTableLevel, boundaries.beginMark,
-                        boundaries.separatorMark, boundaries.endMark );
-            }
-            else
-            {
-                throw new UnsupportedOperationException( "NYI: "
-                        + structure.structure.getClass() );
+                processDeadField(wordDocument, block, range,
+                    currentTableLevel, boundaries.beginMark,
+                    boundaries.separatorMark, boundaries.endMark);
+            } else {
+                throw new UnsupportedOperationException("NYI: "
+                    + structure.structure.getClass());
             }
 
-            previous = Math.min( range.getEndOffset(), structure.end );
+            previous = Math.min(range.getEndOffset(), structure.end);
         }
 
-        if ( previous != range.getStartOffset() )
-        {
-            if ( previous > range.getEndOffset() )
-            {
-                LOG.log( POILogger.WARN, "Latest structure in ", range,
-                        " ended at #", previous, " after range boundaries [",
-                        range.getStartOffset(), "; ", range.getEndOffset(),
-                        ")" );
+        if (previous != range.getStartOffset()) {
+            if (previous > range.getEndOffset()) {
+                LOG.log(POILogger.WARN, "Latest structure in ", range,
+                    " ended at #", previous, " after range boundaries [",
+                    range.getStartOffset(), "; ", range.getEndOffset(),
+                    ")");
                 return true;
             }
 
-            if ( previous < range.getEndOffset() )
-            {
-                Range subrange = new Range( previous, range.getEndOffset(),
-                        range )
-                {
+            if (previous < range.getEndOffset()) {
+                Range subrange = new Range(previous, range.getEndOffset(),
+                    range) {
                     @Override
-                    public String toString()
-                    {
+                    public String toString() {
                         return "AfterStructureSubrange " + super.toString();
                     }
                 };
-                processCharacters( wordDocument, currentTableLevel, subrange,
-                        block );
+                processCharacters(wordDocument, currentTableLevel, subrange,
+                    block);
             }
             return true;
         }
 
-        for ( int c = 0; c < range.numCharacterRuns(); c++ )
-        {
-            CharacterRun characterRun = range.getCharacterRun( c );
+        for (int c = 0; c < range.numCharacterRuns(); c++) {
+            CharacterRun characterRun = range.getCharacterRun(c);
 
-            if ( characterRun == null )
+            if (characterRun == null) {
                 throw new AssertionError();
+            }
 
-            if ( wordDocument instanceof HWPFDocument
-                    && ( (HWPFDocument) wordDocument ).getPicturesTable()
-                            .hasPicture( characterRun ) )
-            {
+            if (wordDocument instanceof HWPFDocument
+                && ((HWPFDocument) wordDocument).getPicturesTable()
+                .hasPicture(characterRun)) {
                 HWPFDocument newFormat = (HWPFDocument) wordDocument;
                 Picture picture = newFormat.getPicturesTable().extractPicture(
-                        characterRun, true );
+                    characterRun, true);
 
-                processImage( block, characterRun.text().charAt( 0 ) == 0x01,
-                        picture );
+                processImage(block, characterRun.text().charAt(0) == 0x01,
+                    picture);
                 continue;
             }
 
             String text = characterRun.text();
-            if ( text.isEmpty() ) continue;
+            if (text.isEmpty()) {
+                continue;
+            }
 
-            if ( characterRun.isSpecialCharacter() )
-            {
-                if ( text.charAt( 0 ) == SPECCHAR_AUTONUMBERED_FOOTNOTE_REFERENCE
-                        && ( wordDocument instanceof HWPFDocument ) )
-                {
+            if (characterRun.isSpecialCharacter()) {
+                if (text.charAt(0) == SPECCHAR_AUTONUMBERED_FOOTNOTE_REFERENCE
+                    && (wordDocument instanceof HWPFDocument)) {
                     HWPFDocument doc = (HWPFDocument) wordDocument;
-                    processNoteAnchor( doc, characterRun, block );
+                    processNoteAnchor(doc, characterRun, block);
                     continue;
                 }
-                if ( text.charAt( 0 ) == SPECCHAR_DRAWN_OBJECT
-                        && ( wordDocument instanceof HWPFDocument ) )
-                {
+                if (text.charAt(0) == SPECCHAR_DRAWN_OBJECT
+                    && (wordDocument instanceof HWPFDocument)) {
                     HWPFDocument doc = (HWPFDocument) wordDocument;
-                    processDrawnObject( doc, characterRun, block );
+                    processDrawnObject(doc, characterRun, block);
                     continue;
                 }
-                if ( characterRun.isOle2()
-                        && ( wordDocument instanceof HWPFDocument ) )
-                {
+                if (characterRun.isOle2()
+                    && (wordDocument instanceof HWPFDocument)) {
                     HWPFDocument doc = (HWPFDocument) wordDocument;
-                    processOle2( doc, characterRun, block );
+                    processOle2(doc, characterRun, block);
                     continue;
                 }
-                if ( characterRun.isSymbol()
-                        && ( wordDocument instanceof HWPFDocument ) )
-                {
+                if (characterRun.isSymbol()
+                    && (wordDocument instanceof HWPFDocument)) {
                     HWPFDocument doc = (HWPFDocument) wordDocument;
-                    processSymbol( doc, characterRun, block );
+                    processSymbol(doc, characterRun, block);
                     continue;
                 }
             }
 
-            if ( text.charAt(0) == FIELD_BEGIN_MARK )
-            {
-                if ( wordDocument instanceof HWPFDocument )
-                {
-                    Field aliveField = ( (HWPFDocument) wordDocument )
-                            .getFields().getFieldByStartOffset(
-                                    FieldsDocumentPart.MAIN,
-                                    characterRun.getStartOffset() );
-                    if ( aliveField != null )
-                    {
-                        processField( ( (HWPFDocument) wordDocument ), range,
-                                currentTableLevel, aliveField, block );
+            if (text.charAt(0) == FIELD_BEGIN_MARK) {
+                if (wordDocument instanceof HWPFDocument) {
+                    Field aliveField = ((HWPFDocument) wordDocument)
+                        .getFields().getFieldByStartOffset(
+                            FieldsDocumentPart.MAIN,
+                            characterRun.getStartOffset());
+                    if (aliveField != null) {
+                        processField(((HWPFDocument) wordDocument), range,
+                            currentTableLevel, aliveField, block);
 
                         int continueAfter = aliveField.getFieldEndOffset();
-                        while ( c < range.numCharacterRuns()
-                                && range.getCharacterRun( c ).getEndOffset() <= continueAfter )
+                        while (c < range.numCharacterRuns()
+                            && range.getCharacterRun(c).getEndOffset() <= continueAfter) {
                             c++;
+                        }
 
-                        if ( c < range.numCharacterRuns() )
+                        if (c < range.numCharacterRuns()) {
                             c--;
+                        }
 
                         continue;
                     }
                 }
 
-                int skipTo = tryDeadField( wordDocument, range,
-                        currentTableLevel, c, block );
+                int skipTo = tryDeadField(wordDocument, range,
+                    currentTableLevel, c, block);
 
-                if ( skipTo != c )
-                {
+                if (skipTo != c) {
                     c = skipTo;
                     continue;
                 }
 
                 continue;
             }
-            if ( text.charAt(0) == FIELD_SEPARATOR_MARK )
-            {
+            if (text.charAt(0) == FIELD_SEPARATOR_MARK) {
                 // shall not appear without FIELD_BEGIN_MARK
                 continue;
             }
-            if ( text.charAt(0) == FIELD_END_MARK )
-            {
+            if (text.charAt(0) == FIELD_END_MARK) {
                 // shall not appear without FIELD_BEGIN_MARK
                 continue;
             }
 
-            if ( characterRun.isSpecialCharacter() || characterRun.isObj()
-                    || characterRun.isOle2() )
-            {
+            if (characterRun.isSpecialCharacter() || characterRun.isObj()
+                || characterRun.isOle2()) {
                 continue;
             }
 
-            if ( text.endsWith( "\r" )
-                    || ( text.charAt( text.length() - 1 ) == BEL_MARK && currentTableLevel != Integer.MIN_VALUE ) )
-                text = text.substring( 0, text.length() - 1 );
+            if (text.endsWith("\r")
+                || (text.charAt(text.length() - 1) == BEL_MARK && currentTableLevel != Integer.MIN_VALUE)) {
+                text = text.substring(0, text.length() - 1);
+            }
 
             {
                 // line breaks
                 StringBuilder stringBuilder = new StringBuilder();
-                for ( char charChar : text.toCharArray() )
-                {
-                    if ( charChar == 11 )
-                    {
-                        if ( stringBuilder.length() > 0 )
-                        {
-                            outputCharacters( block, characterRun,
-                                    stringBuilder.toString() );
-                            stringBuilder.setLength( 0 );
+                for (char charChar : text.toCharArray()) {
+                    if (charChar == 11) {
+                        if (stringBuilder.length() > 0) {
+                            outputCharacters(block, characterRun,
+                                stringBuilder.toString());
+                            stringBuilder.setLength(0);
                         }
-                        processLineBreak( block, characterRun );
-                    }
-                    else if ( charChar == 30 )
-                    {
+                        processLineBreak(block, characterRun);
+                    } else if (charChar == 30) {
                         // Non-breaking hyphens are stored as ASCII 30
-                        stringBuilder.append( UNICODECHAR_NONBREAKING_HYPHEN );
-                    }
-                    else if ( charChar == 31 )
-                    {
+                        stringBuilder.append(UNICODECHAR_NONBREAKING_HYPHEN);
+                    } else if (charChar == 31) {
                         // Non-required hyphens to zero-width space
-                        stringBuilder.append( UNICODECHAR_ZERO_WIDTH_SPACE );
-                    }
-                    else if ( charChar >= 0x20 || charChar == 0x09
-                            || charChar == 0x0A || charChar == 0x0D )
-                    {
-                        stringBuilder.append( charChar );
+                        stringBuilder.append(UNICODECHAR_ZERO_WIDTH_SPACE);
+                    } else if (charChar >= 0x20 || charChar == 0x09
+                        || charChar == 0x0A || charChar == 0x0D) {
+                        stringBuilder.append(charChar);
                     }
                 }
-                if ( stringBuilder.length() > 0 )
-                {
-                    outputCharacters( block, characterRun,
-                            stringBuilder.toString() );
-                    stringBuilder.setLength( 0 );
+                if (stringBuilder.length() > 0) {
+                    outputCharacters(block, characterRun,
+                        stringBuilder.toString());
+                    stringBuilder.setLength(0);
                 }
             }
 

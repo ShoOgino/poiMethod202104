@@ -1,63 +1,54 @@
-    protected void processDeadField( HWPFDocumentCore wordDocument,
-            Element currentBlock, Range range, int currentTableLevel,
-            int beginMark, int separatorMark, int endMark )
-    {
-        if ( beginMark + 1 < separatorMark && separatorMark + 1 < endMark )
-        {
-            Range formulaRange = new Range( range.getCharacterRun(
-                    beginMark + 1 ).getStartOffset(), range.getCharacterRun(
-                    separatorMark - 1 ).getEndOffset(), range )
-            {
+    protected void processDeadField(HWPFDocumentCore wordDocument,
+        Element currentBlock, Range range, int currentTableLevel,
+        int beginMark, int separatorMark, int endMark) {
+        if (beginMark + 1 < separatorMark && separatorMark + 1 < endMark) {
+            Range formulaRange = new Range(range.getCharacterRun(
+                beginMark + 1).getStartOffset(), range.getCharacterRun(
+                separatorMark - 1).getEndOffset(), range) {
                 @Override
-                public String toString()
-                {
+                public String toString() {
                     return "Dead field formula subrange: " + super.toString();
                 }
             };
-            Range valueRange = new Range( range.getCharacterRun(
-                    separatorMark + 1 ).getStartOffset(), range
-                    .getCharacterRun( endMark - 1 ).getEndOffset(), range )
-            {
+            Range valueRange = new Range(range.getCharacterRun(
+                separatorMark + 1).getStartOffset(), range
+                .getCharacterRun(endMark - 1).getEndOffset(), range) {
                 @Override
-                public String toString()
-                {
+                public String toString() {
                     return "Dead field value subrange: " + super.toString();
                 }
             };
             String formula = formulaRange.text();
-            final Matcher matcher = PATTERN_HYPERLINK_LOCAL.matcher( formula );
-            if ( matcher.matches() )
-            {
-                String localref = matcher.group( 1 );
-                processPageref( wordDocument, currentBlock, valueRange,
-                        currentTableLevel, localref );
+            final Matcher matcher = PATTERN_HYPERLINK_LOCAL.matcher(formula);
+            if (matcher.matches()) {
+                String localref = matcher.group(1);
+                processPageref(wordDocument, currentBlock, valueRange,
+                    currentTableLevel, localref);
                 return;
             }
         }
 
-        StringBuilder debug = new StringBuilder( "Unsupported field type: \n" );
-        for ( int i = beginMark; i <= endMark; i++ )
-        {
-            debug.append( "\t" );
-            debug.append( range.getCharacterRun( i ) );
-            debug.append( "\n" );
+        StringBuilder debug = new StringBuilder("Unsupported field type: \n");
+        for (int i = beginMark; i <= endMark; i++) {
+            debug.append("\t");
+            debug.append(range.getCharacterRun(i));
+            debug.append("\n");
         }
-        LOG.log( POILogger.WARN, debug );
+        LOG.log(POILogger.WARN, debug);
 
-        Range deadFieldValueSubrage = new Range( range.getCharacterRun(
-                separatorMark ).getStartOffset() + 1, range.getCharacterRun(
-                endMark ).getStartOffset(), range )
-        {
+        Range deadFieldValueSubrage = new Range(range.getCharacterRun(
+            separatorMark).getStartOffset() + 1, range.getCharacterRun(
+            endMark).getStartOffset(), range) {
             @Override
-            public String toString()
-            {
+            public String toString() {
                 return "DeadFieldValueSubrange (" + super.toString() + ")";
             }
         };
 
         // just output field value
-        if ( separatorMark + 1 < endMark )
-            processCharacters( wordDocument, currentTableLevel,
-                    deadFieldValueSubrage, currentBlock );
+        if (separatorMark + 1 < endMark) {
+            processCharacters(wordDocument, currentTableLevel,
+                deadFieldValueSubrage, currentBlock);
+        }
     }
 
