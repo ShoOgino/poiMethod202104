@@ -1,26 +1,27 @@
     @Override
     public void executionFinished(TestIdentifier testIdentifier, TestExecutionResult testExecutionResult) {
-        if ("[engine:junit-jupiter]".equals(testIdentifier.getParentId().orElse(""))) {
-            int totalTestsInClass = numSucceededInCurrentClass + numAbortedInCurrentClass
-                + numFailedInCurrentClass + numSkippedInCurrentClass;
-            Duration duration = Duration.between(startCurrentClass, Instant.now());
-            double numSeconds = duration.toNanos() / (double) 1_000_000_000;
-            String output = String.format("Tests run: %d, Failures: %d, Aborted: %d, Skipped: %d, Time elapsed: %f sec",
-                totalTestsInClass, numFailedInCurrentClass, numAbortedInCurrentClass,
-                numSkippedInCurrentClass, numSeconds);
-            println(output);
-
-        }
-        // don't count containers since looking for legacy JUnit 4 counting style
-        if (testIdentifier.getType() == Type.TEST) {
-            if (testExecutionResult.getStatus() == Status.SUCCESSFUL) {
-                numSucceededInCurrentClass++;
-            } else if (testExecutionResult.getStatus() == Status.ABORTED) {
-                println("  ABORTED: " + testIdentifier.getDisplayName());
-                numAbortedInCurrentClass++;
-            } else if (testExecutionResult.getStatus() == Status.FAILED) {
-                println("  FAILED: " + testIdentifier.getDisplayName());
-                numFailedInCurrentClass++;
+        Optional<String> parentId = testIdentifier.getParentId();
+        if (parentId.isPresent() && parentId.get().indexOf('/') < 0) {
+            int totalTestsInClass = this.numSucceededInTestSet.get() + this.numAbortedInTestSet.get() + this.numFailedInTestSet.get()
+                + this.numSkippedInTestSet.get();
+            Duration duration = Duration.between(this.testSetStartTime, Instant.now());
+            double numSeconds = (double) duration.toMillis() / 1_000;
+            String summary = String.format("Tests run: %d, Failures: %d, Aborted: %d, Skipped: %d, Time elapsed: %f sec", totalTestsInClass,
+                this.numFailedInTestSet.get(), this.numAbortedInTestSet.get(), this.numSkippedInTestSet.get(), numSeconds);
+            println(summary);
+        } else if (testIdentifier.isTest()) {
+            switch (testExecutionResult.getStatus()) {
+                case SUCCESSFUL:
+                    this.numSucceededInTestSet.incrementAndGet();
+                    break;
+                case ABORTED:
+                    println("   Aborted: " + testIdentifier.getDisplayName());
+                    this.numAbortedInTestSet.incrementAndGet();
+                    break;
+                case FAILED:
+                    println("   Failed: " + testIdentifier.getDisplayName());
+                    this.numFailedInTestSet.incrementAndGet();
+                    break;
             }
         }
     }
