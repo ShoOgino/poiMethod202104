@@ -1,18 +1,16 @@
-    // This is not a very useful test as written. It is not worth the execution time for a unit test
-    @Disabled
     @Test
     void testCellVerticalAlignShouldNotThrowNPE() throws Exception {
-        XWPFDocument docx = XWPFTestDataSamples.openSampleDocument("TestTableCellAlign.docx");
-        List<XWPFTable> tables = docx.getTables();
-        for (XWPFTable table : tables) {
-            List<XWPFTableRow> tableRows = table.getRows();
-            for (XWPFTableRow tableRow : tableRows) {
-                List<XWPFTableCell> tableCells = tableRow.getTableCells();
-                for (XWPFTableCell tableCell : tableCells) {
-                    // getVerticalAlignment should return either an XWPFVertAlign enum or null if not set
-                    tableCell.getVerticalAlignment();
-                }
-            }
+        try (XWPFDocument docx = XWPFTestDataSamples.openSampleDocument("TestTableCellAlign.docx")) {
+            String[] act =  docx.getTables().stream()
+                .flatMap(t -> t.getRows().stream())
+                .flatMap(r -> r.getTableICells().stream())
+                .map(XWPFTableCell.class::cast)
+                .map(XWPFTableCell::getVerticalAlignment)
+                .map(e -> e == null ? null : e.name())
+                .toArray(String[]::new);
+
+            String[] exp = { null, "BOTTOM", "CENTER", null};
+            assertArrayEquals(exp, act);
         }
     }
 
