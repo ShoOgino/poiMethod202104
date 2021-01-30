@@ -1,6 +1,22 @@
-    @Disabled("Calls System.exit()")
     @Test
     void testMainNoArgs() throws Exception {
-        POIFSDump.main(new String[] {});
+        SecurityManager sm = System.getSecurityManager();
+        try {
+            System.setSecurityManager(new SecurityManager() {
+                @Override
+                public void checkExit(int status) {
+                    throw new SecurityException();
+                }
+
+                @Override
+                public void checkPermission(Permission perm) {
+                    // Allow other activities by default
+                }
+            });
+
+            assertThrows(SecurityException.class, () -> POIFSDump.main(new String[]{}));
+        } finally {
+            System.setSecurityManager(sm);
+        }
     }
 
