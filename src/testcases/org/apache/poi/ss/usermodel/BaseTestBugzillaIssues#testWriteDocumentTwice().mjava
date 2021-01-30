@@ -1,0 +1,28 @@
+    @Test
+    void testWriteDocumentTwice() throws Exception {
+        try (Workbook wb = _testDataProvider.createWorkbook()) {
+            Sheet sheet = wb.createSheet("RawData");
+            Row row = sheet.createRow(0);
+            Cell cell;
+
+            cell = row.createCell(0);
+            cell.setCellValue("Ernie & Bert");
+
+            cell = row.createCell(1);
+            // Set a precalculated formula value containing a special character.
+            cell.setCellValue("Ernie & Bert are cool!");
+            cell.setCellFormula("A1 & \" are cool!\"");
+
+            try (ByteArrayOutputStream out1 = new ByteArrayOutputStream();
+                 ByteArrayOutputStream out2 = new ByteArrayOutputStream()) {
+                wb.write(out1);
+                wb.write(out2);
+
+                out1.flush();
+                out2.flush();
+
+                assertArrayEquals(out1.toByteArray(), out2.toByteArray());
+            }
+        }
+    }
+
