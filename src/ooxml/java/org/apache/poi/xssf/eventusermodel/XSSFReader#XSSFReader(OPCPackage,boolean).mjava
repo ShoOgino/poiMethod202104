@@ -1,0 +1,33 @@
+    /**
+     * Creates a new XSSFReader, for the given package
+     *
+     * @param pkg an <code>OPCPackage</code> representing a spreasheet file
+     * @param allowStrictOoxmlFiles whether to try to handle Strict OOXML format files
+     */
+    public XSSFReader(OPCPackage pkg, boolean allowStrictOoxmlFiles) throws IOException, OpenXML4JException {
+        this.pkg = pkg;
+
+        PackageRelationship coreDocRelationship = this.pkg.getRelationshipsByType(
+                PackageRelationshipTypes.CORE_DOCUMENT).getRelationship(0);
+
+        // strict OOXML likely not fully supported, see #57699
+        // this code is similar to POIXMLDocumentPart.getPartFromOPCPackage(), but I could not combine it
+        // easily due to different return values
+        if (coreDocRelationship == null) {
+            if (allowStrictOoxmlFiles) {
+                coreDocRelationship = this.pkg.getRelationshipsByType(
+                        PackageRelationshipTypes.STRICT_CORE_DOCUMENT).getRelationship(0);
+            } else if (this.pkg.getRelationshipsByType(
+                    PackageRelationshipTypes.STRICT_CORE_DOCUMENT).getRelationship(0) != null) {
+                throw new POIXMLException("Strict OOXML isn't currently supported, please see bug #57699");
+            }
+
+            if (coreDocRelationship == null) {
+                throw new POIXMLException("OOXML file structure broken/invalid - no core document found!");
+            }
+        }
+
+        // Get the part that holds the workbook
+        workbookPart = this.pkg.getPart(coreDocRelationship);
+    }
+
