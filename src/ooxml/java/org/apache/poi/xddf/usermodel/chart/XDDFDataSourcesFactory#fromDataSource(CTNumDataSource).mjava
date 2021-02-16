@@ -1,57 +1,114 @@
     public static XDDFNumericalDataSource<Double> fromDataSource(final CTNumDataSource valuesDS) {
-        return new XDDFNumericalDataSource<Double>() {
-            private CTNumData values = (CTNumData) valuesDS.getNumRef().getNumCache().copy();
-            private String formatCode = values.isSetFormatCode() ? values.getFormatCode() : null;
+        if (valuesDS == null) {
+            return null;
+        }
+        if (valuesDS.getNumRef() != null && valuesDS.getNumRef().getNumCache() != null) {
+            return new XDDFNumericalDataSource<Double>() {
+                private CTNumData values = (CTNumData) valuesDS.getNumRef().getNumCache().copy();
+                private String formatCode = values.isSetFormatCode() ? values.getFormatCode() : null;
 
-            @Override
-            public String getFormula() {
-                return valuesDS.getNumRef().getF();
-            }
+                @Override
+                public String getFormatCode() {
+                    return formatCode;
+                }
 
-            @Override
-            public String getFormatCode() {
-                return formatCode;
-            }
+                @Override
+                public void setFormatCode(String formatCode) {
+                    this.formatCode = formatCode;
+                }
 
-            @Override
-            public void setFormatCode(String formatCode) {
-                this.formatCode = formatCode;
-            }
+                @Override
+                public boolean isCellRange() {
+                    return true;
+                }
 
-            @Override
-            public boolean isCellRange() {
-                return true;
-            }
+                @Override
+                public boolean isNumeric() {
+                    return true;
+                }
 
-            @Override
-            public boolean isNumeric() {
-                return true;
-            }
+                @Override
+                public boolean isReference() {
+                    return true;
+                }
 
-            @Override
-            public boolean isReference() {
-                return true;
-            }
+                @Override
+                public int getPointCount() {
+                    return (int) values.getPtCount().getVal();
+                }
 
-            @Override
-            public int getPointCount() {
-                return (int) values.getPtCount().getVal();
-            }
+                @Override
+                public Double getPointAt(int index) {
+                    return Double.valueOf(values.getPtArray(index).getV());
+                }
 
-            @Override
-            public Double getPointAt(int index) {
-                return Double.valueOf(values.getPtArray(index).getV());
-            }
+                @Override
+                public String getDataRangeReference() {
+                    return valuesDS.getNumRef().getF();
+                }
 
-            @Override
-            public String getDataRangeReference() {
-                return valuesDS.getNumRef().getF();
-            }
+                @Override
+                public int getColIndex() {
+                    return 0;
+                }
+            };
+        } else if (valuesDS.getNumLit() != null) {
+            return new XDDFNumericalDataSource<Double>() {
+                private CTNumData values = (CTNumData) valuesDS.getNumLit().copy();
+                private String formatCode = values.isSetFormatCode() ? values.getFormatCode() : null;
 
-            @Override
-            public int getColIndex() {
-                return 0;
-            }
-        };
+                @Override
+                public String getFormatCode() {
+                    return formatCode;
+                }
+
+                @Override
+                public void setFormatCode(String formatCode) {
+                    this.formatCode = formatCode;
+                }
+
+                @Override
+                public boolean isCellRange() {
+                    return false;
+                }
+
+                @Override
+                public boolean isLiteral() {
+                    return true;
+                }
+
+                @Override
+                public boolean isNumeric() {
+                    return true;
+                }
+
+                @Override
+                public boolean isReference() {
+                    return false;
+                }
+
+                @Override
+                public int getPointCount() {
+                    return (int) values.getPtCount().getVal();
+                }
+
+                @Override
+                public Double getPointAt(int index) {
+                    return Double.valueOf(values.getPtArray(index).getV());
+                }
+
+                @Override
+                public String getDataRangeReference() {
+                    return null;
+                }
+
+                @Override
+                public int getColIndex() {
+                    return 0;
+                }
+            };
+        } else {
+            return null; // in some weird cases the element is empty
+        }
     }
 

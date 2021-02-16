@@ -1,0 +1,39 @@
+    /**
+     * Replace references to the sheet name in the data supporting the chart.
+     *
+     * @param newSheet
+     *          sheet to be used in the data references.
+     *
+     * @since POI 5.0.1
+     */
+    public void replaceReferences(XSSFSheet newSheet) {
+        for (XDDFChartData data : getChartSeries()) {
+            for (XDDFChartData.Series series : data.series) {
+                XDDFDataSource newCategory = series.categoryData;
+                XDDFNumericalDataSource newValues = series.valuesData;
+                try {
+                    if (series.categoryData != null && series.categoryData.isReference()) {
+                        String ref = series.categoryData.getDataRangeReference();
+                        CellRangeAddress rangeAddress = CellRangeAddress.valueOf(ref.substring(ref.indexOf('!') + 1));
+                        newCategory = series.categoryData.isNumeric()
+                                ? XDDFDataSourcesFactory.fromNumericCellRange(newSheet, rangeAddress)
+                                : XDDFDataSourcesFactory.fromStringCellRange(newSheet, rangeAddress);
+                        if (newCategory.isNumeric()) {
+                            ((XDDFNumericalDataSource) newCategory).setFormatCode(series.categoryData.getFormatCode());
+                        }
+                    }
+                    if (series.valuesData!= null && series.valuesData.isReference()) {
+                        String ref = series.valuesData.getDataRangeReference();
+                        CellRangeAddress rangeAddress = CellRangeAddress.valueOf(ref.substring(ref.indexOf('!') + 1));
+                        newValues = XDDFDataSourcesFactory.fromNumericCellRange(newSheet, rangeAddress);
+                        newValues.setFormatCode(series.valuesData.getFormatCode());
+                    }
+                } catch (IllegalArgumentException iae) {
+                    // keep old values when cell range cannot be parsed
+                }
+                series.replaceData(newCategory, newValues);
+                series.plot();
+            }
+        }
+    }
+

@@ -1,5 +1,8 @@
     public static XDDFCategoryDataSource fromDataSource(final CTAxDataSource categoryDS) {
-        if (categoryDS.getStrRef() == null) {
+        if (categoryDS == null) {
+            return null;
+        }
+        if (categoryDS.getNumRef() != null && categoryDS.getNumRef().getNumCache() != null) {
             return new XDDFCategoryDataSource() {
                 private CTNumData category = (CTNumData) categoryDS.getNumRef().getNumCache().copy();
                 private String formatCode = category.isSetFormatCode() ? category.getFormatCode() : null;
@@ -15,7 +18,7 @@
                 }
 
                 @Override
-                public String getFormula() {
+                public String getDataRangeReference() {
                     return categoryDS.getNumRef().getF();
                 }
 
@@ -32,7 +35,7 @@
                 @Override
                 public String getFormatCode() { return formatCode; }
             };
-        } else {
+        } else if (categoryDS.getStrRef() != null && categoryDS.getStrRef().getStrCache() != null) {
             return new XDDFCategoryDataSource() {
                 private CTStrData category = (CTStrData) categoryDS.getStrRef().getStrCache().copy();
 
@@ -42,7 +45,7 @@
                 }
 
                 @Override
-                public String getFormula() {
+                public String getDataRangeReference() {
                     return categoryDS.getStrRef().getF();
                 }
 
@@ -59,6 +62,88 @@
                 @Override
                 public String getFormatCode() { return null; }
             };
+        } else if (categoryDS.getNumLit() != null) {
+            return new XDDFCategoryDataSource() {
+                private CTNumData category = (CTNumData) categoryDS.getNumLit().copy();
+                private String formatCode = category.isSetFormatCode() ? category.getFormatCode() : null;
+
+                @Override
+                public boolean isCellRange() {
+                    return false;
+                }
+
+                @Override
+                public boolean isLiteral() {
+                    return true;
+                }
+
+                @Override
+                public boolean isNumeric() {
+                    return true;
+                }
+
+                @Override
+                public boolean isReference() {
+                    return false;
+                }
+
+                @Override
+                public String getDataRangeReference() {
+                    return null;
+                }
+
+                @Override
+                public int getPointCount() {
+                    return (int) category.getPtCount().getVal();
+                }
+
+                @Override
+                public String getPointAt(int index) {
+                    return category.getPtArray(index).getV();
+                }
+
+                @Override
+                public String getFormatCode() { return formatCode; }
+            };
+        } else if (categoryDS.getStrLit() != null) {
+            return new XDDFCategoryDataSource() {
+                private CTStrData category = (CTStrData) categoryDS.getStrLit().copy();
+
+                @Override
+                public boolean isCellRange() {
+                    return false;
+                }
+
+                @Override
+                public boolean isLiteral() {
+                    return true;
+                }
+
+                @Override
+                public boolean isReference() {
+                    return false;
+                }
+
+                @Override
+                public String getDataRangeReference() {
+                    return null;
+                }
+
+                @Override
+                public int getPointCount() {
+                    return (int) category.getPtCount().getVal();
+                }
+
+                @Override
+                public String getPointAt(int index) {
+                    return category.getPtArray(index).getV();
+                }
+
+                @Override
+                public String getFormatCode() { return null; }
+            };
+        } else {
+            return null; // in some weird cases the element is empty
         }
     }
 
