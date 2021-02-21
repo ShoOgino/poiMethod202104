@@ -45,7 +45,7 @@
                 throw addExceptionInfo(e, sheetIndex, rowIndex, columnIndex);
              } catch (RuntimeException re) {
                  if (re.getCause() instanceof WorkbookNotFoundException && _ignoreMissingWorkbooks) {
-                     logInfo(re.getCause().getMessage() + " - Continuing with cached value!");
+                     LOG.atInfo().log("{} - Continuing with cached value!", re.getCause().getMessage());
                      switch(srcCell.getCachedFormulaResultType()) {
                          case NUMERIC:
                              result = new NumberEval(srcCell.getNumericCellValue());
@@ -78,11 +78,12 @@
             }
             return cce.getValue();
         }
-        if (isDebugLogEnabled()) {
+        final ValueEval resultForLogging = result;
+        LOG.atDebug().log(()->{
             String sheetName = getSheetName(sheetIndex);
             CellReference cr = new CellReference(rowIndex, columnIndex);
-            logDebug("Evaluated " + sheetName + "!" + cr.formatAsString() + " to " + result);
-        }
+            return new SimpleMessage("Evaluated " + sheetName + "!" + cr.formatAsString() + " to " + resultForLogging);
+        });
         // Usually (result === cce.getValue())
         // But sometimes: (result==ErrorEval.CIRCULAR_REF_ERROR, cce.getValue()==null)
         // When circular references are detected, the cache entry is only updated for

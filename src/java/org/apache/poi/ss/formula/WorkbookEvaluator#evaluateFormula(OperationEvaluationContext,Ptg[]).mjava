@@ -9,14 +9,18 @@
             dbgEvaluationOutputForNextEval = false;
         }
         if (dbgEvaluationOutputIndent > 0) {
-            // init. indent string to needed spaces (create as substring vom very long space-only string;
-            // limit indendation for deep recursions)
+            // init. indent string to needed spaces (create as substring from very long space-only string;
+            // limit indentation for deep recursions)
             dbgIndentStr = "                                                                                                    ";
             dbgIndentStr = dbgIndentStr.substring(0, Math.min(dbgIndentStr.length(), dbgEvaluationOutputIndent*2));
-            EVAL_LOG.log(POILogger.WARN, dbgIndentStr
-                               + "- evaluateFormula('" + ec.getRefEvaluatorForCurrentSheet().getSheetNameRange()
-                               + "'/" + new CellReference(ec.getRowIndex(), ec.getColumnIndex()).formatAsString()
-                               + "): " + Arrays.toString(ptgs).replaceAll("\\Qorg.apache.poi.ss.formula.ptg.\\E", ""));
+            String finalDbgIndentStr = dbgIndentStr;
+            EVAL_LOG.atWarn().log(() -> {
+                String message = finalDbgIndentStr
+                        + "- evaluateFormula('" + ec.getRefEvaluatorForCurrentSheet().getSheetNameRange()
+                        + "'/" + new CellReference(ec.getRowIndex(), ec.getColumnIndex()).formatAsString()
+                        + "): " + Arrays.toString(ptgs).replaceAll("\\Qorg.apache.poi.ss.formula.ptg.\\E", "");
+                return new SimpleMessage(message);
+            });
             dbgEvaluationOutputIndent++;
         }
 
@@ -28,7 +32,7 @@
             // since we don't know how to handle these yet :(
             Ptg ptg = ptgs[i];
             if (dbgEvaluationOutputIndent > 0) {
-                EVAL_LOG.log(POILogger.INFO, dbgIndentStr, "  * ptg ", i, ": ", ptg, ", stack: ", stack);
+                EVAL_LOG.atInfo().log("{}  * ptg {}: {}, stack: {}", dbgIndentStr, box(i),ptg, stack);
             }
             if (ptg instanceof AttrPtg) {
                 AttrPtg attrPtg = (AttrPtg) ptg;
@@ -173,7 +177,7 @@
 //            logDebug("push " + opResult);
             stack.push(opResult);
             if (dbgEvaluationOutputIndent > 0) {
-                EVAL_LOG.log(POILogger.INFO, dbgIndentStr, "    = ", opResult);
+                EVAL_LOG.atInfo().log("{}    = {}", dbgIndentStr, opResult);
             }
         }
 
@@ -192,9 +196,7 @@
         }
 
         if (dbgEvaluationOutputIndent > 0) {
-            EVAL_LOG.log(POILogger.INFO, dbgIndentStr, "finished eval of ",
-                            new CellReference(ec.getRowIndex(), ec.getColumnIndex()).formatAsString(),
-                            ": ", result);
+            EVAL_LOG.atInfo().log("{}finished eval of {}: {}", dbgIndentStr, new CellReference(ec.getRowIndex(), ec.getColumnIndex()).formatAsString(), result);
             dbgEvaluationOutputIndent--;
             if (dbgEvaluationOutputIndent == 1) {
                 // this evaluation is done, reset indent to stop logging

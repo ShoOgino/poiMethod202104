@@ -6,17 +6,17 @@
      * @param recListener the record listener to notify about read records
      * @param dumpInterpretedRecords if {@code true}, the read records will be written to the PrintWriter
      *
-     * @exception  org.apache.poi.util.RecordFormatException  on error processing the InputStream
+     * @exception  RecordFormatException  on error processing the InputStream
      */
     private static void createRecords(InputStream is, PrintWriter ps, BiffRecordListener recListener, boolean dumpInterpretedRecords)
-            throws org.apache.poi.util.RecordFormatException {
+            throws RecordFormatException {
         RecordInputStream recStream = new RecordInputStream(is);
         while (true) {
             boolean hasNext;
             try {
                 hasNext = recStream.hasNextRecord();
             } catch (LeftoverDataException e) {
-                LOG.log(POILogger.ERROR, "Discarding ", recStream.remaining(), " bytes and continuing", e);
+                LOG.atError().withThrowable(e).log("Discarding {} bytes and continuing", box(recStream.remaining()));
                 recStream.readRemainder();
                 hasNext = recStream.hasNextRecord();
             }
@@ -27,7 +27,7 @@
             if (recStream.getSid() == 0) {
                 continue;
             }
-            org.apache.poi.hssf.record.Record record;
+            Record record;
             if (dumpInterpretedRecords) {
                 record = createRecord (recStream);
                 if (record.getSid() == ContinueRecord.sid) {

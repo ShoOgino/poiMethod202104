@@ -6,7 +6,7 @@
         // Create a workbook
         try (Workbook wb = _testDataProvider.createWorkbook(nrows+1)) {
             final Sheet sh = wb.createSheet();
-            LOG.log(POILogger.DEBUG, wb.getClass().getName(), " column autosizing timing...");
+            LOG.atDebug().log("{} column autosizing timing...", wb.getClass().getName());
 
             final long t0 = time();
             _testDataProvider.trackAllColumnsForAutosizing(sh);
@@ -19,28 +19,24 @@
             }
             final double populateSheetTime = delta(t0);
             final double populateSheetTimePerCell_ns = (1000000 * populateSheetTime / (nrows * ncols));
-            if (LOG.check(POILogger.DEBUG)) {
-                LOG.log(POILogger.DEBUG, "Populate sheet time: ", populateSheetTime, " ms (", populateSheetTimePerCell_ns, " ns/cell)");
+            LOG.atDebug().log("Populate sheet time: {} ms ({} ns/cell)", populateSheetTime, populateSheetTimePerCell_ns);
 
-                LOG.log(POILogger.DEBUG, "Autosizing...");
-            }
+            LOG.atDebug().log("Autosizing...");
             final long t1 = time();
             for (int c = 0; c < ncols; c++) {
                 final long t2 = time();
                 sh.autoSizeColumn(c);
-                LOG.log(POILogger.DEBUG, "Column ", c, " took ", delta(t2), " ms");
+                LOG.atDebug().log("Column {} took {} ms", box(c),delta(t2));
             }
             final double autoSizeColumnsTime = delta(t1);
             final double autoSizeColumnsTimePerColumn = autoSizeColumnsTime / ncols;
             final double bestFitWidthTimePerCell_ns = 1000000 * autoSizeColumnsTime / (ncols * nrows);
 
-            if (LOG.check(POILogger.DEBUG)) {
-                LOG.log(POILogger.DEBUG, "Auto sizing columns took a total of ", autoSizeColumnsTime, " ms (", autoSizeColumnsTimePerColumn, " ms per column)");
-                LOG.log(POILogger.DEBUG, "Best fit width time per cell: ", bestFitWidthTimePerCell_ns, " ns");
-            }
+            LOG.atDebug().log("Auto sizing columns took a total of {} ms ({} ms per column)", autoSizeColumnsTime, autoSizeColumnsTimePerColumn);
+            LOG.atDebug().log("Best fit width time per cell: {} ns", bestFitWidthTimePerCell_ns);
 
             final double totalTime_s = (populateSheetTime + autoSizeColumnsTime) / 1000;
-            LOG.log(POILogger.DEBUG, "Total time: ", totalTime_s, " s");
+            LOG.atDebug().log("Total time: {} s", totalTime_s);
         }
 
         //if (bestFitWidthTimePerCell_ns > 50000) {
