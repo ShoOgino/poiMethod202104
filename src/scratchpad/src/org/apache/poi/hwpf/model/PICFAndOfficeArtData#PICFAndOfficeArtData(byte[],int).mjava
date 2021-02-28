@@ -7,7 +7,7 @@
 
         if ( _picf.getMm() == 0x0066 )
         {
-            _cchPicName = LittleEndian.getUByte( dataStream, offset );
+            short _cchPicName = LittleEndian.getUByte(dataStream, offset);
             offset += 1;
 
             _stPicName = IOUtils.safelyClone(dataStream, offset, _cchPicName, MAX_RECORD_LENGTH);
@@ -15,12 +15,10 @@
         }
 
         final DefaultEscherRecordFactory escherRecordFactory = new DefaultEscherRecordFactory();
-        _shape = new EscherContainerRecord();
         int recordSize = _shape.fillFields( dataStream, offset,
                 escherRecordFactory );
         offset += recordSize;
 
-        _blipRecords = new LinkedList<>();
         while ( ( offset - startOffset ) < _picf.getLcb() )
         {
             EscherRecord nextRecord = escherRecordFactory.createRecord(
@@ -35,6 +33,10 @@
             offset += blipRecordSize;
 
             _blipRecords.add( nextRecord );
+
+            // [MS-ODRAW] allows for multiple records in a OfficeArtInlineSpContainer, which is what we're parsing here.
+            //   However, in the context of a HWPF document, there should be only 1.
+            assert _blipRecords.size() == 1;
         }
     }
 
