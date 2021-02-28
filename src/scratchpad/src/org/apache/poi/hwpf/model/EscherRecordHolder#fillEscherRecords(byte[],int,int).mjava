@@ -5,18 +5,48 @@
 	 *
 	 * @see FileInformationBlock#getLcbDggInfo()
 	 */
-	private void fillEscherRecords(byte[] data, int offset, int size)
-	{
+	private void fillEscherRecords(byte[] data, int offset, int size) {
 		if (size == 0) return;
 
 		EscherRecordFactory recordFactory = new DefaultEscherRecordFactory();
 		int pos = offset;
-		while ( pos < offset + size)
-		{
-			EscherRecord r = recordFactory.createRecord(data, pos);
-			escherRecords.add(r);
-			int bytesRead = r.fillFields(data, pos, recordFactory);
-			pos += bytesRead + 1; // There is an empty byte between each top-level record in a Word doc
+		pos += drawingGroupData.fillFields(data, pos, recordFactory);
+		assert drawingGroupData.getRecordId() == EscherRecordTypes.DGG_CONTAINER.typeID;
+
+		/*
+		 * After the drawingGroupData there is an array (2 slots max) that has data about drawings. According to the
+		 * spec, the first slot is for the Main Document, the second for the Header Document. Additionally, the
+		 * OfficeArtWordDrawing structure has a byte (dgglbl) that indicates whether the structure is for the Main or
+		 * Header Document. In practice we've seen documents such as 61911.doc where the order of array entries does not
+		 * match the dgglbl byte. As the byte is more likely to be reliable, we base the parsing off of that rather than
+		 * array order.
+		 */
+
+		// This should loop at most twice
+		while (pos < offset + size) {
+
+			// Named this way to match section 2.9.172 of [MS-DOC] - v20191119.
+			byte dgglbl = data[pos];
+			assert dgglbl == 0x00 || dgglbl == 0x01;
+			pos++;
+
+			EscherContainerRecord dgContainer = new EscherContainerRecord();
+			pos+= dgContainer.fillFields(data, pos, recordFactory);
+			assert dgContainer.getRecordId() == EscherRecordTypes.DG_CONTAINER.typeID;
+
+			switch (dgglbl) {
+				case 0x00:
+					mainDocumentDgContainer = dgContainer;
+					break;
+				case 0x01:
+					headerDocumentDgContainer = dgContainer;
+					break;
+				default:
+					LogManager.getLogger(EscherRecordHolder.class).atWarn()
+							.log("dgglbl {} for OfficeArtWordDrawing is out of bounds [0, 1]", box(dgglbl));
+			}
 		}
+
+		assert pos == offset + size;
 	}
 
