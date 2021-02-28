@@ -1,0 +1,46 @@
+    @Override
+    public final void setData(byte[] data) throws IOException {
+        /*
+         * When working with slideshow pictures, we need to be aware of 2 container units. The first is a list of
+         * HSLFPictureData that are the programmatic reference for working with the pictures. The second is the
+         * Blip Store. For the purposes of this function, you can think of the Blip Store as containing a list of
+         * pointers (with a small summary) to the picture in the slideshow.
+         *
+         * When updating a picture, we need to update the in-memory data structure (this instance), but we also need to
+         * update the stored pointer. When modifying the pointer, we also need to modify all subsequent pointers, since
+         * they might shift based on a change in the byte count of the underlying image.
+         */
+        int oldSize = getBseSize();
+        formattedData = formatImageForSlideshow(data);
+        int newSize = getBseSize();
+        int changeInSize = newSize - oldSize;
+        byte[] newUid = getUID();
+
+        boolean foundBseForOldImage = false;
+
+        // Get the BSE records & sort the list by offset, so we can proceed to shift offsets
+        @SuppressWarnings("unchecked") // The BStore only contains BSE records
+        List<EscherBSERecord> bseRecords = (List<EscherBSERecord>) (Object) bStore.getChildRecords();
+        bseRecords.sort(Comparator.comparingInt(EscherBSERecord::getOffset));
+
+        for (EscherBSERecord bse : bseRecords) {
+
+            if (foundBseForOldImage) {
+
+                // The BSE for this picture was modified in a previous iteration, and we are now adjusting
+                //  subsequent offsets.
+                bse.setOffset(bse.getOffset() + changeInSize);
+
+            } else if (bse == this.bse) { // Reference equals is safe because these BSE belong to the same slideshow
+
+                // This BSE matches the current image. Update the size and UID.
+                foundBseForOldImage = true;
+
+                bse.setUid(newUid);
+
+                // Image byte count may have changed, so update the pointer.
+                bse.setSize(newSize);
+            }
+        }
+    }
+

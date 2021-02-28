@@ -1,0 +1,33 @@
+    /**
+     * Verify that the {@link EscherBSERecord#getOffset()} values are modified for all images after the image being
+     * changed.
+     */
+    @Test
+    void testEditPictureDataRecordOffsetsAreShifted() throws IOException {
+        int[] originalOffsets = {0, 12013, 15081, 34162, 59563};
+        int[] modifiedOffsets = {0, 35, 3103, 22184, 47585};
+
+        ByteArrayOutputStream inMemory = new ByteArrayOutputStream();
+        try (HSLFSlideShow ppt = HSLFTestDataSamples.getSlideShow("pictures.ppt")) {
+            int[] offsets = ppt.getPictureData().stream().mapToInt(HSLFPictureData::getOffset).toArray();
+            assertArrayEquals(originalOffsets, offsets);
+
+            HSLFPictureData imageBeingChanged = ppt.getPictureData().get(0);
+            // It doesn't matter that this isn't a valid image. We are just testing offsets here.
+            imageBeingChanged.setData(new byte[10]);
+
+            // Verify that the in-memory representations have all been updated
+            offsets = ppt.getPictureData().stream().mapToInt(HSLFPictureData::getOffset).toArray();
+            assertArrayEquals(modifiedOffsets, offsets);
+
+            ppt.write(inMemory);
+        }
+
+        try (HSLFSlideShow ppt = new HSLFSlideShow(new ByteArrayInputStream(inMemory.toByteArray()))) {
+
+            // Verify that the persisted representations have all been updated
+            int[] offsets = ppt.getPictureData().stream().mapToInt(HSLFPictureData::getOffset).toArray();
+            assertArrayEquals(modifiedOffsets, offsets);
+        }
+    }
+

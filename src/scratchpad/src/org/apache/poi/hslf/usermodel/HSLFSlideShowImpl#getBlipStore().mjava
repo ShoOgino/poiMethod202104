@@ -1,0 +1,26 @@
+    private EscherContainerRecord getBlipStore() {
+        Document documentRecord = null;
+        for (Record record : _records) {
+            if (record.getRecordType() == RecordTypes.Document.typeID) {
+                documentRecord = (Document) record;
+                break;
+            }
+        }
+
+        if (documentRecord == null) {
+            throw new CorruptPowerPointFileException("Document record is missing");
+        }
+
+        EscherContainerRecord blipStore;
+
+        EscherContainerRecord dggContainer = documentRecord.getPPDrawingGroup().getDggContainer();
+        blipStore = HSLFShape.getEscherChild(dggContainer, EscherContainerRecord.BSTORE_CONTAINER);
+        if (blipStore == null) {
+            blipStore = new EscherContainerRecord();
+            blipStore.setRecordId(EscherContainerRecord.BSTORE_CONTAINER);
+
+            dggContainer.addChildBefore(blipStore, EscherOptRecord.RECORD_ID);
+        }
+        return blipStore;
+    }
+

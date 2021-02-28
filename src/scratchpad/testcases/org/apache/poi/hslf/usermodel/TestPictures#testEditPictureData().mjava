@@ -1,0 +1,24 @@
+    /**
+     * Verify that it is possible for a user to change the contents of a {@link HSLFPictureData} using
+     * {@link HSLFPictureData#setData(byte[])}, and that the changes are saved to the slideshow.
+     */
+    @Test
+    void testEditPictureData() throws IOException {
+        byte[] newImage = slTests.readFile("tomcat.png");
+        ByteArrayOutputStream modifiedSlideShow = new ByteArrayOutputStream();
+
+        // Load an existing slideshow and modify the image
+        try (HSLFSlideShow ppt = HSLFTestDataSamples.getSlideShow("ppt_with_png.ppt")) {
+            HSLFPictureData picture = ppt.getPictureData().get(0);
+            picture.setData(newImage);
+            ppt.write(modifiedSlideShow);
+        }
+
+        // Load the modified slideshow and verify the image content
+        try (HSLFSlideShow ppt = new HSLFSlideShow(new ByteArrayInputStream(modifiedSlideShow.toByteArray()))) {
+            HSLFPictureData picture = ppt.getPictureData().get(0);
+            byte[] modifiedImageData = picture.getData();
+            assertArrayEquals(newImage, modifiedImageData);
+        }
+    }
+

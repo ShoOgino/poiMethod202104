@@ -1,0 +1,27 @@
+	static EscherBSERecord addNewEscherBseRecord(EscherContainerRecord blipStore, PictureType type, byte[] imageData, int offset) {
+		EscherBSERecord record = new EscherBSERecord();
+		record.setRecordId(EscherBSERecord.RECORD_ID);
+		record.setOptions((short) (0x0002 | (type.nativeId << 4)));
+		record.setSize(imageData.length + HSLFPictureData.PREAMBLE_SIZE);
+		record.setUid(Arrays.copyOf(imageData, HSLFPictureData.CHECKSUM_SIZE));
+
+		record.setBlipTypeMacOS((byte) type.nativeId);
+		record.setBlipTypeWin32((byte) type.nativeId);
+
+		if (type == PictureType.EMF) {
+			record.setBlipTypeMacOS((byte) PictureType.PICT.nativeId);
+		} else if (type == PictureType.WMF) {
+			record.setBlipTypeMacOS((byte) PictureType.PICT.nativeId);
+		} else if (type == PictureType.PICT) {
+			record.setBlipTypeWin32((byte) PictureType.WMF.nativeId);
+		}
+
+		record.setOffset(offset);
+
+		blipStore.addChildRecord(record);
+		int count = blipStore.getChildRecords().size();
+		blipStore.setOptions((short) ((count << 4) | 0xF));
+
+		return record;
+	}
+

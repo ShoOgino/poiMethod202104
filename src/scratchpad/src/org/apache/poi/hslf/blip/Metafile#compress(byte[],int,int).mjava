@@ -1,8 +1,13 @@
-    protected static byte[] compress(byte[] bytes, int offset, int length) throws IOException {
+    protected static byte[] compress(byte[] bytes, int offset, int length) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        DeflaterOutputStream  deflater = new DeflaterOutputStream( out );
-        deflater.write(bytes, offset, length);
-        deflater.close();
+        try (DeflaterOutputStream deflater = new DeflaterOutputStream(out)) {
+            deflater.write(bytes, offset, length);
+        } catch (IOException e) {
+            // IOException won't get thrown by the DeflaterOutputStream in this configuration because:
+            //  1. ByteArrayOutputStream doesn't throw an IOException during writes.
+            //  2. The DeflaterOutputStream is not finished until we're done writing.
+            throw new AssertionError("Won't happen", e);
+        }
         return out.toByteArray();
     }
 

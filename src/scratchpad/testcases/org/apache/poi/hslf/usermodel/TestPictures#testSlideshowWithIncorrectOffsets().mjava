@@ -1,0 +1,35 @@
+    /**
+     * Verify that a slideshow with records that have offsets not matching those of the pictures in the stream still
+     * correctly pairs the records and pictures.
+     */
+    @Test
+    void testSlideshowWithIncorrectOffsets() throws IOException {
+        int[] originalOffsets;
+        int originalNumberOfRecords;
+
+        // Create a presentation that has records with unmatched offsets, but with matched UIDs.
+        ByteArrayOutputStream inMemory = new ByteArrayOutputStream();
+        try (HSLFSlideShow ppt = HSLFTestDataSamples.getSlideShow("pictures.ppt")) {
+            originalOffsets = ppt.getPictureData().stream().mapToInt(HSLFPictureData::getOffset).toArray();
+            originalNumberOfRecords = ppt.getPictureData().get(0).bStore.getChildRecords().size();
+
+            Random random = new Random();
+            for (HSLFPictureData picture : ppt.getPictureData()) {
+                // Bound is arbitrary and irrelevant to the test.
+                picture.bse.setOffset(random.nextInt(500_000));
+            }
+            ppt.write(inMemory);
+        }
+
+        try (HSLFSlideShow ppt = new HSLFSlideShow(new ByteArrayInputStream(inMemory.toByteArray()))) {
+
+            // Verify that the offsets all got fixed.
+            int[] offsets = ppt.getPictureData().stream().mapToInt(HSLFPictureData::getOffset).toArray();
+            assertArrayEquals(originalOffsets, offsets);
+
+            // Verify that there are the same number of records as in the original slideshow.
+            int numberOfRecords = ppt.getPictureData().get(0).bStore.getChildRecords().size();
+            assertEquals(originalNumberOfRecords, numberOfRecords);
+        }
+    }
+

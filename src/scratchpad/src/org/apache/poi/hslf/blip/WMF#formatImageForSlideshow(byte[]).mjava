@@ -1,5 +1,5 @@
     @Override
-    public void setData(byte[] data) throws IOException {
+    protected byte[] formatImageForSlideshow(byte[] data) {
         int pos = 0;
         ImageHeaderWMF nHeader = new ImageHeaderWMF(data, pos);
         pos += nHeader.getLength();
@@ -14,14 +14,21 @@
         header.setZipSize(compressed.length);
 
         byte[] checksum = getChecksum(data);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        out.write(checksum);
-        if (getUIDInstanceCount() == 2) {
-            out.write(checksum);
-        }
-        header.write(out);
-        out.write(compressed);
+        byte[] rawData = new byte[checksum.length * getUIDInstanceCount() + header.getSize() + compressed.length];
+        int offset = 0;
 
-        setRawData(out.toByteArray());
+        System.arraycopy(checksum, 0, rawData, offset, checksum.length);
+        offset += checksum.length;
+
+        if (getUIDInstanceCount() == 2) {
+            System.arraycopy(checksum, 0, rawData, offset, checksum.length);
+            offset += checksum.length;
+        }
+
+        header.write(rawData, offset);
+        offset += header.getSize();
+        System.arraycopy(compressed, 0, rawData, offset, compressed.length);
+
+        return rawData;
     }
 

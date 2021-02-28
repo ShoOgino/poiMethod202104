@@ -1,0 +1,29 @@
+    /**
+     * Verify that it is possible for a user to change the contents of an encrypted {@link HSLFPictureData} using
+     * {@link HSLFPictureData#setData(byte[])}, and that the changes are saved to the slideshow.
+     */
+    @Test
+    void testEditPictureDataEncrypted() throws IOException {
+        byte[] newImage = slTests.readFile("tomcat.png");
+        ByteArrayOutputStream modifiedSlideShow = new ByteArrayOutputStream();
+
+        Biff8EncryptionKey.setCurrentUserPassword("password");
+        try {
+            // Load an existing slideshow and modify the image
+            try (HSLFSlideShow ppt = HSLFTestDataSamples.getSlideShow("ppt_with_png_encrypted.ppt")) {
+                HSLFPictureData picture = ppt.getPictureData().get(0);
+                picture.setData(newImage);
+                ppt.write(modifiedSlideShow);
+            }
+
+            // Load the modified slideshow and verify the image content
+            try (HSLFSlideShow ppt = new HSLFSlideShow(new ByteArrayInputStream(modifiedSlideShow.toByteArray()))) {
+                HSLFPictureData picture = ppt.getPictureData().get(0);
+                byte[] modifiedImageData = picture.getData();
+                assertArrayEquals(newImage, modifiedImageData);
+            }
+        } finally {
+            Biff8EncryptionKey.setCurrentUserPassword(null);
+        }
+    }
+

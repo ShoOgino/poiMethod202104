@@ -1,0 +1,95 @@
+    /**
+     * Matches all of the {@link PictureFactory PictureFactories} for a slideshow with {@link EscherBSERecord}s in the
+     * Blip Store for the slideshow.
+     * <p>
+     * When reading a slideshow into memory, we have to match the records in the Blip Store with the factories
+     * representing picture in the pictures stream. This can be difficult, as presentations might have incorrectly
+     * formatted data. This function attempts to perform matching using multiple heuristics to increase the likelihood
+     * of finding all pairs, while aiming to reduce the likelihood of associating incorrect pairs.
+     *
+     * @param factories Factories for creating {@link HSLFPictureData} out of the pictures stream.
+     * @param blipStore Blip Store of the presentation being loaded.
+     */
+    private static void matchPicturesAndRecords(List<PictureFactory> factories, EscherContainerRecord blipStore) {
+        // LinkedList because we're sorting and removing.
+        LinkedList<PictureFactory> unmatchedFactories = new LinkedList<>(factories);
+        unmatchedFactories.sort(Comparator.comparingInt(PictureFactory::getOffset));
+
+        // Arrange records by offset. In the common case of a well-formed slideshow, where every factory has a
+        //  matching record, this is somewhat wasteful, but is necessary to handle the uncommon case where multiple
+        //  records share an offset.
+        Map<Integer, List<EscherBSERecord>> unmatchedRecords = new HashMap<>();
+        for (EscherRecord child : blipStore) {
+            EscherBSERecord record = (EscherBSERecord) child;
+            unmatchedRecords.computeIfAbsent(record.getOffset(), k -> new ArrayList<>()).add(record);
+        }
+
+        // The first pass through the factories only pairs a factory with a record if we're very confident that they
+        //  are a match. Confidence comes from a perfect match on the offset, and if necessary, the UID. Matched
+        //  factories and records are removed from the unmatched collections.
+        for (Iterator<PictureFactory> iterator = unmatchedFactories.iterator(); iterator.hasNext(); ) {
+            PictureFactory factory = iterator.next();
+            int physicalOffset = factory.getOffset();
+            List<EscherBSERecord> recordsAtOffset = unmatchedRecords.get(physicalOffset);
+
+            if (recordsAtOffset == null || recordsAtOffset.isEmpty()) {
+                // There are no records that have an offset matching the physical offset in the stream. We'll do
+                //  more complicated and less reliable matching for this factory after all "well known"
+                //  image <-> record pairs have been found.
+                LOG.atDebug().log("No records with offset {}", box(physicalOffset));
+            } else if (recordsAtOffset.size() == 1) {
+                // Only 1 record has the same offset as the target image. Assume these are a pair.
+                factory.setRecord(recordsAtOffset.get(0));
+                unmatchedRecords.remove(physicalOffset);
+                iterator.remove();
+            } else {
+
+                // Multiple records share an offset. Perform additional matching based on UID.
+                for (int i = 0; i < recordsAtOffset.size(); i++) {
+                    EscherBSERecord record = recordsAtOffset.get(i);
+                    byte[] recordUid = record.getUid();
+                    byte[] imageHeader = Arrays.copyOf(factory.imageData, HSLFPictureData.CHECKSUM_SIZE);
+                    if (Arrays.equals(recordUid, imageHeader)) {
+                        factory.setRecord(record);
+                        recordsAtOffset.remove(i);
+                        iterator.remove();
+                        break;
+                    }
+                }
+            }
+        }
+
+        // At this point, any factories remaining didn't have a record with a matching offset. The second pass
+        // through the factories pairs based on the UID. Factories for which a record with a matching UID cannot be
+        // found will get a new record.
+        List<EscherBSERecord> remainingRecords = unmatchedRecords.values()
+                .stream()
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
+
+        for (PictureFactory factory : unmatchedFactories) {
+
+            boolean matched = false;
+            for (int i = remainingRecords.size() - 1; i >= 0; i--) {
+                EscherBSERecord record = remainingRecords.get(i);
+                byte[] recordUid = record.getUid();
+                byte[] imageHeader = Arrays.copyOf(factory.imageData, HSLFPictureData.CHECKSUM_SIZE);
+                if (Arrays.equals(recordUid, imageHeader)) {
+                    remainingRecords.remove(i);
+                    factory.setRecord(record);
+                    record.setOffset(factory.getOffset());
+                    matched = true;
+                }
+            }
+
+            if (!matched) {
+                // Synthesize a new record
+                LOG.atDebug().log("No record found for picture at offset {}", box(factory.offset));
+                EscherBSERecord record = HSLFSlideShow.addNewEscherBseRecord(blipStore, factory.type, factory.imageData, factory.offset);
+                factory.setRecord(record);
+            }
+        }
+
+        LOG.atDebug().log("Found {} unmatched records.", box(remainingRecords.size()));
+    }
+

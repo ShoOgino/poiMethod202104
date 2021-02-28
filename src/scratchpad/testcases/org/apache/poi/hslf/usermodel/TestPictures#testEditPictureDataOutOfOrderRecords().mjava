@@ -1,0 +1,47 @@
+    /**
+     * Verify that the {@link EscherBSERecord#getOffset()} values are modified for all images after the image being
+     * changed, but assuming that the records are not stored in a sorted-by-offset fashion.
+     *
+     * We have not encountered a file that has meaningful data that is not sorted. However, we have encountered files
+     * that have records with an offset of 0 interspersed between meaningful records. See {@code 53446.ppt} and
+     * {@code alterman_security.ppt} for examples.
+     */
+    @Test
+    void testEditPictureDataOutOfOrderRecords() throws IOException {
+        int[] modifiedOffsets = {0, 35, 3103, 22184, 47585};
+
+        ByteArrayOutputStream inMemory = new ByteArrayOutputStream();
+        try (HSLFSlideShow ppt = HSLFTestDataSamples.getSlideShow("pictures.ppt")) {
+
+            // For this test we're going to intentionally manipulate the records into a shuffled order.
+            EscherContainerRecord container = ppt.getPictureData().get(0).bStore;
+            List<EscherRecord> children = container.getChildRecords();
+            for (EscherRecord child : children) {
+                container.removeChildRecord(child);
+            }
+            Collections.shuffle(children);
+            for (EscherRecord child : children) {
+                container.addChildRecord(child);
+            }
+
+            HSLFPictureData imageBeingChanged = ppt.getPictureData().get(0);
+            // It doesn't matter that this isn't a valid image. We are just testing offsets here.
+            imageBeingChanged.setData(new byte[10]);
+
+            // Verify that the in-memory representations have all been updated
+            int[] offsets = ppt.getPictureData().stream().mapToInt(HSLFPictureData::getOffset).toArray();
+            Arrays.sort(offsets);
+            assertArrayEquals(modifiedOffsets, offsets);
+
+            ppt.write(inMemory);
+        }
+
+        try (HSLFSlideShow ppt = new HSLFSlideShow(new ByteArrayInputStream(inMemory.toByteArray()))) {
+
+            // Verify that the persisted representations have all been updated
+            int[] offsets = ppt.getPictureData().stream().mapToInt(HSLFPictureData::getOffset).toArray();
+            Arrays.sort(offsets);
+            assertArrayEquals(modifiedOffsets, offsets);
+        }
+    }
+
