@@ -8,25 +8,16 @@
 		// Get the type
 		_type = LittleEndian.getUShort(_header,2);
 
-		// Get the contents for now
-		final byte[] contents = IOUtils.safelyClone(source, start, len, MAX_RECORD_LENGTH);
-
 		// Build up a tree of Escher records contained within
 		final DefaultEscherRecordFactory erf = new HSLFEscherRecordFactory();
-		findEscherChildren(erf, contents, 8, len-8, childRecords);
-		EscherContainerRecord dgContainer = getDgContainer();
+		dgContainer.fillFields(source, start + 8, erf);
+		assert dgContainer.getRecordId() == EscherRecordTypes.DG_CONTAINER.typeID;
+		dg = dgContainer.getChildById(EscherRecordTypes.DG.typeID);
 
-		if (dgContainer != null) {
-			textboxWrappers = Stream.of(dgContainer).
-				flatMap(findEscherContainer(EscherRecordTypes.SPGR_CONTAINER)).
-				flatMap(findEscherContainer(EscherRecordTypes.SP_CONTAINER)).
-				flatMap(PPDrawing::getTextboxHelper).
-				toArray(EscherTextboxWrapper[]::new);
-		} else {
-			// Find and EscherTextboxRecord's, and wrap them up
-			final List<EscherTextboxWrapper> textboxes = new ArrayList<>();
-			findEscherTextboxRecord(childRecords, textboxes);
-			this.textboxWrappers = textboxes.toArray(new EscherTextboxWrapper[0]);
-		}
+		textboxWrappers = Stream.of(dgContainer).
+			flatMap(findEscherContainer(EscherRecordTypes.SPGR_CONTAINER)).
+			flatMap(findEscherContainer(EscherRecordTypes.SP_CONTAINER)).
+			flatMap(PPDrawing::getTextboxHelper).
+			toArray(EscherTextboxWrapper[]::new);
 	}
 
