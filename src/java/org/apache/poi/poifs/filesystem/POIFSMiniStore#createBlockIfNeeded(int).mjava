@@ -2,49 +2,50 @@
      * Load the block, extending the underlying stream if needed
      */
     protected ByteBuffer createBlockIfNeeded(final int offset) throws IOException {
-       boolean firstInStore = false;
-       if (_mini_stream.getStartBlock() == POIFSConstants.END_OF_CHAIN) {
-           firstInStore = true;
-       }
+        boolean firstInStore = false;
+        if (_mini_stream.getStartBlock() == POIFSConstants.END_OF_CHAIN) {
+            firstInStore = true;
+        }
 
-       // Try to get it without extending the stream
-       if (! firstInStore) {
-           try {
-              return getBlockAt(offset);
-           } catch(NoSuchElementException ignored) {}
-       }
+        // Try to get it without extending the stream
+        if (!firstInStore) {
+            try {
+                return getBlockAt(offset);
+            } catch (NoSuchElementException ignored) {
+            }
+        }
 
-       // Need to extend the stream
-       // TODO Replace this with proper append support
-       // For now, do the extending by hand...
+        // Need to extend the stream
+        // TODO Replace this with proper append support
+        // For now, do the extending by hand...
 
-       // Ask for another block
-       int newBigBlock = _filesystem.getFreeBlock();
-       _filesystem.createBlockIfNeeded(newBigBlock);
+        // Ask for another block
+        int newBigBlock = _filesystem.getFreeBlock();
+        _filesystem.createBlockIfNeeded(newBigBlock);
 
-       // If we are the first block to be allocated, initialise the stream
-       if (firstInStore) {
-           _filesystem._get_property_table().getRoot().setStartBlock(newBigBlock);
-           _mini_stream = new POIFSStream(_filesystem, newBigBlock);
-       } else {
-           // Tack it onto the end of our chain
-           ChainLoopDetector loopDetector = _filesystem.getChainLoopDetector();
-           int block = _mini_stream.getStartBlock();
-           while(true) {
-              loopDetector.claim(block);
-              int next = _filesystem.getNextBlock(block);
-              if(next == POIFSConstants.END_OF_CHAIN) {
-                 break;
-              }
-              block = next;
-           }
-           _filesystem.setNextBlock(block, newBigBlock);
-       }
+        // If we are the first block to be allocated, initialise the stream
+        if (firstInStore) {
+            _filesystem._get_property_table().getRoot().setStartBlock(newBigBlock);
+            _mini_stream = new POIFSStream(_filesystem, newBigBlock);
+        } else {
+            // Tack it onto the end of our chain
+            ChainLoopDetector loopDetector = _filesystem.getChainLoopDetector();
+            int block = _mini_stream.getStartBlock();
+            while (true) {
+                loopDetector.claim(block);
+                int next = _filesystem.getNextBlock(block);
+                if (next == POIFSConstants.END_OF_CHAIN) {
+                    break;
+                }
+                block = next;
+            }
+            _filesystem.setNextBlock(block, newBigBlock);
+        }
 
-       // This is now the new end
-       _filesystem.setNextBlock(newBigBlock, POIFSConstants.END_OF_CHAIN);
+        // This is now the new end
+        _filesystem.setNextBlock(newBigBlock, POIFSConstants.END_OF_CHAIN);
 
-       // Now try again, to get the real small block
-       return createBlockIfNeeded(offset);
+        // Now try again, to get the real small block
+        return createBlockIfNeeded(offset);
     }
 

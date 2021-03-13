@@ -1,13 +1,13 @@
     /**
      * Finds a free block, and returns its offset.
      * This method will extend the file if needed, and if doing
-     *  so, allocate new FAT blocks to address the extra space.
+     * so, allocate new FAT blocks to address the extra space.
      */
     protected int getFreeBlock() throws IOException {
-       int sectorsPerSBAT = _filesystem.getBigBlockSizeDetails().getBATEntriesPerBlock();
+        int sectorsPerSBAT = _filesystem.getBigBlockSizeDetails().getBATEntriesPerBlock();
 
-       // First up, do we have any spare ones?
-       int offset = 0;
+        // First up, do we have any spare ones?
+        int offset = 0;
         for (BATBlock sbat : _sbat_blocks) {
             // Check this one
             if (sbat.hasFreeSectors()) {
@@ -25,47 +25,47 @@
             offset += sectorsPerSBAT;
         }
 
-       // If we get here, then there aren't any
-       //  free sectors in any of the SBATs
-       // So, we need to extend the chain and add another
+        // If we get here, then there aren't any
+        //  free sectors in any of the SBATs
+        // So, we need to extend the chain and add another
 
-       // Create a new BATBlock
-       BATBlock newSBAT = BATBlock.createEmptyBATBlock(_filesystem.getBigBlockSizeDetails(), false);
-       int batForSBAT = _filesystem.getFreeBlock();
-       newSBAT.setOurBlockIndex(batForSBAT);
+        // Create a new BATBlock
+        BATBlock newSBAT = BATBlock.createEmptyBATBlock(_filesystem.getBigBlockSizeDetails(), false);
+        int batForSBAT = _filesystem.getFreeBlock();
+        newSBAT.setOurBlockIndex(batForSBAT);
 
-       // Are we the first SBAT?
-       if(_header.getSBATCount() == 0) {
-          // Tell the header that we've got our first SBAT there
-          _header.setSBATStart(batForSBAT);
-          _header.setSBATBlockCount(1);
-       } else {
-          // Find the end of the SBAT stream, and add the sbat in there
-          ChainLoopDetector loopDetector = _filesystem.getChainLoopDetector();
-          int batOffset = _header.getSBATStart();
-          while(true) {
-             loopDetector.claim(batOffset);
-             int nextBat = _filesystem.getNextBlock(batOffset);
-             if(nextBat == POIFSConstants.END_OF_CHAIN) {
-                break;
-             }
-             batOffset = nextBat;
-          }
+        // Are we the first SBAT?
+        if (_header.getSBATCount() == 0) {
+            // Tell the header that we've got our first SBAT there
+            _header.setSBATStart(batForSBAT);
+            _header.setSBATBlockCount(1);
+        } else {
+            // Find the end of the SBAT stream, and add the sbat in there
+            ChainLoopDetector loopDetector = _filesystem.getChainLoopDetector();
+            int batOffset = _header.getSBATStart();
+            while (true) {
+                loopDetector.claim(batOffset);
+                int nextBat = _filesystem.getNextBlock(batOffset);
+                if (nextBat == POIFSConstants.END_OF_CHAIN) {
+                    break;
+                }
+                batOffset = nextBat;
+            }
 
-          // Add it in at the end
-          _filesystem.setNextBlock(batOffset, batForSBAT);
+            // Add it in at the end
+            _filesystem.setNextBlock(batOffset, batForSBAT);
 
-          // And update the count
-          _header.setSBATBlockCount(
-                _header.getSBATCount() + 1
-          );
-       }
+            // And update the count
+            _header.setSBATBlockCount(
+                    _header.getSBATCount() + 1
+            );
+        }
 
-       // Finish allocating
-       _filesystem.setNextBlock(batForSBAT, POIFSConstants.END_OF_CHAIN);
-       _sbat_blocks.add(newSBAT);
+        // Finish allocating
+        _filesystem.setNextBlock(batForSBAT, POIFSConstants.END_OF_CHAIN);
+        _sbat_blocks.add(newSBAT);
 
-       // Return our first spot
-       return offset;
+        // Return our first spot
+        return offset;
     }
 
