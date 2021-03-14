@@ -1,0 +1,33 @@
+    public ValueEval evaluate(ValueEval[] args, OperationEvaluationContext ec) {
+        // Look for a single Eval which matches either our Row or
+        //  our Column
+        ValueEval intersect = null;
+        int col = ec.getColumnIndex();
+        int row = ec.getRowIndex();
+
+        for (ValueEval val : args) {
+            if (val instanceof AreaEvalBase) {
+                AreaEvalBase area = (AreaEvalBase)val;
+
+                if (area.contains(row, col)) {
+                    if (intersect != null) return ErrorEval.VALUE_INVALID; 
+                    intersect = area.getAbsoluteValue(row, col);
+                } else if (area.containsRow(row)) {
+                    if (intersect != null) return ErrorEval.VALUE_INVALID;
+                    intersect = area.getAbsoluteValue(row, area.getFirstColumn());
+                } else if (area.containsColumn(col)) {
+                    if (intersect != null) return ErrorEval.VALUE_INVALID;
+                    intersect = area.getAbsoluteValue(area.getFirstRow(), col);
+                }
+            }
+        }
+        
+        // If we found only one, it's that
+        if (intersect != null) {
+            return intersect;
+        }
+        
+        // If in doubt, it's probably invalid
+        return ErrorEval.VALUE_INVALID;
+    }
+
