@@ -1,0 +1,34 @@
+    @Test
+    public void changeEncryptionMode() throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream(10_000);
+
+        try (HSSFWorkbook wb = new HSSFWorkbook()) {
+            wb.createSheet().createRow(1).createCell(1).setCellValue("Test");
+            Biff8EncryptionKey.setCurrentUserPassword("test1");
+            wb.write(bos);
+        }
+
+        try (HSSFWorkbook wb = new HSSFWorkbook(new ByteArrayInputStream(bos.toByteArray()))) {
+            assertEquals(EncryptionMode.cryptoAPI, wb.getEncryptionMode());
+            wb.setEncryptionMode(EncryptionMode.binaryRC4);
+            Biff8EncryptionKey.setCurrentUserPassword("test2");
+            bos.reset();
+            wb.write(bos);
+        }
+
+        try (HSSFWorkbook wb = new HSSFWorkbook(new ByteArrayInputStream(bos.toByteArray()))) {
+            assertEquals(EncryptionMode.binaryRC4, wb.getEncryptionMode());
+            wb.setEncryptionMode(null);
+            bos.reset();
+            wb.write(bos);
+        }
+
+        assertNull(Biff8EncryptionKey.getCurrentUserPassword());
+
+        try (HSSFWorkbook wb = new HSSFWorkbook(new ByteArrayInputStream(bos.toByteArray()))) {
+            assertNull(wb.getEncryptionMode());
+            wb.setEncryptionMode(null);
+            assertEquals("Test", wb.getSheetAt(0).getRow(1).getCell(1).getStringCellValue());
+        }
+    }
+
