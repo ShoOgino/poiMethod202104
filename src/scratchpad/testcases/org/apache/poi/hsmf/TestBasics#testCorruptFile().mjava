@@ -1,0 +1,24 @@
+   @Disabled(value = "expected to fail")
+   @Test
+   void testCorruptFile() throws Exception {
+      POIDataSamples testData = POIDataSamples.getPOIFSInstance();
+      try(MAPIMessage mapi = new MAPIMessage(testData.openResourceAsStream("unknown_properties.msg"))) {
+         assertNotNull(mapi.getAttachmentFiles());
+         assertNotNull(mapi.getDisplayBCC());
+         assertNotNull(mapi.getMessageDate());
+
+         AttachmentChunks[] attachments = mapi.getAttachmentFiles();
+
+         for(AttachmentChunks attachment : attachments) {
+
+            DirectoryChunk chunkDirectory = attachment.getAttachmentDirectory();
+            if(chunkDirectory != null) {
+               MAPIMessage attachmentMSG = chunkDirectory.getAsEmbeddedMessage();
+               assertNotNull(attachmentMSG);
+               String body = attachmentMSG.getTextBody();
+               assertNotNull(body);
+            }
+         }
+      }
+   }
+
