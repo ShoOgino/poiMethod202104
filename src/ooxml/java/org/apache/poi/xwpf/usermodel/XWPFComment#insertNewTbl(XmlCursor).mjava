@@ -1,0 +1,39 @@
+    @Override
+    public XWPFTable insertNewTbl(XmlCursor cursor) {
+        if (isCursorInCmt(cursor)) {
+            String uri = CTTbl.type.getName().getNamespaceURI();
+            String localPart = "tbl";
+            cursor.beginElement(localPart, uri);
+            cursor.toParent();
+            CTTbl t = (CTTbl) cursor.getObject();
+            XWPFTable newT = new XWPFTable(t, this);
+            cursor.removeXmlContents();
+            XmlObject o = null;
+            while (!(o instanceof CTTbl) && (cursor.toPrevSibling())) {
+                o = cursor.getObject();
+            }
+            if (!(o instanceof CTTbl)) {
+                tables.add(0, newT);
+            } else {
+                int pos = tables.indexOf(getTable((CTTbl) o)) + 1;
+                tables.add(pos, newT);
+            }
+            int i = 0;
+            XmlCursor cursor2 = t.newCursor();
+            while (cursor2.toPrevSibling()) {
+                o = cursor2.getObject();
+                if (o instanceof CTP || o instanceof CTTbl) {
+                    i++;
+                }
+            }
+            cursor2.dispose();
+            bodyElements.add(i, newT);
+            cursor2 = t.newCursor();
+            cursor.toCursor(cursor2);
+            cursor.toEndToken();
+            cursor2.dispose();
+            return newT;
+        }
+        return null;
+    }
+

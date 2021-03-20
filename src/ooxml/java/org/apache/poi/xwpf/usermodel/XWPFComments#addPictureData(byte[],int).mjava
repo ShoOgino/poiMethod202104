@@ -1,0 +1,44 @@
+    /**
+     * Adds a picture to the comments.
+     *
+     * @param pictureData The picture data
+     * @param format      The format of the picture.
+     * @return the index to this picture (0 based), the added picture can be
+     * obtained from {@link #getAllPictures()} .
+     * @throws InvalidFormatException If the format of the picture is not known.
+     */
+    public String addPictureData(byte[] pictureData, int format) throws InvalidFormatException {
+        XWPFPictureData xwpfPicData = document.findPackagePictureData(pictureData, format);
+        POIXMLRelation relDesc = XWPFPictureData.RELATIONS[format];
+
+        if (xwpfPicData == null) {
+            /* Part doesn't exist, create a new one */
+            int idx = getXWPFDocument().getNextPicNameNumber(format);
+            xwpfPicData = (XWPFPictureData) createRelationship(relDesc, XWPFFactory.getInstance(), idx);
+            /* write bytes to new part */
+            PackagePart picDataPart = xwpfPicData.getPackagePart();
+            try (OutputStream out = picDataPart.getOutputStream()) {
+                out.write(pictureData);
+            } catch (IOException e) {
+                throw new POIXMLException(e);
+            }
+
+            document.registerPackagePictureData(xwpfPicData);
+            pictures.add(xwpfPicData);
+            return getRelationId(xwpfPicData);
+        } else if (!getRelations().contains(xwpfPicData)) {
+            /*
+             * Part already existed, but was not related so far. Create
+             * relationship to the already existing part and update
+             * POIXMLDocumentPart data.
+             */
+            // TODO add support for TargetMode.EXTERNAL relations.
+            RelationPart rp = addRelation(null, XWPFRelation.IMAGES, xwpfPicData);
+            pictures.add(xwpfPicData);
+            return rp.getRelationship().getId();
+        } else {
+            /* Part already existed, get relation id and return it */
+            return getRelationId(xwpfPicData);
+        }
+    }
+

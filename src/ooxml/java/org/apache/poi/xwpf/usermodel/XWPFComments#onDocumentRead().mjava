@@ -1,0 +1,24 @@
+    /**
+     * read comments form an existing package
+     */
+    @Override
+    public void onDocumentRead() throws IOException {
+        try (InputStream is = getPackagePart().getInputStream()) {
+            CommentsDocument doc = CommentsDocument.Factory.parse(is, DEFAULT_XML_OPTIONS);
+            ctComments = doc.getComments();
+            for (CTComment ctComment : ctComments.getCommentList()) {
+                comments.add(new XWPFComment(ctComment, this));
+            }
+        } catch (XmlException e) {
+            throw new POIXMLException("Unable to read comments", e);
+        }
+
+        for (POIXMLDocumentPart poixmlDocumentPart : getRelations()) {
+            if (poixmlDocumentPart instanceof XWPFPictureData) {
+                XWPFPictureData xwpfPicData = (XWPFPictureData) poixmlDocumentPart;
+                pictures.add(xwpfPicData);
+                document.registerPackagePictureData(xwpfPicData);
+            }
+        }
+    }
+

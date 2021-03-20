@@ -1,0 +1,38 @@
+    @Override
+    public XWPFParagraph insertNewParagraph(XmlCursor cursor) {
+        if (isCursorInCmt(cursor)) {
+            String uri = CTP.type.getName().getNamespaceURI();
+            String localPart = "p";
+            cursor.beginElement(localPart, uri);
+            cursor.toParent();
+            CTP p = (CTP) cursor.getObject();
+            XWPFParagraph newP = new XWPFParagraph(p, this);
+            XmlObject o = null;
+            while (!(o instanceof CTP) && (cursor.toPrevSibling())) {
+                o = cursor.getObject();
+            }
+            if ((!(o instanceof CTP)) || o == p) {
+                paragraphs.add(0, newP);
+            } else {
+                int pos = paragraphs.indexOf(getParagraph((CTP) o)) + 1;
+                paragraphs.add(pos, newP);
+            }
+            int i = 0;
+            XmlCursor p2 = p.newCursor();
+            cursor.toCursor(p2);
+            p2.dispose();
+            while (cursor.toPrevSibling()) {
+                o = cursor.getObject();
+                if (o instanceof CTP || o instanceof CTTbl)
+                    i++;
+            }
+            bodyElements.add(i, newP);
+            p2 = p.newCursor();
+            cursor.toCursor(p2);
+            cursor.toEndToken();
+            p2.dispose();
+            return newP;
+        }
+        return null;
+    }
+
